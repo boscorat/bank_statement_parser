@@ -1,0 +1,46 @@
+# specify the method by which a type of bank account is identified
+
+[[accounts]]
+id = 1                                          # incremental id
+id_type = "CRD"                                 # id from account_types config
+name = "Rewards Credit Card"                    # friendly name
+refs = ["Card number","M inimum payments"]      # a list of refs to identify the account
+refs_all = true                                 # true if all specified refs must be found, false will id the account if any refs are found
+refs_table = 0                                  # The number of the table to search for the account refs
+refs_strip = true                               # when matching the ref, should we strip out spaces?
+
+[[accounts]]
+id = 2
+id_type = "SAV"
+name = "Flexible Saver"
+refs = ["flexiblesaverdetails"]
+refs_all = true
+refs_table = 2
+refs_strip = true
+
+[[accounts]]
+id = 3
+id_type = "CUR"
+name = "Bank Account"
+refs = ["bankaccountdetails"]
+refs_all = true
+refs_table = 2
+refs_strip = true
+
+[[accounts]]
+id = 4
+id_type = "CUR"
+name = "Advance Account"
+refs = ["Your HSBC Advance  details"]
+refs_all = true
+refs_table = 2
+refs_strip = true
+
+[[accounts]]
+id = 5
+id_type = "SAV"
+name = "Online Bonus Saver"
+refs = ["Your Online Bonus Saver"]
+refs_all = true
+refs_table = 2
+refs_strip = true
