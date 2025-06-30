@@ -1,31 +1,48 @@
+import re
+
 import camelot
 
 import config
 
-pdf_file_cc = "/home/boscorat/repos/bstec/statements/2022-12-08_Statement.pdf"
-pdf_file_ba = "/home/boscorat/Downloads/Statements/2025-05-08_Statement.pdf"
-pdf_file_sa = "/home/boscorat/Downloads/Statements/2025-02-28_Statement.pdf"
+pdf_files: list = [
+    "/home/boscorat/repos/bstec/statements/2022-12-08_Statement.pdf",  # CRD
+    "/home/boscorat/Downloads/Statements/2025-05-08_Statement.pdf",  # CUR
+    "/home/boscorat/Downloads/Statements/2025-02-28_Statement.pdf",  # SAV
+]
+
+current_pdf = ""
 
 
-tables_cc = camelot.read_pdf(pdf_file_cc, pages="1-end", flavor="stream")
-tables_ba = camelot.read_pdf(pdf_file_ba, pages="1-end", flavor="stream")
-tables_sa = camelot.read_pdf(pdf_file_sa, pages="1-end", flavor="stream")
+def extract_pdf_tables(files: str) -> tuple():
+    global current_pdf
+    for file in files:
+        current_pdf = file
+        raw = camelot.read_pdf(file, pages="1-end", flavor="stream")
+        tables: list = [{"page": table.page, "data": table.data} for table in raw]
+        for table in tables:
+            table_text = ""
+            for row in table["data"]:
+                table_text += "|".join(row)
+            table["text"] = table_text
+            table["text_strip"] = table_text.replace(" ", "")
+        current_pdf = file
+        yield tables
+
+
+# pdf_file = "/home/boscorat/repos/bstec/statements/2022-12-08_Statement.pdf"  # CRD
+# pdf_file = "/home/boscorat/Downloads/Statements/2025-05-08_Statement.pdf"      # CUR
+# pdf_file = "/home/boscorat/Downloads/Statements/2025-02-28_Statement.pdf"      # SAV
+
+# tables_extract = (camelot.read_pdf(pdf_file, pages="1-end", flavor="stream"), pdf_file)
+
+# tables_crd = camelot.read_pdf(pdf_file_cc, pages="1-end", flavor="stream")
+# tables_cur = camelot.read_pdf(pdf_file_ba, pages="1-end", flavor="stream")
+# tables_sav = camelot.read_pdf(pdf_file_sa, pages="1-end", flavor="stream")
 # tables = camelot.read_pdf(pdf_file, pages="1-end")
-tables: list = [{"page": table.page, "data": table.data} for table in tables_sa]
 
 # for i, t in enumerate(tables):
 #     t["table_number"] = i + 1
 
-for table in tables:
-    table_text = ""
-    for row in table["data"]:
-        table_text += "|".join(row)
-    table["text"] = table_text
-    table["text_strip"] = table_text.replace(" ", "")
-
-text0 = tables[0]["text"]
-
-# print("Your Statement" in text0)
 
 print()
 bank_name: str = "<no bank name>"
@@ -33,12 +50,12 @@ account_name: str = "<no account name>"
 account_type: str = "<bank account type>"
 
 
-def ref_search(config_list: list, pdf_tables: list) -> dict | None:
+def ref_accounts(config_list: list, pdf_tables: list) -> dict | None:
     for cr in config_list:
         ref_results: list = []
         for ref in cr["refs"]:
             ref = ref.replace(" ", "") if cr["refs_strip"] else ref
-            text = pdf_tables[cr["refs_table"]]["text_strip"] if cr["refs_strip"] else pdf_tables[b["refs_table"]]["text"]
+            text = pdf_tables[cr["refs_table"]]["text_strip"] if cr["refs_strip"] else pdf_tables[cr["refs_table"]]["text"]
             ref_results.append((ref, ref in text))
         if len(ref_results) > 0:  # we've got some ref result
             matches = sum(1 for result in ref_results if result[1])
@@ -49,13 +66,61 @@ def ref_search(config_list: list, pdf_tables: list) -> dict | None:
     return None
 
 
-bank_match = ref_search(config_list=config.banks, pdf_tables=tables)
-bank_name = bank_match["name"]
-account_match = ref_search(config_list=bank_match["accounts"], pdf_tables=tables)
-account_name = account_match["name"]
-account_type = account_match["type"]
+def ref_specs(config_list: list, pdf_tables: list, field: str = "account_number") -> dict | None:
+    try:
+        sc = config_list[field]
+    except KeyError:  # field isn't specified in the specs so can be safely skipped
+        return None
+    for ref in sc["refs"]:
+        try:
+            val = str([r for r in pdf_tables[ref["table"]]["data"]][ref["row"]][ref["cell"]])
+        except IndexError:  # the ref can't be found, but a later ref may work so we contine
+            continue
 
-print(bank_name, account_name, account_type)
+        if subs := sc["re_subs"]:
+            for sub in subs:
+                val = re.sub(sub["pattern"], sub["replacement"], val)
+        if match := re.search(rf"{ref['re_search']}", val):
+            return val[match.start() : match.end()]
+        else:
+            continue
+    raise ValueError(
+        f"No matching ref for {bank_name} - {account_name} - {account_type}\nFailure Field: {field}, file: {current_pdf}"
+    )  # if we get this far we've not managed to match any refs
+
+
+for tables in extract_pdf_tables(pdf_files):
+    bank_match = ref_accounts(config_list=config.banks, pdf_tables=tables)
+    bank_name = bank_match["name"]
+    account_match = ref_accounts(config_list=bank_match["accounts"], pdf_tables=tables)
+    account_name = account_match["name"]
+    account_type = account_match["type"]
+
+    #     except Exception:
+    #         return None
+    # except (KeyError, IndexError):
+    #     return None
+
+    # statements
+    spec = account_match["spec_statements"]
+    sort_code = ref_specs(spec, tables, "sort_code")
+    account_number = ref_specs(spec, tables, "account_number")
+    card_number = ref_specs(spec, tables, "card_number")
+    account_name = ref_specs(spec, tables, "account_name")
+    opening_balance = ref_specs(spec, tables, "opening_balance")
+    closing_balance = ref_specs(spec, tables, "closing_balance")
+    payments_in = ref_specs(spec, tables, "payments_in")
+    payments_out = ref_specs(spec, tables, "payments_out")
+
+    print("sort_code: ", sort_code)
+    print("account: ", account_number)
+    print("card: ", card_number)
+    print("name: ", account_name)
+    print("opening", opening_balance)
+    print("closing", closing_balance)
+    print("in", payments_in)
+    print("out", payments_out)
+    print()
 
 # for b in config.banks_base:
 #     bank_match = False

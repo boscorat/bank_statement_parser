@@ -8,6 +8,7 @@ refs = ["Card number","M inimum payments"]      # a list of refs to identify the
 refs_all = true                                 # true if all specified refs must be found, false will id the account if any refs are found
 refs_table = 0                                  # The number of the table to search for the account refs
 refs_strip = true                               # when matching the ref, should we strip out spaces?
+spec_statement = "specs_002"                    # spec used for getting the statement info
 
 [[accounts]]
 id = 2
@@ -17,6 +18,7 @@ refs = ["flexiblesaverdetails"]
 refs_all = true
 refs_table = 2
 refs_strip = true
+spec_statement = "specs_001"  
 
 [[accounts]]
 id = 3
@@ -26,6 +28,7 @@ refs = ["bankaccountdetails"]
 refs_all = true
 refs_table = 2
 refs_strip = true
+spec_statement = "specs_001" 
 
 [[accounts]]
 id = 4
@@ -35,6 +38,7 @@ refs = ["Your HSBC Advance  details"]
 refs_all = true
 refs_table = 2
 refs_strip = true
+spec_statement = "specs_001" 
 
 [[accounts]]
 id = 5
@@ -44,3 +48,4 @@ refs = ["Your Online Bonus Saver"]
 refs_all = true
 refs_table = 2
 refs_strip = true
+spec_statement = "specs_001" 
