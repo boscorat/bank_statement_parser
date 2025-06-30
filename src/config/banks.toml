@@ -3,16 +3,15 @@ id = 1                                          # identifier for the bank includ
 name = "HSBC Bank UK"                           # friendly name for the bank
 refs = ["www.hsbc.co.uk"]                       # a list of refs to identify the bank
 refs_all = true                                 # true if all specified refs must be found, false will id the bank if any refs are found
-refs_table = 0                                  # number of the table to search - bank will usually appear in the 1st table (0)
+page = 1                                  # number of the table to search - bank will usually appear in the 1st table (0)
 refs_strip = true                               # when matching the ref, should we strip out spaces?
 accounts = [1, 2, 3, 4, 5,]                     # account id's from the accounts config
-
 
 [[banks]]
 id = 2                                  
 name = "NatWest UK"                   
 refs = ["www.natwest.co.uk"]               
 refs_all = true                         
-refs_table = 0 
+page = 1 
 refs_strip = true                      
 accounts = [1, 2,]              

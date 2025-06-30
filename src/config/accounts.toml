@@ -4,9 +4,9 @@
 id = 1                                          # incremental id
 id_type = "CRD"                                 # id from account_types config
 name = "Rewards Credit Card"                    # friendly name
-refs = ["Card number","M inimum payments"]      # a list of refs to identify the account
+refs = ["Card number","Minimum payments"]       # a list of refs to identify the account
 refs_all = true                                 # true if all specified refs must be found, false will id the account if any refs are found
-refs_table = 0                                  # The number of the table to search for the account refs
+page = 1                                        # The number of the table to search for the account refs
 refs_strip = true                               # when matching the ref, should we strip out spaces?
 spec_statement = "specs_002"                    # spec used for getting the statement info
 
@@ -14,9 +14,9 @@ spec_statement = "specs_002"                    # spec used for getting the stat
 id = 2
 id_type = "SAV"
 name = "Flexible Saver"
-refs = ["flexiblesaverdetails"]
-refs_all = true
-refs_table = 2
+refs = ["flexiblesaverdetails", 'Your Flexible Saver']
+refs_all = false
+page = 1
 refs_strip = true
 spec_statement = "specs_001"  
 
@@ -24,9 +24,9 @@ spec_statement = "specs_001"
 id = 3
 id_type = "CUR"
 name = "Bank Account"
-refs = ["bankaccountdetails"]
-refs_all = true
-refs_table = 2
+refs = ["bankaccountdetails", "Arranged Overdraft Limit"]
+refs_all = false
+page = 1
 refs_strip = true
 spec_statement = "specs_001" 
 
@@ -36,7 +36,7 @@ id_type = "CUR"
 name = "Advance Account"
 refs = ["Your HSBC Advance  details"]
 refs_all = true
-refs_table = 2
+page = 1
 refs_strip = true
 spec_statement = "specs_001" 
 
@@ -46,6 +46,6 @@ id_type = "SAV"
 name = "Online Bonus Saver"
 refs = ["Your Online Bonus Saver"]
 refs_all = true
-refs_table = 2
+page = 1
 refs_strip = true
 spec_statement = "specs_001" 

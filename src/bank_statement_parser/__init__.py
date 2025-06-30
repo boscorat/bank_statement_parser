@@ -1,8 +1,17 @@
 import re
+from os import listdir
 
 import camelot
 
 import config
+
+STATEMENT_DIRECTORY = "/home/boscorat/Downloads/Statements/"
+# STATEMENT_DIRECTORY = "/home/boscorat/Downloads/Statements/cc/"
+
+files = listdir(STATEMENT_DIRECTORY)  # List of PDF files in the statements directory
+# Filter out non-PDF files using a list comprehension
+files = [f"{STATEMENT_DIRECTORY}/{filename}" for filename in files if filename.endswith(".pdf")]
+
 
 pdf_files: list = [
     "/home/boscorat/repos/bstec/statements/2022-12-08_Statement.pdf",  # CRD
@@ -55,7 +64,10 @@ def ref_accounts(config_list: list, pdf_tables: list) -> dict | None:
         ref_results: list = []
         for ref in cr["refs"]:
             ref = ref.replace(" ", "") if cr["refs_strip"] else ref
-            text = pdf_tables[cr["refs_table"]]["text_strip"] if cr["refs_strip"] else pdf_tables[cr["refs_table"]]["text"]
+            text = ""
+            for table_text in pdf_tables:
+                if table_text["page"] == cr["page"]:
+                    text += table_text["text_strip"] if cr["refs_strip"] else table_text["text"]
             ref_results.append((ref, ref in text))
         if len(ref_results) > 0:  # we've got some ref result
             matches = sum(1 for result in ref_results if result[1])
@@ -89,7 +101,7 @@ def ref_specs(config_list: list, pdf_tables: list, field: str = "account_number"
     )  # if we get this far we've not managed to match any refs
 
 
-for tables in extract_pdf_tables(pdf_files):
+for tables in extract_pdf_tables(files):
     bank_match = ref_accounts(config_list=config.banks, pdf_tables=tables)
     bank_name = bank_match["name"]
     account_match = ref_accounts(config_list=bank_match["accounts"], pdf_tables=tables)
