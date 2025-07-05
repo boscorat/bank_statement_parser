@@ -6,20 +6,42 @@ import camelot
 import config
 
 STATEMENT_DIRECTORY = "/home/boscorat/Downloads/Statements/"
-# STATEMENT_DIRECTORY = "/home/boscorat/Downloads/Statements/cc/"
+STATEMENT_DIRECTORY_CC = "/home/boscorat/Downloads/Statements/CC/"
 
-files = listdir(STATEMENT_DIRECTORY)  # List of PDF files in the statements directory
-# Filter out non-PDF files using a list comprehension
-files = [f"{STATEMENT_DIRECTORY}/{filename}" for filename in files if filename.endswith(".pdf")]
+# files = listdir(STATEMENT_DIRECTORY)  # List of PDF files in the statements directory
+# files_CC = listdir(STATEMENT_DIRECTORY_CC)  # as above, but for credit card
+# # Filter out non-PDF files using a list comprehension
+# files = [f"{STATEMENT_DIRECTORY}/{filename}" for filename in files if filename.endswith(".pdf")]
+# files_CC = [f"{STATEMENT_DIRECTORY_CC}/{filename}" for filename in files_CC if filename.endswith(".pdf")]
+# files = files_CC
+
+# # files = [file for file in files if file == "/home/boscorat/Downloads/Statements//2019-08-08_Statement.pdf"]
 
 
-pdf_files: list = [
+files: list = [
     "/home/boscorat/repos/bstec/statements/2022-12-08_Statement.pdf",  # CRD
     "/home/boscorat/Downloads/Statements/2025-05-08_Statement.pdf",  # CUR
     "/home/boscorat/Downloads/Statements/2025-02-28_Statement.pdf",  # SAV
 ]
 
 current_pdf = ""
+
+
+def debit_check(value: str):
+    try:
+        return round(float(value), 2)
+    except ValueError:
+        try:
+            return round(float(value[:-1]) * -1, 2)
+        except ValueError:
+            raise Exception("Incompatible value")
+
+
+def balance_check(open: float | str, close: float | str, credit: float, debit: float, account_type: str):
+    if account_type in ["CRD"]:
+        open = open * -1
+        close = close * -1
+    return round(close - open, 2) == round(credit + (debit * -1), 2)
 
 
 def extract_pdf_tables(files: str) -> tuple():
@@ -36,21 +58,6 @@ def extract_pdf_tables(files: str) -> tuple():
             table["text_strip"] = table_text.replace(" ", "")
         current_pdf = file
         yield tables
-
-
-# pdf_file = "/home/boscorat/repos/bstec/statements/2022-12-08_Statement.pdf"  # CRD
-# pdf_file = "/home/boscorat/Downloads/Statements/2025-05-08_Statement.pdf"      # CUR
-# pdf_file = "/home/boscorat/Downloads/Statements/2025-02-28_Statement.pdf"      # SAV
-
-# tables_extract = (camelot.read_pdf(pdf_file, pages="1-end", flavor="stream"), pdf_file)
-
-# tables_crd = camelot.read_pdf(pdf_file_cc, pages="1-end", flavor="stream")
-# tables_cur = camelot.read_pdf(pdf_file_ba, pages="1-end", flavor="stream")
-# tables_sav = camelot.read_pdf(pdf_file_sa, pages="1-end", flavor="stream")
-# tables = camelot.read_pdf(pdf_file, pages="1-end")
-
-# for i, t in enumerate(tables):
-#     t["table_number"] = i + 1
 
 
 print()
@@ -88,7 +95,6 @@ def ref_specs(config_list: list, pdf_tables: list, field: str = "account_number"
             val = str([r for r in pdf_tables[ref["table"]]["data"]][ref["row"]][ref["cell"]])
         except IndexError:  # the ref can't be found, but a later ref may work so we contine
             continue
-
         if subs := sc["re_subs"]:
             for sub in subs:
                 val = re.sub(sub["pattern"], sub["replacement"], val)
@@ -99,6 +105,9 @@ def ref_specs(config_list: list, pdf_tables: list, field: str = "account_number"
     raise ValueError(
         f"No matching ref for {bank_name} - {account_name} - {account_type}\nFailure Field: {field}, file: {current_pdf}"
     )  # if we get this far we've not managed to match any refs
+
+
+results: list[tuple()] = []
 
 
 for tables in extract_pdf_tables(files):
@@ -119,20 +128,48 @@ for tables in extract_pdf_tables(files):
     account_number = ref_specs(spec, tables, "account_number")
     card_number = ref_specs(spec, tables, "card_number")
     account_name = ref_specs(spec, tables, "account_name")
-    opening_balance = ref_specs(spec, tables, "opening_balance")
-    closing_balance = ref_specs(spec, tables, "closing_balance")
-    payments_in = ref_specs(spec, tables, "payments_in")
-    payments_out = ref_specs(spec, tables, "payments_out")
+    opening_balance = float(debit_check(ref_specs(spec, tables, "opening_balance")))
+    closing_balance = float(debit_check(ref_specs(spec, tables, "closing_balance")))
+    payments_in = float(ref_specs(spec, tables, "payments_in"))
+    payments_out = float(ref_specs(spec, tables, "payments_out"))
 
-    print("sort_code: ", sort_code)
-    print("account: ", account_number)
-    print("card: ", card_number)
-    print("name: ", account_name)
-    print("opening", opening_balance)
-    print("closing", closing_balance)
-    print("in", payments_in)
-    print("out", payments_out)
-    print()
+    results.append(
+        (
+            current_pdf,
+            sort_code,
+            account_number,
+            card_number,
+            account_name,
+            opening_balance,
+            closing_balance,
+            payments_in,
+            payments_out,
+            balance_check(opening_balance, closing_balance, payments_in, payments_out, account_match["id_type"]),
+        )
+    )
+
+
+print("matched: ")
+for result in results:
+    if result[-1]:
+        print(result[0], ": ", result[5:])
+
+print("unmatched: ")
+for result in results:
+    if not result[-1]:
+        print(result[0], ": ", result[5:])
+
+print(len(files), len(results))
+# print("sort_code: ", sort_code)
+# print("account: ", account_number)
+# print("card: ", card_number)
+# print("name: ", account_name)
+# print("opening", opening_balance)
+# print("closing", closing_balance)
+# print("in", payments_in)
+# print("out", payments_out)
+# print()
+
 
 # for b in config.banks_base:
 #     bank_match = False
