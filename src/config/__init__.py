@@ -1,31 +1,32 @@
-import copy
 import os
 import pathlib
 
 from tomllib import load
 
 dir = pathlib.Path(__file__).parent
-banks_config = load(open(os.path.join(dir, "banks.toml"), "rb"))
-account_types_config = load(open(os.path.join(dir, "account_types.toml"), "rb"))
-accounts_config = load(open(os.path.join(dir, "accounts.toml"), "rb"))
-spec_statements_config = load(open(os.path.join(dir, "spec_statements.toml"), "rb"))
+_company = load(open(os.path.join(dir, "company.toml"), "rb"))
+_account_type = load(open(os.path.join(dir, "account_type.toml"), "rb"))
+_account = load(open(os.path.join(dir, "account.toml"), "rb"))
+_statement = load(open(os.path.join(dir, "statement.toml"), "rb"))
+_transaction = load(open(os.path.join(dir, "transaction.toml"), "rb"))
 
-banks = [b for b in banks_config["banks"]]
-account_types = [at for at in account_types_config["account_types"]]
-accounts = [a for a in accounts_config["accounts"]]
-spec_statements = spec_statements_config
+# Denormalise the config data...
+
+# transactions into statements
+for id, statement in _statement.items():
+    statement["transaction"] = _transaction[statement["transaction"]]
+
+# account types and statements into accounts
+for id, account in _account.items():
+    account["account_type"] = {"key": account["account_type"], "name": _account_type[account["account_type"]]["name"]}
+    account["statement"] = _statement[account["statement"]]
+
+# accounts into companies
+for id, company in _company.items():
+    company["accounts"] = {key: acct for key, acct in _account.items() if acct["company"] == id}
+
+companies = _company
 
 
-for acct in accounts:  # de-normalise - expand the accounts info
-    acct["type"] = str(next(at["name"] for at in account_types if at["id"] == acct["id_type"]))
-    acct["spec_statements"] = spec_statements[acct["spec_statement"]]
-
-banks_base = copy.deepcopy(banks)  # deep copy of banks so we can still access it without the accounts if required
-
-for bank in banks:  # merge accounts into banks
-    bank["accounts"] = [acct for acct in accounts if acct["id"] in bank["accounts"]]
-
-
-def bank_accounts(id_banks: int) -> list:
-    acc_list = next(bb["accounts"] for bb in banks_base if bb["id"] == id_banks)
-    return [ac for ac in accounts if ac["id"] in acc_list]
+def company_accounts(company: str) -> list:
+    return {key: acct for key, acct in _account.items() if acct["company"] == id}

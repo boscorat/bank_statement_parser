@@ -8,21 +8,21 @@ import config
 STATEMENT_DIRECTORY = "/home/boscorat/Downloads/Statements/"
 STATEMENT_DIRECTORY_CC = "/home/boscorat/Downloads/Statements/CC/"
 
-# files = listdir(STATEMENT_DIRECTORY)  # List of PDF files in the statements directory
-# files_CC = listdir(STATEMENT_DIRECTORY_CC)  # as above, but for credit card
-# # Filter out non-PDF files using a list comprehension
-# files = [f"{STATEMENT_DIRECTORY}/{filename}" for filename in files if filename.endswith(".pdf")]
-# files_CC = [f"{STATEMENT_DIRECTORY_CC}/{filename}" for filename in files_CC if filename.endswith(".pdf")]
-# files = files_CC
+files = listdir(STATEMENT_DIRECTORY)  # List of PDF files in the statements directory
+files_CC = listdir(STATEMENT_DIRECTORY_CC)  # as above, but for credit card
+# Filter out non-PDF files using a list comprehension
+files = [f"{STATEMENT_DIRECTORY}/{filename}" for filename in files if filename.endswith(".pdf")]
+files_CC = [f"{STATEMENT_DIRECTORY_CC}/{filename}" for filename in files_CC if filename.endswith(".pdf")]
+files = files + files_CC
 
 # # files = [file for file in files if file == "/home/boscorat/Downloads/Statements//2019-08-08_Statement.pdf"]
 
 
-files: list = [
-    "/home/boscorat/repos/bstec/statements/2022-12-08_Statement.pdf",  # CRD
-    "/home/boscorat/Downloads/Statements/2025-05-08_Statement.pdf",  # CUR
-    "/home/boscorat/Downloads/Statements/2025-02-28_Statement.pdf",  # SAV
-]
+# files: list = [
+#     "/home/boscorat/repos/bstec/statements/2022-12-08_Statement.pdf",  # CRD
+#     "/home/boscorat/Downloads/Statements/2025-05-08_Statement.pdf",  # CUR
+#     "/home/boscorat/Downloads/Statements/2025-02-28_Statement.pdf",  # SAV
+# ]
 
 current_pdf = ""
 
@@ -67,20 +67,20 @@ account_type: str = "<bank account type>"
 
 
 def ref_accounts(config_list: list, pdf_tables: list) -> dict | None:
-    for cr in config_list:
+    for id, row in config_list.items():
         ref_results: list = []
-        for ref in cr["refs"]:
-            ref = ref.replace(" ", "") if cr["refs_strip"] else ref
+        for ref in row["refs"]:
+            ref = ref.replace(" ", "") if row["refs_strip"] else ref
             text = ""
             for table_text in pdf_tables:
-                if table_text["page"] == cr["page"]:
-                    text += table_text["text_strip"] if cr["refs_strip"] else table_text["text"]
+                if table_text["page"] == row["page"]:
+                    text += table_text["text_strip"] if row["refs_strip"] else table_text["text"]
             ref_results.append((ref, ref in text))
         if len(ref_results) > 0:  # we've got some ref result
             matches = sum(1 for result in ref_results if result[1])
             if matches > 0:
-                if matches == len(ref_results) or not cr["refs_all"]:
-                    return cr
+                if matches == len(ref_results) or not row["refs_all"]:
+                    return row
                     break
     return None
 
@@ -111,11 +111,12 @@ results: list[tuple()] = []
 
 
 for tables in extract_pdf_tables(files):
-    bank_match = ref_accounts(config_list=config.banks, pdf_tables=tables)
-    bank_name = bank_match["name"]
-    account_match = ref_accounts(config_list=bank_match["accounts"], pdf_tables=tables)
+    company_match = ref_accounts(config_list=config.companies, pdf_tables=tables)
+    bank_name = company_match["name"]
+    account_match = ref_accounts(config_list=company_match["accounts"], pdf_tables=tables)
     account_name = account_match["name"]
-    account_type = account_match["type"]
+    account_type = account_match["account_type"]["key"]
+    account_type_name = account_match["account_type"]["name"]
 
     #     except Exception:
     #         return None
@@ -123,7 +124,7 @@ for tables in extract_pdf_tables(files):
     #     return None
 
     # statements
-    spec = account_match["spec_statements"]
+    spec = account_match["statement"]
     sort_code = ref_specs(spec, tables, "sort_code")
     account_number = ref_specs(spec, tables, "account_number")
     card_number = ref_specs(spec, tables, "card_number")
@@ -144,7 +145,7 @@ for tables in extract_pdf_tables(files):
             closing_balance,
             payments_in,
             payments_out,
-            balance_check(opening_balance, closing_balance, payments_in, payments_out, account_match["id_type"]),
+            balance_check(opening_balance, closing_balance, payments_in, payments_out, account_type),
         )
     )
 

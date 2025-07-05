@@ -1,6 +1,6 @@
-[specs_001]
-
-[specs_001.sort_code]
+[ST_001]
+transaction = 'TR_001'
+[ST_001.sort_code]
 ref_type = 'cell_value'  # (cell_value, table_search, row_search)
 re_subs = [
     {pattern = ' ', replacement = ''},
@@ -11,7 +11,7 @@ refs = [
     {table = 1, row = 9, cell = 1, re_search = '^[0-9]{2}-[0-9]{2}-[0-9]{2}'},
 ]
 
-[specs_001.account_number]
+[ST_001.account_number]
 ref_type = 'cell_value'  # (cell_value, table_search, row_search)
 re_subs = [
     {pattern = ' ', replacement = ''},
@@ -23,7 +23,7 @@ refs = [
     {table = 1, row = 9, cell = 1, re_search = '[0-9]{8}$'},
     {table = 1, row = 9, cell = 2, re_search = '^[0-9]{8}'},
 ]
-[specs_001.account_name]
+[ST_001.account_name]
 ref_type = 'cell_value'  # (cell_value, table_search, row_search)
 re_subs = [
     {pattern = 'Account Nam e', replacement = ''},
@@ -32,7 +32,7 @@ refs = [
     {table = 1, row = 8, cell = 0, re_search = '^[A-Z]+[a-zA-Z]+ [A-Z]+[a-zA-Z]+.*'},
     {table = 1, row = 9, cell = 0, re_search = '^[A-Z]+[a-zA-Z]+ [A-Z]+[a-zA-Z]+.*'},
 ]
-[specs_001.opening_balance]
+[ST_001.opening_balance]
 ref_type = 'cell_value'  # (cell_value, table_search, row_search)
 re_subs = [
     {pattern = '^£', replacement = ''},
@@ -43,7 +43,7 @@ re_subs = [
 refs = [
     {table = 0, row = 7, cell = 2, re_search = '^[0-9]*\.[0-9]{2}[D]?$'},
 ]
-[specs_001.closing_balance]
+[ST_001.closing_balance]
 ref_type = 'cell_value'  # (cell_value, table_search, row_search)
 re_subs = [
     {pattern = '^£', replacement = ''},
@@ -54,7 +54,7 @@ re_subs = [
 refs = [
     {table = 0, row = 10, cell = 2, re_search = '^[0-9]*\.[0-9]{2}[D]?$'},
 ]
-[specs_001.payments_in]
+[ST_001.payments_in]
 ref_type = 'cell_value'  # (cell_value, table_search, row_search)
 re_subs = [
     {pattern = '^£', replacement = ''},
@@ -65,7 +65,7 @@ re_subs = [
 refs = [
     {table = 0, row = 8, cell = 2, re_search = '^[0-9]*\.[0-9]{2}$'},
 ]
-[specs_001.payments_out]
+[ST_001.payments_out]
 ref_type = 'cell_value'  # (cell_value, table_search, row_search)
 re_subs = [
     {pattern = '^£', replacement = ''},
@@ -78,9 +78,10 @@ refs = [
 ]
 
 
-[specs_002]
+[ST_002]
+transaction = 'TR_002'
 
-[specs_002.card_number]
+[ST_002.card_number]
 ref_type = 'cell_value'  # (cell_value, table_search, row_search)
 re_subs= false
 refs = [
@@ -90,7 +91,7 @@ refs = [
     {table = 2, row = 2, cell = 2, re_search = '^[0-9]{4} [0-9]{4} [0-9]{4} [0-9]{4}$'},
 ]
 
-[specs_002.account_name]
+[ST_002.account_name]
 ref_type = 'cell_value'  # (cell_value, table_search, row_search)
 re_subs= false
 refs = [
@@ -98,7 +99,7 @@ refs = [
     {table = 2, row = 2, cell = 0, re_search = '^[A-Z]+[a-zA-Z]+ [A-Z]+[a-zA-Z]+.*'},
 ]
 
-[specs_002.opening_balance]
+[ST_002.opening_balance]
 ref_type = 'cell_value'  # (cell_value, table_search, row_search)
 re_subs = [
     {pattern = '^£', replacement = ''},
@@ -111,7 +112,7 @@ refs = [
     {table = 0, row = 12, cell = 1, re_search = '^[0-9]*\.[0-9]{2}$'},
     {table = 0, row = 13, cell = 1, re_search = '^[0-9]*\.[0-9]{2}$'},
 ]
-[specs_002.closing_balance]
+[ST_002.closing_balance]
 ref_type = 'cell_value'  # (cell_value, table_search, row_search)
 re_subs = [
     {pattern = '^£', replacement = ''},
@@ -124,7 +125,7 @@ refs = [
     {table = 0, row = 15, cell = 1, re_search = '^[0-9]*\.[0-9]{2}$'},
     {table = 0, row = 16, cell = 1, re_search = '^[0-9]*\.[0-9]{2}$'},
 ]
-[specs_002.payments_in]
+[ST_002.payments_in]
 ref_type = 'cell_value'  # (cell_value, table_search, row_search)
 re_subs = [
     {pattern = '^£', replacement = ''},
@@ -137,7 +138,7 @@ refs = [
     {table = 0, row = 14, cell = 1, re_search = '^[0-9]*\.[0-9]{2}$'},
     {table = 0, row = 15, cell = 1, re_search = '^[0-9]*\.[0-9]{2}$'},
 ]
-[specs_002.payments_out]
+[ST_002.payments_out]
 ref_type = 'cell_value'  # (cell_value, table_search, row_search)
 re_subs = [
     {pattern = '^£', replacement = ''},

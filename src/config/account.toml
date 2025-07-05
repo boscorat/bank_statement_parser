@@ -1,0 +1,61 @@
+# specify the method by which a type of bank account is identified
+
+[CRD_001]                                       # incremental id
+account_type = 'CRD'                            # record in account_type.toml
+company = 'HSBC_UK'                             # record in company.toml
+statement = 'ST_002'                            # record in statement.toml
+name = "Credit Card"                            # friendly name
+refs = ["Card number","Minimum payments"]      # a list of refs to identify the account
+refs_all = true                                 # true if all specified refs must be found, false will id the account if any refs are found
+page = 1                                        # The number of the table to search for the account refs
+refs_strip = true                               # when matching the ref, should we strip out spaces?
+
+[SAV_001]
+account_type = 'SAV'
+company = 'HSBC_UK'
+statement = 'ST_001'
+name = "Flexible Saver"
+refs = ["flexiblesaverdetails", 'Your Flexible Saver']
+refs_all = false
+page = 1
+refs_strip = true
+
+[CUR_001]
+account_type = 'CUR'
+company = 'HSBC_UK'
+statement = 'ST_001'
+name = "Bank Account"
+refs = ["bankaccountdetails", "Arranged Overdraft Limit"]
+refs_all = false
+page = 1
+refs_strip = true
+
+[CUR_002]
+account_type = 'CUR'
+company = 'HSBC_UK'
+statement = 'ST_001'
+name = "Advance Account"
+refs = ["Your HSBC Advance  details"]
+refs_all = true
+page = 1
+refs_strip = true
+
+[SAV_002]
+account_type = 'SAV'
+company = 'HSBC_UK'
+statement = 'ST_001'
+name = "Online Bonus Saver"
+refs = ["Your Online Bonus Saver"]
+refs_all = true
+page = 1
+refs_strip = true
+
+[SAV_003]
+account_type = 'SAV'
+company = 'NATWEST_UK'
+statement = 'ST_001'
+name = "Online Bonus Saver"
+refs = ["Your Online Bonus Saver"]
+refs_all = true
+page = 1
+refs_strip = true
