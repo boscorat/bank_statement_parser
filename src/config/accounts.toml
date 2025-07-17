@@ -1,0 +1,79 @@
+# specify the method by which a type of bank account is identified
+
+[HSBC_UK_CRD_RCC]
+account = "Rewards Credit Card"
+company_key = 'HSBC_UK'
+account_type_key = 'CRD'
+statement_type_key = 'HSBC_UK_CRD'
+[HSBC_UK_CRD_RCC.config]
+page_number = 1
+region = {top_left = [275, 20], bottom_right = [575, 70]}
+type = 'search'
+fields = [
+    {field = 'account', pattern='Rewards[\s]*Credit[\s]*Card'},
+]
+
+[HSBC_UK_SAV_FLX]
+account = "Flexible Saver"
+company_key = 'HSBC_UK'
+account_type_key = 'SAV'
+statement_type_key = 'HSBC_UK_SAV'
+[HSBC_UK_SAV_FLX.config]
+page_number = 1
+region = {top_left = [37, 425], bottom_right = [255, 480]}
+type = 'search'
+fields = [
+    {field = 'account', pattern='Flexible[\s]*Saver'},
+]
+
+[HSBC_UK_CUR_STD]
+account = "Bank Account"
+company_key = 'HSBC_UK'
+account_type_key = 'CUR'
+statement_type_key = 'HSBC_UK_CUR'
+[HSBC_UK_CUR_STD.config]
+page_number = 1
+region = {top_left = [37, 400], bottom_right = [255, 465]}
+type = 'search'
+fields = [
+    {field = 'account', pattern='Bank[\s]*Account'},
+]
+
+[HSBC_UK_CUR_ADV]
+account = "HSBC Advance"
+company_key = 'HSBC_UK'
+account_type_key = 'CUR'
+statement_type_key = 'HSBC_UK_CUR'
+[HSBC_UK_CUR_ADV.config]
+page_number = 1
+region = {top_left = [37, 400], bottom_right = [255, 465]}
+type = 'search'
+fields = [
+    {field = 'account', pattern='HSBC[\s]*Advance'},
+]
+
+[HSBC_UK_SAV_OBS]
+account = "Online Bonus Saver"
+company_key = 'HSBC_UK'
+account_type_key = 'SAV'
+statement_type_key = 'HSBC_UK_SAV'
+[HSBC_UK_SAV_OBS.config]
+page_number = 1
+region = {top_left = [37, 425], bottom_right = [255, 490]}
+type = 'search'
+fields = [
+    {field = 'account', pattern='Online[\s]*Bonus[\s]*Saver'},
+]
+
+[NATWEST_UK_SAV_OBS]
+account = "Online Bonus Saver"
+company_key = 'NATWEST_UK'
+account_type_key = 'SAV'
+statement_type_key = 'NATWEST_UK_SAV'
+[NATWEST_UK_SAV_OBS.config]
+page_number = 1
+region = {top_left = [37, 425], bottom_right = [255, 490]}
+type = 'search'
+fields = [
+    {field = 'account', pattern='Online[\s]*Bonus[\s]*Saver'},
+]
