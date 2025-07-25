@@ -10,10 +10,10 @@ class StatementError(Exception):
     pass
 
 
-Result = namedtuple("Result", "file company account config fields tests")
+Result = namedtuple("Result", "file company account config fields tests page_number_config")
 FieldResults = namedtuple("FieldResults", "field")
 ConfigResults = namedtuple("ConfigResults", "results_full results_field")
-FieldResult = namedtuple("FieldResult", "page_number field type value result vital exception")
+FieldResult = namedtuple("FieldResult", "page_number field type cell_value value success vital exception")
 
 
 def main():
@@ -45,22 +45,25 @@ def main():
         configs_page = config_statement_type.page.configs
         configs_lines = config_statement_type.lines.configs
 
-    header_results = get_field_values(configs_header, statement, file, company, account)
-    page_results = get_field_values(configs_page, statement, file, company, account)
-    lines_results = get_field_values(configs_lines, statement, file, company, account)
+    if configs_header:
+        header_results = get_field_values(configs_header, statement, file, company, account)
+    if configs_page:
+        page_results = get_field_values(configs_page, statement, file, company, account)
+    if configs_lines:
+        lines_results = get_field_values(configs_lines, statement, file, company, account)
 
     print(header_results.results_field)
+    print(page_results.results_field)
 
 
 def get_field_values(configs, statement, file, company, account) -> ConfigResults:
     results: list = []
-    if configs:
-        for config in configs:
-            extract = extract_field_values(config=config, statement=statement)
-            fields, tests = extract
-            result = Result(file, company, account, config.config, fields, tests)
-            results.append(result)
-        field_results = get_field_results(results, file, company)
+    for config in configs:
+        extract = extract_field_values(config=config, statement=statement)
+        fields, tests, page_number_config = extract
+        result = Result(file, company, account, config.config, fields, tests, page_number_config)
+        results.append(result)
+    field_results = get_field_results(results, file, company)
     return ConfigResults(results, field_results)
 
 
@@ -76,7 +79,7 @@ def get_field_results(results: list[Result], file, company) -> tuple | None:
                     raise StatementError(
                         f"EXCEPTION: {field.exception}\nfile: {file}\ncompany: {company}\nfield group: {result.config}\nfield: {field.field}"
                     )
-                elif not field.result:
+                elif not field.success:
                     raise StatementError(
                         f"EXCEPTION: Vital Field Without Value!\nfile: {file}\ncompany: {company}\nfield group: {result.config}\nfield: {field.field}"
                     )
@@ -85,32 +88,27 @@ def get_field_results(results: list[Result], file, company) -> tuple | None:
                     print(
                         f"WARNING: {field.exception}\nfile: {file}\ncompany: {company}\nfield group: {result.config}\nfield: {field.field}"
                     )
-                elif not field.result:
+                elif not field.success:
                     print(
                         f"WARNING: non-vital field without value\nfile: {file}\ncompany: {company}\nfield group: {result.config}\nfield: {field.field}"
                     )
-            field_names.append(field.field)
-            if field.value.string or field.value:
-            try:
-                if field.type == "float":
-                    try:
-                        field_values.append(float(field.value.string))
-                    except AttributeError:
+            field_names.append(field.field + (f"_{str(field.page_number)}" if not result.page_number_config else ""))
+
+            if field.value:
+                try:
+                    if field.type == "float":
                         field_values.append(float(field.value))
-                elif field.type == "int":
-                    try:
-                        field_values.append(int(field.value.string))
-                    except AttributeError:
+                    elif field.type == "int":
                         field_values.append(int(field.value))
-                else:
-                    try:
-                        field_values.append(field.value.string)
-                    except AttributeError:
+                    else:
                         field_values.append(field.value)
                 except TypeError:
                     raise StatementError(
                         f"EXCEPTION: {field.field} should have the type of {field.type}!\nfile: {file}\ncompany: {company}\nfield group: {result.config}\nfield: {field.field}"
                     )
+            else:
+                field_values.append("<missing>")
+
     FieldResults = namedtuple("FieldResults", field_names)
     field_results = FieldResults(*field_values)
     if get_test_results(results, field_results, file, company):
@@ -178,6 +176,9 @@ def get_config_from_account(account_key: str, file) -> cf.Account:
 def extract_field_values(config, statement):
     field_pages = []
     field_results: list[FieldResult] = []
+    cell_value: str | None
+    success: bool = False
+    exception: str = ""
     if config.page_number:
         field_pages = [page for page in statement.pages if page.page_number == config.page_number]
     else:
@@ -185,12 +186,17 @@ def extract_field_values(config, statement):
     for page in field_pages:
         region = page_crop(page, config.region.top_left, config.region.bottom_right)
         for field in config.fields:
+            cell_value = None
+            success = False
+            exception = ""
             if config.type == "search":
                 if search := region_search(region, field.pattern):
+                    cell_value = search
                     success = True
                 else:
+                    cell_value = None
                     success = False
-                field_results.append(FieldResult(page.page_number, field.field, field.type, search, success, field.vital, ""))
+                    exception = "" if success else f"{field.field}: {field.pattern} not found"
             elif config.type == "table":
                 table = region_table(
                     region=region, header_rows=config.header_rows, data_rows=config.data_rows, row_spacing=config.row_spacing
@@ -198,46 +204,54 @@ def extract_field_values(config, statement):
                 try:
                     cell_value = table[field.cell.row][field.cell.col]
                 except IndexError:
-                    cell_value = ""
-                    field_results.append(
-                        FieldResult(page.page_number, field.field, field.type, None, False, field.vital, "Cell Reference Not in table")
-                    )
-                # strip characters if required
-                if field.strip:
-                    for char in field.strip:
-                        cell_value = cell_value.replace(char, "")
-                # validate cell value
-                if search := re.search(field.pattern, cell_value):
-                    success = True
-                else:
+                    cell_value = None
                     success = False
-                field_results.append(FieldResult(page.page_number, field.field, field.type, search, success, field.vital, ""))
+                    exception = f"cell[row={field.cell.row}, column={field.cell.col}] not found in specified table"
+                if cell_value:  # if we've got a cell value
+                    # strip characters if required
+                    if field.strip:
+                        for char in field.strip:
+                            cell_value = cell_value.replace(char, "")
+                    # validate cell value
+                    if search := re.search(field.pattern, cell_value):
+                        success = True
+                        cell_value = search.string
+                    else:
+                        success = False
+                        exception = f"cell_value of {cell_value} does not match pattern {field.pattern}"
+                else:
+                    exception = exception if exception else f"cell[row={field.cell.row}, column={field.cell.col}] contains an empty string"
             else:
-                field_results.append(
-                    FieldResult(
-                        page.page_number,
-                        field.field,
-                        field.type,
-                        None,
-                        False,
-                        field.vital,
-                        "Unknown config type - should be 'search' or 'table'",
-                    )
+                cell_value = None
+                success = False
+                exception = "Unknown config type - should be 'search' or 'table'"
+
+            field_results.append(
+                FieldResult(
+                    page_number=page.page_number,
+                    field=field.field,
+                    type=field.type,
+                    cell_value=cell_value,
+                    value=cell_value if success else None,
+                    success=success,
+                    vital=field.vital,
+                    exception=exception,
                 )
-    return (field_results, config.tests)
+            )
+    return (field_results, config.tests, config.page_number)
 
 
 def pick_leaf(leaves, statement) -> tuple[cf.Account, str]:
     if type(leaves) is dict:
         for key, leaf in leaves.items():
             if extract := extract_field_values(config=leaf.config, statement=statement)[0]:
-                if sum([1 for record in extract if record.result]):
+                if sum([1 for record in extract if record.success]):
                     result = (leaf, key)
                     break
     elif type(leaves) is list:
         for leaf in leaves:
             if extract := extract_field_values(config=leaf.config, statement=statement)[0]:
-                if sum([1 for record in extract if record.result]):
+                if sum([1 for record in extract if record.success]):
                     result = (leaf, "")
                     break
     else:

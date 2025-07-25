@@ -40,8 +40,11 @@ statement_type = 'HSBC UK Current Account'
             ]
     [HSBC_UK_CUR.page]
             [[HSBC_UK_CUR.page.configs]]
-            config = 'Page Info Sheet 1'
-            region = {top_left = [37, 365], bottom_right = [575, 410]}
+            config = 'Page Info'
+            region = [
+                {top_left = [37, 365], bottom_right = [575, 410]},
+                {top_left = [37, 140], bottom_right = [575, 191]}
+            ]
             type = 'table'
             header_rows = 1
             data_rows = 1
