@@ -34,7 +34,7 @@ class Region:
 class Config:
     config: Optional[str]
     page_number: Optional[int]
-    region: Optional[Region]
+    regions: Optional[list[Region]]
     type: Optional[str]
     fields: Optional[list[Field]]
     row_spacing: Optional[int]

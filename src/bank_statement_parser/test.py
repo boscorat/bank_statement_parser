@@ -107,7 +107,13 @@ def get_field_results(results: list[Result], file, company) -> tuple | None:
                         f"EXCEPTION: {field.field} should have the type of {field.type}!\nfile: {file}\ncompany: {company}\nfield group: {result.config}\nfield: {field.field}"
                     )
             else:
-                field_values.append("<missing>")
+                del field_names[-1]  # delete the last field name if no value
+
+    # # remove missing records
+    # for id, val in enumerate(field_values):
+    #     if val == "<missing>":
+    #         del field_names[id]
+    #         del field_values[id]
 
     FieldResults = namedtuple("FieldResults", field_names)
     field_results = FieldResults(*field_values)
@@ -184,60 +190,63 @@ def extract_field_values(config, statement):
     else:
         field_pages = [page for page in statement.pages]
     for page in field_pages:
-        region = page_crop(page, config.region.top_left, config.region.bottom_right)
-        for field in config.fields:
-            cell_value = None
-            success = False
-            exception = ""
-            if config.type == "search":
-                if search := region_search(region, field.pattern):
-                    cell_value = search
-                    success = True
-                else:
-                    cell_value = None
-                    success = False
-                    exception = "" if success else f"{field.field}: {field.pattern} not found"
-            elif config.type == "table":
-                table = region_table(
-                    region=region, header_rows=config.header_rows, data_rows=config.data_rows, row_spacing=config.row_spacing
-                )
-                try:
-                    cell_value = table[field.cell.row][field.cell.col]
-                except IndexError:
-                    cell_value = None
-                    success = False
-                    exception = f"cell[row={field.cell.row}, column={field.cell.col}] not found in specified table"
-                if cell_value:  # if we've got a cell value
-                    # strip characters if required
-                    if field.strip:
-                        for char in field.strip:
-                            cell_value = cell_value.replace(char, "")
-                    # validate cell value
-                    if search := re.search(field.pattern, cell_value):
-                        success = True
-                        cell_value = search.string
-                    else:
-                        success = False
-                        exception = f"cell_value of {cell_value} does not match pattern {field.pattern}"
-                else:
-                    exception = exception if exception else f"cell[row={field.cell.row}, column={field.cell.col}] contains an empty string"
-            else:
+        for reg in config.regions:
+            region = page_crop(page, reg.top_left, reg.bottom_right)
+            for field in config.fields:
                 cell_value = None
                 success = False
-                exception = "Unknown config type - should be 'search' or 'table'"
+                exception = ""
+                if config.type == "search":
+                    if search := region_search(region, field.pattern):
+                        cell_value = search
+                        success = True
+                    else:
+                        cell_value = None
+                        success = False
+                        exception = "" if success else f"{field.field}: {field.pattern} not found"
+                elif config.type == "table":
+                    table = region_table(
+                        region=region, header_rows=config.header_rows, data_rows=config.data_rows, row_spacing=config.row_spacing
+                    )
+                    try:
+                        cell_value = table[field.cell.row][field.cell.col]
+                    except IndexError:
+                        cell_value = None
+                        success = False
+                        exception = f"cell[row={field.cell.row}, column={field.cell.col}] not found in specified table"
+                    if cell_value:  # if we've got a cell value
+                        # strip characters if required
+                        if field.strip:
+                            for char in field.strip:
+                                cell_value = cell_value.replace(char, "")
+                        # validate cell value
+                        if search := re.search(field.pattern, cell_value):
+                            success = True
+                            cell_value = search.string
+                        else:
+                            success = False
+                            exception = f"cell_value of {cell_value} does not match pattern {field.pattern}"
+                    else:
+                        exception = (
+                            exception if exception else f"cell[row={field.cell.row}, column={field.cell.col}] contains an empty string"
+                        )
+                else:
+                    cell_value = None
+                    success = False
+                    exception = "Unknown config type - should be 'search' or 'table'"
 
-            field_results.append(
-                FieldResult(
-                    page_number=page.page_number,
-                    field=field.field,
-                    type=field.type,
-                    cell_value=cell_value,
-                    value=cell_value if success else None,
-                    success=success,
-                    vital=field.vital,
-                    exception=exception,
+                field_results.append(
+                    FieldResult(
+                        page_number=page.page_number,
+                        field=field.field,
+                        type=field.type,
+                        cell_value=cell_value,
+                        value=cell_value if success else None,
+                        success=success,
+                        vital=field.vital,
+                        exception=exception,
+                    )
                 )
-            )
     return (field_results, config.tests, config.page_number)
 
 

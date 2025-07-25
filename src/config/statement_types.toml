@@ -4,7 +4,9 @@ statement_type = 'HSBC UK Current Account'
         [[HSBC_UK_CUR.header.configs]]
             config = 'Statement Balances'
             page_number = 1
-            region = {top_left = [345, 180], bottom_right = [575, 294]}
+            regions = [
+                {top_left = [345, 180], bottom_right = [575, 294]}
+            ]
             type = 'table'
             row_spacing = 7
             header_rows = 1
@@ -21,7 +23,9 @@ statement_type = 'HSBC UK Current Account'
         [[HSBC_UK_CUR.header.configs]]
             config = 'Statemnt Info'
             page_number = 1
-            region = {top_left = [37, 325], bottom_right = [190, 360]}
+            regions = [
+                {top_left = [37, 325], bottom_right = [190, 360]}
+            ]
             type = 'search'
             fields = [
                 {field = 'statement_date', pattern ='^[1-3]?[0-9]\s[A-Z][a-z]{2,8}\sto\s[1-3]?[0-9]\s[A-Z][a-z]{2,8}\s[0-9]{4}$', type='str'},
@@ -29,7 +33,9 @@ statement_type = 'HSBC UK Current Account'
         [[HSBC_UK_CUR.header.configs]]
             config = 'Account Info'
             page_number = 1
-            region = {top_left = [37, 365], bottom_right = [575, 410]}
+            regions = [
+                {top_left = [37, 365], bottom_right = [575, 410]}
+            ]
             type = 'table'
             header_rows = 1
             data_rows = 1
@@ -41,7 +47,7 @@ statement_type = 'HSBC UK Current Account'
     [HSBC_UK_CUR.page]
             [[HSBC_UK_CUR.page.configs]]
             config = 'Page Info'
-            region = [
+            regions = [
                 {top_left = [37, 365], bottom_right = [575, 410]},
                 {top_left = [37, 140], bottom_right = [575, 191]}
             ]

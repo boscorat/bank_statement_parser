@@ -7,7 +7,9 @@ account_type_key = 'CRD'
 statement_type_key = 'HSBC_UK_CRD'
 [HSBC_UK_CRD_RCC.config]
 page_number = 1
-region = {top_left = [275, 20], bottom_right = [575, 70]}
+regions = [
+    {top_left = [275, 20], bottom_right = [575, 70]}
+]
 type = 'search'
 fields = [
     {field = 'account', pattern='Rewards[\s]*Credit[\s]*Card'},
@@ -20,7 +22,9 @@ account_type_key = 'SAV'
 statement_type_key = 'HSBC_UK_SAV'
 [HSBC_UK_SAV_FLX.config]
 page_number = 1
-region = {top_left = [37, 425], bottom_right = [255, 480]}
+regions = [
+    {top_left = [37, 425], bottom_right = [255, 480]}
+]
 type = 'search'
 fields = [
     {field = 'account', pattern='Flexible[\s]*Saver'},
@@ -33,7 +37,9 @@ account_type_key = 'CUR'
 statement_type_key = 'HSBC_UK_CUR'
 [HSBC_UK_CUR_STD.config]
 page_number = 1
-region = {top_left = [37, 400], bottom_right = [255, 465]}
+regions = [
+    {top_left = [37, 400], bottom_right = [255, 465]}
+]
 type = 'search'
 fields = [
     {field = 'account', pattern='Bank[\s]*Account'},
@@ -46,7 +52,9 @@ account_type_key = 'CUR'
 statement_type_key = 'HSBC_UK_CUR'
 [HSBC_UK_CUR_ADV.config]
 page_number = 1
-region = {top_left = [37, 400], bottom_right = [255, 465]}
+regions = [
+    {top_left = [37, 400], bottom_right = [255, 465]}
+]
 type = 'search'
 fields = [
     {field = 'account', pattern='HSBC[\s]*Advance'},
@@ -59,7 +67,9 @@ account_type_key = 'SAV'
 statement_type_key = 'HSBC_UK_SAV'
 [HSBC_UK_SAV_OBS.config]
 page_number = 1
-region = {top_left = [37, 425], bottom_right = [255, 490]}
+regions = [
+    {top_left = [37, 425], bottom_right = [255, 490]}
+]
 type = 'search'
 fields = [
     {field = 'account', pattern='Online[\s]*Bonus[\s]*Saver'},
@@ -72,7 +82,9 @@ account_type_key = 'SAV'
 statement_type_key = 'NATWEST_UK_SAV'
 [NATWEST_UK_SAV_OBS.config]
 page_number = 1
-region = {top_left = [37, 425], bottom_right = [255, 490]}
+regions = [
+    {top_left = [37, 425], bottom_right = [255, 490]}
+]
 type = 'search'
 fields = [
     {field = 'account', pattern='Online[\s]*Bonus[\s]*Saver'},
