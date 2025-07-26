@@ -10,7 +10,7 @@ page_number = 1
 regions = [
     {top_left = [275, 20], bottom_right = [575, 70]}
 ]
-type = 'search'
+type = 'text'
 fields = [
     {field = 'account', pattern='Rewards[\s]*Credit[\s]*Card'},
 ]
@@ -25,7 +25,7 @@ page_number = 1
 regions = [
     {top_left = [37, 425], bottom_right = [255, 480]}
 ]
-type = 'search'
+type = 'text'
 fields = [
     {field = 'account', pattern='Flexible[\s]*Saver'},
 ]
@@ -40,7 +40,7 @@ page_number = 1
 regions = [
     {top_left = [37, 400], bottom_right = [255, 465]}
 ]
-type = 'search'
+type = 'text'
 fields = [
     {field = 'account', pattern='Bank[\s]*Account'},
 ]
@@ -55,7 +55,7 @@ page_number = 1
 regions = [
     {top_left = [37, 400], bottom_right = [255, 465]}
 ]
-type = 'search'
+type = 'text'
 fields = [
     {field = 'account', pattern='HSBC[\s]*Advance'},
 ]
@@ -70,7 +70,7 @@ page_number = 1
 regions = [
     {top_left = [37, 425], bottom_right = [255, 490]}
 ]
-type = 'search'
+type = 'text'
 fields = [
     {field = 'account', pattern='Online[\s]*Bonus[\s]*Saver'},
 ]
@@ -85,7 +85,7 @@ page_number = 1
 regions = [
     {top_left = [37, 425], bottom_right = [255, 490]}
 ]
-type = 'search'
+type = 'text'
 fields = [
     {field = 'account', pattern='Online[\s]*Bonus[\s]*Saver'},
 ]

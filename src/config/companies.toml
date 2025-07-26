@@ -3,9 +3,9 @@ company = 'HSBC Bank UK'
 [HSBC_UK.config]
     page_number = 1
     regions = [
-        {top_left = [367, 64], bottom_right = [575, 130]}
+        {top_left = [475,110], bottom_right = [575, 130]}
     ]
-    type = 'search'
+    type = 'text'
     fields = [
         {field = 'website', pattern ='www\.hsbc\.co\.uk'},
     ]
@@ -17,7 +17,7 @@ company = 'NatWest Bank UK'
     regions = [
         {top_left = [367, 64], bottom_right = [575, 130]}
     ]
-    type = 'search'
+    type = 'text'
     fields = [
         {field = 'website', pattern ='www\.natwest\.co\.uk'},
     ]

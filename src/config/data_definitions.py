@@ -38,7 +38,8 @@ class Config:
     type: Optional[str]
     fields: Optional[list[Field]]
     row_spacing: Optional[int]
-    header_rows: Optional[int]
+    table_rows: Optional[int]
+    table_columns: Optional[int]
     data_rows: Optional[int]
     tests: Optional[list[Test]]
 

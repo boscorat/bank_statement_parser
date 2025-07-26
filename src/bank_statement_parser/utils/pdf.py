@@ -24,20 +24,22 @@ def page_text(page):
     return page_text
 
 
-def region_table(region, header_rows: int | None, data_rows: int | None, row_spacing: int | None):
-    # if data_rows:
-    #     min_words_vertical = 1  # data_rows  # + header_rows if header_rows else 0
-    # else:
-    #     min_words_vertical = 3
-    snap_y_tolerance = row_spacing if row_spacing else 3
-    table = region.extract_table(
-        table_settings={
-            "vertical_strategy": "text",
-            "horizontal_strategy": "text",
-            "snap_y_tolerance": snap_y_tolerance,
-            "min_words_vertical": 2,
-        }
-    )
+def region_table(region, table_rows: int | None, table_columns: int | None, row_spacing: int | None):
+    tbl_settings: dict = {
+        "vertical_strategy": "text",
+        "horizontal_strategy": "text",
+        "min_words_vertical": 2,
+        "min_words_horizontal": 2,
+        "snap_y_tolerance": 3,
+    }
+    if table_rows:
+        tbl_settings["min_words_vertical"] = table_rows
+    if table_columns:
+        tbl_settings["min_words_horizontal"] = table_columns
+    if row_spacing:
+        tbl_settings["snap_y_tolerance"] = row_spacing
+
+    table = region.extract_table(table_settings=tbl_settings)
     return table
 
 
