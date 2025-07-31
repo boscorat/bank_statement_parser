@@ -1,0 +1,58 @@
+[HSBC_UK_CUR_ACCT_SUM]
+statement_table = 'Account Summary'
+row_spacing = 7
+locations = [
+    {page_number=1, top_left = [345, 180], bottom_right = [575, 294]},
+]
+fields = [
+    {field = 'opening_balance', cell = {row = 1, col = 1}, strip = ['£',' ',',','\n'], pattern ='^[0-9]*\.[0-9]{2}[D]?$', vital=true, type='float'},
+    {field = 'payments_in', cell = {row = 2, col = 1}, strip = ['£',' ',',','\n'], pattern ='^[0-9]*\.[0-9]{2}[D]?$', vital=true, type='float'},
+    {field = 'payments_out', cell = {row = 3, col = 1}, strip = ['£',' ',',','\n'], pattern ='^[0-9]*\.[0-9]{2}[D]?$', vital=true, type='float'},
+    {field = 'closing_balance', cell = {row = 4, col = 1}, strip = ['£',' ',',','\n'], pattern ='^[0-9]*\.[0-9]{2}[D]?$', vital=true, type='float'},
+]
+# tests = [
+#     {test_desc = 'credits and debits match balance movement', assertion = "({closing_balance} - {opening_balance}) = ({payments_in} + ({payments_out} * -1))"}
+# ]
+
+[HSBC_UK_CUR_ACCT_DET]
+statement_table = 'Account Details'
+table_columns = 4
+table_rows = 2
+locations = [
+    {page_number = 1, top_left = [37, 365], bottom_right = [575, 410]},
+]
+fields = [
+    {field = 'account_name', cell = {row = 1, col = 0}, pattern ='^[A-Z]+[a-z]*\s[A-Z]+[a-z]*.*$', vital=true, type='str'},
+    {field = 'sortcode', cell = {row = 1, col = 1}, pattern ='^[0-9]{2}-[0-9]{2}-[0-9]{2}$', vital=true, type='str'},
+    {field = 'account_number', cell = {row = 1, col = 2}, pattern ='^[0-9]{8}$', vital=true, type='str'},
+]
+
+[HSBC_UK_SAV_ACCT_DET]
+statement_table = 'Account Details'
+table_columns = 4
+table_rows = 2
+locations = [
+    {page_number = 1, top_left = [37, 390], bottom_right = [575, 430]},
+]
+fields = [
+    {field = 'account_name', cell = {row = 1, col = 0}, pattern ='^[A-Z]+[a-z]*\s[A-Z]+[a-z]*.*$', vital=true, type='str'},
+    {field = 'sortcode', cell = {row = 1, col = 1}, pattern ='^[0-9]{2}-[0-9]{2}-[0-9]{2}$', vital=true, type='str'},
+    {field = 'account_number', cell = {row = 1, col = 2}, pattern ='^[0-9]{8}$', vital=true, type='str'},
+]
+
+[HSBC_UK_CRD_ACCT_SUM]
+statement_table = 'Account Summary'
+row_spacing = 7
+locations = [
+    {page_number=1, top_left = [335, 180], bottom_right = [575, 380]},
+]
+fields = [
+    {field = 'credit_limit', cell = {row = 0, col = 1}, strip = ['£',' ',',','\n'], pattern ='^[0-9]*\.[0-9]{2}[D]?$', vital=false, type='float'},
+    {field = 'apr', cell = {row = 1, col = 1}, strip = ['%',' ',',','\n'], pattern ='^[0-9]*\.[0-9]{1}[D]?$', vital=false, type='float'},
+    {field = 'previous_balance', cell = {row = 2, col = 1}, strip = ['£',' ',',','\n'], pattern ='^[0-9]*\.[0-9]{2}[D]?$', vital=false, type='float'},
+    {field = 'debits', cell = {row = 3, col = 1}, strip = ['£',' ',',','\n'], pattern ='^[0-9]*\.[0-9]{2}[D]?$', vital=true, type='float'},
+    {field = 'credits', cell = {row = 4, col = 1}, strip = ['£',' ',',','\n'], pattern ='^[0-9]*\.[0-9]{2}[D]?$', vital=true, type='float'},
+    {field = 'new_balance', cell = {row = 5, col = 1}, strip = ['£',' ',',','\n'], pattern ='^[0-9]*\.[0-9]{2}[D]?$', vital=true, type='float'},
+    {field = 'transaction_balance', cell = {row = 6, col = 1}, strip = ['£',' ',',','\n'], pattern ='^[0-9]*\.[0-9]{2}[D]?$', vital=true, type='float'},
+    {field = 'minimum_payment', cell = {row = 7, col = 1}, strip = ['£',' ',',','\n'], pattern ='^[0-9]*\.[0-9]{2}[D]?$', vital=false, type='float'}
+]

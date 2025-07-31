@@ -25,23 +25,31 @@ class Test:
 
 
 @dataclass
-class Region:
+class Location:
+    page_number: Optional[int]
     top_left: list[int]
     bottom_right: list[int]
 
 
 @dataclass
+class StatementTable:
+    statement_table: str
+    locations: list[Location]
+    fields: list[Field]
+    table_columns: Optional[int]
+    table_rows: Optional[int]
+    row_spacing: Optional[int]
+    tests: Optional[list[Test]]
+
+
+@dataclass
 class Config:
     config: Optional[str]
-    page_number: Optional[int]
-    regions: Optional[list[Region]]
-    type: Optional[str]
-    fields: Optional[list[Field]]
-    row_spacing: Optional[int]
-    table_rows: Optional[int]
-    table_columns: Optional[int]
-    data_rows: Optional[int]
-    tests: Optional[list[Test]]
+    statement_table_key: Optional[str]
+    statement_table: Optional[StatementTable]
+    location: Optional[Location]
+    locations: Optional[list[Location]]
+    field: Optional[Field]
 
 
 @dataclass
@@ -53,7 +61,7 @@ class ConfigGroup:
 class StatementType:
     statement_type: str
     header: ConfigGroup
-    page: ConfigGroup
+    pages: ConfigGroup
     lines: ConfigGroup
 
 
