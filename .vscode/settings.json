@@ -1,6 +1,7 @@
 {
     "python.analysis.extraPaths": [
         "./src/bank_statement_parser",
-        "./src/config"
+        "./src/config",
+        "./src/bank_statement_parser/modules"
     ]
 }

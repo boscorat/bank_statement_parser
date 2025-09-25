@@ -3,7 +3,16 @@ from pdfplumber import open
 
 def pdf_open(file: str):
     pdf = open(file)
+    # pdfplumber.open does not need a context manager
+    # with open(file) as opFile:
+    #     pdf = opFile
+    #     opFile.close
+    #     opFile = None
     return pdf
+
+
+def pdf_close(pdf):
+    pdf.close()
 
 
 def page_crop(page, top_left: list, bottom_right: list):
@@ -41,6 +50,11 @@ def region_table(region, table_rows: int | None, table_columns: int | None, row_
 
     table = region.extract_table(table_settings=tbl_settings)
     return table
+
+
+if __name__ == "__main__":
+    # if the file is run directly do some useful testing
+    ...
 
 
 # def page_table_largest(page, config: dict = {}):

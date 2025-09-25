@@ -3,14 +3,9 @@ from collections import namedtuple
 from copy import deepcopy
 
 import polars as pl
-from utils import page_crop, pdf_open, region_search, region_table
+from modules import StatementError, page_crop, pdf_open, region_search, region_table
 
 import config as cf
-
-
-class StatementError(Exception):
-    pass
-
 
 Result = namedtuple("Result", "file company account config fields tests")
 FieldResults = namedtuple("FieldResults", "field")
@@ -20,6 +15,7 @@ FieldResult = namedtuple("FieldResult", "config page_number field type field_val
 
 def main():
     file = "/home/boscorat/Downloads/2025-07-12_Statement_Rewards_Credit_Card.pdf"  # CUR
+
     statement = pdf_open(file)
 
     account_key = None  # "HSBC_UK_CUR_ADV"
@@ -200,39 +196,6 @@ def get_field_results(results: list[Result], file, company) -> pl.DataFrame | No
 #     return True
 
 
-def get_config_from_statement(statement, file) -> cf.Account:
-    company_leaf = pick_leaf(leaves=cf.config_companies, statement=statement)
-    if not company_leaf:
-        raise StatementError(f"Unable to identify the company from the statement provided: {file}")
-    company_key = company_leaf[1]
-    config_account = get_config_from_company(company_key, statement, file)
-    del company_leaf
-    return config_account
-
-
-def get_config_from_company(company_key: str, statement, file) -> cf.Account:
-    try:
-        company_accounts = cf.config_company_accounts(company_key)
-    except KeyError:
-        print(f"{company_key} is not a valid company key")
-    if company_accounts:
-        config_account = pick_leaf(leaves=company_accounts, statement=statement)[0]
-    if not config_account:
-        raise StatementError(f"Unable to identify the account from the statement provided: {file}")
-    return config_account
-
-
-def get_config_from_account(account_key: str, file) -> cf.Account:
-    try:
-        config_account = cf.config_accounts.get(account_key)
-    except KeyError:
-        print(f"{account_key} is not a valid account key")
-    if not config_account:
-        raise StatementError(f"Unable to identify the account from the statement provided: {file}")
-    else:
-        return config_account
-
-
 def field_strip(value: str, chars: list | None) -> str:
     if chars:
         for char in chars:
@@ -348,10 +311,7 @@ def spawn_locations(locations, statement):
 
 
 def extract_field_values(config, statement):
-    locations: list
-    tables: list
-    fields: list
-    field_pages = []
+
     field_results: list[FieldResult] = []
     field_value: str | None
     success: bool = False
@@ -417,86 +377,7 @@ def extract_field_values(config, statement):
             raise StatementError("Incomplete Configuration")
         print()
 
-    # # if config.page_number:
-    # #     field_pages = [page for page in statement.pages if page.page_number == config.page_number]
-    # # else:
-    # #     field_pages = [page for page in statement.pages]
-    # for page in field_pages:
-    #     for reg in config.regions:
-    #         region = page_crop(page, reg.top_left, reg.bottom_right)
-    #         for field in config.fields:
-    #             field_value = None
-    #             success = False
-    #             exception = ""
-
-    #             if config.type == "text":
-    #                 field_value = region.extract_text()
-    #             elif config.type == "table":
-    #                 table = region_table(
-    #                     region=region, table_rows=config.table_rows, table_columns=config.table_columns, row_spacing=config.row_spacing
-    #                 )
-    #                 if table:
-    #                     try:
-    #                         field_value = table[field.cell.row][field.cell.col]
-    #                     except IndexError:
-    #                         field_value = None
-    #                         success = False
-    #                         exception = f"cell[row={field.cell.row}, column={field.cell.col}] not found in specified table"
-    #             else:
-    #                 field_value = None
-    #                 success = False
-    #                 exception = "Unknown config type - should be 'text' or 'table'"
-
-    #             if field_value:
-    #                 # strip characters if required
-    #                 if field.strip:
-    #                     for char in field.strip:
-    #                         field_value = field_value.replace(char, "")
-    #                 # validate cell value
-    #                 if search := re.search(field.pattern, field_value):
-    #                     success = True
-    #                     field_value = search.string
-    #                 else:
-    #                     success = False
-    #                     exception = f"cell_value of {field_value} does not match pattern {field.pattern}"
-
-    #             else:
-    #                 exception = exception if exception else "field value contains an empty string"
-
-    #             field_results.append(
-    #                 FieldResult(
-    #                     page_number=page.page_number,
-    #                     field=field.field,
-    #                     type=field.type,
-    #                     field_value=field_value,
-    #                     value=field_value if success else None,
-    #                     success=success,
-    #                     vital=field.vital,
-    #                     exception=exception,
-    #                 )
-    #             )
     return (field_results, tests)
-
-
-def pick_leaf(leaves, statement) -> tuple[cf.Account, str]:
-    result: tuple | None = None
-    if type(leaves) is dict:
-        for key, leaf in leaves.items():
-            if extract := extract_field_values(config=leaf.config, statement=statement)[0]:
-                if sum([1 for record in extract if record.success]):
-                    result = (leaf, key)
-                    break
-    elif type(leaves) is list:
-        for leaf in leaves:
-            if extract := extract_field_values(config=leaf.config, statement=statement)[0]:
-                if sum([1 for record in extract if record.success]):
-                    result = (leaf, "")
-                    break
-    else:
-        raise TypeError("the pick_leaf() function requires leaves to be a dictionary or list")
-    if not result:
-        raise StatementError("the account cannot be identified from your statement")
-    return result
 
 
 if __name__ == "__main__":
@@ -576,3 +457,7 @@ if __name__ == "__main__":
 
 # if __name__ == "__main__":
 #     main()
+
+# if __name__ == "__main__":
+#     # if the file is run directly do some useful testing
+#     ...
