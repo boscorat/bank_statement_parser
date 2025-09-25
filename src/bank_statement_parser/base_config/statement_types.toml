@@ -61,7 +61,7 @@ statement_type = 'HSBC UK Credit Card'
 
         [[HSBC_UK_CRD.header.configs]]
             config = 'Statement Info'
-            location = {page_number=1, top_left = [120, 150], bottom_right = [235, 175]}
+            location = {page_number=1, top_left = [120, 470], bottom_right = [225, 500]}
             field = {field = 'statement_date', pattern ='^[0-3]?[0-9]\s[A-Z][a-z]{2,8}\s[0-9]{4}$', type='str'}
 
         [[HSBC_UK_CRD.header.configs]]
@@ -72,7 +72,7 @@ statement_type = 'HSBC UK Credit Card'
         [[HSBC_UK_CRD.header.configs]]
             config = 'Account Info'
             location = {page_number=2, top_left = [220, 175], bottom_right = [340, 197]}
-            field = {field = 'card_number', pattern ='^[0-9]{4}\s[0-9]{4}\s[0-9]{4}\s[0-9]{4}\s$', vital=true, type='str'}
+            field = {field = 'card_number', pattern ='^[0-9]{4}\s[0-9]{4}\s[0-9]{4}\s[0-9]{4}\s?$', vital=true, type='str'}
 
     [HSBC_UK_CRD.page]
         [[HSBC_UK_CRD.pages.configs]]

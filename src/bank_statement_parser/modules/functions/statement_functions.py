@@ -2,10 +2,14 @@ import re
 from collections import namedtuple
 from copy import deepcopy
 
+import polars as pl
+
 from bank_statement_parser.modules.classes.errors import StatementError
 from bank_statement_parser.modules.functions.pdf_functions import page_crop, region_table
 
 FieldResult = namedtuple("FieldResult", "config page_number field type field_value value success vital exception")
+Result = namedtuple("Result", "file company account config fields tests")
+ConfigResults = namedtuple("ConfigResults", "results_full results_field")
 
 
 def spawn_locations(locations, statement):
@@ -192,7 +196,7 @@ def extract_table_fields(statement, location, statement_table) -> list[tuple]:
     return field_values
 
 
-def extract_field_values(config, statement):
+def extract_field_values(config, pdf):
     """
     Extracts field values from a bank statement based on the provided configuration.
 
@@ -204,7 +208,7 @@ def extract_field_values(config, statement):
     Args:
         config: An object containing extraction configuration, including field definitions,
                 locations, and table extraction settings.
-        statement: The bank statement object to extract fields from.
+        pdf: The bank statement object to extract fields from.
 
     Returns:
         tuple:
@@ -222,9 +226,9 @@ def extract_field_values(config, statement):
     exception: str = ""
     tests: list | None = None
     if config.statement_table:
-        spawned_locations = spawn_locations(config.statement_table.locations, statement)
+        spawned_locations = spawn_locations(config.statement_table.locations, pdf)
         for location in spawned_locations:
-            table_fields = extract_table_fields(statement, location, config.statement_table)
+            table_fields = extract_table_fields(pdf, location, config.statement_table)
             for field_row in table_fields:
                 field, field_value, success, exception = field_row
                 field_results.append(
@@ -242,9 +246,9 @@ def extract_field_values(config, statement):
                 )
 
     elif config.locations:  # multiple locations
-        spawned_locations = spawn_locations(config.locations, statement)
+        spawned_locations = spawn_locations(config.locations, pdf)
         for location in spawned_locations:
-            success, field_value, exception = extract_text_field(statement, location, config.field.strip, config.field.pattern)
+            success, field_value, exception = extract_text_field(pdf, location, config.field.strip, config.field.pattern)
             field_results.append(
                 FieldResult(
                     config=config.config,
@@ -263,7 +267,7 @@ def extract_field_values(config, statement):
         try:
             if not getattr(config.location, "page_number", None):  # we assume the 1st page if no number set for a single config
                 config.location.page_number = 1
-            success, field_value, exception = extract_text_field(statement, config.location, config.field.strip, config.field.pattern)
+            success, field_value, exception = extract_text_field(pdf, config.location, config.field.strip, config.field.pattern)
             field_results.append(
                 FieldResult(
                     config=config.config,
@@ -281,3 +285,114 @@ def extract_field_values(config, statement):
             raise StatementError("Incomplete Configuration")
 
     return (field_results, tests)
+
+
+def field_value_cast(value: str, type: str) -> tuple[bool, str, object]:
+    """
+    Attempts to cast a string value to a specified type and returns the result along with success status and exception message.
+
+    Args:
+        value (str): The string value to be cast.
+        type (str): The target type as a string (e.g., 'int', 'float', 'bool', etc.).
+
+    Returns:
+        tuple[bool, str, object]: A tuple containing:
+            - success (bool): True if casting was successful, False otherwise.
+            - exception (str): An error message if casting failed, empty string otherwise.
+            - result (object): The casted value if successful, None otherwise.
+
+    Notes:
+        - The function attempts to cast using the provided type string, and if that fails, tries shortened versions of the type string.
+        - Uses eval() for dynamic casting, which may have security implications if used with untrusted input.
+    """
+    exp = f"{type}('{value}')"  # build the initial expression
+    success: bool = False
+    exception: str = ""
+    result = None
+    try:  # try to evaluate the cast
+        result = eval(exp)
+        success = True
+    except ValueError:
+        exception = f"<CAST FAILURE: '{value}' is not of type {type}>"
+    except NameError:  # if the formula fails to evaluate
+        type_short = type[0:4]  # try shortening the type to catch bool's passed as 'boolean'
+        exp = f"{type_short}('{value}')"
+        try:
+            result = eval(exp)
+            success = True
+        except ValueError:
+            exception = f"<CAST FAILURE: '{value}' is not of type {type}>"
+        except NameError:
+            type_shortest = type[0:3]
+            exp = f"{type_shortest}('{value}')"
+            try:
+                result = eval(exp)
+                success = True
+            except ValueError:
+                exception = f"<CAST FAILURE: '{value}' is not of type {type}>"
+            except NameError:
+                exception = f"<CAST FAILURE: {type} is not a valid type>"
+    return (success, exception, result)
+
+
+def get_field_results(results: list[Result]) -> pl.DataFrame | None:
+    """
+    Processes a list of Result objects to extract and transform their fields into a Polars DataFrame.
+
+    For each Result in the input list, this function stacks its fields into a DataFrame, then applies several transformations:
+    - Attempts to cast field values to their specified types, storing the success and any exceptions.
+    - Flags fields with unsuccessful casts as exceptions or warnings based on their 'vital' status.
+
+    The resulting DataFrame is printed for inspection. If no fields are present, returns None; otherwise, returns the DataFrame.
+
+    Args:
+        results (list[Result]): A list of Result objects, each containing fields to be processed.
+
+    Returns:
+        pl.DataFrame | None: A DataFrame containing processed field data, or None if no fields are present.
+    """
+    result_df: pl.DataFrame = pl.DataFrame(strict=False)
+    for result in results:
+        for field in result.fields:
+            result_df = result_df.vstack(pl.DataFrame([field], strict=False))
+
+    result_df = result_df.with_columns(
+        cast_success=(
+            pl.struct(["value", "type"]).map_elements(
+                lambda results: field_value_cast(value=results["value"], type=results["type"])[0], return_dtype=pl.Boolean
+            )
+        ),
+        cast_exception=(
+            pl.struct(["value", "type"]).map_elements(
+                lambda results: field_value_cast(value=results["value"], type=results["type"])[1], return_dtype=pl.String
+            )
+        ),
+        flag_exception=(pl.col("success").not_() & pl.col("vital")),
+        flag_warning=(pl.col("success").not_() & pl.col("vital").not_()),
+    )
+
+    return None if result_df.height == 0 else result_df
+
+
+def get_field_values(configs, pdf, file, company, account) -> ConfigResults:
+    """
+    Extracts field values from a list of configuration objects for a given bank statement, file, company, and account.
+
+    Args:
+        configs (list): A list of configuration objects used to extract field values.
+        pdf: The bank statement object to process.
+        file: The file associated with the statement.
+        company: The company associated with the statement.
+        account: The account associated with the statement.
+
+    Returns:
+        ConfigResults: An object containing the full extraction results and field-specific results.
+    """
+    results: list = []
+    for config in configs:
+        extract = extract_field_values(config=config, pdf=pdf)
+        fields, tests = extract
+        result = Result(file, company, account, config.config, fields, tests)
+        results.append(result)
+    field_results = get_field_results(results)
+    return ConfigResults(results_full=results, results_field=field_results)

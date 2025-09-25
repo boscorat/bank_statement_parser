@@ -117,7 +117,7 @@ def pick_leaf(leaves, statement) -> tuple[Account, str]:
     if isinstance(leaves, dict):
         for key, leaf in leaves.items():
             if hasattr(leaf, "config"):
-                extracts = extract_field_values(config=leaf.config, statement=statement)
+                extracts = extract_field_values(config=leaf.config, pdf=statement)
                 if extracts and (extract := extracts[0]):
                     if sum([1 for record in extract if getattr(record, "success", False)]):
                         result = (leaf, key)
@@ -125,7 +125,7 @@ def pick_leaf(leaves, statement) -> tuple[Account, str]:
     elif isinstance(leaves, list):
         for leaf in leaves:
             if hasattr(leaf, "config"):
-                extracts = extract_field_values(config=leaf.config, statement=statement)
+                extracts = extract_field_values(config=leaf.config, pdf=statement)
                 if extracts and (extract := extracts[0]):
                     if sum([1 for record in extract if getattr(record, "success", False)]):
                         result = (leaf, "")
