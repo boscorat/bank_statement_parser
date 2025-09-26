@@ -57,13 +57,14 @@ class Statement:
         self.pdf = None
 
 
-# stmtCC = Statement("/home/boscorat/Downloads/2025-07-12_Statement_Rewards_Credit_Card.pdf")
+stmtCC = Statement("/home/boscorat/Downloads/2025-07-12_Statement_Rewards_Credit_Card.pdf")
 stmtAdv = Statement("/home/boscorat/Downloads/2025-07-08_Statement_Advance_Account.pdf")
 stmtFlex = Statement("/home/boscorat/Downloads/2025-07-08_Statement_Flexible_Saver.pdf")
 
 with pl.Config(tbl_cols=-1, tbl_rows=-1):
-    # print(f"\n\n{(stmtCC.company + '---' + stmtCC.account).center(80, '=')}")
-    # print(f"HEADER:\n{stmtCC.header_results.results_field}")
+    print(f"\n\n{(stmtCC.company + '---' + stmtCC.account).center(80, '=')}")
+    print(f"HEADER:\n{stmtCC.header_results.results_field}")
+    print(f"PAGES:\n{stmtCC.page_results.results_field}")
 
     print(f"\n\n{(stmtAdv.company + '---' + stmtAdv.account).center(80, '=')}")
     print(f"HEADER:\n{stmtAdv.header_results.results_field}")

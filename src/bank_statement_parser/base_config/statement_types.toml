@@ -79,12 +79,10 @@ statement_type = 'HSBC UK Credit Card'
             config = 'Page Info'
             locations = [
                 {page_number = 1, top_left = [480, 470], bottom_right = [590, 500]}, #first page
-                {top_left = [475, 145], bottom_right = [590, 185]} # all other pages
+                {page_number = 2, top_left = [475, 145], bottom_right = [590, 185]}, #first page
+                {top_left = [460, 80], bottom_right = [590, 130]} # all other pages
             ]
             field = {field = 'sheet_number', pattern ='^Sheet[\s]*number[\s]*[0-9]+[\s]*of[\s]*[0-9]+$', type='str'}
-
-        [[HSBC_UK_CRD.pages.configs]]
-        [[HSBC_UK_CRD.pages.configs]]
     [HSBC_UK_CRD.lines]
         [[HSBC_UK_CRD.lines.configs]]
         [[HSBC_UK_CRD.lines.configs]]
