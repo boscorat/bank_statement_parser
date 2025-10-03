@@ -16,7 +16,14 @@ def pdf_close(pdf):
 
 
 def page_crop(page, top_left: list, bottom_right: list):
-    page_cropped = page.within_bbox((top_left[0], top_left[1], bottom_right[0], bottom_right[1]))
+    if not top_left and not bottom_right:  # no need to crop if not specified
+        return page
+    elif not top_left:  # set top left to 0,0 if only bottom right specified
+        top_left = [0, 0]
+    elif not bottom_right:  # set bottom right to page width,height if only top left specified
+        bottom_right = [page.width, page.height]
+    else:
+        page_cropped = page.within_bbox((top_left[0], top_left[1], bottom_right[0], bottom_right[1]))
     return page_cropped
 
 
@@ -33,7 +40,7 @@ def page_text(page):
     return page_text
 
 
-def region_table(region, table_rows: int | None, table_columns: int | None, row_spacing: int | None):
+def region_table(region, table_rows: int | None, table_columns: int | None, row_spacing: int | None, vertical_lines: list | None):
     tbl_settings: dict = {
         "vertical_strategy": "text",
         "horizontal_strategy": "text",
@@ -47,6 +54,11 @@ def region_table(region, table_rows: int | None, table_columns: int | None, row_
         tbl_settings["min_words_horizontal"] = table_columns
     if row_spacing:
         tbl_settings["snap_y_tolerance"] = row_spacing
+    if vertical_lines:
+        tbl_settings["explicit_vertical_lines"] = vertical_lines
+        tbl_settings["vertical_strategy"] = "explicit"
+        tbl_settings["min_words_vertical"] = 1  # override if explicit vertical lines given
+        tbl_settings["min_words_horizontal"] = 1  # override if explicit vertical lines given
 
     table = region.extract_table(table_settings=tbl_settings)
     return table

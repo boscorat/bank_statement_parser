@@ -4,7 +4,7 @@ from typing import Optional
 
 @dataclass
 class Cell:
-    row: int
+    row: Optional[int]
     col: int
 
 
@@ -27,8 +27,59 @@ class Test:
 @dataclass
 class Location:
     page_number: Optional[int]
-    top_left: list[int]
-    bottom_right: list[int]
+    top_left: Optional[list[int]]
+    bottom_right: Optional[list[int]]
+    vertical_lines: Optional[list[int]]
+
+
+@dataclass
+class StatementBookend:
+    start_fields: list[str]
+    min_non_empty_start: int
+    end_fields: list[str]
+    min_non_empty_end: int
+
+
+@dataclass
+class StdDate:
+    field: str
+    format: str
+
+
+@dataclass
+class StdDescription:
+    field: str
+    max_length: int
+    strip_chars_start: str
+    strip_chars_end: str
+
+
+@dataclass
+class StdCreditDebit:
+    field: str
+    prefix: str
+    suffix: str
+    is_float: bool
+    multiplier: float
+    round_decimals: int
+
+
+@dataclass
+class MergeFields:
+    fields: list[str]
+    max_rows: int
+    separator: str
+
+
+@dataclass
+class TransactionMods:
+    transaction_bookends: StatementBookend
+    std_date: StdDate
+    std_description: StdDescription
+    std_credit: StdCreditDebit
+    std_debit: StdCreditDebit
+    fill_forward_fields: Optional[list[str]]
+    merge_fields: Optional[MergeFields]
 
 
 @dataclass
@@ -40,6 +91,10 @@ class StatementTable:
     table_rows: Optional[int]
     row_spacing: Optional[int]
     tests: Optional[list[Test]]
+    delete_success_false: Optional[bool]
+    delete_cast_success_false: Optional[bool]
+    delete_rows_with_missing_vital_fields: Optional[bool]
+    transaction_mods: Optional[TransactionMods]
 
 
 @dataclass

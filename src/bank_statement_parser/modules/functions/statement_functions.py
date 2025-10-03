@@ -4,12 +4,13 @@ from copy import deepcopy
 
 import polars as pl
 
+from bank_statement_parser.modules.classes.data_definitions import StatementBookend, StatementTable, TransactionMods
 from bank_statement_parser.modules.classes.errors import StatementError
 from bank_statement_parser.modules.functions.pdf_functions import page_crop, region_table
 
-FieldResult = namedtuple("FieldResult", "config page_number field type field_value value success vital exception")
+FieldResult = namedtuple("FieldResult", "config page_number field type field_value value success vital exception table_row id_row")
 Result = namedtuple("Result", "file company account config fields tests")
-ConfigResults = namedtuple("ConfigResults", "results_full results_field")
+ConfigResults = namedtuple("ConfigResults", "results_full results_clean results_transactions")
 
 
 def spawn_locations(locations, statement):
@@ -140,6 +141,7 @@ def extract_table_fields(statement, location, statement_table) -> list[tuple]:
             - field_value: The extracted and processed value (or None if extraction/validation failed).
             - success: A boolean indicating if extraction and validation were successful.
             - exception: A string describing any error or validation failure encountered.
+            - row: The row index of the field in the table (if applicable).
     """
     success: bool = False
     exception: str = ""
@@ -162,37 +164,45 @@ def extract_table_fields(statement, location, statement_table) -> list[tuple]:
             table_rows=statement_table.table_rows,
             table_columns=statement_table.table_columns,
             row_spacing=statement_table.row_spacing,
+            vertical_lines=location.vertical_lines,
         )
     else:
         if not exception:
             exception = "Failed to extract region"
     if table and not exception:
-        for field in statement_table.fields:
-            success = False
-            try:
-                field_value = table[field.cell.row][field.cell.col]
-                if field_value and not exception:
-                    field_value = field_strip(field_value, field.strip) if field.strip else field_value  # strip any specified characters
-                    if field_validate(field_value, field.pattern):
-                        success = True
-                        exception = ""
-                        field_values.append((field, field_value, success, exception))
-                    else:
-                        field_value = None
-                        success = False
-                        exception = f"{field_value} failed to validate against pattern {field.pattern}"
-                        field_values.append((field, field_value, success, exception))
-            except IndexError:
-                field_value = None
+        for id_row, row in enumerate(table):
+            for field in statement_table.fields:
                 success = False
-                exception = f"cell[row={field.cell.row}, column={field.cell.col}] not found in specified table"
-                field_values.append((field, field_value, success, exception))
+                exception = ""
+                field_value = None
+                try:
+                    if field.cell.row is not None and field.cell.row != id_row:
+                        continue  # skip if the field is not on this row
+                    field_value = table[id_row][field.cell.col]
+                    if field_value and not exception:
+                        field_value = (
+                            field_strip(field_value, field.strip) if field.strip else field_value
+                        )  # strip any specified characters
+                        if field_validate(field_value, field.pattern):
+                            success = True
+                            exception = ""
+                            field_values.append((field, field_value, success, exception, id_row))
+                        else:
+                            field_value = None
+                            success = False
+                            exception = f"{field_value} failed to validate against pattern {field.pattern}"
+                            field_values.append((field, field_value, success, exception, id_row))
+                except IndexError:
+                    field_value = None
+                    success = False
+                    exception = f"cell[row={field.cell.row}, column={field.cell.col}] not found in specified table"
+                    field_values.append((field, field_value, success, exception, id_row))
     else:
         if not exception:
             exception = "Failed to extract region"
     if not field_values:
         for field in statement_table.fields:
-            field_values.append((field, None, False, exception))
+            field_values.append((field, None, False, exception, None))
     return field_values
 
 
@@ -230,7 +240,7 @@ def extract_field_values(config, pdf):
         for location in spawned_locations:
             table_fields = extract_table_fields(pdf, location, config.statement_table)
             for field_row in table_fields:
-                field, field_value, success, exception = field_row
+                field, field_value, success, exception, table_row = field_row
                 field_results.append(
                     FieldResult(
                         config=config.config,
@@ -242,6 +252,8 @@ def extract_field_values(config, pdf):
                         success=success,
                         vital=field.vital,
                         exception=exception if exception else "",
+                        table_row=table_row,
+                        id_row=location.page_number * 1000 + (table_row if table_row is not None else 0),  # unique row id
                     )
                 )
 
@@ -260,6 +272,8 @@ def extract_field_values(config, pdf):
                     success=success,
                     vital=config.field.vital,
                     exception=exception if exception else "",
+                    table_row=None,
+                    id_row=location.page_number * 1000,  # unique row id
                 )
             )
 
@@ -279,6 +293,8 @@ def extract_field_values(config, pdf):
                     success=success,
                     vital=config.field.vital,
                     exception=exception if exception else "",
+                    table_row=None,
+                    id_row=config.location.page_number * 1000,  # row id
                 )
             )
         except AttributeError:
@@ -287,7 +303,7 @@ def extract_field_values(config, pdf):
     return (field_results, tests)
 
 
-def field_value_cast(value: str, type: str) -> tuple[bool, str, object]:
+def field_value_cast(value: str, type: str, success: bool) -> tuple[bool, str, object]:
     """
     Attempts to cast a string value to a specified type and returns the result along with success status and exception message.
 
@@ -305,37 +321,38 @@ def field_value_cast(value: str, type: str) -> tuple[bool, str, object]:
         - The function attempts to cast using the provided type string, and if that fails, tries shortened versions of the type string.
         - Uses eval() for dynamic casting, which may have security implications if used with untrusted input.
     """
-    exp = f"{type}('{value}')"  # build the initial expression
-    success: bool = False
+    cast_success: bool = False
     exception: str = ""
-    result = None
-    try:  # try to evaluate the cast
-        result = eval(exp)
-        success = True
-    except ValueError:
-        exception = f"<CAST FAILURE: '{value}' is not of type {type}>"
-    except NameError:  # if the formula fails to evaluate
-        type_short = type[0:4]  # try shortening the type to catch bool's passed as 'boolean'
-        exp = f"{type_short}('{value}')"
-        try:
+    result: object = None
+    if success:  # only try to cast if the initial extraction was successful
+        exp = f"{type}('{value}')"  # build the initial expression
+        try:  # try to evaluate the cast
             result = eval(exp)
-            success = True
-        except ValueError:
+            cast_success = True
+        except (ValueError, SyntaxError):
             exception = f"<CAST FAILURE: '{value}' is not of type {type}>"
-        except NameError:
-            type_shortest = type[0:3]
-            exp = f"{type_shortest}('{value}')"
+        except NameError:  # if the formula fails to evaluate
+            type_short = type[0:4]  # try shortening the type to catch bool's passed as 'boolean'
+            exp = f"{type_short}('{value}')"
             try:
                 result = eval(exp)
-                success = True
-            except ValueError:
+                cast_success = True
+            except (ValueError, SyntaxError):
                 exception = f"<CAST FAILURE: '{value}' is not of type {type}>"
             except NameError:
-                exception = f"<CAST FAILURE: {type} is not a valid type>"
-    return (success, exception, result)
+                type_shortest = type[0:3]
+                exp = f"{type_shortest}('{value}')"
+                try:
+                    result = eval(exp)
+                    cast_success = True
+                except (ValueError, SyntaxError):
+                    exception = f"<CAST FAILURE: '{value}' is not of type {type}>"
+                except NameError:
+                    exception = f"<CAST FAILURE: {type} is not a valid type>"
+    return (cast_success, exception, result)
 
 
-def get_field_results(results: list[Result]) -> pl.DataFrame | None:
+def get_field_results(result: Result) -> pl.DataFrame:
     """
     Processes a list of Result objects to extract and transform their fields into a Polars DataFrame.
 
@@ -352,26 +369,212 @@ def get_field_results(results: list[Result]) -> pl.DataFrame | None:
         pl.DataFrame | None: A DataFrame containing processed field data, or None if no fields are present.
     """
     result_df: pl.DataFrame = pl.DataFrame(strict=False)
-    for result in results:
-        for field in result.fields:
-            result_df = result_df.vstack(pl.DataFrame([field], strict=False))
+    for field in result.fields:
+        result_df = result_df.vstack(pl.DataFrame([field], strict=False))
 
     result_df = result_df.with_columns(
         cast_success=(
-            pl.struct(["value", "type"]).map_elements(
-                lambda results: field_value_cast(value=results["value"], type=results["type"])[0], return_dtype=pl.Boolean
+            pl.struct(["value", "type", "success"]).map_elements(
+                lambda results: field_value_cast(value=results["value"], type=results["type"], success=results["success"])[0],
+                return_dtype=pl.Boolean,
             )
         ),
         cast_exception=(
-            pl.struct(["value", "type"]).map_elements(
-                lambda results: field_value_cast(value=results["value"], type=results["type"])[1], return_dtype=pl.String
+            pl.struct(["value", "type", "success"]).map_elements(
+                lambda results: field_value_cast(value=results["value"], type=results["type"], success=results["success"])[1],
+                return_dtype=pl.String,
             )
         ),
         flag_exception=(pl.col("success").not_() & pl.col("vital")),
         flag_warning=(pl.col("success").not_() & pl.col("vital").not_()),
     )
+    return result_df
 
-    return None if result_df.height == 0 else result_df
+
+def remove_rows_with_missing_vital_fields(field_results: pl.DataFrame, vital_fields: list[str]) -> pl.DataFrame:
+    """
+    Removes rows from the DataFrame that contain missing vital fields.
+
+    This function identifies rows in the provided DataFrame where any vital field (indicated by the 'vital' column)
+    is missing (i.e., the 'value' column is null). It then filters out these rows, returning a new DataFrame
+    that only includes rows with all vital fields present.
+
+    Args:
+        field_results (pl.DataFrame): A Polars DataFrame containing field results, including 'vital' and 'value' columns.
+
+    Returns:
+        pl.DataFrame: A new DataFrame with rows containing missing vital fields removed.
+    """
+    # Identify rows with missing vital fields
+    row_vital_field_count = (
+        field_results.filter(pl.col("field").is_in(vital_fields) & pl.col("success") & pl.col("cast_success"))
+        .select(
+            pl.col("page_number"),
+            pl.col("table_row"),
+            pl.col("field"),
+            vital_count=1,
+        )
+        .unique()
+    )
+    all_pages_and_rows = field_results.select(pl.col("page_number"), pl.col("table_row")).unique()
+    row_vital_fields = all_pages_and_rows.join(row_vital_field_count, on=["page_number", "table_row"], how="left").fill_null(0)
+
+    rows_with_missing_vital = (
+        row_vital_fields.group_by(["page_number", "table_row"])
+        .agg(pl.col("vital_count").sum().alias("vital_count"))
+        .filter(pl.col("vital_count") < len(vital_fields))
+    )
+
+    if rows_with_missing_vital.height > 0:
+        # Filter out rows with missing vital fields
+        filtered_results = field_results.join(
+            rows_with_missing_vital.select(pl.col("page_number"), pl.col("table_row")),
+            on=["page_number", "table_row"],
+            how="anti",
+        )
+        return filtered_results
+    else:
+        return field_results
+
+
+def flag_transaction_bookend(field_results: pl.DataFrame, transaction_bookends: StatementBookend) -> pl.DataFrame:
+    """
+    Flags the start of transactions in the DataFrame based on specified transaction start fields.
+
+    This function identifies rows in the provided DataFrame where any of the specified transaction start fields
+    are present and have successful extraction and casting. It then adds a new column 'transaction_start' to the
+    DataFrame, marking these rows with a True value, while other rows are marked as False.
+
+    Args:
+        field_results (pl.DataFrame): A Polars DataFrame containing field results, including 'field', 'success', and 'cast_success' columns.
+        transaction_start_fields (list[str]): A list of field names that indicate the start of a transaction.
+
+    Returns:
+        pl.DataFrame: A new DataFrame with a 'transaction_start' column added, indicating the start of transactions.
+    """
+    # Identify rows with missing vital fields
+    start_rows = (
+        field_results.filter(pl.col("field").is_in(transaction_bookends.start_fields) & pl.col("success") & pl.col("cast_success"))
+        .select(
+            pl.col("id_row"),
+            pl.col("field"),
+            start_count=1,
+        )
+        .unique()
+        .group_by(["id_row"])
+        .agg(pl.col("start_count").sum().alias("start_count"))
+        .filter(pl.col("start_count") >= transaction_bookends.min_non_empty_start)
+    )
+
+    end_rows = (
+        field_results.filter(pl.col("field").is_in(transaction_bookends.end_fields) & pl.col("success") & pl.col("cast_success"))
+        .select(
+            pl.col("id_row"),
+            pl.col("field"),
+            end_count=1,
+        )
+        .unique()
+        .group_by(["id_row"])
+        .agg(pl.col("end_count").sum().alias("end_count"))
+        .filter(pl.col("end_count") >= transaction_bookends.min_non_empty_end)
+    )
+
+    # Flag rows as transaction starts based on the specified fields
+    field_results = field_results.with_columns(
+        transaction_start=pl.when(pl.col("id_row").is_in(start_rows["id_row"])).then(True).otherwise(False),
+        transaction_end=pl.when(pl.col("id_row").is_in(end_rows["id_row"])).then(True).otherwise(False),
+    )
+
+    return field_results
+
+
+def get_transactions(result_transactions: pl.DataFrame, mods: TransactionMods) -> pl.DataFrame:
+    # remove rows before first transaction_start and after last transaction_end
+    first_id_row = result_transactions.filter(pl.col("transaction_start")).select(pl.col("id_row")).min()[0, 0]
+    last_id_row = result_transactions.filter(pl.col("transaction_end")).select(pl.col("id_row")).max()[0, 0]
+    transactions = result_transactions.filter((pl.col("id_row") >= first_id_row) & (pl.col("id_row") <= last_id_row))
+
+    if mods.fill_forward_fields:
+        for field in mods.fill_forward_fields:
+            if field in transactions.columns:
+                transactions = transactions.with_columns(pl.col(field).fill_null(strategy="forward"))
+
+    if mods.merge_fields:
+        for field in mods.merge_fields.fields:
+            for _ in range(
+                mods.merge_fields.max_rows
+            ):  # repeat multiple times to ensure all rows are merged - can handle up to 10 rows per transaction
+                transactions = (
+                    transactions.with_columns(
+                        pl.when(
+                            pl.col("transaction_end") & ~pl.col("transaction_start")
+                        )  # if a row is a continuation of the previous transaction
+                        .then(
+                            pl.concat_str(
+                                transactions.shift(1)[field], pl.col(field), separator=mods.merge_fields.separator, ignore_nulls=True
+                            )
+                        )  # merge with previous row
+                        .otherwise(pl.col(field))  # else keep the same
+                        .alias(f"{field}_merge"),  # new column with merged values
+                        pl.when(
+                            ~pl.col("transaction_end") & pl.col("transaction_start") & transactions.shift(-1)["transaction_end"]
+                        )  # if a row is the start of a transaction, but not the end, and the next row is the end of a transaction we can delete this row
+                        .then(True)
+                        .otherwise(False)
+                        .alias(f"{field}_delete_row"),
+                    )
+                    .drop(field)
+                    .rename({f"{field}_merge": field})
+                )
+                transactions = transactions.filter(~pl.col(f"{field}_delete_row")).drop(
+                    f"{field}_delete_row"
+                )  # drop rows that have been merged into the following row
+
+    transactions = transactions.filter(
+        pl.col("transaction_end")
+    )  # keep only rows where transaction ends, all transaction rows above have been merged into these rows
+
+    # get standard fields
+    # credit & debit columns first so these can be used in the movement column
+
+    transactions = transactions.with_columns(
+        # standard credit column
+        std_credit=pl.when(
+            pl.col(mods.std_credit.field).str.ends_with(mods.std_credit.suffix)
+            & pl.col(mods.std_credit.field).str.starts_with(mods.std_credit.prefix)
+            & (  # check if the field can be cast to float if is_float is True, or not if is_float is False
+                (mods.std_credit.is_float & pl.col(mods.std_credit.field).cast(pl.Float64, strict=False).fill_null(False).cast(pl.Boolean))
+                | ~pl.col(mods.std_credit.field).cast(pl.Float64, strict=False).fill_null(False).cast(pl.Boolean)
+            )
+        )
+        .then(pl.col(mods.std_credit.field).str.strip_chars_end(mods.std_credit.suffix).str.strip_chars_start(mods.std_credit.prefix))
+        .otherwise(0.00)
+        .cast(pl.Float64)
+        .mul(mods.std_credit.multiplier)
+        .round(mods.std_credit.round_decimals),
+        # standard debit column
+        std_debit=pl.when(
+            pl.col(mods.std_debit.field).str.ends_with(mods.std_debit.suffix)
+            & pl.col(mods.std_debit.field).str.starts_with(mods.std_debit.prefix)
+            & (  # check if the field can be cast to float if is_float is True, or not if is_float is False
+                (mods.std_debit.is_float & pl.col(mods.std_debit.field).cast(pl.Float64, strict=False).fill_null(False).cast(pl.Boolean))
+                | ~pl.col(mods.std_debit.field).cast(pl.Float64, strict=False).fill_null(False).cast(pl.Boolean)
+            )
+        )
+        .then(pl.col(mods.std_debit.field).str.strip_chars_end(mods.std_debit.suffix).str.strip_chars_start(mods.std_debit.prefix))
+        .otherwise(0.00)
+        .cast(pl.Float64)
+        .mul(mods.std_debit.multiplier)
+        .round(mods.std_debit.round_decimals),
+    )
+    # and then the other standard fields
+    transactions = transactions.with_columns(
+        std_date=pl.col("transaction_date").str.to_date(format="%d %b %y", strict=True),
+        std_description=pl.col("details").str.to_titlecase().str.slice(0, 100).str.strip_chars_start(")"),
+        std_movement=(pl.col("std_credit") + pl.col("std_debit")).round(2),
+    )
+
+    return transactions
 
 
 def get_field_values(configs, pdf, file, company, account) -> ConfigResults:
@@ -388,11 +591,43 @@ def get_field_values(configs, pdf, file, company, account) -> ConfigResults:
     Returns:
         ConfigResults: An object containing the full extraction results and field-specific results.
     """
-    results: list = []
+    results_full: list = []
+    results_clean: list[pl.DataFrame] = []
+    results_transactions: list[pl.DataFrame] = []
     for config in configs:
+        result_full: Result | None = None
+        result_clean: pl.DataFrame = pl.DataFrame()
+        result_transactions: pl.DataFrame = pl.DataFrame()
+        mods: TransactionMods | None = None
+        table: StatementTable | None = None
+        # get the full results for the config
         extract = extract_field_values(config=config, pdf=pdf)
         fields, tests = extract
-        result = Result(file, company, account, config.config, fields, tests)
-        results.append(result)
-    field_results = get_field_results(results)
-    return ConfigResults(results_full=results, results_field=field_results)
+        result_full = Result(file, company, account, config.config, fields, tests)
+
+        # now get the field results for the config, which are validated and cast
+        result_clean = get_field_results(result_full)
+        if table := config.statement_table:
+            if table.delete_success_false:
+                result_clean = result_clean.filter(pl.col("success"))
+            if table.delete_cast_success_false:
+                result_clean = result_clean.filter(pl.col("cast_success"))
+            if table.delete_rows_with_missing_vital_fields:
+                vital_fields = [field.field for field in table.fields if field.vital]
+                result_clean = remove_rows_with_missing_vital_fields(result_clean, vital_fields)
+
+            # extract and process the transactions
+            if mods := table.transaction_mods:
+                result_clean = flag_transaction_bookend(result_clean, mods.transaction_bookends)
+                # transactions are now pivoted
+                result_transactions = result_clean.pivot(
+                    on="field",
+                    values="value",
+                    index=["config", "page_number", "table_row", "id_row", "transaction_start", "transaction_end"],
+                )  # pivoted dataframe
+                result_transactions = get_transactions(result_transactions, mods)
+        if len(result_full.fields) > 0:
+            results_full.append(result_full)
+            results_clean.append(result_clean)
+            results_transactions.append(result_transactions)
+    return ConfigResults(results_full=results_full, results_clean=results_clean, results_transactions=results_transactions)

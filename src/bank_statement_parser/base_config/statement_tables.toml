@@ -56,3 +56,55 @@ fields = [
     {field = 'transaction_balance', cell = {row = 6, col = 1}, strip = ['£',' ',',','\n'], pattern ='^[0-9]*\.[0-9]{2}[D]?$', vital=true, type='float'},
     {field = 'minimum_payment', cell = {row = 7, col = 1}, strip = ['£',' ',',','\n'], pattern ='^[0-9]*\.[0-9]{2}[D]?$', vital=false, type='float'}
 ]
+
+[HSBC_UK_CRD_TRANSACTIONS]
+statement_table = 'Transactions'
+table_columns = 4
+locations = [
+    {vertical_lines = [52, 105, 105, 185, 185, 475, 475, 560]},
+]
+fields = [
+    {field = 'received_by_us', cell = {col = 0}, pattern ='^[0-3][0-9]\s?[A-Z][a-z]{2}\s?[0-3][0-9]$', type='str', vital=true},
+    {field = 'transaction_date', cell = {col = 1}, pattern ='^[0-3][0-9]\s?[A-Z][a-z]{2}\s?[0-3][0-9]$', type='str', vital=true},
+    {field = 'details', cell = {col = 2}, pattern ='.+', type='str', vital=true},
+    {field = 'amount', cell = {col = 3}, strip = ['£',' ',',','\n'], pattern ='^[0-9]+[.][0-9]{2}(\s)?(CR)?$', type='str', vital=true}
+]
+delete_success_false = true
+delete_cast_success_false = true
+delete_rows_with_missing_vital_fields = true
+
+[HSBC_UK_CRD_TRANSACTIONS.transaction_mods]
+transaction_bookends = {start_fields = ['received_by_us','transaction_date','details','amount'], min_non_empty_start = 4, end_fields = ['received_by_us','transaction_date','details','amount'], min_non_empty_end = 4}
+
+std_date = {field = 'transaction_date', format = '%d %b %y'}
+std_description = {field = 'details', max_length = 100, strip_chars_start = ')', strip_chars_end = ' '}
+std_credit = {field = 'amount', prefix = "", suffix = "CR", is_float = false, multiplier = 1, round_decimals = 2}
+std_debit = {field = 'amount', prefix = "", suffix = "", is_float = true, multiplier = -1, round_decimals = 2}
+
+[HSBC_UK_CUR_TRANSACTIONS]
+statement_table = 'Transactions'
+table_columns = 6
+locations = [
+    {vertical_lines = [50, 100, 100, 130, 130, 320, 320, 400, 400, 480, 480, 555]},
+]
+fields = [
+    {field = 'date', cell = {col = 0}, pattern ='^[0-3][0-9]\s?[A-Z][a-z]{2}\s?[0-3][0-9]$', type='str', vital=false},
+    {field = 'payment_type', cell = {col = 1}, pattern ='(^[A-Z0-9]{1,3}$)|(^[)]{3}$)', type='str', vital=false},
+    {field = 'details', cell = {col = 2}, pattern ='.+', type='str', vital=true},
+    {field = '£_paid_out', cell = {col = 3}, strip = ['£',' ',',','\n'], pattern ='^[0-9]+[.][0-9]{2}$', type='str', vital=false},
+    {field = '£_paid_in', cell = {col = 4}, strip = ['£',' ',',','\n'], pattern ='^[0-9]+[.][0-9]{2}$', type='str', vital=false},
+    {field = '£_balance', cell = {col = 5}, strip = ['£',' ',',','\n'], pattern ='^[0-9]+[.][0-9]{2}(\s)?(D)?$', type='str', vital=false},
+]
+delete_success_false = true
+delete_cast_success_false = true
+delete_rows_with_missing_vital_fields = true
+
+[HSBC_UK_CUR_TRANSACTIONS.transaction_mods]
+transaction_bookends = {start_fields = ['payment_type','details'], min_non_empty_start = 2, end_fields = ['£_paid_out','£_paid_in'], min_non_empty_end = 1}
+fill_forward_fields = ['date','payment_type']
+merge_fields = {fields=['details'], max_rows=5, separator=' | '}
+
+std_date = {field = 'date', format = '%d %b %y'}
+std_description = {field = 'details', max_length = 100, strip_chars_start = ' ', strip_chars_end = ' '}
+std_credit = {field = '£_paid_in', prefix = "", suffix = "", is_float = true, multiplier = 1, round_decimals = 2}
+std_debit = {field = '£_paid_out', prefix = "", suffix = "", is_float = true, multiplier = -1, round_decimals = 2}

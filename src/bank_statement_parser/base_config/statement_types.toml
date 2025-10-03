@@ -24,6 +24,9 @@ statement_type = 'HSBC UK Current Account'
             field = {field = 'sheet_number', pattern ='^[0-9]+$', type='int'}
 
     [HSBC_UK_CUR.lines]
+        [[HSBC_UK_CUR.lines.configs]]
+            config = 'Transaction Lines'
+            statement_table_key = 'HSBC_UK_CUR_TRANSACTIONS'
 
 [HSBC_UK_SAV]
 statement_type = 'HSBC UK Saving Account'
@@ -51,6 +54,9 @@ statement_type = 'HSBC UK Saving Account'
             field = {field = 'sheet_number', pattern ='^[0-9]+$', type='int'}
 
     [HSBC_UK_SAV.lines]
+        [[HSBC_UK_SAV.lines.configs]]
+            config = 'Transaction Lines'
+            statement_table_key = 'HSBC_UK_CUR_TRANSACTIONS'
 
 [HSBC_UK_CRD]
 statement_type = 'HSBC UK Credit Card'
@@ -85,8 +91,8 @@ statement_type = 'HSBC UK Credit Card'
             field = {field = 'sheet_number', pattern ='^Sheet[\s]*number[\s]*[0-9]+[\s]*of[\s]*[0-9]+$', type='str'}
     [HSBC_UK_CRD.lines]
         [[HSBC_UK_CRD.lines.configs]]
-        [[HSBC_UK_CRD.lines.configs]]
-        [[HSBC_UK_CRD.lines.configs]]
+            config = 'Transaction Lines'
+            statement_table_key = 'HSBC_UK_CRD_TRANSACTIONS'
 
 [NATWEST_UK_SAV]
 statement_type = 'NATWEST UK Saving Account'

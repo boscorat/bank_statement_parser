@@ -43,12 +43,12 @@ for key in __config_dict.keys():
                 raise ConfigFileError(file)
             except ConfigFileError as e:
                 print(e)
-del key, file, toml
+# del key, file, toml
 
 for v in __config_dict.values():
     for k in v["config"].keys():
         v["config"][k] = from_dict(data_class=v["dataclass"], data=v["config"][k])
-del v, k
+# del v, k
 
 # Link statement table configurations to their corresponding statement type configs.
 # For each statement type, if any header, page, or line config references a statement_table_key,
@@ -73,14 +73,14 @@ for key, statement_type in __config_dict["statement_types"]["config"].items():
                 __config_dict["statement_types"]["config"][key].lines.configs[id].statement_table = __config_dict["statement_tables"][
                     "config"
                 ][config_group.statement_table_key]
-del key, statement_type, id, config_group
+# del key, statement_type, id, config_group
 
 # account types, statements, and companies into accounts
 for key, account in __config_dict["accounts"]["config"].items():
     __config_dict["accounts"]["config"][key].account_type = __config_dict["account_types"]["config"][account.account_type_key]
     __config_dict["accounts"]["config"][key].statement_type = __config_dict["statement_types"]["config"][account.statement_type_key]
     __config_dict["accounts"]["config"][key].company = __config_dict["companies"]["config"][account.company_key]
-del key, account
+# del key, account
 
 config_accounts = __config_dict["accounts"]["config"]
 config_statement_types = __config_dict["statement_types"]["config"]
@@ -164,7 +164,7 @@ def get_config_from_statement(statement, file) -> Account:
         config_account = get_config_from_company(company_key, statement, file)
     except Exception as e:
         raise StatementError(f"Unable to identify the account from the statement provided: {file}") from e
-    del company_leaf
+    # del company_leaf
     return config_account
 
 
@@ -220,4 +220,4 @@ def get_config_from_account(account_key: str, file) -> Account:
         return config_account
 
 
-del __dir_base, __dir_user, __config_dict, deepcopy, from_dict, load, os, pathlib
+# del __dir_base, __dir_user, __config_dict, deepcopy, from_dict, load, os, pathlib
