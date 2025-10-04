@@ -178,7 +178,7 @@ def extract_table_fields(statement, location, statement_table) -> list[tuple]:
                 try:
                     if field.cell.row is not None and field.cell.row != id_row:
                         continue  # skip if the field is not on this row
-                    field_value = table[id_row][field.cell.col]
+                    field_value = row[field.cell.col]
                     if field_value and not exception:
                         field_value = (
                             field_strip(field_value, field.strip) if field.strip else field_value

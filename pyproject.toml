@@ -8,7 +8,6 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = [
-    "camelot-py>=1.0.0",
     "dacite>=1.9.2",
     "pdfplumber>=0.11.7",
     "polars>=1.31.0",
