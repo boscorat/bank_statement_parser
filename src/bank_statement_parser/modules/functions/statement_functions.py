@@ -544,7 +544,10 @@ def get_transactions(result_transactions: pl.DataFrame, mods: TransactionMods) -
             & pl.col(mods.std_credit.field).str.starts_with(mods.std_credit.prefix)
             & (  # check if the field can be cast to float if is_float is True, or not if is_float is False
                 (mods.std_credit.is_float & pl.col(mods.std_credit.field).cast(pl.Float64, strict=False).fill_null(False).cast(pl.Boolean))
-                | ~pl.col(mods.std_credit.field).cast(pl.Float64, strict=False).fill_null(False).cast(pl.Boolean)
+                | (
+                    mods.std_credit.is_float
+                    == False & ~pl.col(mods.std_credit.field).cast(pl.Float64, strict=False).fill_null(False).cast(pl.Boolean)
+                )
             )
         )
         .then(pl.col(mods.std_credit.field).str.strip_chars_end(mods.std_credit.suffix).str.strip_chars_start(mods.std_credit.prefix))
@@ -558,7 +561,10 @@ def get_transactions(result_transactions: pl.DataFrame, mods: TransactionMods) -
             & pl.col(mods.std_debit.field).str.starts_with(mods.std_debit.prefix)
             & (  # check if the field can be cast to float if is_float is True, or not if is_float is False
                 (mods.std_debit.is_float & pl.col(mods.std_debit.field).cast(pl.Float64, strict=False).fill_null(False).cast(pl.Boolean))
-                | ~pl.col(mods.std_debit.field).cast(pl.Float64, strict=False).fill_null(False).cast(pl.Boolean)
+                | (
+                    mods.std_debit.is_float
+                    == False & ~pl.col(mods.std_debit.field).cast(pl.Float64, strict=False).fill_null(False).cast(pl.Boolean)
+                )
             )
         )
         .then(pl.col(mods.std_debit.field).str.strip_chars_end(mods.std_debit.suffix).str.strip_chars_start(mods.std_debit.prefix))
@@ -569,8 +575,12 @@ def get_transactions(result_transactions: pl.DataFrame, mods: TransactionMods) -
     )
     # and then the other standard fields
     transactions = transactions.with_columns(
-        std_date=pl.col("transaction_date").str.to_date(format="%d %b %y", strict=True),
-        std_description=pl.col("details").str.to_titlecase().str.slice(0, 100).str.strip_chars_start(")"),
+        std_date=pl.col(mods.std_date.field).str.to_date(format=mods.std_date.format, strict=True),
+        std_description=pl.col(mods.std_description.field)
+        .str.to_titlecase()
+        .str.slice(0, mods.std_description.max_length)
+        .str.strip_chars_start(mods.std_description.strip_chars_start)
+        .str.strip_chars_end(mods.std_description.strip_chars_end),
         std_movement=(pl.col("std_credit") + pl.col("std_debit")).round(2),
     )
 

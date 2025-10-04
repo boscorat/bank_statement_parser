@@ -143,9 +143,9 @@ class Statement:
         self.pdf = None
 
 
-stmt = Statement("/home/boscorat/Downloads/2025-07-12_Statement_Rewards_Credit_Card.pdf")
+# stmt = Statement("/home/boscorat/Downloads/2025-07-12_Statement_Rewards_Credit_Card.pdf")
 # stmt = Statement("/home/boscorat/Downloads/2025-07-08_Statement_Advance_Account.pdf")
-# stmt = Statement("/home/boscorat/Downloads/2025-07-08_Statement_Flexible_Saver.pdf")
+stmt = Statement("/home/boscorat/Downloads/2025-07-08_Statement_Flexible_Saver.pdf")
 
 with pl.Config(tbl_cols=-1, tbl_rows=-1):
     print(f"\n\n{(stmt.company + '---' + stmt.account).center(80, '=')}")
