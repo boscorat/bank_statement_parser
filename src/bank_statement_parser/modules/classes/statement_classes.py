@@ -143,83 +143,83 @@ class Statement:
         self.pdf = None
 
 
-# stmt = Statement("/home/boscorat/Downloads/2025-07-12_Statement_Rewards_Credit_Card.pdf")
-# stmt = Statement("/home/boscorat/Downloads/2025-07-08_Statement_Advance_Account.pdf")
-stmt = Statement("/home/boscorat/Downloads/2025-07-08_Statement_Flexible_Saver.pdf")
+for _ in range(5):
+    stmt = Statement("/home/boscorat/Downloads/2025-07-12_Statement_Rewards_Credit_Card.pdf")
+    # stmt = Statement("/home/boscorat/Downloads/2025-07-08_Statement_Advance_Account.pdf")
+    # stmt = Statement("/home/boscorat/Downloads/2025-07-08_Statement_Flexible_Saver.pdf")
 
-with pl.Config(tbl_cols=-1, tbl_rows=-1):
-    print(f"\n\n{(stmt.company + '---' + stmt.account).center(80, '=')}")
-    # print(f"HEADER:\n{stmtCC.header_results.results_field}")
-    # print(f"PAGES:\n{stmtCC.page_results.results_field}")
-    # print(f"LINES:\n{stmt.lines_results.results_field}")
-    # pivoted_lines = stmt.lines_results.results_field.pivot(values="value", index=["config", "page_number", "table_row"], columns="field")
-    # print(f"LINES PIVOTED:\n{pivoted_lines}")
-    # print(f"HEADER:\n{stmt.header_results.results_field}")
-    # print(f"PAGES:\n{stmt.page_results.results_field}")
-    print(f"Results Full:\n{stmt.lines_results.results_full}")
-    print(f"Results Clean:\n{stmt.lines_results.results_clean}")
-    print(f"Results Transactions:\n{stmt.lines_results.results_transactions}")
+    with pl.Config(tbl_cols=-1, tbl_rows=-1):
+        print(f"\n\n{(stmt.company + '---' + stmt.account).center(80, '=')}")
+        # print(f"HEADER:\n{stmtCC.header_results.results_field}")
+        # print(f"PAGES:\n{stmtCC.page_results.results_field}")
+        # print(f"LINES:\n{stmt.lines_results.results_field}")
+        # pivoted_lines = stmt.lines_results.results_field.pivot(values="value", index=["config", "page_number", "table_row"], columns="field")
+        # print(f"LINES PIVOTED:\n{pivoted_lines}")
+        # print(f"HEADER:\n{stmt.header_results.results_field}")
+        # print(f"PAGES:\n{stmt.page_results.results_field}")
+        print(f"Results Full:\n{stmt.lines_results.results_full}")
+        print(f"Results Clean:\n{stmt.lines_results.results_clean}")
+        print(f"Results Transactions:\n{stmt.lines_results.results_transactions}")
 
-    for tr in stmt.lines_results.results_transactions:
-        print(f"transaction_count: {tr.select('std_movement').count()}")
-        print(f"transaction movements: {tr.select('std_credit', 'std_debit', 'std_movement').sum()}")
+        for tr in stmt.lines_results.results_transactions:
+            print(f"transaction_count: {tr.select('std_movement').count()}")
+            print(f"transaction movements: {tr.select('std_credit', 'std_debit', 'std_movement').sum()}")
 
-    # print(f"\n\n{(stmtAdv.company + '---' + stmtAdv.account).center(80, '=')}")
-    # print(f"HEADER:\n{stmtAdv.header_results.results_field}")
-    # print(f"PAGES:\n{stmtAdv.page_results.results_field}")
+        # print(f"\n\n{(stmtAdv.company + '---' + stmtAdv.account).center(80, '=')}")
+        # print(f"HEADER:\n{stmtAdv.header_results.results_field}")
+        # print(f"PAGES:\n{stmtAdv.page_results.results_field}")
 
-    # print(f"\n\n{(stmtFlex.company + '---' + stmtFlex.account).center(80, '=')}")
-    # print(f"HEADER:\n{stmtFlex.header_results.results_field}")
-    # print(f"PAGES:\n{stmtFlex.page_results.results_field}")
+        # print(f"\n\n{(stmtFlex.company + '---' + stmtFlex.account).center(80, '=')}")
+        # print(f"HEADER:\n{stmtFlex.header_results.results_field}")
+        # print(f"PAGES:\n{stmtFlex.page_results.results_field}")
 
-stmt.close_pdf()
-# stmtAdv.close_pdf()
-# stmtFlex.close_pdf()
+    stmt.close_pdf()
+    # stmtAdv.close_pdf()
+    # stmtFlex.close_pdf()
 
-# del stmtCC
-# del stmtAdv
-# del stmtFlex
+    # del stmtCC
+    # del stmtAdv
+    # del stmtFlex
 
-print()
+    print()
 
+    # data = {"Column1": [2, 4, 6, 8, 10], "Column2": [3, 5, 7, 9, 11]}
+    # data2 = {"Column1": [1, 2, 3, 4, 5], "Column2": [10, 20, "big", "head", 50]}
+    # df = pl.DataFrame(data)
+    # print("Original DataFrame:\n", df)
+    # df2 = df.with_columns(df - df.shift(1))
+    # print("DataFrame after subtracting previous row:\n", df2)
 
-# data = {"Column1": [2, 4, 6, 8, 10], "Column2": [3, 5, 7, 9, 11]}
-# data2 = {"Column1": [1, 2, 3, 4, 5], "Column2": [10, 20, "big", "head", 50]}
-# df = pl.DataFrame(data)
-# print("Original DataFrame:\n", df)
-# df2 = df.with_columns(df - df.shift(1))
-# print("DataFrame after subtracting previous row:\n", df2)
+    # jf = pl.DataFrame(data2, strict=False)
+    # print("Original DataFrame:\n", jf)
+    # jf2 = jf.with_columns(jf.shift(1))
+    # print("DataFrame after shifting down:\n", jf2)
+    # jf3 = jf.with_columns(pl.concat_str(jf["Column2"], jf.shift(2)["Column2"], separator=" ", ignore_nulls=True).alias("merged"))
+    # print("DataFrame after merging:\n", jf3)
 
-# jf = pl.DataFrame(data2, strict=False)
-# print("Original DataFrame:\n", jf)
-# jf2 = jf.with_columns(jf.shift(1))
-# print("DataFrame after shifting down:\n", jf2)
-# jf3 = jf.with_columns(pl.concat_str(jf["Column2"], jf.shift(2)["Column2"], separator=" ", ignore_nulls=True).alias("merged"))
-# print("DataFrame after merging:\n", jf3)
+    # jf = jf.with_columns(
+    #     pl.when(jf.shift(1)["Column1"] == 3)
+    #     .then(pl.concat_str(jf.shift(1)["Column2"], jf["Column2"], separator=" | ", ignore_nulls=True))
+    #     .otherwise(pl.col("Column2"))
+    #     .alias("Col2")
+    # )
 
-# jf = jf.with_columns(
-#     pl.when(jf.shift(1)["Column1"] == 3)
-#     .then(pl.concat_str(jf.shift(1)["Column2"], jf["Column2"], separator=" | ", ignore_nulls=True))
-#     .otherwise(pl.col("Column2"))
-#     .alias("Col2")
-# )
+    # # for i, row in enumerate(jf.iter_rows(named=True)):
+    # #     lc2 = jf.shift(1)["Column2"]
+    # #     print(lc2)
+    # #     jf = (
+    # #         jf.with_columns(
+    # #             pl.when(pl.col("Column1") == 4)
+    # #             .then(pl.concat_str(lc2, pl.col("Column2"), separator=" | ", ignore_nulls=True))
+    # #             .otherwise(pl.col("Column2"))
+    # #             .alias("Col2")
+    # #         )
+    # #         .head(4)
+    # #         .tail(1)
+    # #     )
 
-# # for i, row in enumerate(jf.iter_rows(named=True)):
-# #     lc2 = jf.shift(1)["Column2"]
-# #     print(lc2)
-# #     jf = (
-# #         jf.with_columns(
-# #             pl.when(pl.col("Column1") == 4)
-# #             .then(pl.concat_str(lc2, pl.col("Column2"), separator=" | ", ignore_nulls=True))
-# #             .otherwise(pl.col("Column2"))
-# #             .alias("Col2")
-# #         )
-# #         .head(4)
-# #         .tail(1)
-# #     )
+    # print("DataFrame after changing row:\n", jf)  # does not change original df
 
-# print("DataFrame after changing row:\n", jf)  # does not change original df
-
-# # print("DataFrame after selecting rows:\n", jf.select(["Column1", "Column2"]).head(4).tail(1))  # does not change original df
-# # f = pl.DataFrame({"a": [1, 2, 3, 4, 5], "b": [10, 20, 30, 40, 50]})
-# # f.with_columns(pl.when(pl.col("a") <= 3).then(pl.col("b") // 10).otherwise(pl.col("b")))
+    # # print("DataFrame after selecting rows:\n", jf.select(["Column1", "Column2"]).head(4).tail(1))  # does not change original df
+    # # f = pl.DataFrame({"a": [1, 2, 3, 4, 5], "b": [10, 20, 30, 40, 50]})
+    # # f.with_columns(pl.when(pl.col("a") <= 3).then(pl.col("b") // 10).otherwise(pl.col("b")))
