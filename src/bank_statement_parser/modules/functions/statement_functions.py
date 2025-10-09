@@ -4,7 +4,7 @@ from copy import deepcopy
 
 import polars as pl
 
-from bank_statement_parser.modules.classes.data_definitions import StatementBookend, StatementTable, TransactionMods
+from bank_statement_parser.modules.classes.data_definitions import StatementBookend, StatementTable, TransactionSpec
 from bank_statement_parser.modules.classes.errors import StatementError
 from bank_statement_parser.modules.functions.pdf_functions import page_crop, region_table
 
@@ -149,6 +149,9 @@ def extract_table_fields(statement, location, statement_table) -> list[tuple]:
     field_values: list[tuple] = []
     region = None
     table = None
+    table_df = pl.DataFrame()
+    field_value_df = pl.DataFrame()
+    results_df = pl.DataFrame()
     if location.page_number:
         try:
             region = page_crop(statement.pages[location.page_number - 1], location.top_left, location.bottom_right)
@@ -159,7 +162,7 @@ def extract_table_fields(statement, location, statement_table) -> list[tuple]:
     else:
         exception = "No page number specified for the location"
     if region and not exception:
-        table = region_table(
+        table, table_df = region_table(
             region=region,
             table_rows=statement_table.table_rows,
             table_columns=statement_table.table_columns,
@@ -197,6 +200,13 @@ def extract_table_fields(statement, location, statement_table) -> list[tuple]:
                     success = False
                     exception = f"cell[row={field.cell.row}, column={field.cell.col}] not found in specified table"
                     field_values.append((field, field_value, success, exception, id_row))
+                # if table_df.height > 0 and not exception:
+                #     for field in statement_table.fields:
+                #         if field.cell.row is not None and field.cell.row < table_df.height:
+                ...
+        #         print(table_df.head(field.cell.row + 1).with_columns(new_column=pl.lit("testing")))
+        #         print(field_value_df)
+        # print(table_df)
     else:
         if not exception:
             exception = "Failed to extract region"
@@ -488,21 +498,21 @@ def flag_transaction_bookend(field_results: pl.DataFrame, transaction_bookends: 
     return field_results
 
 
-def get_transactions(result_transactions: pl.DataFrame, mods: TransactionMods) -> pl.DataFrame:
+def get_transactions(result_transactions: pl.DataFrame, spec: TransactionSpec) -> pl.DataFrame:
     # remove rows before first transaction_start and after last transaction_end
     first_id_row = result_transactions.filter(pl.col("transaction_start")).select(pl.col("id_row")).min()[0, 0]
     last_id_row = result_transactions.filter(pl.col("transaction_end")).select(pl.col("id_row")).max()[0, 0]
     transactions = result_transactions.filter((pl.col("id_row") >= first_id_row) & (pl.col("id_row") <= last_id_row))
 
-    if mods.fill_forward_fields:
-        for field in mods.fill_forward_fields:
+    if spec.fill_forward_fields:
+        for field in spec.fill_forward_fields:
             if field in transactions.columns:
                 transactions = transactions.with_columns(pl.col(field).fill_null(strategy="forward"))
 
-    if mods.merge_fields:
-        for field in mods.merge_fields.fields:
+    if spec.merge_fields:
+        for field in spec.merge_fields.fields:
             for _ in range(
-                mods.merge_fields.max_rows
+                spec.merge_fields.max_rows
             ):  # repeat multiple times to ensure all rows are merged - can handle up to 10 rows per transaction
                 transactions = (
                     transactions.with_columns(
@@ -511,7 +521,7 @@ def get_transactions(result_transactions: pl.DataFrame, mods: TransactionMods) -
                         )  # if a row is a continuation of the previous transaction
                         .then(
                             pl.concat_str(
-                                transactions.shift(1)[field], pl.col(field), separator=mods.merge_fields.separator, ignore_nulls=True
+                                transactions.shift(1)[field], pl.col(field), separator=spec.merge_fields.separator, ignore_nulls=True
                             )
                         )  # merge with previous row
                         .otherwise(pl.col(field))  # else keep the same
@@ -540,47 +550,47 @@ def get_transactions(result_transactions: pl.DataFrame, mods: TransactionMods) -
     transactions = transactions.with_columns(
         # standard credit column
         std_credit=pl.when(
-            pl.col(mods.std_credit.field).str.ends_with(mods.std_credit.suffix)
-            & pl.col(mods.std_credit.field).str.starts_with(mods.std_credit.prefix)
+            pl.col(spec.std_credit.field).str.ends_with(spec.std_credit.suffix)
+            & pl.col(spec.std_credit.field).str.starts_with(spec.std_credit.prefix)
             & (  # check if the field can be cast to float if is_float is True, or not if is_float is False
-                (mods.std_credit.is_float & pl.col(mods.std_credit.field).cast(pl.Float64, strict=False).fill_null(False).cast(pl.Boolean))
+                (spec.std_credit.is_float & pl.col(spec.std_credit.field).cast(pl.Float64, strict=False).fill_null(False).cast(pl.Boolean))
                 | (
-                    mods.std_credit.is_float
-                    == False & ~pl.col(mods.std_credit.field).cast(pl.Float64, strict=False).fill_null(False).cast(pl.Boolean)
+                    spec.std_credit.is_float
+                    == False & ~pl.col(spec.std_credit.field).cast(pl.Float64, strict=False).fill_null(False).cast(pl.Boolean)
                 )
             )
         )
-        .then(pl.col(mods.std_credit.field).str.strip_chars_end(mods.std_credit.suffix).str.strip_chars_start(mods.std_credit.prefix))
+        .then(pl.col(spec.std_credit.field).str.strip_chars_end(spec.std_credit.suffix).str.strip_chars_start(spec.std_credit.prefix))
         .otherwise(0.00)
         .cast(pl.Float64)
-        .mul(mods.std_credit.multiplier)
-        .round(mods.std_credit.round_decimals),
+        .mul(spec.std_credit.multiplier)
+        .round(spec.std_credit.round_decimals),
         # standard debit column
         std_debit=pl.when(
-            pl.col(mods.std_debit.field).str.ends_with(mods.std_debit.suffix)
-            & pl.col(mods.std_debit.field).str.starts_with(mods.std_debit.prefix)
+            pl.col(spec.std_debit.field).str.ends_with(spec.std_debit.suffix)
+            & pl.col(spec.std_debit.field).str.starts_with(spec.std_debit.prefix)
             & (  # check if the field can be cast to float if is_float is True, or not if is_float is False
-                (mods.std_debit.is_float & pl.col(mods.std_debit.field).cast(pl.Float64, strict=False).fill_null(False).cast(pl.Boolean))
+                (spec.std_debit.is_float & pl.col(spec.std_debit.field).cast(pl.Float64, strict=False).fill_null(False).cast(pl.Boolean))
                 | (
-                    mods.std_debit.is_float
-                    == False & ~pl.col(mods.std_debit.field).cast(pl.Float64, strict=False).fill_null(False).cast(pl.Boolean)
+                    spec.std_debit.is_float
+                    == False & ~pl.col(spec.std_debit.field).cast(pl.Float64, strict=False).fill_null(False).cast(pl.Boolean)
                 )
             )
         )
-        .then(pl.col(mods.std_debit.field).str.strip_chars_end(mods.std_debit.suffix).str.strip_chars_start(mods.std_debit.prefix))
+        .then(pl.col(spec.std_debit.field).str.strip_chars_end(spec.std_debit.suffix).str.strip_chars_start(spec.std_debit.prefix))
         .otherwise(0.00)
         .cast(pl.Float64)
-        .mul(mods.std_debit.multiplier)
-        .round(mods.std_debit.round_decimals),
+        .mul(spec.std_debit.multiplier)
+        .round(spec.std_debit.round_decimals),
     )
     # and then the other standard fields
     transactions = transactions.with_columns(
-        std_date=pl.col(mods.std_date.field).str.to_date(format=mods.std_date.format, strict=True),
-        std_description=pl.col(mods.std_description.field)
+        std_date=pl.col(spec.std_date.field).str.to_date(format=spec.std_date.format, strict=True),
+        std_description=pl.col(spec.std_description.field)
         .str.to_titlecase()
-        .str.slice(0, mods.std_description.max_length)
-        .str.strip_chars_start(mods.std_description.strip_chars_start)
-        .str.strip_chars_end(mods.std_description.strip_chars_end),
+        .str.slice(0, spec.std_description.max_length)
+        .str.strip_chars_start(spec.std_description.strip_chars_start)
+        .str.strip_chars_end(spec.std_description.strip_chars_end),
         std_movement=(pl.col("std_credit") + pl.col("std_debit")).round(2),
     )
 
@@ -608,7 +618,7 @@ def get_field_values(configs, pdf, file, company, account) -> ConfigResults:
         result_full: Result | None = None
         result_clean: pl.DataFrame = pl.DataFrame()
         result_transactions: pl.DataFrame = pl.DataFrame()
-        mods: TransactionMods | None = None
+        spec: Transactionspec | None = None
         table: StatementTable | None = None
         # get the full results for the config
         extract = extract_field_values(config=config, pdf=pdf)
@@ -627,15 +637,15 @@ def get_field_values(configs, pdf, file, company, account) -> ConfigResults:
                 result_clean = remove_rows_with_missing_vital_fields(result_clean, vital_fields)
 
             # extract and process the transactions
-            if mods := table.transaction_mods:
-                result_clean = flag_transaction_bookend(result_clean, mods.transaction_bookends)
+            if spec := table.transaction_spec:
+                result_clean = flag_transaction_bookend(result_clean, spec.transaction_bookends)
                 # transactions are now pivoted
                 result_transactions = result_clean.pivot(
                     on="field",
                     values="value",
                     index=["config", "page_number", "table_row", "id_row", "transaction_start", "transaction_end"],
                 )  # pivoted dataframe
-                result_transactions = get_transactions(result_transactions, mods)
+                result_transactions = get_transactions(result_transactions, spec)
         if len(result_full.fields) > 0:
             results_full.append(result_full)
             results_clean.append(result_clean)

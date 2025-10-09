@@ -1,5 +1,8 @@
+from datetime import datetime
+
 import polars as pl
 
+from bank_statement_parser.modules.classes.data_definitions import Cell, Field, Location, StatementTable
 from bank_statement_parser.modules.config import get_config_from_account, get_config_from_company, get_config_from_statement
 from bank_statement_parser.modules.functions.pdf_functions import pdf_close, pdf_open
 from bank_statement_parser.modules.functions.statement_functions import get_field_values
@@ -34,16 +37,16 @@ class Statement:
             if self.config.statement_type and hasattr(self.config.statement_type, "lines")
             else None
         )
-        # del self.config
-        self.header_results = get_field_values(
-            self.config_header, pdf=self.pdf, file=self.file_path, company=self.company, account=self.account
-        )
-        self.page_results = get_field_values(
-            self.config_pages, pdf=self.pdf, file=self.file_path, company=self.company, account=self.account
-        )
-        self.lines_results = get_field_values(
-            self.config_lines, pdf=self.pdf, file=self.file_path, company=self.company, account=self.account
-        )
+        # # del self.config
+        # self.header_results = get_field_values(
+        #     self.config_header, pdf=self.pdf, file=self.file_path, company=self.company, account=self.account
+        # )
+        # self.page_results = get_field_values(
+        #     self.config_pages, pdf=self.pdf, file=self.file_path, company=self.company, account=self.account
+        # )
+        # self.lines_results = get_field_values(
+        #     self.config_lines, pdf=self.pdf, file=self.file_path, company=self.company, account=self.account
+        # )
         # # pivoted dataframes
         # self.lines_df = self.lines_results.results_clean.pivot(
         #     values="value", index=["config", "page_number", "table_row", "id_row", "transaction_start", "transaction_end"], on="field"
@@ -55,15 +58,12 @@ class Statement:
     #     first_id_row = self.lines_df.filter(pl.col("transaction_start")).select(pl.col("id_row")).min()[0, 0]
     #     last_id_row = self.lines_df.filter(pl.col("transaction_end")).select(pl.col("id_row")).max()[0, 0]
     #     transactions = self.lines_df.filter((pl.col("id_row") >= first_id_row) & (pl.col("id_row") <= last_id_row))
-
     #     # transaction modifications
     #     mods = self.lines_results.transaction_mods
-
     #     if fill_forward_fields := mods["fill_forward_fields"] if "fill_forward_fields" in mods.keys() else None:
     #         for field in fill_forward_fields:
     #             if field in transactions.columns:
     #                 transactions = transactions.with_columns(pl.col(field).fill_null(strategy="forward"))
-
     #     if merge_fields := mods["merge_fields"] if "merge_fields" in mods.keys() else None:
     #         for field in merge_fields:
     #             for _ in range(10):  # repeat multiple times to ensure all rows are merged - can handle up to 10 rows per transaction
@@ -90,11 +90,9 @@ class Statement:
     #                 transactions = transactions.filter(~pl.col(f"{field}_delete_row")).drop(
     #                     f"{field}_delete_row"
     #                 )  # drop rows that have been merged into the following row
-
     #     transactions = transactions.filter(
     #         pl.col("transaction_end")
     #     )  # keep only rows where transaction ends, all transaction rows above have been merged into these rows
-
     #     # get standard fields
     #     # credit & debit columns first so these can be used in the movement column
     #     transactions = transactions.with_columns(
@@ -125,9 +123,7 @@ class Statement:
     #         std_description=pl.col("details").str.to_titlecase().str.slice(0, 100).str.strip_chars_start(")"),
     #         std_movement=(pl.col("std_credit") + pl.col("std_debit")).round(2),
     #     )
-
     #     return transactions
-
     def get_config(self):
         config = None
         if self.key_account:
@@ -143,83 +139,142 @@ class Statement:
         self.pdf = None
 
 
-for _ in range(5):
-    stmt = Statement("/home/boscorat/Downloads/2025-07-12_Statement_Rewards_Credit_Card.pdf")
-    # stmt = Statement("/home/boscorat/Downloads/2025-07-08_Statement_Advance_Account.pdf")
-    # stmt = Statement("/home/boscorat/Downloads/2025-07-08_Statement_Flexible_Saver.pdf")
+# for _ in range(1):
+#     stmt = Statement("/home/boscorat/Downloads/2025-07-12_Statement_Rewards_Credit_Card.pdf")
+#     # stmt = Statement("/home/boscorat/Downloads/2025-07-08_Statement_Advance_Account.pdf")
+#     # stmt = Statement("/home/boscorat/Downloads/2025-07-08_Statement_Flexible_Saver.pdf")
+#     with pl.Config(tbl_cols=-1, tbl_rows=-1):
+#         print(f"\n\n{(stmt.company + '---' + stmt.account).center(80, '=')}")
+#         # print(f"HEADER:\n{stmtCC.header_results.results_field}")
+#         # print(f"PAGES:\n{stmtCC.page_results.results_field}")
+#         # print(f"LINES:\n{stmt.lines_results.results_field}")
+#         # pivoted_lines = stmt.lines_results.results_field.pivot(values="value", index=["config", "page_number", "table_row"], columns="field")
+#         # print(f"LINES PIVOTED:\n{pivoted_lines}")
+#         # print(f"HEADER:\n{stmt.header_results.results_field}")
+#         # print(f"PAGES:\n{stmt.page_results.results_field}")
+#         print(f"Results Full:\n{stmt.lines_results.results_full}")
+#         print(f"Results Clean:\n{stmt.lines_results.results_clean}")
+#         print(f"Results Transactions:\n{stmt.lines_results.results_transactions}")
+#         for tr in stmt.lines_results.results_transactions:
+#             print(f"transaction_count: {tr.select('std_movement').count()}")
+#             print(f"transaction movements: {tr.select('std_credit', 'std_debit', 'std_movement').sum()}")
+#         # print(f"\n\n{(stmtAdv.company + '---' + stmtAdv.account).center(80, '=')}")
+#         # print(f"HEADER:\n{stmtAdv.header_results.results_field}")
+#         # print(f"PAGES:\n{stmtAdv.page_results.results_field}")
+#         # print(f"\n\n{(stmtFlex.company + '---' + stmtFlex.account).center(80, '=')}")
+#         # print(f"HEADER:\n{stmtFlex.header_results.results_field}")
+#         # print(f"PAGES:\n{stmtFlex.page_results.results_field}")
+#     stmt.close_pdf()
+#     # stmtAdv.close_pdf()
+#     # stmtFlex.close_pdf()
+#     # del stmtCC
+#     # del stmtAdv
+#     # del stmtFlex
+#     print()
+# table = [["Credit Limit", "£10,500.00"], ["APR", "23.9"], ["PreviousBalance", "1,090.67"]]
+# column_names = ["col_" + str(i) for i in range(len(table[0]))] if table else []
+# table_df = pl.DataFrame(table[0:], schema=column_names) if table else pl.DataFrame()
+# result_df = pl.DataFrame()
+# result = pl.DataFrame()
+# statement_table = StatementTable(
+#     statement_table="Account Summary",
+#     locations=[Location(page_number=1, top_left=[335, 180], bottom_right=[575, 380], vertical_lines=None)],
+#     fields=[
+#         Field(
+#             field="credit_limit",
+#             pattern="^[0-9]*\\.[0-9]{2}[D]?$",
+#             cell=Cell(row=0, col=1),
+#             strip=["£", " ", ",", "\\n"],
+#             vital=False,
+#             type="float",
+#         ),
+#         Field(
+#             field="credit_limit_2",
+#             pattern="^[0-9]*\\.[0-9]{2}[D]?$",
+#             cell=Cell(row=0, col=2),
+#             strip=["£", " ", ",", "\\n"],
+#             vital=False,
+#             type="float",
+#         ),
+#         Field(
+#             field="apr", pattern="^[0-9]*\\.[0-9]{1}[D]?$", cell=Cell(row=1, col=1), strip=["%", " ", ",", "\\n"], vital=False, type="float"
+#         ),
+#         Field(
+#             field="previous_balance",
+#             pattern="^[0-9]*\\.[0-9]{2}[D]?$",
+#             cell=Cell(row=2, col=1),
+#             strip=["£", " ", ",", "\\n"],
+#             vital=False,
+#             type="float",
+#         ),
+#         Field(
+#             field="debits",
+#             pattern="^[0-9]*\\.[0-9]{2}[D]?$",
+#             cell=Cell(row=3, col=1),
+#             strip=["£", " ", ",", "\\n"],
+#             vital=True,
+#             type="float",
+#         ),
+#         Field(
+#             field="credits",
+#             pattern="^[0-9]*\\.[0-9]{2}[D]?$",
+#             cell=Cell(row=4, col=1),
+#             strip=["£", " ", ",", "\\n"],
+#             vital=True,
+#             type="float",
+#         ),
+#         Field(
+#             field="new_balance",
+#             pattern="^[0-9]*\\.[0-9]{2}[D]?$",
+#             cell=Cell(row=5, col=1),
+#             strip=["£", " ", ",", "\\n"],
+#             vital=True,
+#             type="float",
+#         ),
+#         Field(
+#             field="transaction_balance",
+#             pattern="^[0-9]*\\.[0-9]{2}[D]?$",
+#             cell=Cell(row=6, col=1),
+#             strip=["£", " ", ",", "\\n"],
+#             vital=True,
+#             type="float",
+#         ),
+#         Field(
+#             field="minimum_payment",
+#             pattern="^[0-9]*\\.[0-9]{2}[D]?$",
+#             cell=Cell(row=7, col=1),
+#             strip=["£", " ", ",", "\\n"],
+#             vital=False,
+#             type="float",
+#         ),
+#     ],
+#     table_columns=None,
+#     table_rows=None,
+#     row_spacing=7,
+#     tests=None,
+#     delete_success_false=None,
+#     delete_cast_success_false=None,
+#     delete_rows_with_missing_vital_fields=None,
+#     transaction_mods=None,
+# )
+# fields_df = pl.DataFrame(statement_table.fields)
+# print(fields_df)
+# if table_df.height > 0:
+#     for field in statement_table.fields:
+#         if field.cell.row is not None and field.cell.row < table_df.height:  # type: ignore
+#             result = (
+#                 table_df.head(field.cell.row + 1)
+#                 .tail(1)
+#                 .with_columns(value=pl.col("col_1").str.replace_all("[£,\\s]", ""))
+#                 .with_columns(valid=pl.col("value").str.contains("^[0-9]*\\.[0-9]{1}[D]?$"))
+#             )  # type: ignore
+#             result_df = result_df.vstack(result)
+# print(result_df)
 
-    with pl.Config(tbl_cols=-1, tbl_rows=-1):
-        print(f"\n\n{(stmt.company + '---' + stmt.account).center(80, '=')}")
-        # print(f"HEADER:\n{stmtCC.header_results.results_field}")
-        # print(f"PAGES:\n{stmtCC.page_results.results_field}")
-        # print(f"LINES:\n{stmt.lines_results.results_field}")
-        # pivoted_lines = stmt.lines_results.results_field.pivot(values="value", index=["config", "page_number", "table_row"], columns="field")
-        # print(f"LINES PIVOTED:\n{pivoted_lines}")
-        # print(f"HEADER:\n{stmt.header_results.results_field}")
-        # print(f"PAGES:\n{stmt.page_results.results_field}")
-        print(f"Results Full:\n{stmt.lines_results.results_full}")
-        print(f"Results Clean:\n{stmt.lines_results.results_clean}")
-        print(f"Results Transactions:\n{stmt.lines_results.results_transactions}")
+# table_df = table_df.with_columns(row=pl.row_index())
+# fields_df = fields_df.unnest("cell")
 
-        for tr in stmt.lines_results.results_transactions:
-            print(f"transaction_count: {tr.select('std_movement').count()}")
-            print(f"transaction movements: {tr.select('std_credit', 'std_debit', 'std_movement').sum()}")
-
-        # print(f"\n\n{(stmtAdv.company + '---' + stmtAdv.account).center(80, '=')}")
-        # print(f"HEADER:\n{stmtAdv.header_results.results_field}")
-        # print(f"PAGES:\n{stmtAdv.page_results.results_field}")
-
-        # print(f"\n\n{(stmtFlex.company + '---' + stmtFlex.account).center(80, '=')}")
-        # print(f"HEADER:\n{stmtFlex.header_results.results_field}")
-        # print(f"PAGES:\n{stmtFlex.page_results.results_field}")
-
-    stmt.close_pdf()
-    # stmtAdv.close_pdf()
-    # stmtFlex.close_pdf()
-
-    # del stmtCC
-    # del stmtAdv
-    # del stmtFlex
-
-    print()
-
-    # data = {"Column1": [2, 4, 6, 8, 10], "Column2": [3, 5, 7, 9, 11]}
-    # data2 = {"Column1": [1, 2, 3, 4, 5], "Column2": [10, 20, "big", "head", 50]}
-    # df = pl.DataFrame(data)
-    # print("Original DataFrame:\n", df)
-    # df2 = df.with_columns(df - df.shift(1))
-    # print("DataFrame after subtracting previous row:\n", df2)
-
-    # jf = pl.DataFrame(data2, strict=False)
-    # print("Original DataFrame:\n", jf)
-    # jf2 = jf.with_columns(jf.shift(1))
-    # print("DataFrame after shifting down:\n", jf2)
-    # jf3 = jf.with_columns(pl.concat_str(jf["Column2"], jf.shift(2)["Column2"], separator=" ", ignore_nulls=True).alias("merged"))
-    # print("DataFrame after merging:\n", jf3)
-
-    # jf = jf.with_columns(
-    #     pl.when(jf.shift(1)["Column1"] == 3)
-    #     .then(pl.concat_str(jf.shift(1)["Column2"], jf["Column2"], separator=" | ", ignore_nulls=True))
-    #     .otherwise(pl.col("Column2"))
-    #     .alias("Col2")
-    # )
-
-    # # for i, row in enumerate(jf.iter_rows(named=True)):
-    # #     lc2 = jf.shift(1)["Column2"]
-    # #     print(lc2)
-    # #     jf = (
-    # #         jf.with_columns(
-    # #             pl.when(pl.col("Column1") == 4)
-    # #             .then(pl.concat_str(lc2, pl.col("Column2"), separator=" | ", ignore_nulls=True))
-    # #             .otherwise(pl.col("Column2"))
-    # #             .alias("Col2")
-    # #         )
-    # #         .head(4)
-    # #         .tail(1)
-    # #     )
-
-    # print("DataFrame after changing row:\n", jf)  # does not change original df
-
-    # # print("DataFrame after selecting rows:\n", jf.select(["Column1", "Column2"]).head(4).tail(1))  # does not change original df
-    # # f = pl.DataFrame({"a": [1, 2, 3, 4, 5], "b": [10, 20, 30, 40, 50]})
-    # # f.with_columns(pl.when(pl.col("a") <= 3).then(pl.col("b") // 10).otherwise(pl.col("b")))
+# for i, col in enumerate(table_df.iter_columns()):
+#     table_df = table_df.with_columns(pl.lit("new").alias(f"{col.name}_config"))
+# print(table_df)
+# # print(fields_df)

@@ -4,18 +4,49 @@ from typing import Optional
 
 @dataclass
 class Cell:
-    row: Optional[int]
+    row: int
     col: int
+
+
+@dataclass
+class StringConfig:
+    max_length: Optional[str]
+    pattern: str = ".+"
+
+
+@dataclass
+class DateConfig:
+    date_format: str = "%d %b %y"
+
+
+@dataclass
+class NumericModifier:
+    prefix: Optional[str]
+    suffix: Optional[str]
+    multiplier: int = 1
+    include_negative_values: bool = True
+    include_positive_values: bool = True
+
+
+@dataclass
+class NumericConfig:
+    strip_chars_start: Optional[str]
+    strip_chars_end: Optional[str]
+    numeric_modifier: Optional[NumericModifier]
+    decimal_seperator: str = "."
+    thousands_seperator: str = ","
+    round_decimals: int = 2
 
 
 @dataclass
 class Field:
     field: str
-    pattern: str
     cell: Optional[Cell]
-    strip: Optional[list]
-    vital: Optional[bool] = False
-    type: Optional[str] = "str"
+    column: Optional[int]
+    vital: bool
+    numeric_config: Optional[NumericConfig]
+    string_config: Optional[StringConfig]
+    date_config: Optional[DateConfig]
 
 
 @dataclass
@@ -41,27 +72,18 @@ class StatementBookend:
 
 
 @dataclass
-class StdDate:
-    field: str
-    format: str
+class StdField:
+    field: Field
 
 
 @dataclass
 class StdDescription:
-    field: str
-    max_length: int
-    strip_chars_start: str
-    strip_chars_end: str
+    field: Field
 
 
 @dataclass
 class StdCreditDebit:
-    field: str
-    prefix: str
-    suffix: str
-    is_float: bool
-    multiplier: float
-    round_decimals: int
+    field: Field
 
 
 @dataclass
@@ -72,12 +94,12 @@ class MergeFields:
 
 
 @dataclass
-class TransactionMods:
+class TransactionSpec:
     transaction_bookends: StatementBookend
-    std_date: StdDate
-    std_description: StdDescription
-    std_credit: StdCreditDebit
-    std_debit: StdCreditDebit
+    std_date: StdField
+    std_description: StdField
+    std_credit: StdField
+    std_debit: StdField
     fill_forward_fields: Optional[list[str]]
     merge_fields: Optional[MergeFields]
 
@@ -94,7 +116,7 @@ class StatementTable:
     delete_success_false: Optional[bool]
     delete_cast_success_false: Optional[bool]
     delete_rows_with_missing_vital_fields: Optional[bool]
-    transaction_mods: Optional[TransactionMods]
+    transaction_spec: Optional[TransactionSpec]
 
 
 @dataclass

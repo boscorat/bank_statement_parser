@@ -1,0 +1,102 @@
+import polars as pl
+
+from bank_statement_parser.modules.classes.statement_classes import Statement, StatementTable
+from bank_statement_parser.modules.config import STRIP_FLOAT_LIST, STRIP_FLOAT_RE, config_companies_df
+from bank_statement_parser.modules.functions.pdf_functions import page_crop, region_table
+from bank_statement_parser.modules.functions.statement_functions import extract_table_fields, spawn_locations
+
+stmt = Statement("/home/boscorat/Downloads/2025-07-08_Statement_Advance_Account.pdf")
+
+
+def get_region(location, pdf):
+    region = None
+    exception = None
+    if location.page_number:
+        try:
+            region = page_crop(pdf.pages[location.page_number - 1], location.top_left, location.bottom_right)
+        except IndexError:
+            exception = "Page doesn't exist in Statement"
+        except ValueError:
+            exception = "Specified location outside of the page boundaries"
+    else:
+        exception = "No page number specified for the location"
+    return (region, exception)
+
+
+def get_table(location, region, statement_table):
+    table = pl.DataFrame()
+    table = region_table(
+        region=region,
+        table_rows=statement_table.table_rows,
+        table_columns=statement_table.table_columns,
+        row_spacing=statement_table.row_spacing,
+        vertical_lines=location.vertical_lines,
+    )[1]
+    return table
+
+
+# polars expressions
+strip_float_list = pl.col("value_raw").str.replace_many(STRIP_FLOAT_LIST, [""])
+strip_float_re = pl.col("value_raw").str.replace_all(STRIP_FLOAT_RE, "")
+
+match_pat = pl.when(pl.col("value_stripped").str.contains(pl.col("pattern"))).then(pl.lit(True)).otherwise(pl.lit(False))
+
+
+def extract_table_fields_df(pdf, location, statement_table):
+    region, exception = get_region(location, pdf)
+    table = get_table(location, region, statement_table) if region and not exception else pl.LazyFrame()
+    fields = pl.LazyFrame(statement_table.fields)
+    if statement_table.transaction_spec:  # transaction records will be multi-line and have now row specification
+        ...
+    else:  # other table records will be row and column specific
+        table = (
+            table.unpivot(index="row", value_name="value_raw")
+            .with_columns(col=pl.col("variable").str.replace("col_", "").cast(pl.Int16))
+            .drop("variable")
+        )
+        fields = (
+            fields.unnest("cell")
+            .join(other=table, on=["row", "col"], how="left")
+            .with_columns(value_list=strip_float_list)
+            .with_columns(value_re=strip_float_re)
+            # .with_columns(value_pat_matched=match_pat)
+            # .with_columns(value_stripped=pl.col("value_raw").str.replace_all(rf"{STRIP_FLOAT_RE}", ""))
+            # .with_columns(value_stripped2=pl.col("value_raw").str.replace_all(rf"{fields.replace}", ""))
+            # .with_columns(value_stripped=pl.col("value_raw").str.replace_all(, ""))
+            # .with_columns(value_stripped=pl.col("value_raw").str.replace_all(pl.col("strip").first(), "", literal=True).over("strip"))
+            # .with_columns(value_stripped=pl.col("value_raw").str.replace_many(["£", ",", " "], [""]))
+            # .with_columns(
+            #     value_pat_matched=pl.when(pl.col("value_stripped").str.contains(pl.col("pattern"))).then(pl.col("value_stripped"))
+            # )
+            # .with_columns(
+            #     dt_float=pl.when(pl.col("type").is_in(["flt", "float"])).then(pl.col("value_pat_matched").cast(float, strict=False)),
+            #     dt_int=pl.when(pl.col("type").is_in(["int", "integer"])).then(pl.col("value_pat_matched").cast(int, strict=False)),
+            #     dt_str=pl.when(pl.col("type").is_in(["str", "string"])).then(pl.col("value_pat_matched").cast(str, strict=False)),
+            # )
+            # .with_columns(value_cast=pl.coalesce("dt_float", "dt_int", "dt_str"))
+            # .with_columns(valid=pl.when(pl.col("value_cast").is_not_null()).then(True).otherwise(False))
+            # # .with_columns(exception=pl.when(pl.col("valid")).then(pl.lit("no error")).otherwise(pl.lit("Error! ")))
+            # .with_columns(
+            #     exception=pl.when(pl.col("value_raw").is_null())
+            #     .then(pl.lit("Raw Value"))
+            #     .otherwise(
+            #         pl.when(pl.col("value_pat_matched").is_null())
+            #         .then(pl.lit("Pattern Match"))
+            #         .otherwise(pl.when(pl.col("value_cast").is_null()).then(pl.lit("Datatype")))
+            #     )
+            # )
+            # .drop("dt_float", "dt_int", "dt_str")
+        )
+        with pl.Config(tbl_cols=-1, tbl_rows=-1):
+            print(fields.collect())
+
+
+if stmt.config_header:
+    for config in stmt.config_header:
+        # extract field values
+        if config.statement_table:
+            spawned_locations = spawn_locations(config.statement_table.locations, stmt.pdf)
+            for location in spawned_locations:
+                table_fields = extract_table_fields(stmt.pdf, location, config.statement_table)
+                table_fields_df = extract_table_fields_df(stmt.pdf, location, config.statement_table)
+                ...

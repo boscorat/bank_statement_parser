@@ -2,12 +2,20 @@ import os
 import pathlib
 from copy import deepcopy
 
+import polars as pl
 from dacite import from_dict
 from tomllib import load
 
 from bank_statement_parser.modules.classes.data_definitions import Account, AccountType, Company, StatementTable, StatementType
 from bank_statement_parser.modules.classes.errors import ConfigFileError, StatementError
 from bank_statement_parser.modules.functions.statement_functions import extract_field_values
+
+# CONSTANTS
+NUMBERS_GBP = r"^[£]?[\s]*[-]?\d{1,3}(?:,\d{3})*(?:\.\d+)?$|^\d+(?:\.)?\d+$"
+NUMBERS_USD = r"^[$]?[\s]*[-]?\d{1,3}(?:,\d{3})*(?:\.\d+)?$|^\d+(?:\.)?\d+$"
+NUMBERS_EURO = r"^[-]?\d{1,3}(?:\.\d{3})*(?:,\d+)?$|^\d+(?:,)?\d+[EUR]?$"
+STRIP_UK_US = ["$", "£", " ", ",", "\n"]
+STRIP_EURO = ["EUR", " ", ",", "\n"]
 
 __dir_base = os.path.join(pathlib.Path(__file__).parent.parent, "base_config")
 __dir_user = os.path.join(pathlib.Path(__file__).parent.parent.parent, "user_config")
@@ -74,6 +82,16 @@ for key, account in __config_dict["accounts"]["config"].items():
 config_accounts = __config_dict["accounts"]["config"]
 config_statement_types = __config_dict["statement_types"]["config"]
 config_companies = __config_dict["companies"]["config"]
+
+config_accounts_df = pl.DataFrame(config_accounts).transpose(include_header=True, header_name="account", column_names=["config"])
+config_statement_types_df = pl.DataFrame(config_statement_types).transpose(
+    include_header=True, header_name="statement_type", column_names=["config"]
+)
+config_companies_df = pl.DataFrame(config_companies).transpose(include_header=True, header_name="company", column_names=["config"])
+
+# print(config_accounts_df)
+# print(config_statement_types_df)
+# print(config_accounts_df)
 
 
 def config_company_accounts(company_key):
