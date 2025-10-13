@@ -3,20 +3,18 @@ from typing import Optional
 
 
 @dataclass
+class CurrencySpec:
+    symbols: list[str]
+    seperator_decimal: str
+    seperators_thousands: list[str]
+    round_decimals: int
+    pattern: str
+
+
+@dataclass
 class Cell:
     row: int
     col: int
-
-
-@dataclass
-class StringConfig:
-    max_length: Optional[str]
-    pattern: str = ".+"
-
-
-@dataclass
-class DateConfig:
-    date_format: str = "%d %b %y"
 
 
 @dataclass
@@ -24,18 +22,8 @@ class NumericModifier:
     prefix: Optional[str]
     suffix: Optional[str]
     multiplier: int = 1
-    include_negative_values: bool = True
-    include_positive_values: bool = True
-
-
-@dataclass
-class NumericConfig:
-    strip_chars_start: Optional[str]
-    strip_chars_end: Optional[str]
-    numeric_modifier: Optional[NumericModifier]
-    decimal_seperator: str = "."
-    thousands_seperator: str = ","
-    round_decimals: int = 2
+    exclude_negative_values: bool = False
+    exclude_positive_values: bool = False
 
 
 @dataclass
@@ -44,9 +32,14 @@ class Field:
     cell: Optional[Cell]
     column: Optional[int]
     vital: bool
-    numeric_config: Optional[NumericConfig]
-    string_config: Optional[StringConfig]
-    date_config: Optional[DateConfig]
+    type: str
+    strip_characters_start: Optional[str] = None
+    strip_characters_end: Optional[str] = None
+    numeric_currency: str = "GBP"
+    numeric_modifier: Optional[NumericModifier] = None
+    string_pattern: str = ".+"
+    string_max_length: Optional[int] = None
+    date_format: str = "%d %b %y"
 
 
 @dataclass
@@ -72,21 +65,6 @@ class StatementBookend:
 
 
 @dataclass
-class StdField:
-    field: Field
-
-
-@dataclass
-class StdDescription:
-    field: Field
-
-
-@dataclass
-class StdCreditDebit:
-    field: Field
-
-
-@dataclass
 class MergeFields:
     fields: list[str]
     max_rows: int
@@ -96,10 +74,10 @@ class MergeFields:
 @dataclass
 class TransactionSpec:
     transaction_bookends: StatementBookend
-    std_date: StdField
-    std_description: StdField
-    std_credit: StdField
-    std_debit: StdField
+    std_date: Field
+    std_description: Field
+    std_credit: Field
+    std_debit: Field
     fill_forward_fields: Optional[list[str]]
     merge_fields: Optional[MergeFields]
 

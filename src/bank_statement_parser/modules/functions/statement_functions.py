@@ -6,6 +6,7 @@ import polars as pl
 
 from bank_statement_parser.modules.classes.data_definitions import StatementBookend, StatementTable, TransactionSpec
 from bank_statement_parser.modules.classes.errors import StatementError
+from bank_statement_parser.modules.constants import NUMBERS_GBP, STRIP_GBP_USD
 from bank_statement_parser.modules.functions.pdf_functions import page_crop, region_table
 
 FieldResult = namedtuple("FieldResult", "config page_number field type field_value value success vital exception table_row id_row")
@@ -80,7 +81,7 @@ def field_validate(value: str | None, pattern: str) -> bool:
     return success
 
 
-def extract_text_field(statement, location, strip, pattern) -> tuple[bool, str, str]:
+def extract_text_field(statement, location, pattern, strip=None) -> tuple[bool, str, str]:
     """
     Extracts a text field from a specified region in a bank statement page.
 
@@ -179,26 +180,40 @@ def extract_table_fields(statement, location, statement_table) -> list[tuple]:
                 exception = ""
                 field_value = None
                 try:
-                    if field.cell.row is not None and field.cell.row != id_row:
+                    if field.cell and field.cell.row != id_row:
                         continue  # skip if the field is not on this row
-                    field_value = row[field.cell.col]
+                    col = field.cell.col if field.cell else field.column
+                    field_value = row[col]
+                    # if field_value and not exception:
+                    #     field_value = (
+                    #         field_strip(field_value, field.strip) if field.strip else field_value
+                    #     )  # strip any specified characters
+                    #     if field_validate(field_value, field.pattern):
+                    #         success = True
+                    #         exception = ""
+                    #         field_values.append((field, field_value, success, exception, id_row))
+                    #     else:
+                    #         field_value = None
+                    #         success = False
+                    #         exception = f"{field_value} failed to validate against pattern {field.pattern}"
+                    #         field_values.append((field, field_value, success, exception, id_row))
                     if field_value and not exception:
                         field_value = (
-                            field_strip(field_value, field.strip) if field.strip else field_value
+                            field_strip(field_value, STRIP_GBP_USD) if STRIP_GBP_USD else field_value
                         )  # strip any specified characters
-                        if field_validate(field_value, field.pattern):
+                        if field_validate(field_value, NUMBERS_GBP if field.numeric_currency else field.string_pattern):
                             success = True
                             exception = ""
                             field_values.append((field, field_value, success, exception, id_row))
                         else:
                             field_value = None
                             success = False
-                            exception = f"{field_value} failed to validate against pattern {field.pattern}"
+                            exception = f"{field_value} failed to validate against pattern {field.string_pattern}"
                             field_values.append((field, field_value, success, exception, id_row))
                 except IndexError:
                     field_value = None
                     success = False
-                    exception = f"cell[row={field.cell.row}, column={field.cell.col}] not found in specified table"
+                    exception = f"column={field.cell.col if field.cell else field.column}] not found in specified table"
                     field_values.append((field, field_value, success, exception, id_row))
                 # if table_df.height > 0 and not exception:
                 #     for field in statement_table.fields:
@@ -256,7 +271,7 @@ def extract_field_values(config, pdf):
                         config=config.config,
                         page_number=location.page_number,
                         field=field.field,
-                        type=field.type,
+                        type="",  # field.type,
                         field_value=field_value if field_value else "",
                         value=field_value if success else "",
                         success=success,
@@ -270,13 +285,13 @@ def extract_field_values(config, pdf):
     elif config.locations:  # multiple locations
         spawned_locations = spawn_locations(config.locations, pdf)
         for location in spawned_locations:
-            success, field_value, exception = extract_text_field(pdf, location, config.field.strip, config.field.pattern)
+            success, field_value, exception = extract_text_field(pdf, location, config.field.string_pattern)  # , config.field.strip)
             field_results.append(
                 FieldResult(
                     config=config.config,
                     page_number=location.page_number,
                     field=config.field.field,
-                    type=config.field.type,
+                    type="",  # config.field.type,
                     field_value=field_value if field_value else "",
                     value=field_value if success else "",
                     success=success,
@@ -291,13 +306,13 @@ def extract_field_values(config, pdf):
         try:
             if not getattr(config.location, "page_number", None):  # we assume the 1st page if no number set for a single config
                 config.location.page_number = 1
-            success, field_value, exception = extract_text_field(pdf, config.location, config.field.strip, config.field.pattern)
+            success, field_value, exception = extract_text_field(pdf, config.location, config.field.string_pattern)  # , config.field.strip)
             field_results.append(
                 FieldResult(
                     config=config.config,
                     page_number=config.location.page_number,
                     field=config.field.field,
-                    type=config.field.type,
+                    type="",  # config.field.type,
                     field_value=field_value if field_value else "",
                     value=field_value if success else "",
                     success=success,

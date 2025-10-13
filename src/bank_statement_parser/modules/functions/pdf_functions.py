@@ -65,7 +65,7 @@ def region_table(region, table_rows: int | None, table_columns: int | None, row_
     column_names = ["col_" + str(i) for i in range(len(table[0]))] if table else []
     table_df = pl.LazyFrame(table[0:], schema=column_names, orient="row") if table else pl.LazyFrame()
     # print(table_df)
-    return (table, table_df.with_row_index(name="row"))
+    return (table, table_df)
 
 
 if __name__ == "__main__":

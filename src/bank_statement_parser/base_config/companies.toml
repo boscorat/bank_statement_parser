@@ -5,10 +5,10 @@ company = 'HSBC Bank UK'
         {page_number = 1, top_left = [475,110], bottom_right = [575, 130]},
         {page_number = 1, top_left = [460,144], bottom_right = [575, 165]},
     ]
-    field = {field = 'website', pattern ='^www\.hsbc\.co\.uk$'}
+    field = {field = 'website', vital=true, type="string", string_pattern ='^www\.hsbc\.co\.uk$'}
 
 [NATWEST_UK]
 company = 'NatWest Bank UK'
 [NATWEST_UK.config]
-    location = {page_numer = 1, top_left = [367, 64], bottom_right = [575, 130]}
-    field = {field = 'website', pattern ='www\.natwest\.co\.uk'}
+    location = {page_number = 1, top_left = [367, 64], bottom_right = [575, 130]}
+    field = {field = 'website', vital=true, type="string", string_pattern ='www\.natwest\.co\.uk'}

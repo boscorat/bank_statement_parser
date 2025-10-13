@@ -8,7 +8,7 @@ statement_type = 'HSBC UK Current Account'
         [[HSBC_UK_CUR.header.configs]]
             config = 'Statement Info'
             location = {page_number=1, top_left = [37, 325], bottom_right = [190, 360]}
-            field = {field = 'statement_date', pattern ='^[1-3]?[0-9]\s[A-Z][a-z]{2,8}\sto\s[1-3]?[0-9]\s[A-Z][a-z]{2,8}\s[0-9]{4}$', type='str'}
+            field = {field = 'statement_date', vital=true, type = "string", string_pattern ='^[1-3]?[0-9]\s[A-Z][a-z]{2,8}\sto\s[1-3]?[0-9]\s[A-Z][a-z]{2,8}\s[0-9]{4}$'}
 
         [[HSBC_UK_CUR.header.configs]]
             config = 'Account Info'
@@ -21,7 +21,7 @@ statement_type = 'HSBC UK Current Account'
                 {page_number = 1, top_left = [485, 388], bottom_right = [550, 410]}, #first page
                 {top_left = [485, 163], bottom_right = [550, 185]} # all other pages
             ]
-            field = {field = 'sheet_number', pattern ='^[0-9]+$', type='int'}
+            field = {field = 'sheet_number', vital=false, type = "string", string_pattern ='^[0-9]+$'}
 
     [HSBC_UK_CUR.lines]
         [[HSBC_UK_CUR.lines.configs]]
@@ -38,7 +38,7 @@ statement_type = 'HSBC UK Saving Account'
         [[HSBC_UK_SAV.header.configs]]
             config = 'Statement Info'
             location = {page_number=1, top_left = [42, 350], bottom_right = [200, 385]}
-            field = {field = 'statement_date', pattern ='^[1-3]?[0-9]\s[A-Z][a-z]{2,8}\sto\s[1-3]?[0-9]\s[A-Z][a-z]{2,8}\s[0-9]{4}$', type='str'}
+            field = {field = 'statement_date', vital=true, type = "string", string_pattern ='^[1-3]?[0-9]\s[A-Z][a-z]{2,8}\sto\s[1-3]?[0-9]\s[A-Z][a-z]{2,8}\s[0-9]{4}$'}
 
         [[HSBC_UK_SAV.header.configs]]
             config = 'Account Info'
@@ -51,7 +51,7 @@ statement_type = 'HSBC UK Saving Account'
                 {page_number = 1, top_left = [485, 408], bottom_right = [550, 425]}, #first page
                 {top_left = [485, 163], bottom_right = [550, 185]} # all other pages
             ]
-            field = {field = 'sheet_number', pattern ='^[0-9]+$', type='int'}
+            field = {field = 'sheet_number', vital=false, type = "string", string_pattern ='^[0-9]+$'}
 
     [HSBC_UK_SAV.lines]
         [[HSBC_UK_SAV.lines.configs]]
@@ -68,17 +68,17 @@ statement_type = 'HSBC UK Credit Card'
         [[HSBC_UK_CRD.header.configs]]
             config = 'Statement Info'
             location = {page_number=1, top_left = [120, 470], bottom_right = [225, 500]}
-            field = {field = 'statement_date', pattern ='^[0-3]?[0-9]\s[A-Z][a-z]{2,8}\s[0-9]{4}$', type='str'}
+            field = {field = 'statement_date', vital=true, type = "string", string_pattern ='^[0-3]?[0-9]\s[A-Z][a-z]{2,8}\s[0-9]{4}$'}
 
         [[HSBC_UK_CRD.header.configs]]
             config = 'Account Info'
             location = {page_number=2, top_left = [44, 174], bottom_right = [215, 200]}
-            field = {field = 'account_name', pattern ='^[A-Z]+[a-z]*\s[A-Z]+[a-z]*.*$', vital=true, type='str'}
+            field = {field = 'account_name', vital=true, type = "string", string_pattern ='^[A-Z]+[a-z]*\s[A-Z]+[a-z]*.*$'}
 
         [[HSBC_UK_CRD.header.configs]]
             config = 'Account Info'
             location = {page_number=2, top_left = [220, 175], bottom_right = [340, 197]}
-            field = {field = 'card_number', pattern ='^[0-9]{4}\s[0-9]{4}\s[0-9]{4}\s[0-9]{4}\s?$', vital=true, type='str'}
+            field = {field = 'card_number', vital=true, type = "string", string_pattern ='^[0-9]{4}\s[0-9]{4}\s[0-9]{4}\s[0-9]{4}\s?$'}
 
     [HSBC_UK_CRD.page]
         [[HSBC_UK_CRD.pages.configs]]
@@ -88,7 +88,7 @@ statement_type = 'HSBC UK Credit Card'
                 {page_number = 2, top_left = [475, 145], bottom_right = [590, 185]}, #first page
                 {top_left = [460, 80], bottom_right = [590, 130]} # all other pages
             ]
-            field = {field = 'sheet_number', pattern ='^Sheet[\s]*number[\s]*[0-9]+[\s]*of[\s]*[0-9]+$', type='str'}
+            field = {field = 'sheet_number', vital=false, type = "string", string_pattern ='^Sheet[\s]*number[\s]*[0-9]+[\s]*of[\s]*[0-9]+$'}
     [HSBC_UK_CRD.lines]
         [[HSBC_UK_CRD.lines.configs]]
             config = 'Transaction Lines'

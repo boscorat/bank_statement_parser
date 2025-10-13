@@ -5,10 +5,10 @@ locations = [
     {page_number=1, top_left = [345, 180], bottom_right = [575, 294]},
 ]
 fields = [
-    {field = 'opening_balance', cell = {row = 1, col = 1}, vital=true, numeric_config = {decimal_seperator=".", thousands_separator=",", strip_chars_start = "£", round_decimals = 2, numeric_modifier = {suffix = "D", multiplier = -1}}},
-    {field = 'payments_in', cell = {row = 2, col = 1}, vital=true, numeric_config = {decimal_seperator=".", thousands_separator=",", strip_chars_start = "£", round_decimals = 2}},
-    {field = 'payments_out', cell = {row = 3, col = 1}, vital=true, numeric_config = {decimal_seperator=".", thousands_separator=",", strip_chars_start = "£", round_decimals = 2}},
-    {field = 'closing_balance', cell = {row = 4, col = 1}, vital=true, numeric_config = {decimal_seperator=".", thousands_separator=",", strip_chars_start = "£", round_decimals = 2, numeric_modifier = {suffix = "D", multiplier = -1}}},
+    {field = 'opening_balance', cell = {row = 1, col = 1}, vital=true, type = 'numeric', numeric_currency ="GBP", numeric_modifier = {suffix = "D", multiplier = -1}},
+    {field = 'payments_in', cell = {row = 2, col = 1}, vital=true, type = 'numeric', numeric_currency ="GBP"},
+    {field = 'payments_out', cell = {row = 3, col = 1}, vital=true, type = 'numeric', numeric_currency ="GBP"},
+    {field = 'closing_balance', cell = {row = 4, col = 1}, vital=true, type = 'numeric', numeric_currency ="GBP", numeric_modifier = {suffix = "D", multiplier = -1}},
 ]
 
 [HSBC_UK_CUR_ACCT_DET]
@@ -19,9 +19,9 @@ locations = [
     {page_number = 1, top_left = [37, 365], bottom_right = [575, 410]},
 ]
 fields = [
-    {field = 'account_name', cell = {row = 1, col = 0}, vital = true, string_config = {pattern ='^[A-Z]+[a-z]*\s[A-Z]+[a-z]*.*$'}},
-    {field = 'sortcode', cell = {row = 1, col = 1}, vital=true, string_config = {pattern ='^[0-9]{2}-[0-9]{2}-[0-9]{2}$'}},
-    {field = 'account_number', cell = {row = 1, col = 2}, vital=true, string_config = {pattern ='^[0-9]{8}$'}},
+    {field = 'account_name', cell = {row = 1, col = 0}, vital = true, type = "string", string_pattern ='^[A-Z]+[a-z]*\s[A-Z]+[a-z]*.*$'},
+    {field = 'sortcode', cell = {row = 1, col = 1}, vital=true, type = "string", string_pattern ='^[0-9]{2}-[0-9]{2}-[0-9]{2}$'},
+    {field = 'account_number', cell = {row = 1, col = 2}, vital=true, type = "string", string_pattern ='^[0-9]{8}$'},
 ]
 
 [HSBC_UK_SAV_ACCT_DET]
@@ -32,9 +32,9 @@ locations = [
     {page_number = 1, top_left = [37, 390], bottom_right = [575, 430]},
 ]
 fields = [
-    {field = 'account_name', cell = {row = 1, col = 0}, vital=true, string_config = {pattern ='^[A-Z]+[a-z]*\s[A-Z]+[a-z]*.*$'}},
-    {field = 'sortcode', cell = {row = 1, col = 1}, vital=true, string_config = {pattern ='^[0-9]{2}-[0-9]{2}-[0-9]{2}$'}},
-    {field = 'account_number', cell = {row = 1, col = 2}, vital=true, string_config = {pattern ='^[0-9]{8}$'}},
+    {field = 'account_name', cell = {row = 1, col = 0}, vital=true, type = "string", string_pattern ='^[A-Z]+[a-z]*\s[A-Z]+[a-z]*.*$'},
+    {field = 'sortcode', cell = {row = 1, col = 1}, vital=true, type = "string", string_pattern ='^[0-9]{2}-[0-9]{2}-[0-9]{2}$'},
+    {field = 'account_number', cell = {row = 1, col = 2}, vital=true, type = "string", string_pattern ='^[0-9]{8}$'},
 ]
 
 [HSBC_UK_CRD_ACCT_SUM]
@@ -44,14 +44,14 @@ locations = [
     {page_number=1, top_left = [335, 180], bottom_right = [575, 380]},
 ]
 fields = [
-    {field = 'credit_limit', cell = {row = 0, col = 1}, vital=false, numeric_config = {decimal_seperator=".", thousands_separator=",", strip_chars_start = "£", round_decimals = 2}},
-    {field = 'apr', cell = {row = 1, col = 1}, vital=false, string_config = {pattern ='^[0-9]*\.[0-9]{1}$'}},
-    {field = 'previous_balance', cell = {row = 2, col = 1}, vital=false, numeric_config = {decimal_seperator=".", thousands_separator=",", strip_chars_start = "£", round_decimals = 2, numeric_modifier = {suffix = "D", multiplier = -1}}},
-    {field = 'debits', cell = {row = 3, col = 1}, vital=true, numeric_config = {decimal_seperator=".", thousands_separator=",", strip_chars_start = "£", round_decimals = 2}},
-    {field = 'credits', cell = {row = 4, col = 1}, vital=true, numeric_config = {decimal_seperator=".", thousands_separator=",", strip_chars_start = "£", round_decimals = 2}},
-    {field = 'new_balance', cell = {row = 5, col = 1}, vital=true, numeric_config = {decimal_seperator=".", thousands_separator=",", strip_chars_start = "£", round_decimals = 2, numeric_modifier = {suffix = "D", multiplier = -1}}},
-    {field = 'transaction_balance', cell = {row = 6, col = 1}, vital=true, numeric_config = {decimal_seperator=".", thousands_separator=",", strip_chars_start = "£", round_decimals = 2, numeric_modifier = {suffix = "D", multiplier = -1}}},
-    {field = 'minimum_payment', cell = {row = 7, col = 1}, vital=false, numeric_config = {decimal_seperator=".", thousands_separator=",", strip_chars_start = "£", round_decimals = 2}}
+    {field = 'credit_limit', cell = {row = 0, col = 1}, vital=false, type = "numeric", numeric_currency = "GBP"},
+    {field = 'apr', cell = {row = 1, col = 1}, vital=false, type = "string", string_pattern ='^[0-9]*\.[0-9]{1}$'},
+    {field = 'previous_balance', cell = {row = 2, col = 1}, vital=false, type = "numeric", numeric_currency = "GBP", numeric_modifier = {suffix = "D", multiplier = -1}},
+    {field = 'debits', cell = {row = 3, col = 1}, vital=true, type = "numeric", numeric_currency = "GBP"},
+    {field = 'credits', cell = {row = 4, col = 1}, vital=true, type = "numeric", numeric_currency = "GBP"},
+    {field = 'new_balance', cell = {row = 5, col = 1}, vital=true, type = "numeric", numeric_currency = "GBP", numeric_modifier = {suffix = "D", multiplier = -1}},
+    {field = 'transaction_balance', cell = {row = 6, col = 1}, vital=true, type = "numeric", numeric_currency = "GBP", numeric_modifier = {suffix = "D", multiplier = -1}},
+    {field = 'minimum_payment', cell = {row = 7, col = 1}, vital=false, type = "numeric", numeric_currency = "GBP"}
 ]
 
 [HSBC_UK_CRD_TRANSACTIONS]
@@ -61,10 +61,10 @@ locations = [
     {vertical_lines = [52, 105, 105, 185, 185, 475, 475, 560]},
 ]
 fields = [
-    {field = 'received_by_us', column = 0, vital=true, string_config = {pattern ='^[0-3][0-9]\s?[A-Z][a-z]{2}\s?[0-3][0-9]$'}},
-    {field = 'transaction_date', column = 1, vital=true, string_config = {pattern ='^[0-3][0-9]\s?[A-Z][a-z]{2}\s?[0-3][0-9]$'}},
-    {field = 'details', column = 2, vital=true, string_config = {}},
-    {field = 'amount', column = 3, vital=true, numeric_config = {decimal_seperator=".", thousands_separator=",", strip_chars_start = "£", round_decimals = 2, numeric_modifier = {suffix = "CR", multiplier = -1}}},
+    {field = 'received_by_us', column = 0, vital=true, type = "string", string_pattern ='^[0-3][0-9]\s?[A-Z][a-z]{2}\s?[0-3][0-9]$'},
+    {field = 'transaction_date', column = 1, vital=true, type = "string", string_pattern ='^[0-3][0-9]\s?[A-Z][a-z]{2}\s?[0-3][0-9]$'},
+    {field = 'details', column = 2, vital=true, type = "string", string_max_length = 100},
+    {field = 'amount', column = 3, vital=true, type = "numeric", numeric_currency = "GBP", numeric_modifier = {suffix = "CR", multiplier = -1}},
 ]
 delete_success_false = true
 delete_cast_success_false = true
@@ -73,10 +73,10 @@ delete_rows_with_missing_vital_fields = true
 [HSBC_UK_CRD_TRANSACTIONS.transaction_spec]
 transaction_bookends = {start_fields = ['received_by_us','transaction_date','details','amount'], min_non_empty_start = 4, end_fields = ['received_by_us','transaction_date','details','amount'], min_non_empty_end = 4}
 
-std_date = {field = 'transaction_date', vital=true, date_config = {}}
-std_description = {field = 'details', vital=true, strip_chars_start = ')', string_config = {max_length = 100}}
-std_credit = {field = 'amount', vital=true, numeric_config = {round_decimals = 2, numeric_modifier = {multiplier = -1, include_negative_values = true, include_positive_values = false}}}
-std_debit = {field = 'amount', vital=true, numeric_config = {round_decimals = 2, numeric_modifier = {multiplier = 1, include_negative_values = false, include_positive_values = true}}}
+std_date = {field = 'transaction_date', vital=true, type = "date", date_format="%d %b %y"}
+std_description = {field = 'details', vital=true, type = "string", strip_chars_start = ')', string_max_length = 100}
+std_credit = {field = 'amount', vital=true, type = "numeric", numeric_currency = "GBP", numeric_modifier = {multiplier = -1, exclude_positive_values = true}}
+std_debit = {field = 'amount', vital=true, type = "numeric", numeric_currency = "GBP", numeric_modifier = {multiplier = 1, exclude_negative_values = true}}
 
 [HSBC_UK_CUR_TRANSACTIONS]
 statement_table = 'Transactions'
@@ -85,12 +85,12 @@ locations = [
     {vertical_lines = [50, 100, 100, 130, 130, 320, 320, 400, 400, 480, 480, 555]},
 ]
 fields = [
-    {field = 'date', column = 0, vital=false, string_config = {pattern ='^[0-3][0-9]\s?[A-Z][a-z]{2}\s?[0-3][0-9]$'}},
-    {field = 'payment_type', column = 1, vital=false, string_config = {pattern ='(^[A-Z0-9]{1,3}$)|(^[)]{3}$)'}},
-    {field = 'details', column = 2, vital=true, string_config = {pattern ='.+', max_length = 100}},
-    {field = '£_paid_out', column = 3, vital=false, numeric_config = {round_decimals = 2, numeric_modifier = {multiplier = -1}}},
-    {field = '£_paid_in', column = 4, vital=false, numeric_config = {round_decimals = 2}},
-    {field = '£_balance', column = 5, vital=false, numeric_config = {round_decimals = 2, numeric_modifier = {suffix = "D", multiplier = -1}}},
+    {field = 'date', column = 0, vital=false, type = "string", string_pattern ='^[0-3][0-9]\s?[A-Z][a-z]{2}\s?[0-3][0-9]$'},
+    {field = 'payment_type', column = 1, vital=false, type = "string", string_pattern ='(^[A-Z0-9]{1,3}$)|(^[)]{3}$)'},
+    {field = 'details', column = 2, vital=true, type = "string", string_pattern ='.+', string_max_length = 100},
+    {field = '£_paid_out', column = 3, vital=false, type = "numeric", numeric_currency = "GBP", numeric_modifier = {multiplier = -1}},
+    {field = '£_paid_in', column = 4, vital=false, type = "numeric", numeric_currency = "GBP"},
+    {field = '£_balance', column = 5, vital=false, type = "numeric", numeric_currency = "GBP", numeric_modifier = {suffix = "D", multiplier = -1}},
 ]
 delete_success_false = true
 delete_cast_success_false = true
@@ -101,7 +101,7 @@ transaction_bookends = {start_fields = ['payment_type','details'], min_non_empty
 fill_forward_fields = ['date','payment_type']
 merge_fields = {fields=['details'], max_rows=5, separator=' | '}
 
-std_date = {field = 'date', vital=true, date_config = {}}
-std_description = {field = 'details', vital=true, string_config = {max_length = 100}}
-std_credit = {field = '£_paid_in', vital=true, numeric_config = {round_decimals = 2, numeric_modifier = {multiplier = 1}}}
-std_debit = {field = '£_paid_out', vital=true, numeric_config = {round_decimals = 2, numeric_modifier = {multiplier = -1}}}
+std_date = {field = 'date', vital=true, type = "date", date_format="%d %b %y"}
+std_description = {field = 'details', vital=true, type = "string", string_max_length = 100}
+std_credit = {field = '£_paid_in', vital=true, type = "numeric", numeric_currency = "GBP", numeric_modifier = {multiplier = 1}}
+std_debit = {field = '£_paid_out', vital=true, type = "numeric", numeric_currency = "GBP", numeric_modifier = {multiplier = -1}}

@@ -10,12 +10,13 @@ from bank_statement_parser.modules.classes.data_definitions import Account, Acco
 from bank_statement_parser.modules.classes.errors import ConfigFileError, StatementError
 from bank_statement_parser.modules.functions.statement_functions import extract_field_values
 
-# CONSTANTS
-NUMBERS_GBP = r"^[£]?[\s]*[-]?\d{1,3}(?:,\d{3})*(?:\.\d+)?$|^\d+(?:\.)?\d+$"
-NUMBERS_USD = r"^[$]?[\s]*[-]?\d{1,3}(?:,\d{3})*(?:\.\d+)?$|^\d+(?:\.)?\d+$"
-NUMBERS_EURO = r"^[-]?\d{1,3}(?:\.\d{3})*(?:,\d+)?$|^\d+(?:,)?\d+[EUR]?$"
-STRIP_UK_US = ["$", "£", " ", ",", "\n"]
-STRIP_EURO = ["EUR", " ", ",", "\n"]
+##!!!
+"""
+WRITE SOME TESTS TO VALIDATE THE CONFIG FILES!!!!!
+e.g. cell must be set for all non-transaction table fields
+column must be set for all transaction fields
+numeric fields should have a currency and none of the date or string specific fields
+"""
 
 __dir_base = os.path.join(pathlib.Path(__file__).parent.parent, "base_config")
 __dir_user = os.path.join(pathlib.Path(__file__).parent.parent.parent, "user_config")

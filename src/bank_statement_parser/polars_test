@@ -1,11 +1,15 @@
 import polars as pl
+import polars.selectors as cs
 
 from bank_statement_parser.modules.classes.statement_classes import Statement, StatementTable
-from bank_statement_parser.modules.config import STRIP_FLOAT_LIST, STRIP_FLOAT_RE, config_companies_df
+from bank_statement_parser.modules.config import config_companies_df
+from bank_statement_parser.modules.constants import NUMBERS_GBP, STRIP_GBP_USD
+from bank_statement_parser.modules.currency import currency_spec
 from bank_statement_parser.modules.functions.pdf_functions import page_crop, region_table
 from bank_statement_parser.modules.functions.statement_functions import extract_table_fields, spawn_locations
 
 stmt = Statement("/home/boscorat/Downloads/2025-07-08_Statement_Advance_Account.pdf")
+DEBUG = True
 
 
 def get_region(location, pdf):
@@ -35,60 +39,294 @@ def get_table(location, region, statement_table):
     return table
 
 
-# polars expressions
-strip_float_list = pl.col("value_raw").str.replace_many(STRIP_FLOAT_LIST, [""])
-strip_float_re = pl.col("value_raw").str.replace_all(STRIP_FLOAT_RE, "")
+def strip(data, field, spec_numeric=None):
+    src = "raw"
+    step = "strip"
+    if DEBUG:
+        print(f"{step}: {field.field}")
+        print("Before...")
+        with pl.Config(tbl_cols=-1, tbl_rows=-1):
+            print(data)
+    data = data.with_columns(
+        pl.col(f"value_{src}").alias(f"value_{step}"),
+        pl.lit(False).alias(f"success_{step}"),
+        pl.lit(f"{step} error").alias(f"error_{step}"),
+    )
+    if field.strip_characters_start:
+        data = data.with_columns(pl.col(f"value_{step}").str.strip_chars_start(field.strip_characters_start).alias(f"value_{step}"))
+    if field.strip_characters_end:
+        data = data.with_columns(pl.col(f"value_{step}").str.strip_chars_end(field.strip_characters_end).alias(f"value_{step}"))
 
-match_pat = pl.when(pl.col("value_stripped").str.contains(pl.col("pattern"))).then(pl.lit(True)).otherwise(pl.lit(False))
+    if spec_numeric:
+        data = data.with_columns(
+            pl.col(f"value_{step}")
+            .str.replace_many(spec_numeric.symbols, [""])
+            .str.replace_many(spec_numeric.seperators_thousands, [""])
+            .str.replace_many([r"\s"], [""])
+            .alias(f"value_{step}")  # always remove any whitespace
+        )
+
+    data = data.with_columns(
+        (pl.col(f"value_{step}").is_not_null() & pl.col(f"value_{step}").len() > 0).alias(f"success_{step}")
+    ).with_columns(pl.when(pl.col(f"success_{step}")).then(None).otherwise(pl.col(f"error_{step}")).alias(f"error_{step}"))
+    if DEBUG:
+        print("After...")
+        with pl.Config(tbl_cols=-1, tbl_rows=-1):
+            print(data)
+    return data
+
+
+def pattern(data, pattern):
+    src = "strip"
+    step = "pattern"
+    if DEBUG:
+        print(f"{step}: {pattern}")
+        print("Before...")
+        with pl.Config(tbl_cols=-1, tbl_rows=-1):
+            print(data)
+    data = data.with_columns(
+        pl.lit(None).alias(f"value_{step}"),
+        pl.lit(False).alias(f"success_{step}"),
+        pl.lit(f"{step} error").alias(f"error_{step}"),
+    )
+    data = data.with_columns(pl.col(f"value_{src}").str.extract(pattern, 0).alias(f"value_{step}"))
+    data = data.with_columns(
+        (pl.col(f"value_{step}").is_not_null() & pl.col(f"value_{step}").len() > 0).alias(f"success_{step}")
+    ).with_columns(pl.when(pl.col(f"success_{step}")).then(None).otherwise(pl.col(f"error_{step}")).alias(f"error_{step}"))
+    if DEBUG:
+        print("After...")
+        with pl.Config(tbl_cols=-1, tbl_rows=-1):
+            print(data)
+    return data
+
+
+def cast(data, field):
+    src = "pattern"
+    step = "cast"
+    if DEBUG:
+        print(f"{step}: {field.numeric_modifier}")
+        print("Before...")
+        with pl.Config(tbl_cols=-1, tbl_rows=-1):
+            print(data)
+    data = data.with_columns(
+        pl.lit(None).alias(f"value_{step}"),
+        pl.lit(False).alias(f"success_{step}"),
+        pl.lit(f"{step} error").alias(f"error_{step}"),
+    )
+    if field.type == "numeric":
+        if field.numeric_modifier:
+            if field.numeric_modifier.prefix or field.numeric_modifier.suffix:
+                if field.numeric_modifier.prefix:
+                    data = data.with_columns(
+                        pl.when(pl.col(f"value_{src}").str.starts_with(field.numeric_modifier.prefix))
+                        .then(
+                            pl.col(f"value_{src}")
+                            .str.strip_chars_start(field.numeric_modifier.prefix)
+                            .cast(float)
+                            .mul(field.numeric_modifier.multiplier)
+                        )
+                        .otherwise(pl.col(f"value_{src}").cast(float, strict=False))
+                        .alias(f"value_{step}")
+                    )
+                elif field.numeric_modifier.suffix:
+                    data = data.with_columns(
+                        pl.when(pl.col(f"value_{src}").str.ends_with(field.numeric_modifier.suffix))
+                        .then(
+                            pl.col(f"value_{src}")
+                            .str.strip_chars_end(field.numeric_modifier.suffix)
+                            .cast(float, strict=False)
+                            .mul(field.numeric_modifier.multiplier)
+                        )
+                        .otherwise(pl.col(f"value_{src}").cast(float, strict=False))
+                        .alias(f"value_{step}")
+                    )
+            else:
+                data = data.with_columns(
+                    pl.col(f"value_{src}").cast(float, strict=False).mul(field.numeric_modifier.multiplier).alias(f"value_{step}")
+                )
+            if field.numeric_modifier.exclude_negative_values:
+                data = data.with_columns(pl.when(pl.col(f"value_{step}") < 0).then(pl.lit(0.00)).alias(f"value_{step}"))
+            if field.numeric_modifier.exclude_positive_values:
+                data = data.with_columns(pl.when(pl.col(f"value_{step}") > 0).then(pl.lit(0.00)).alias(f"value_{step}"))
+        else:
+            data = data.with_columns(pl.col(f"value_{src}").cast(float, strict=False).alias(f"value_{step}"))
+    elif field.type == "string":
+        data = data.with_columns(pl.col(f"value_{src}").cast(str, strict=False).alias(f"value_{step}"))
+    data = data.with_columns(
+        (pl.col(f"value_{step}").is_not_null() & pl.col(f"value_{step}").len() > 0).alias(f"success_{step}")
+    ).with_columns(pl.when(pl.col(f"success_{step}")).then(None).otherwise(pl.col(f"error_{step}")).alias(f"error_{step}"))
+    if DEBUG:
+        print("After...")
+        with pl.Config(tbl_cols=-1, tbl_rows=-1):
+            print(data)
+    return data
+
+
+def string_shorten(data, string_max_length=None):
+    if DEBUG:
+        print(f"String Shorten: {string_max_length}")
+        print("Before...")
+        with pl.Config(tbl_cols=-1, tbl_rows=-1):
+            print(data)
+    string_max_length = string_max_length if string_max_length else 999
+    data = data.with_columns(value_short=pl.col("value_stripped").str.head(string_max_length))
+    if DEBUG:
+        print("After...")
+        with pl.Config(tbl_cols=-1, tbl_rows=-1):
+            print(data)
+    return data
+
+
+def numeric_validate(data):
+    if DEBUG:
+        print("Numeric Validate")
+        print("Before...")
+        with pl.Config(tbl_cols=-1, tbl_rows=-1):
+            print(data)
+    data = data.with_columns(
+        valid=pl.when(pl.col("exception_cast").is_null() & pl.col("value_pattern").is_not_null()).then(True).otherwise(False)
+    )
+    if DEBUG:
+        print("After...")
+        with pl.Config(tbl_cols=-1, tbl_rows=-1):
+            print(data)
+    return data
+
+
+def string_validate(data):
+    if DEBUG:
+        print("String Validate")
+        print("Before...")
+        with pl.Config(tbl_cols=-1, tbl_rows=-1):
+            print(data)
+    data = data.with_columns(
+        valid=pl.when(pl.col("value_pattern").is_not_null() & pl.col("value_short").len() > 0).then(True).otherwise(False)
+    )
+    if DEBUG:
+        print("After...")
+        with pl.Config(tbl_cols=-1, tbl_rows=-1):
+            print(data)
+    return data
+
+
+def string_cleanup(data):
+    if DEBUG:
+        print("String Cleanup")
+        print("Before...")
+        with pl.Config(tbl_cols=-1, tbl_rows=-1):
+            print(data)
+    data = (
+        data.with_columns(value=pl.col("value_short"), exception=pl.concat_str(pl.col("exception_pattern")))
+        # .drop(["value_stripped", "value_short", "exception_pattern", "pattern_match"])
+        .with_columns(failure=pl.when(~pl.col("valid") & pl.col("vital")).then(pl.lit(True)).otherwise(pl.lit(False)))
+    )
+    if DEBUG:
+        print("After...")
+        with pl.Config(tbl_cols=-1, tbl_rows=-1):
+            print(data)
+    return data
+
+
+def numeric_cleanup(data):
+    if DEBUG:
+        print("Numeric Cleanup")
+        print("Before...")
+        with pl.Config(tbl_cols=-1, tbl_rows=-1):
+            print(data)
+    data = (
+        data.with_columns(
+            value=pl.col("value_cast"),
+            exception=pl.concat_str(pl.col("exception_pattern"), pl.col("exception_cast"), separator=" & ", ignore_nulls=True),
+        )
+        # .drop(["value_stripped", "value_cast", "exception_cast", "exception_pattern", "pattern_match"])
+        .with_columns(failure=pl.when(~pl.col("valid") & pl.col("vital")).then(pl.lit(True)).otherwise(pl.lit(False)))
+    )
+    if DEBUG:
+        print("After...")
+        with pl.Config(tbl_cols=-1, tbl_rows=-1):
+            print(data)
+    return data
 
 
 def extract_table_fields_df(pdf, location, statement_table):
     region, exception = get_region(location, pdf)
-    table = get_table(location, region, statement_table) if region and not exception else pl.LazyFrame()
-    fields = pl.LazyFrame(statement_table.fields)
+    table = get_table(location, region, statement_table).collect() if region and not exception else pl.DataFrame()
+    result: pl.DataFrame = pl.DataFrame()
+    results: pl.DataFrame = pl.DataFrame()
+
     if statement_table.transaction_spec:  # transaction records will be multi-line and have now row specification
+        # table_up = (
+        #     table.unpivot(index="row", value_name="value_raw")
+        #     .with_columns(col=pl.col("variable").str.replace("col_", "").cast(pl.Int16))
+        #     .drop("variable")
+        # )
+        # fields = (
+        #     fields.unnest("cell").join(other=table, on=["row", "col"], how="left").unnest("numeric_modifier")
+        for field in statement_table.fields:
+            try:
+                result = table.select(field=pl.lit(field.field), vital=pl.lit(field.vital), value_raw=pl.nth(field.column)).with_row_index(
+                    "row"
+                )
+            except pl.exceptions.ColumnNotFoundError:
+                continue
+        if field.type == "numeric":
+            spec = currency_spec[field.numeric_currency]
+            result = (
+                result.pipe(general_strip, field)
+                .pipe(numeric_strip, spec)
+                .pipe(general_pattern_match, spec.pattern)
+                .pipe(numeric_cast, field)
+                .pipe(numeric_validate)
+                .pipe(numeric_cleanup)
+            )
+            with pl.Config(tbl_cols=-1, tbl_rows=-1):
+                print(table)
+                print("Field:", field.field)
+                print(result)
+
+            results.vstack(result, in_place=True)
+
         ...
     else:  # other table records will be row and column specific
-        table = (
-            table.unpivot(index="row", value_name="value_raw")
-            .with_columns(col=pl.col("variable").str.replace("col_", "").cast(pl.Int16))
-            .drop("variable")
-        )
-        fields = (
-            fields.unnest("cell")
-            .join(other=table, on=["row", "col"], how="left")
-            .with_columns(value_list=strip_float_list)
-            .with_columns(value_re=strip_float_re)
-            # .with_columns(value_pat_matched=match_pat)
-            # .with_columns(value_stripped=pl.col("value_raw").str.replace_all(rf"{STRIP_FLOAT_RE}", ""))
-            # .with_columns(value_stripped2=pl.col("value_raw").str.replace_all(rf"{fields.replace}", ""))
-            # .with_columns(value_stripped=pl.col("value_raw").str.replace_all(, ""))
-            # .with_columns(value_stripped=pl.col("value_raw").str.replace_all(pl.col("strip").first(), "", literal=True).over("strip"))
-            # .with_columns(value_stripped=pl.col("value_raw").str.replace_many(["£", ",", " "], [""]))
-            # .with_columns(
-            #     value_pat_matched=pl.when(pl.col("value_stripped").str.contains(pl.col("pattern"))).then(pl.col("value_stripped"))
-            # )
-            # .with_columns(
-            #     dt_float=pl.when(pl.col("type").is_in(["flt", "float"])).then(pl.col("value_pat_matched").cast(float, strict=False)),
-            #     dt_int=pl.when(pl.col("type").is_in(["int", "integer"])).then(pl.col("value_pat_matched").cast(int, strict=False)),
-            #     dt_str=pl.when(pl.col("type").is_in(["str", "string"])).then(pl.col("value_pat_matched").cast(str, strict=False)),
-            # )
-            # .with_columns(value_cast=pl.coalesce("dt_float", "dt_int", "dt_str"))
-            # .with_columns(valid=pl.when(pl.col("value_cast").is_not_null()).then(True).otherwise(False))
-            # # .with_columns(exception=pl.when(pl.col("valid")).then(pl.lit("no error")).otherwise(pl.lit("Error! ")))
-            # .with_columns(
-            #     exception=pl.when(pl.col("value_raw").is_null())
-            #     .then(pl.lit("Raw Value"))
-            #     .otherwise(
-            #         pl.when(pl.col("value_pat_matched").is_null())
-            #         .then(pl.lit("Pattern Match"))
-            #         .otherwise(pl.when(pl.col("value_cast").is_null()).then(pl.lit("Datatype")))
-            #     )
-            # )
-            # .drop("dt_float", "dt_int", "dt_str")
-        )
-        with pl.Config(tbl_cols=-1, tbl_rows=-1):
-            print(fields.collect())
+        for field in statement_table.fields:
+            result = pl.DataFrame(
+                data=[
+                    pl.Series("field", [field.field], dtype=pl.String),
+                    pl.Series("vital", [field.vital], dtype=pl.Boolean),
+                    pl.Series("value_raw", [table.item(field.cell.row, field.cell.col)], dtype=pl.String),
+                ]
+            )
+            # numeric fields
+            if field.type == "numeric":
+                spec = currency_spec[field.numeric_currency]
+                result = (
+                    result.pipe(strip, field, spec)
+                    .pipe(pattern, spec.pattern)
+                    .pipe(cast, field)
+                    .pipe(numeric_validate)
+                    .pipe(numeric_cleanup)
+                )
+            # string fields
+            elif field.type == "string":
+                result = (
+                    result.pipe(general_strip, field)
+                    .pipe(general_pattern_match, field.string_pattern)
+                    .pipe(string_shorten, field.string_max_length)
+                    .pipe(string_validate)
+                    .pipe(string_cleanup)
+                )
+            results.vstack(result, in_place=True)
+
+    # print(table)
+    results = results.with_columns(errors=pl.concat_list(cs.starts_with("exception_")), values=pl.concat_list(cs.starts_with("value_")))
+    results = results.with_columns(
+        # has_error=pl.col("errors").list.any(),
+        has_missing_values=pl.col("values").list.len() - pl.col("values").list.drop_nulls().len()
+    )
+
+    with pl.Config(tbl_cols=-1, tbl_rows=-1):
+        print(results)
+    return results
 
 
 if stmt.config_header:
@@ -99,4 +337,25 @@ if stmt.config_header:
             for location in spawned_locations:
                 table_fields = extract_table_fields(stmt.pdf, location, config.statement_table)
                 table_fields_df = extract_table_fields_df(stmt.pdf, location, config.statement_table)
+                # print(table_fields_df)
                 ...
+# if stmt.config_pages:
+#     for config in stmt.config_pages:
+#         # extract field values
+#         if config.statement_table:
+#             spawned_locations = spawn_locations(config.statement_table.locations, stmt.pdf)
+#             for location in spawned_locations:
+#                 table_fields = extract_table_fields(stmt.pdf, location, config.statement_table)
+#                 table_fields_df = extract_table_fields_df(stmt.pdf, location, config.statement_table)
+#                 print(table_fields_df)
+# #                 ...
+# if stmt.config_lines:
+#     for config in stmt.config_lines:
+#         # extract field values
+#         if config.statement_table:
+#             spawned_locations = spawn_locations(config.statement_table.locations, stmt.pdf)
+#             for location in spawned_locations:
+#                 table_fields = extract_table_fields(stmt.pdf, location, config.statement_table)
+#                 table_fields_df = extract_table_fields_df(stmt.pdf, location, config.statement_table)
+#                 print(table_fields_df)
+#                 ...
