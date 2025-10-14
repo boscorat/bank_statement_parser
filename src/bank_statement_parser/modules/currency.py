@@ -6,21 +6,21 @@ currency_dict: dict = {
         "seperator_decimal": ".",
         "seperators_thousands": [",", " "],
         "round_decimals": 2,
-        "pattern": r"^[£]?[\s]*[-]?\d{1,3}(?:,\d{3})*(?:\.\d+)?$|^\d+(?:\.)?\d+[ ]?[GBP]?$",
+        "pattern": r"^[\d]+[.][\d]{2}$",
     },
     "USD": {
         "symbols": ["USD", "$"],
         "seperator_decimal": ".",
         "seperators_thousands": [",", " "],
         "round_decimals": 2,
-        "pattern": r"^[$]?[\s]*[-]?\d{1,3}(?:,\d{3})*(?:\.\d+)?$|^\d+(?:\.)?\d+[ ]?[USD]?$",
+        "pattern": r"^[\d]+[.][\d]{2}$",
     },
     "EUR": {
         "symbols": ["EUR", "EURO", "EUROS"],
         "seperator_decimal": ",",
         "seperators_thousands": [".", " "],
         "round_decimals": 2,
-        "pattern": r"^[\s]*[-]?\d{1,3}(?:,\d{3})*(?:\.\d+)?$|^\d+(?:\.)?\d+[ ]?[EUR[O[S]?]?]?$",
+        "pattern": r"^[\d]+[,][\d]{2}$",
     },
 }
 

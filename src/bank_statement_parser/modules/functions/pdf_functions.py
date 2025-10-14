@@ -64,8 +64,10 @@ def region_table(region, table_rows: int | None, table_columns: int | None, row_
     table = region.extract_table(table_settings=tbl_settings)
     column_names = ["col_" + str(i) for i in range(len(table[0]))] if table else []
     table_df = pl.LazyFrame(table[0:], schema=column_names, orient="row") if table else pl.LazyFrame()
+    del table
+
     # print(table_df)
-    return (table, table_df)
+    return table_df
 
 
 if __name__ == "__main__":

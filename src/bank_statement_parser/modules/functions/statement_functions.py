@@ -1,4 +1,5 @@
 import re
+import time
 from collections import namedtuple
 from copy import deepcopy
 
@@ -163,6 +164,7 @@ def extract_table_fields(statement, location, statement_table) -> list[tuple]:
     else:
         exception = "No page number specified for the location"
     if region and not exception:
+        start = time.time()
         table, table_df = region_table(
             region=region,
             table_rows=statement_table.table_rows,
@@ -170,6 +172,8 @@ def extract_table_fields(statement, location, statement_table) -> list[tuple]:
             row_spacing=statement_table.row_spacing,
             vertical_lines=location.vertical_lines,
         )
+        # end = time.time()
+        # print("table_extraction: ", "old", "region:", region, "time:", end - start)
     else:
         if not exception:
             exception = "Failed to extract region"

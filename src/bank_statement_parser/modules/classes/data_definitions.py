@@ -35,11 +35,11 @@ class Field:
     type: str
     strip_characters_start: Optional[str] = None
     strip_characters_end: Optional[str] = None
-    numeric_currency: str = "GBP"
+    numeric_currency: Optional[str] = None
     numeric_modifier: Optional[NumericModifier] = None
-    string_pattern: str = ".+"
+    string_pattern: Optional[str] = None
     string_max_length: Optional[int] = None
-    date_format: str = "%d %b %y"
+    date_format: Optional[str] = None
 
 
 @dataclass
