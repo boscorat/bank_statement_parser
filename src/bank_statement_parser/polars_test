@@ -14,9 +14,9 @@ from bank_statement_parser.modules.functions.statement_functions import extract_
 
 log = []
 
-stmt = Statement("/home/boscorat/Downloads/2025-07-08_Statement_Advance_Account.pdf")
+# stmt = Statement("/home/boscorat/Downloads/2025-07-08_Statement_Advance_Account.pdf")
 # stmt = Statement("/home/boscorat/Downloads/2025-07-08_Statement_Flexible_Saver.pdf")
-# stmt = Statement("/home/boscorat/Downloads/2025-07-12_Statement_Rewards_Credit_Card.pdf")
+stmt = Statement("/home/boscorat/Downloads/2025-07-12_Statement_Rewards_Credit_Card.pdf")
 DEBUG = False
 
 
@@ -469,8 +469,8 @@ def process_transactions(data, transaction_spec):
         )
         .drop("transaction_start", "transaction_end")
     )
-    with pl.Config(tbl_cols=-1, tbl_rows=-1):
-        print(data.collect())
+    # with pl.Config(tbl_cols=-1, tbl_rows=-1):
+    #     print(data.collect())
 
     log.append(["process_transactions", time.time() - start])
     return data.collect()
@@ -487,9 +487,26 @@ def get_results(pdf, section, config: Config, scope="success") -> pl.DataFrame: 
         results.vstack(result.collect(), in_place=True)
 
     if statement_table := config.statement_table:
+        # process transactions if there's a transaction spec
         if spec := statement_table.transaction_spec:
             results = results.pipe(process_transactions, spec)
-            log.append(["get_results_stmt", time.time() - start])
+            log.append(["get_results_stmt_transaction", time.time() - start])
+            return results
+        elif statement_table.type == "summary":  # summary tables should have some standard fields
+            results = results.pivot(values="value", index="section", on="field")
+            if sob := statement_table.std_opening_balance:
+                multiplier = 1 if not sob.numeric_modifier else sob.numeric_modifier.multiplier
+                results = results.with_columns(std_opening_balance=pl.col(sob.field).cast(float).mul(multiplier).fill_null(0))
+            if scb := statement_table.std_closing_balance:
+                multiplier = 1 if not scb.numeric_modifier else scb.numeric_modifier.multiplier
+                results = results.with_columns(std_closing_balance=pl.col(scb.field).cast(float).mul(multiplier).fill_null(0))
+            if ssc := statement_table.std_statement_credits:
+                multiplier = 1 if not ssc.numeric_modifier else ssc.numeric_modifier.multiplier
+                results = results.with_columns(std_statement_credits=pl.col(ssc.field).cast(float).mul(multiplier).fill_null(0))
+            if ssd := statement_table.std_statement_debits:
+                multiplier = 1 if not ssd.numeric_modifier else ssd.numeric_modifier.multiplier
+                results = results.with_columns(std_statement_debits=pl.col(ssd.field).cast(float).mul(multiplier).fill_null(0))
+            log.append(["get_results_stmt_summary", time.time() - start])
             return results
 
     if scope == "all":
@@ -609,7 +626,7 @@ if config_header:
     results: pl.DataFrame = pl.DataFrame()
     for config in config_header:
         results.vstack(get_results(stmt.pdf, "header", config, scope="success"), in_place=True)
-    results = results.pivot(values="value", on="field")
+    results = results.pivot(values="value", index="section", on="field")
     with pl.Config(tbl_cols=-1, tbl_rows=-1):
         print(results)
         ...
@@ -638,13 +655,7 @@ if config_lines:
         ...
 end_lines = time.time()
 
-end_all = time.time()
-
-print("all:", end_all - start_all)
-print("header:", end_header - start_header)
-print("pages:", end_pages - start_pages)
-print("lines:", end_lines - start_lines)
-print("HPL:", end_lines - start_header)
+log.append(["Total Time", time.time() - start_all])
 
 log_times = (
     pl.DataFrame(log, strict=False)

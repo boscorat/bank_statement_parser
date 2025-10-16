@@ -1,4 +1,5 @@
 [HSBC_UK_CUR_ACCT_SUM]
+type = "summary"
 statement_table = 'Account Summary'
 row_spacing = 7
 locations = [
@@ -10,8 +11,13 @@ fields = [
     {field = 'payments_out', cell = {row = 3, col = 1}, vital=true, type = 'numeric', numeric_currency ="GBP"},
     {field = 'closing_balance', cell = {row = 4, col = 1}, vital=true, type = 'numeric', numeric_currency ="GBP", numeric_modifier = {suffix = "D", multiplier = -1}},
 ]
+std_opening_balance = {field = 'opening_balance', vital=true, type = "numeric", numeric_currency = "GBP"}
+std_closing_balance = {field = 'closing_balance', vital=true, type = "numeric", numeric_currency = "GBP"}
+std_statement_credits = {field = 'payments_in', vital=true, type = "numeric", numeric_currency = "GBP"}
+std_statement_debits = {field = 'payments_out', vital=true, type = "numeric", numeric_currency = "GBP"}
 
 [HSBC_UK_CUR_ACCT_DET]
+type = "detail"
 statement_table = 'Account Details'
 table_columns = 4
 table_rows = 2
@@ -25,6 +31,7 @@ fields = [
 ]
 
 [HSBC_UK_SAV_ACCT_DET]
+type = "detail"
 statement_table = 'Account Details'
 table_columns = 4
 table_rows = 2
@@ -38,6 +45,7 @@ fields = [
 ]
 
 [HSBC_UK_CRD_ACCT_SUM]
+type = "summary"
 statement_table = 'Account Summary'
 row_spacing = 7
 locations = [
@@ -53,8 +61,13 @@ fields = [
     {field = 'transaction_balance', cell = {row = 6, col = 1}, vital=true, type = "numeric", numeric_currency = "GBP", numeric_modifier = {suffix = "D", multiplier = -1}},
     {field = 'minimum_payment', cell = {row = 7, col = 1}, vital=false, type = "numeric", numeric_currency = "GBP"}
 ]
+std_opening_balance = {field = 'previous_balance', vital=true, type = "numeric", numeric_currency = "GBP", numeric_modifier = {multiplier = -1}}
+std_closing_balance = {field = 'new_balance', vital=true, type = "numeric", numeric_currency = "GBP", numeric_modifier = {multiplier = -1}}
+std_statement_credits = {field = 'credits', vital=true, type = "numeric", numeric_currency = "GBP"}
+std_statement_debits = {field = 'debits', vital=true, type = "numeric", numeric_currency = "GBP"}
 
 [HSBC_UK_CRD_TRANSACTIONS]
+type = "transaction"
 statement_table = 'Transactions'
 table_columns = 4
 locations = [
@@ -79,6 +92,7 @@ std_credit = {field = 'amount', vital=true, type = "numeric", numeric_currency =
 std_debit = {field = 'amount', vital=true, type = "numeric", numeric_currency = "GBP", numeric_modifier = {multiplier = 1, exclude_negative_values = true}}
 
 [HSBC_UK_CUR_TRANSACTIONS]
+type = "transaction"
 statement_table = 'Transactions'
 table_columns = 6
 locations = [

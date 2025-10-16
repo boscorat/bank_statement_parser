@@ -74,10 +74,10 @@ def region_table(region, table_rows: int | None, table_columns: int | None, row_
     table_df = pl.LazyFrame(table[0:], schema=column_names, orient="row") if table else pl.LazyFrame()
     end_table_df = time.time()
     end_region_table = time.time()
-    print("region_table", end_region_table - start_region_table)
-    print("table", end_table - start_table)
-    print("column names", end_column_names - start_column_names)
-    print("table_df", end_table_df - start_table_df)
+    # print("region_table", end_region_table - start_region_table)
+    # print("table", end_table - start_table)
+    # print("column names", end_column_names - start_column_names)
+    # print("table_df", end_table_df - start_table_df)
     return table_df
 
 

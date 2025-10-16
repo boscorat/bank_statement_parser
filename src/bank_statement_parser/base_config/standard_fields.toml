@@ -1,0 +1,62 @@
+[STD_HEADER_STATEMENT_DATE]
+    std_refs = [
+        {statement_type="HSBC_UK_CUR", field="statement_date"},
+        {statement_type="HSBC_UK_SAV", field="statement_date"},
+        {statement_type="HSBC_UK_CRD", field="statement_date"},
+    ]
+
+[STD_HEADER_OPENING_BALANCE]
+    std_refs = [
+        {statement_type="HSBC_UK_CUR", field="opening_balance"},
+        {statement_type="HSBC_UK_SAV", field="opening_balance"},
+        {statement_type="HSBC_UK_CRD", field="previous_balance"},
+    ]
+
+[STD_HEADER_CLOSING_BALANCE]
+    std_refs = [
+        {statement_type="HSBC_UK_CUR", field="closing_balance"},
+        {statement_type="HSBC_UK_SAV", field="closing_balance"},
+        {statement_type="HSBC_UK_CRD", field="new_balance"},
+    ]
+
+[STD_HEADER_PAYMENTS_IN]
+    std_refs = [
+        {statement_type="HSBC_UK_CUR", field="payments_in"},
+        {statement_type="HSBC_UK_SAV", field="payments_in"},
+        {statement_type="HSBC_UK_CRD", field="credits"},
+    ]
+
+[STD_HEADER_PAYMENTS_OUT]
+    std_refs = [
+        {statement_type="HSBC_UK_CUR", field="payments_out"},
+        {statement_type="HSBC_UK_SAV", field="payments_out"},
+        {statement_type="HSBC_UK_CRD", field="debits"},
+    ]
+
+[STD_LINES_TRANSACTION_DATE]
+    std_refs = [
+        {statement_type="HSBC_UK_CUR", field="date"},
+        {statement_type="HSBC_UK_SAV", field="date"},
+        {statement_type="HSBC_UK_CRD", field="transaction_date"},
+    ]
+
+[STD_LINES_TRANSACTION_DESC]
+    std_refs = [
+        {statement_type="HSBC_UK_CUR", field="details"},
+        {statement_type="HSBC_UK_SAV", field="details"},
+        {statement_type="HSBC_UK_CRD", field="details"},
+    ]
+
+[STD_LINES_PAYMENT_IN]
+    std_refs = [
+        {statement_type="HSBC_UK_CUR", field="£_paid_in"},
+        {statement_type="HSBC_UK_SAV", field="£_paid_in"},
+        {statement_type="HSBC_UK_CRD", field="amount", exclude_positive_values=false},
+    ]
+
+[STD_LINES_PAYMENT_OUT]
+    std_refs = [
+        {statement_type="HSBC_UK_CUR", field="£_paid_out", multiplier=-1},
+        {statement_type="HSBC_UK_SAV", field="£_paid_out", multiplier=-1},
+        {statement_type="HSBC_UK_CRD", field="amount", exclude_negative_values=true},
+    ]

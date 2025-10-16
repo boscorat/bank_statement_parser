@@ -83,9 +83,14 @@ class TransactionSpec:
 
 @dataclass
 class StatementTable:
+    type: str
     statement_table: str
     locations: list[Location]
     fields: list[Field]
+    std_opening_balance: Optional[Field]
+    std_closing_balance: Optional[Field]
+    std_statement_credits: Optional[Field]
+    std_statement_debits: Optional[Field]
     table_columns: Optional[int]
     table_rows: Optional[int]
     row_spacing: Optional[int]
