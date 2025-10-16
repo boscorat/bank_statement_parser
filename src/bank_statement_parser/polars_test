@@ -3,14 +3,18 @@ import time
 import polars as pl
 import polars.selectors as cs
 
+from bank_statement_parser.modules.classes.data_definitions import Config
+from bank_statement_parser.modules.classes.errors import StatementError
 from bank_statement_parser.modules.classes.statement_classes import Statement, StatementTable
-from bank_statement_parser.modules.config import config_companies_df
+from bank_statement_parser.modules.config import config_accounts, config_companies, config_company_accounts
 from bank_statement_parser.modules.constants import NUMBERS_GBP, STRIP_GBP_USD
 from bank_statement_parser.modules.currency import currency_spec
 from bank_statement_parser.modules.functions.pdf_functions import page_crop, region_table
 from bank_statement_parser.modules.functions.statement_functions import extract_table_fields, spawn_locations
 
 stmt = Statement("/home/boscorat/Downloads/2025-07-08_Statement_Advance_Account.pdf")
+# stmt = Statement("/home/boscorat/Downloads/2025-07-08_Statement_Flexible_Saver.pdf")
+# stmt = Statement("/home/boscorat/Downloads/2025-07-12_Statement_Rewards_Credit_Card.pdf")
 DEBUG = False
 
 
@@ -83,30 +87,60 @@ def strip(data, field, spec=None):
     return data
 
 
+def build_pattern(string_pattern=None, spec_pattern=None, prefix=None, suffix=None):
+    pattern: str = r".+"
+    if string_pattern is not None:
+        pattern = string_pattern
+        return pattern
+    elif spec_pattern is not None:
+        pattern = spec_pattern
+        if prefix is None and suffix is None:
+            return pattern
+        if prefix is not None:
+            pattern = str(pattern).replace("^", rf"^({prefix})?\s?")
+        if suffix is not None:
+            pattern = str(pattern).replace("$", rf"\s?({suffix})?$")
+    return pattern
+
+
 def patmatch(data, field, spec=None):
     src = "strip"
     step = "pattern"
+    pattern = build_pattern(
+        string_pattern=field.string_pattern,
+        spec_pattern=spec.pattern if spec else None,
+        prefix=field.numeric_modifier.prefix if field.numeric_modifier else None,
+        suffix=field.numeric_modifier.suffix if field.numeric_modifier else None,
+    )
     if DEBUG:
-        print(f"{step}: spec: {spec.pattern if spec else field.string_pattern}")
+        print(f"{step}: spec: {pattern}")
         print("Before...")
         with pl.Config(tbl_cols=-1, tbl_rows=-1):
-            print(data)
+            print(data.collect())
     data = data.with_columns(
         pl.lit("").alias(f"value_{step}"),
         pl.lit(False).alias(f"success_{step}"),
         pl.lit(f"{step} error").alias(f"error_{step}"),
     )
-    if spec:
-        data = data.with_columns(pl.col(f"value_{src}").str.extract(spec.pattern, 0).fill_null("").alias(f"value_{step}"))
-    else:
-        data = data.with_columns(pl.col(f"value_{src}").str.extract(field.string_pattern, 0).fill_null("").alias(f"value_{step}"))
+    # if spec:
+    #     data = data.with_columns(
+    #         pl.col(f"value_{src}")
+    #         .str.extract(
+    #             spec.pattern,
+    #             0,
+    #         )
+    #         .fill_null("")
+    #         .alias(f"value_{step}")
+    #     )
+    # else:
+    data = data.with_columns(pl.col(f"value_{src}").str.extract(pattern, 0).fill_null("").alias(f"value_{step}"))
     data = data.with_columns(
         ((pl.col(f"value_{step}").is_not_null()) & (pl.col(f"value_{step}").str.len_bytes() > 0)).alias(f"success_{step}")
     ).with_columns(pl.when(pl.col(f"success_{step}")).then(None).otherwise(pl.col(f"error_{step}")).alias(f"error_{step}"))
     if DEBUG:
         print("After...")
         with pl.Config(tbl_cols=-1, tbl_rows=-1):
-            print(data)
+            print(data.collect())
     return data
 
 
@@ -228,207 +262,355 @@ def validate(data, field):
 
 def cleanup(data):
     if not DEBUG:
-        data = data.select("row", "page", "field", "vital", "value", "success", "error", "hard_fail")
+        data = data.select("section", "location", "config", "row", "page", "field", "vital", "value", "success", "error", "hard_fail")
     return data
 
 
-def extract_table_fields_df(pdf, location, statement_table):
-    region, exception = get_region(location, pdf)
-    table = get_table(location, region, statement_table) if region and not exception else pl.LazyFrame()
-    table = table.collect().lazy()
-    # table = table.collect()
-    result: pl.LazyFrame = pl.LazyFrame()
-    # result: pl.DataFrame = pl.DataFrame()
+def extract_fields(pdf, location, statement_table, config_field, config, section, location_id):
     results: pl.DataFrame = pl.DataFrame()
-
-    if statement_table.transaction_spec:  # transaction records will be multi-line and have now row specification
-        for field in statement_table.fields:
-            result = table.select(
-                page=pl.lit(location.page_number), field=pl.lit(field.field), vital=pl.lit(field.vital), value_raw=pl.nth(field.column)
-            ).with_row_index("row")
-            spec = None
-            if field.type == "numeric":
-                spec = currency_spec[field.numeric_currency]
-            result = (
-                result.pipe(strip, field, spec)
-                .pipe(patmatch, field, spec)
-                .pipe(cast, field)
-                .pipe(trim, field)
-                .pipe(validate, field)
-                .pipe(cleanup)
-            )
-            try:
-                results.vstack(result.collect(), in_place=True)
-                # results.vstack(result, in_place=True)
-            except pl.exceptions.ColumnNotFoundError:
-                continue
-
-    else:  # other table records will be row and column specific
-        # result_eager: pl.DataFrame = pl.DataFrame()
-        table_eager: pl.DataFrame = table.collect()
-        # table_eager: pl.DataFrame = table
-        for field in statement_table.fields:
+    result: pl.LazyFrame = pl.LazyFrame()
+    region, exception = get_region(location, pdf)
+    if not statement_table:
+        if region and not exception:
             result = pl.LazyFrame(
                 data=[
-                    pl.Series("field", [field.field], dtype=pl.String),
-                    pl.Series("vital", [field.vital], dtype=pl.Boolean),
-                    pl.Series("value_raw", [table_eager.item(field.cell.row, field.cell.col)], dtype=pl.String),
+                    pl.Series("field", [config_field.field], dtype=pl.String),
+                    pl.Series("vital", [config_field.vital], dtype=pl.Boolean),
+                    pl.Series("value_raw", [region.extract_text()], dtype=pl.String),
                 ]
             )
             result = result.select(
-                pl.lit(field.cell.row).alias("row"),
+                pl.lit(section).alias("section"),
+                pl.lit(location_id).alias("location"),
+                pl.lit(config).alias("config"),
+                pl.lit(0).alias("row"),
                 pl.lit(location.page_number).alias("page"),
                 pl.col("field"),
                 pl.col("vital"),
                 pl.col("value_raw"),
             )
             spec = None
-            if field.type == "numeric":
-                spec = currency_spec[field.numeric_currency]
+            if config_field.type == "numeric":
+                spec = currency_spec[config_field.numeric_currency]
             result = (
-                result.pipe(strip, field, spec)
-                .pipe(patmatch, field, spec)
-                .pipe(cast, field)
-                .pipe(trim, field)
-                .pipe(validate, field)
+                result.pipe(strip, config_field, spec)
+                .pipe(patmatch, config_field, spec)
+                .pipe(cast, config_field)
+                .pipe(trim, config_field)
+                .pipe(validate, config_field)
                 .pipe(cleanup)
             )
             try:
                 results.vstack(result.collect(), in_place=True)
-                # results.vstack(result, in_place=True)
             except pl.exceptions.ColumnNotFoundError:
-                continue
+                return results.lazy()
 
-    return (results.lazy(), results.filter(pl.col("success")).lazy())
+    else:  # if there is a statement table
+        table = get_table(location, region, statement_table) if region and not exception else pl.LazyFrame()
+        table = table.collect().lazy()
+
+        if not statement_table.transaction_spec:
+            table_eager: pl.DataFrame = table.collect()
+            for field in statement_table.fields:
+                result = pl.LazyFrame(
+                    data=[
+                        pl.Series("field", [field.field], dtype=pl.String),
+                        pl.Series("vital", [field.vital], dtype=pl.Boolean),
+                        pl.Series("value_raw", [table_eager.item(field.cell.row, field.cell.col)], dtype=pl.String),
+                    ]
+                )
+                result = result.select(
+                    pl.lit(section).alias("section"),
+                    pl.lit(location_id).alias("location"),
+                    pl.lit(config).alias("config"),
+                    pl.lit(field.cell.row).alias("row"),
+                    pl.lit(location.page_number).alias("page"),
+                    pl.col("field"),
+                    pl.col("vital"),
+                    pl.col("value_raw"),
+                )
+                spec = None
+                if field.type == "numeric":
+                    spec = currency_spec[field.numeric_currency]
+                result = (
+                    result.pipe(strip, field, spec)
+                    .pipe(patmatch, field, spec)
+                    .pipe(cast, field)
+                    .pipe(trim, field)
+                    .pipe(validate, field)
+                    .pipe(cleanup)
+                )
+                try:
+                    results.vstack(result.collect(), in_place=True)
+                except pl.exceptions.ColumnNotFoundError:
+                    continue
+
+        else:  # transaction records will be multi-line and have now row specification
+            for field in statement_table.fields:
+                result = table.select(
+                    section=pl.lit(section),
+                    location=pl.lit(location_id),
+                    config=pl.lit(config),
+                    page=pl.lit(location.page_number),
+                    field=pl.lit(field.field),
+                    vital=pl.lit(field.vital),
+                    value_raw=pl.nth(field.column),
+                ).with_row_index("row")
+                spec = None
+                if field.type == "numeric":
+                    spec = currency_spec[field.numeric_currency]
+                result = (
+                    result.pipe(strip, field, spec).pipe(patmatch, field, spec).pipe(cast, field).pipe(trim, field).pipe(validate, field)
+                    # .pipe(cleanup)
+                )
+                try:
+                    results.vstack(result.collect(), in_place=True)
+                except pl.exceptions.ColumnNotFoundError:
+                    continue
+            # Transaction bookends
+            bookends = statement_table.transaction_spec.transaction_bookends
+            start = bookends.start_fields
+            end = bookends.end_fields
+            start_rows = (
+                results.filter(pl.col("field").is_in(start))
+                .group_by("row")
+                .agg(pl.col("success").implode())
+                .filter(pl.col("success").list.count_matches(True) >= bookends.min_non_empty_start)
+                .select(pl.col("row"), transaction_start=pl.lit(True))
+            )
+            end_rows = (
+                results.filter(pl.col("field").is_in(end))
+                .group_by("row")
+                .agg(pl.col("success").implode())
+                .filter(pl.col("success").list.count_matches(True) >= bookends.min_non_empty_end)
+                .select(pl.col("row"), transaction_end=pl.lit(True))
+            )
+            results = (
+                results.join(start_rows, on="row", how="left", validate="m:1")
+                .join(end_rows, on="row", how="left", validate="m:1")
+                .with_columns(
+                    transaction_start=pl.col("transaction_start").fill_null(False),
+                    transaction_end=pl.col("transaction_end").fill_null(False),
+                )
+            )
+    return results.lazy()
 
 
-# def extract_table_fields_df(pdf, location, statement_table):
-#     region, exception = get_region(location, pdf)
-#     table = get_table(location, region, statement_table).collect() if region and not exception else pl.DataFrame()
-#     # table = table.collect().lazy()
-#     result: pl.DataFrame = pl.DataFrame()
+def process_transactions(data, transaction_spec):
+    data = (
+        data.filter(pl.col("success"))
+        .pivot(values="value", index=["page", "row", "transaction_start", "transaction_end"], on="field")
+        .sort("page", "row")
+        .lazy()
+    )  # pivot the data
+    data = data.with_columns(transaction_number=pl.col("transaction_start").cum_sum()).filter(
+        pl.col("transaction_number") > 0
+    )  # number the transactions and remove rows before the 1st
+    if fffs := transaction_spec.fill_forward_fields:  # fill forward if there are any fields in the spec
+        for fff in fffs:
+            data = data.with_columns(
+                pl.col(fff).fill_null(strategy="forward").alias(fff),
+            )
+    if mfs := transaction_spec.merge_fields:
+        for mf in mfs.fields:
+            data = data.with_columns(
+                pl.col(mf).str.join(delimiter=mfs.separator).over("transaction_number"),
+            )
+    data = data.filter(pl.col("transaction_end"))
+    std_date_field = transaction_spec.std_date.field
+    std_date_format = 
+    data = data.with_columns(
+        std_date = pl.col(transaction_spec.std_date.field).str.to_date(format=)
+    )
+    with pl.Config(tbl_cols=-1, tbl_rows=-1):
+        print(data.collect())
+    return data
+
+
+def get_results(pdf, section, config: Config, log=False, scope="success") -> pl.DataFrame:  # scope can be all, success, fail, or hard_fail
+    result: pl.LazyFrame = pl.LazyFrame()
+    results: pl.DataFrame = pl.DataFrame()
+    locations = config.statement_table.locations if config.statement_table else config.locations
+    spawned_locations = spawn_locations(locations, stmt.pdf)
+    for i, location in enumerate(spawned_locations):
+        result = extract_fields(pdf, location, config.statement_table, config.field, config.config, section=section, location_id=i)
+        results.vstack(result.collect(), in_place=True)
+        if log:
+            print("Get Results...", config.config)
+            with pl.Config(tbl_cols=-1, tbl_rows=-1):
+                print(results)
+
+    if statement_table := config.statement_table:
+        if spec := statement_table.transaction_spec:
+            results = results.pipe(process_transactions, spec)
+
+    if scope == "all":
+        return results
+    elif scope == "success":
+        return results.filter(pl.col("success"))
+    elif scope == "fail":
+        return results.filter(~pl.col("success"))
+    elif scope == "hard_fail":
+        return results.filter(pl.col("hard_fail"))
+    else:
+        return results
+
+
+def pick_leaf(leaves, pdf):
+    result: tuple | None = None
+    if isinstance(leaves, dict):
+        for key, leaf in leaves.items():
+            config = leaf.config
+            leaf_result = get_results(pdf, "pick", config, scope="success", log=False)
+            if len(leaf_result) > 0:
+                result = (leaf, key)
+                break
+    elif isinstance(leaves, list):
+        for leaf in leaves:
+            config = leaf.config
+            leaf_result = get_results(pdf, "pick", config, scope="success", log=False)
+            if len(leaf_result) > 0:
+                result = (leaf, "")
+                break
+    else:
+        raise TypeError("the pick_leaf() function requires leaves to be a dictionary or list")
+    if not result:
+        raise StatementError("the account cannot be identified from your statement")
+    return result
+
+
+def get_config_from_account(account_key, file_path):
+    config_account = config_accounts.get(account_key)
+    if not config_account:
+        raise StatementError(f"Unable to identify the account from the statement provided: {file_path}")
+    else:
+        return config_account
+
+
+def get_config_from_company(company_key, pdf, file_path):
+    company_accounts = None
+    config_account = None
+    try:
+        company_accounts = config_company_accounts(company_key)
+    except KeyError:
+        print(f"{company_key} is not a valid company key")
+    if company_accounts:
+        try:
+            config_account = pick_leaf(leaves=company_accounts, pdf=pdf)[0]
+        except StatementError:
+            config_account = None
+    if not config_account:
+        raise StatementError(f"Unable to identify the account from the statement provided: {file_path}")
+    return config_account
+
+
+def get_config_from_statement(pdf, file_path):
+    company_leaf = pick_leaf(leaves=config_companies, pdf=pdf)
+    if not company_leaf:
+        raise StatementError(f"Unable to identify the company from the statement provided: {file_path}")
+    company_key = company_leaf[1]
+    config_account = None
+    try:
+        config_account = get_config_from_company(company_key, pdf, file_path)
+    except Exception as e:
+        raise StatementError(f"Unable to identify the account from the statement provided: {file_path}") from e
+    return config_account
+
+
+def get_config(self):
+    config = None
+    if self.account_key:
+        config = get_config_from_account(self.account_key, self.file_path)
+    elif self.company_key:
+        config = get_config_from_company(self.company_key, self.pdf, self.file_path)
+    else:
+        config = get_config_from_statement(self.pdf, self.file_path)
+    return config
+
+
+config = get_config(stmt)
+company = config.company.company if config.company and hasattr(config.company, "company") else ""
+account = config.account if config and hasattr(config, "account") else ""
+statement_type = (
+    config.statement_type.statement_type if config.statement_type and hasattr(config.statement_type, "statement_type") else None
+)
+config_header = config.statement_type.header.configs if config.statement_type and hasattr(config.statement_type, "header") else None
+config_pages = config.statement_type.pages.configs if config.statement_type and hasattr(config.statement_type, "pages") else None
+config_lines = config.statement_type.lines.configs if config.statement_type and hasattr(config.statement_type, "lines") else None
+
+# if config_header:
 #     results: pl.DataFrame = pl.DataFrame()
+#     for config in config_header:
+#         results.vstack(get_results(stmt.pdf, "header", config, scope="success", log=False), in_place=True)
+#     results = results.pivot(values="value", on="field")
+#     with pl.Config(tbl_cols=-1, tbl_rows=-1):
+#         print(results)
+#         ...
 
-#     if statement_table.transaction_spec:  # transaction records will be multi-line and have now row specification
-#         for field in statement_table.fields:
-#             try:
-#                 result = table.select(field=pl.lit(field.field), vital=pl.lit(field.vital), value_raw=pl.nth(field.column)).with_row_index(
-#                     "row"
-#                 )
-#             except pl.exceptions.ColumnNotFoundError:
-#                 continue
-#             spec = None
-#             if field.type == "numeric":
-#                 spec = currency_spec[field.numeric_currency]
-#             result = (
-#                 result.pipe(strip, field, spec)
-#                 .pipe(patmatch, field, spec)
-#                 .pipe(cast, field)
-#                 .pipe(trim, field)
-#                 .pipe(validate, field)
-#                 .pipe(cleanup)
-#             )
-#             try:
-#                 results.vstack(result, in_place=True)
-#                 del result
-#             except pl.exceptions.ColumnNotFoundError:
-#                 del result
-#                 continue
+# if config_pages:
+#     results: pl.DataFrame = pl.DataFrame()
+#     for config in config_pages:
+#         results.vstack(get_results(stmt.pdf, "pages", config, scope="success", log=False), in_place=True)
+#     results = results.pivot(values="value", index=["page"], on="field")
+#     with pl.Config(tbl_cols=-1, tbl_rows=-1):
+#         print(results)
+#         ...
 
-#     # else:  # other table records will be row and column specific
-#     #     # result_eager: pl.DataFrame = pl.DataFrame()
-#     #     table_eager: pl.DataFrame = table.collect()
-#     #     for field in statement_table.fields:
-#     #         result = pl.LazyFrame(
-#     #             data=[
-#     #                 pl.Series("field", [field.field], dtype=pl.String),
-#     #                 pl.Series("vital", [field.vital], dtype=pl.Boolean),
-#     #                 pl.Series("value_raw", [table_eager.item(field.cell.row, field.cell.col)], dtype=pl.String),
-#     #             ]
-#     #         )
-#     #         spec = None
-#     #         if field.type == "numeric":
-#     #             spec = currency_spec[field.numeric_currency]
-#     #         result = (
-#     #             result.pipe(strip, field, spec)
-#     #             .pipe(patmatch, field, spec)
-#     #             .pipe(cast, field)
-#     #             .pipe(trim, field)
-#     #             .pipe(validate, field)
-#     #             .pipe(cleanup)
-#     #         )
-#     #         results.vstack(result.collect(), in_place=True)
-#     # del region, exception, table
-#     return results
+if config_lines:
+    results: pl.DataFrame = pl.DataFrame()
+    for config in config_lines:
+        results.vstack(get_results(stmt.pdf, "lines", config, scope="success", log=False), in_place=True)
+    # results = results.filter(pl.col("page") == 1, pl.col("row") == 47)
+    results = results.pivot(values="value", index=["page", "row", "transaction_start", "transaction_end"], on="field").sort("page", "row")
+    results = results.with_columns(transaction_number=pl.col("transaction_start").cum_sum()).with_columns(
+        pl.col("date").fill_null(strategy="forward").alias("date"),
+        pl.col("payment_type").fill_null(strategy="forward").alias("payment_type"),
+    )
+    transaction_details = (
+        results.filter(pl.col("transaction_number") > 0)
+        .group_by(pl.col("transaction_number"))
+        .agg(pl.col("details").implode().alias("details_list"))
+    ).with_columns(
+        pl.col("details_list").list.join(separator=" ").alias("details_space"),
+        pl.col("details_list").list.join(separator=" | ").alias("details_pipe"),
+    )
+    results = results.join(transaction_details, on="transaction_number", how="inner", maintain_order="left").filter(
+        pl.col("transaction_end")
+    )
+    with pl.Config(tbl_cols=-1, tbl_rows=-1):
+        print(results)
+        ...
 
-
-# if stmt.config_header:
-#     for config in stmt.config_header:
+# if config_pages:
+#     pages_results: pl.DataFrame = pl.DataFrame()
+#     for config in config_pages:
 #         # extract field values
-#         if config.statement_table:
-#             spawned_locations = spawn_locations(config.statement_table.locations, stmt.pdf)
-#             for location in spawned_locations:
-#                 # table_fields = extract_table_fields(stmt.pdf, location, config.statement_table)
-#                 table_fields_df = extract_table_fields_df(stmt.pdf, location, config.statement_table)[1]
-#                 with pl.Config(tbl_cols=-1, tbl_rows=-1):
-#                     print(table_fields_df.collect())
-#                 ...
-# if stmt.config_pages:
-#     for config in stmt.config_pages:
+#         # if config.statement_table:
+#         locations = config.statement_table.locations if config.statement_table else config.locations
+#         spawned_locations = spawn_locations(locations, stmt.pdf)
+#         for i, location in enumerate(spawned_locations):
+#             # table_fields = extract_table_fields(stmt.pdf, location, config.statement_table)
+#             table_fields_df = extract_fields(
+#                 stmt.pdf, location, config.statement_table, config.field, config.config, section="pages", location_id=i
+#             )[1]
+#             pages_results.vstack(table_fields_df.collect(), in_place=True)
+#     with pl.Config(tbl_cols=-1, tbl_rows=-1):
+#         print(pages_results)
+#         ...
+
+# if config_lines:
+#     lines_results: pl.DataFrame = pl.DataFrame()
+#     for config in config_lines:
 #         # extract field values
-#         if config.statement_table:
-#             spawned_locations = spawn_locations(config.statement_table.locations, stmt.pdf)
-#             for location in spawned_locations:
-#                 # table_fields = extract_table_fields(stmt.pdf, location, config.statement_table)
-#                 table_fields_df = extract_table_fields_df(stmt.pdf, location, config.statement_table)[1]
-#                 with pl.Config(tbl_cols=-1, tbl_rows=-1):
-#                     print(table_fields_df.collect())
-#                 ...
-if stmt.config_lines:
-    for config in stmt.config_lines:
-        # extract field values
-        if config.statement_table:
-            spawned_locations = spawn_locations(config.statement_table.locations, stmt.pdf)
-
-            # start_old = time.time()
-            # for location in spawned_locations:
-            #     for i in range(5):
-            #         # print("old", location, i)
-            #         table_fields = extract_table_fields(stmt.pdf, location, config.statement_table)
-            # end_old = time.time()
-
-            start_new = time.time()
-            for location in spawned_locations:
-                for _ in range(1):
-                    # if location.page_number == 2:
-                    table_fields_df = extract_table_fields_df(stmt.pdf, location, config.statement_table)[1]
-                    with pl.Config(tbl_cols=-1, tbl_rows=-1):
-                        print(table_fields_df.collect())
-            end_new = time.time()
-
-            # start_new2 = time.time()
-            # for location in spawned_locations:
-            #     for i in range(5):
-            #         table_fields_df2 = extract_table_fields_df2(stmt.pdf, location, config.statement_table)
-            # end_new2 = time.time()
-
-            # start_new3 = time.time()
-            # for location in spawned_locations:
-            #     for _ in range(5):
-            #         table_fields_df = extract_table_fields_df(stmt.pdf, location, config.statement_table)
-            # end_new3 = time.time()
-
-            # start_new4 = time.time()
-            # for location in spawned_locations:
-            #     for i in range(5):
-            #         table_fields_df2 = extract_table_fields_df2(stmt.pdf, location, config.statement_table)
-            # end_new4 = time.time()
-
-            # print("old: ", {end_old - start_old}, "secs")
-            print("new: ", {end_new - start_new}, "secs")
-            # print("new2: ", {end_new2 - start_new2}, "secs")
-            # print("new3: ", {end_new3 - start_new3}, "secs")
-            # print("new4: ", {end_new4 - start_new4}, "secs")
-            # with pl.Config(tbl_cols=-1, tbl_rows=-1):
-            #     print(table_fields_df.filter(pl.col("success")))
-            ...
+#         # if config.statement_table:
+#         locations = config.statement_table.locations if config.statement_table else config.locations
+#         spawned_locations = spawn_locations(locations, stmt.pdf)
+#         for i, location in enumerate(spawned_locations):
+#             # table_fields = extract_table_fields(stmt.pdf, location, config.statement_table)
+#             table_fields_df = extract_fields(
+#                 stmt.pdf, location, config.statement_table, config.field, config.config, section="lines", location_id=i
+#             )[1]
+#             lines_results.vstack(table_fields_df.collect(), in_place=True)
+#     with pl.Config(tbl_cols=-1, tbl_rows=-1):
+#         print(lines_results)
+#         ...

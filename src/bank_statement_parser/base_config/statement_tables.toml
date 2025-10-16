@@ -63,7 +63,7 @@ locations = [
 fields = [
     {field = 'received_by_us', column = 0, vital=true, type = "string", string_pattern ='^[0-3][0-9]\s?[A-Z][a-z]{2}\s?[0-3][0-9]$'},
     {field = 'transaction_date', column = 1, vital=true, type = "string", string_pattern ='^[0-3][0-9]\s?[A-Z][a-z]{2}\s?[0-3][0-9]$'},
-    {field = 'details', column = 2, vital=true, type = "string", string_max_length = 100},
+    {field = 'details', column = 2, vital=true, type = "string", string_pattern ='.+', string_max_length = 100},
     {field = 'amount', column = 3, vital=true, type = "numeric", numeric_currency = "GBP", numeric_modifier = {suffix = "CR", multiplier = -1}},
 ]
 delete_success_false = true
@@ -74,7 +74,7 @@ delete_rows_with_missing_vital_fields = true
 transaction_bookends = {start_fields = ['received_by_us','transaction_date','details','amount'], min_non_empty_start = 4, end_fields = ['received_by_us','transaction_date','details','amount'], min_non_empty_end = 4}
 
 std_date = {field = 'transaction_date', vital=true, type = "date", date_format="%d %b %y"}
-std_description = {field = 'details', vital=true, type = "string", strip_chars_start = ')', string_max_length = 100}
+std_description = {field = 'details', vital=true, type = "string", string_pattern ='.+', strip_chars_start = ')', string_max_length = 100}
 std_credit = {field = 'amount', vital=true, type = "numeric", numeric_currency = "GBP", numeric_modifier = {multiplier = -1, exclude_positive_values = true}}
 std_debit = {field = 'amount', vital=true, type = "numeric", numeric_currency = "GBP", numeric_modifier = {multiplier = 1, exclude_negative_values = true}}
 
@@ -99,9 +99,9 @@ delete_rows_with_missing_vital_fields = true
 [HSBC_UK_CUR_TRANSACTIONS.transaction_spec]
 transaction_bookends = {start_fields = ['payment_type','details'], min_non_empty_start = 2, end_fields = ['£_paid_out','£_paid_in'], min_non_empty_end = 1}
 fill_forward_fields = ['date','payment_type']
-merge_fields = {fields=['details'], max_rows=5, separator=' | '}
+merge_fields = {fields=['details'], separator=' | '}
 
 std_date = {field = 'date', vital=true, type = "date", date_format="%d %b %y"}
-std_description = {field = 'details', vital=true, type = "string", string_max_length = 100}
+std_description = {field = 'details', vital=true, type = "string", string_pattern ='.+', string_max_length = 100}
 std_credit = {field = '£_paid_in', vital=true, type = "numeric", numeric_currency = "GBP", numeric_modifier = {multiplier = 1}}
 std_debit = {field = '£_paid_out', vital=true, type = "numeric", numeric_currency = "GBP", numeric_modifier = {multiplier = -1}}

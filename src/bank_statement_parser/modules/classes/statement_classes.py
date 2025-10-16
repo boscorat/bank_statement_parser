@@ -9,34 +9,34 @@ from bank_statement_parser.modules.functions.statement_functions import get_fiel
 
 
 class Statement:
-    def __init__(self, file_path: str, key_company: str | None = None, key_account: str | None = None):
+    def __init__(self, file_path: str, company_key: str | None = None, account_key: str | None = None):
         self.file_path = file_path
-        self.key_company = key_company
-        self.key_account = key_account
+        self.company_key = company_key
+        self.account_key = account_key
         self.pdf = pdf_open(file_path)
-        self.config = self.get_config()
-        self.company = self.config.company.company if self.config.company and hasattr(self.config.company, "company") else ""
-        self.account = self.config.account if self.config and hasattr(self.config, "account") else ""
-        self.statement_type = (
-            self.config.statement_type.statement_type
-            if self.config.statement_type and hasattr(self.config.statement_type, "statement_type")
-            else None
-        )
-        self.config_header = (
-            self.config.statement_type.header.configs
-            if self.config.statement_type and hasattr(self.config.statement_type, "header")
-            else None
-        )
-        self.config_pages = (
-            self.config.statement_type.pages.configs
-            if self.config.statement_type and hasattr(self.config.statement_type, "pages")
-            else None
-        )
-        self.config_lines = (
-            self.config.statement_type.lines.configs
-            if self.config.statement_type and hasattr(self.config.statement_type, "lines")
-            else None
-        )
+        # self.config = self.get_config()
+        # self.company = self.config.company.company if self.config.company and hasattr(self.config.company, "company") else ""
+        # self.account = self.config.account if self.config and hasattr(self.config, "account") else ""
+        # self.statement_type = (
+        #     self.config.statement_type.statement_type
+        #     if self.config.statement_type and hasattr(self.config.statement_type, "statement_type")
+        #     else None
+        # )
+        # self.config_header = (
+        #     self.config.statement_type.header.configs
+        #     if self.config.statement_type and hasattr(self.config.statement_type, "header")
+        #     else None
+        # )
+        # self.config_pages = (
+        #     self.config.statement_type.pages.configs
+        #     if self.config.statement_type and hasattr(self.config.statement_type, "pages")
+        #     else None
+        # )
+        # self.config_lines = (
+        #     self.config.statement_type.lines.configs
+        #     if self.config.statement_type and hasattr(self.config.statement_type, "lines")
+        #     else None
+        # )
         # # del self.config
         # self.header_results = get_field_values(
         #     self.config_header, pdf=self.pdf, file=self.file_path, company=self.company, account=self.account
@@ -126,10 +126,10 @@ class Statement:
     #     return transactions
     def get_config(self):
         config = None
-        if self.key_account:
-            config = get_config_from_account(self.key_account, self.file_path)
-        elif self.key_company:
-            config = get_config_from_company(self.key_company, self.pdf, self.file_path)
+        if self.account_key:
+            config = get_config_from_account(self.account_key, self.file_path)
+        elif self.company_key:
+            config = get_config_from_company(self.company_key, self.pdf, self.file_path)
         else:
             config = get_config_from_statement(self.pdf, self.file_path)
         return config

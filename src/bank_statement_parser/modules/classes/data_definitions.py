@@ -67,7 +67,6 @@ class StatementBookend:
 @dataclass
 class MergeFields:
     fields: list[str]
-    max_rows: int
     separator: str
 
 
@@ -99,10 +98,9 @@ class StatementTable:
 
 @dataclass
 class Config:
-    config: Optional[str]
+    config: str
     statement_table_key: Optional[str]
     statement_table: Optional[StatementTable]
-    location: Optional[Location]
     locations: Optional[list[Location]]
     field: Optional[Field]
 

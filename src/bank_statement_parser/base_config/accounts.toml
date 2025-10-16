@@ -6,8 +6,9 @@ company_key = 'HSBC_UK'
 account_type_key = 'CRD'
 statement_type_key = 'HSBC_UK_CRD'
     [HSBC_UK_CRD_RCC.config]
-    location = {page_number = 1, top_left = [275, 20], bottom_right = [575, 70]}
-    field = {field = 'account', vital=true, type="string", string_pattern ='^Your[\s]*Rewards[\s]*Credit[\s]*Card[\s]*statement[\s]*$'}
+    config = 'Account Info'
+    locations = [{page_number = 1, top_left = [275, 20], bottom_right = [575, 70]}]
+    field = {field = 'account', vital=true, type="string", string_pattern ='^Your[\s]*Rewards[\s]*Credit[\s]*Card[\s]*statement[\s]*'}
 
 [HSBC_UK_SAV_FLX]
 account = "Flexible Saver"
@@ -15,8 +16,9 @@ company_key = 'HSBC_UK'
 account_type_key = 'SAV'
 statement_type_key = 'HSBC_UK_SAV'
     [HSBC_UK_SAV_FLX.config]
-    location = {page_number = 1, top_left = [37, 425], bottom_right = [255, 480]}
-    field = {field = 'account', vital=true, type = "string", string_pattern = '^Your[\s]*Flexible[\s]*Saver$'}
+    config = 'Account Info'
+    locations = [{page_number = 1, top_left = [37, 425], bottom_right = [255, 480]}]
+    field = {field = 'account', vital=true, type = "string", string_pattern = '^Your[\s]*Flexible[\s]*Saver'}
 
 [HSBC_UK_CUR_STD]
 account = "Bank Account"
@@ -24,8 +26,9 @@ company_key = 'HSBC_UK'
 account_type_key = 'CUR'
 statement_type_key = 'HSBC_UK_CUR'
     [HSBC_UK_CUR_STD.config]
-    location = {page_number = 1, top_left = [37, 400], bottom_right = [255, 465]}
-    field = {field = 'account', vital=true, type = "string", string_pattern = '^Bank[\s]*Account$'}
+    config = 'Account Info'
+    locations = [{page_number = 1, top_left = [37, 400], bottom_right = [255, 465]}]
+    field = {field = 'account', vital=true, type = "string", string_pattern = '^Bank[\s]*Account'}
 
 [HSBC_UK_CUR_ADV]
 account = "HSBC Advance"
@@ -33,8 +36,9 @@ company_key = 'HSBC_UK'
 account_type_key = 'CUR'
 statement_type_key = 'HSBC_UK_CUR'
     [HSBC_UK_CUR_ADV.config]
-    location = {page_number = 1, top_left = [25, 400], bottom_right = [270, 445]}
-    field = {field = 'account', vital=true, type = "string", string_pattern = '^Your[\s]*HSBC[\s]*Advance[\s]*details$'}
+    config = 'Account Info'
+    locations = [{page_number = 1, top_left = [25, 400], bottom_right = [270, 445]}]
+    field = {field = 'account', vital=true, type = "string", string_pattern = '^Your[\s]*HSBC[\s]*Advance'}
 
 [HSBC_UK_SAV_OBS]
 account = "Online Bonus Saver"
@@ -42,14 +46,6 @@ company_key = 'HSBC_UK'
 account_type_key = 'SAV'
 statement_type_key = 'HSBC_UK_SAV'
     [HSBC_UK_SAV_OBS.config]
-    location = {page_number = 1, top_left = [37, 425], bottom_right = [255, 490]}
-    field = {field = 'account', vital=true, type = "string", string_pattern = '^Online[\s]*Bonus[\s]*Saver$'}
-
-[NATWEST_UK_SAV_OBS]
-account = "Online Bonus Saver"
-company_key = 'NATWEST_UK'
-account_type_key = 'SAV'
-statement_type_key = 'NATWEST_UK_SAV'
-    [NATWEST_UK_SAV_OBS.config]
-    location = {page_number = 1, top_left = [37, 425], bottom_right = [255, 490]}
-    field = {field = 'account', vital=true, type = "string", string_pattern = '^Online[\s]*Bonus[\s]*Saver$'}
+    config = 'Account Info'
+    locations = [{page_number = 1, top_left = [37, 425], bottom_right = [255, 490]}]
+    field = {field = 'account', vital=true, type = "string", string_pattern = '^Online[\s]*Bonus[\s]*Saver'}
