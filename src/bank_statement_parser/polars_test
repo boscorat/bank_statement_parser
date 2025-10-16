@@ -12,6 +12,8 @@ from bank_statement_parser.modules.currency import currency_spec
 from bank_statement_parser.modules.functions.pdf_functions import page_crop, region_table
 from bank_statement_parser.modules.functions.statement_functions import extract_table_fields, spawn_locations
 
+log = []
+
 stmt = Statement("/home/boscorat/Downloads/2025-07-08_Statement_Advance_Account.pdf")
 # stmt = Statement("/home/boscorat/Downloads/2025-07-08_Statement_Flexible_Saver.pdf")
 # stmt = Statement("/home/boscorat/Downloads/2025-07-12_Statement_Rewards_Credit_Card.pdf")
@@ -19,6 +21,7 @@ DEBUG = False
 
 
 def get_region(location, pdf):
+    start = time.time()
     region = None
     exception = None
     if location.page_number:
@@ -30,10 +33,12 @@ def get_region(location, pdf):
             exception = "Specified location outside of the page boundaries"
     else:
         exception = "No page number specified for the location"
+    log.append(["get_region", time.time() - start])
     return (region, exception)
 
 
 def get_table(location, region, statement_table):
+    start = time.time()
     table = pl.LazyFrame()
     table = region_table(
         region=region,
@@ -42,10 +47,12 @@ def get_table(location, region, statement_table):
         row_spacing=statement_table.row_spacing,
         vertical_lines=location.vertical_lines,
     )
+    log.append(["get_table", time.time() - start])
     return table
 
 
 def strip(data, field, spec=None):
+    start = time.time()
     src = "raw"
     step = "strip"
     if DEBUG:
@@ -84,13 +91,17 @@ def strip(data, field, spec=None):
         print("After...")
         with pl.Config(tbl_cols=-1, tbl_rows=-1):
             print(data)
+
+    log.append(["strip", time.time() - start])
     return data
 
 
 def build_pattern(string_pattern=None, spec_pattern=None, prefix=None, suffix=None):
+    start = time.time()
     pattern: str = r".+"
     if string_pattern is not None:
         pattern = string_pattern
+        log.append(["build_pattern", time.time() - start])
         return pattern
     elif spec_pattern is not None:
         pattern = spec_pattern
@@ -100,10 +111,12 @@ def build_pattern(string_pattern=None, spec_pattern=None, prefix=None, suffix=No
             pattern = str(pattern).replace("^", rf"^({prefix})?\s?")
         if suffix is not None:
             pattern = str(pattern).replace("$", rf"\s?({suffix})?$")
+    log.append(["build_pattern", time.time() - start])
     return pattern
 
 
 def patmatch(data, field, spec=None):
+    start = time.time()
     src = "strip"
     step = "pattern"
     pattern = build_pattern(
@@ -141,10 +154,12 @@ def patmatch(data, field, spec=None):
         print("After...")
         with pl.Config(tbl_cols=-1, tbl_rows=-1):
             print(data.collect())
+    log.append(["pat_match", time.time() - start])
     return data
 
 
 def cast(data, field):
+    start = time.time()
     src = "pattern"
     step = "cast"
     if DEBUG:
@@ -209,10 +224,12 @@ def cast(data, field):
         print("After...")
         with pl.Config(tbl_cols=-1, tbl_rows=-1):
             print(data)
+    log.append(["cast", time.time() - start])
     return data
 
 
 def trim(data, field):
+    start = time.time()
     src = "cast"
     step = "trim"
     if DEBUG:
@@ -237,10 +254,12 @@ def trim(data, field):
         print("After...")
         with pl.Config(tbl_cols=-1, tbl_rows=-1):
             print(data)
+    log.append(["trim", time.time() - start])
     return data
 
 
 def validate(data, field):
+    start = time.time()
     src = "trim"
     if DEBUG:
         print("Validate")
@@ -257,16 +276,20 @@ def validate(data, field):
         print("After...")
         with pl.Config(tbl_cols=-1, tbl_rows=-1):
             print(data)
+    log.append(["validate", time.time() - start])
     return data
 
 
 def cleanup(data):
+    start = time.time()
     if not DEBUG:
         data = data.select("section", "location", "config", "row", "page", "field", "vital", "value", "success", "error", "hard_fail")
+    log.append(["cleanup", time.time() - start])
     return data
 
 
 def extract_fields(pdf, location, statement_table, config_field, config, section, location_id):
+    start = time.time()
     results: pl.DataFrame = pl.DataFrame()
     result: pl.LazyFrame = pl.LazyFrame()
     region, exception = get_region(location, pdf)
@@ -303,6 +326,7 @@ def extract_fields(pdf, location, statement_table, config_field, config, section
             try:
                 results.vstack(result.collect(), in_place=True)
             except pl.exceptions.ColumnNotFoundError:
+                log.append(["extract_fields_exception", time.time() - start])
                 return results.lazy()
 
     else:  # if there is a statement table
@@ -369,17 +393,17 @@ def extract_fields(pdf, location, statement_table, config_field, config, section
                     continue
             # Transaction bookends
             bookends = statement_table.transaction_spec.transaction_bookends
-            start = bookends.start_fields
-            end = bookends.end_fields
+            start_line = bookends.start_fields
+            end_line = bookends.end_fields
             start_rows = (
-                results.filter(pl.col("field").is_in(start))
+                results.filter(pl.col("field").is_in(start_line))
                 .group_by("row")
                 .agg(pl.col("success").implode())
                 .filter(pl.col("success").list.count_matches(True) >= bookends.min_non_empty_start)
                 .select(pl.col("row"), transaction_start=pl.lit(True))
             )
             end_rows = (
-                results.filter(pl.col("field").is_in(end))
+                results.filter(pl.col("field").is_in(end_line))
                 .group_by("row")
                 .agg(pl.col("success").implode())
                 .filter(pl.col("success").list.count_matches(True) >= bookends.min_non_empty_end)
@@ -393,10 +417,12 @@ def extract_fields(pdf, location, statement_table, config_field, config, section
                     transaction_end=pl.col("transaction_end").fill_null(False),
                 )
             )
+    log.append([f"extract_fields_{'stmt' if statement_table and statement_table.transaction_spec else 'std'}", time.time() - start])
     return results.lazy()
 
 
 def process_transactions(data, transaction_spec):
+    start = time.time()
     data = (
         data.filter(pl.col("success"))
         .pivot(values="value", index=["page", "row", "transaction_start", "transaction_end"], on="field")
@@ -417,17 +443,41 @@ def process_transactions(data, transaction_spec):
                 pl.col(mf).str.join(delimiter=mfs.separator).over("transaction_number"),
             )
     data = data.filter(pl.col("transaction_end"))
-    std_date_field = transaction_spec.std_date.field
-    std_date_format = 
-    data = data.with_columns(
-        std_date = pl.col(transaction_spec.std_date.field).str.to_date(format=)
+    std_date = transaction_spec.std_date
+    std_date_field = std_date.field
+    std_date_format = std_date.date_format
+    std_credit = transaction_spec.std_credit
+    std_credit_field = std_credit.field
+    std_credit_multiplier = 1 if not std_credit.numeric_modifier else std_credit.numeric_modifier.multiplier
+    std_debit = transaction_spec.std_debit
+    std_debit_field = std_debit.field
+    std_debit_multiplier = 1 if not std_debit.numeric_modifier else std_debit.numeric_modifier.multiplier
+    std_description = transaction_spec.std_description
+    std_description_field = std_description.field
+
+    data = (
+        data.with_columns(
+            std_date=pl.col(std_date_field).str.to_date(format=std_date_format),
+            std_credit=pl.col(std_credit_field).cast(float).mul(std_credit_multiplier).fill_null(0),
+            std_debit=pl.col(std_debit_field).cast(float).mul(std_debit_multiplier).fill_null(0),
+            std_description=pl.col(std_description_field),
+        )
+        .with_columns(
+            std_movement=pl.col("std_credit").sub(pl.col("std_debit")).cast(str).str.to_decimal(scale=2),
+            std_credit=pl.col("std_credit").cast(str).str.to_decimal(scale=2),
+            std_debit=pl.col("std_debit").cast(str).str.to_decimal(scale=2),
+        )
+        .drop("transaction_start", "transaction_end")
     )
     with pl.Config(tbl_cols=-1, tbl_rows=-1):
         print(data.collect())
-    return data
+
+    log.append(["process_transactions", time.time() - start])
+    return data.collect()
 
 
-def get_results(pdf, section, config: Config, log=False, scope="success") -> pl.DataFrame:  # scope can be all, success, fail, or hard_fail
+def get_results(pdf, section, config: Config, scope="success") -> pl.DataFrame:  # scope can be all, success, fail, or hard_fail
+    start = time.time()
     result: pl.LazyFrame = pl.LazyFrame()
     results: pl.DataFrame = pl.DataFrame()
     locations = config.statement_table.locations if config.statement_table else config.locations
@@ -435,40 +485,44 @@ def get_results(pdf, section, config: Config, log=False, scope="success") -> pl.
     for i, location in enumerate(spawned_locations):
         result = extract_fields(pdf, location, config.statement_table, config.field, config.config, section=section, location_id=i)
         results.vstack(result.collect(), in_place=True)
-        if log:
-            print("Get Results...", config.config)
-            with pl.Config(tbl_cols=-1, tbl_rows=-1):
-                print(results)
 
     if statement_table := config.statement_table:
         if spec := statement_table.transaction_spec:
             results = results.pipe(process_transactions, spec)
+            log.append(["get_results_stmt", time.time() - start])
+            return results
 
     if scope == "all":
+        log.append(["get_results_all", time.time() - start])
         return results
     elif scope == "success":
+        log.append(["get_results_success", time.time() - start])
         return results.filter(pl.col("success"))
     elif scope == "fail":
+        log.append(["get_results_fail", time.time() - start])
         return results.filter(~pl.col("success"))
     elif scope == "hard_fail":
+        log.append(["get_results_hard_fail", time.time() - start])
         return results.filter(pl.col("hard_fail"))
     else:
+        log.append(["get_results_default", time.time() - start])
         return results
 
 
 def pick_leaf(leaves, pdf):
+    start = time.time()
     result: tuple | None = None
     if isinstance(leaves, dict):
         for key, leaf in leaves.items():
             config = leaf.config
-            leaf_result = get_results(pdf, "pick", config, scope="success", log=False)
+            leaf_result = get_results(pdf, "pick", config, scope="success")
             if len(leaf_result) > 0:
                 result = (leaf, key)
                 break
     elif isinstance(leaves, list):
         for leaf in leaves:
             config = leaf.config
-            leaf_result = get_results(pdf, "pick", config, scope="success", log=False)
+            leaf_result = get_results(pdf, "pick", config, scope="success")
             if len(leaf_result) > 0:
                 result = (leaf, "")
                 break
@@ -476,18 +530,22 @@ def pick_leaf(leaves, pdf):
         raise TypeError("the pick_leaf() function requires leaves to be a dictionary or list")
     if not result:
         raise StatementError("the account cannot be identified from your statement")
+    log.append(["pick_leaf", time.time() - start])
     return result
 
 
 def get_config_from_account(account_key, file_path):
+    start = time.time()
     config_account = config_accounts.get(account_key)
     if not config_account:
         raise StatementError(f"Unable to identify the account from the statement provided: {file_path}")
     else:
+        log.append(["get_config_from_account", time.time() - start])
         return config_account
 
 
 def get_config_from_company(company_key, pdf, file_path):
+    start = time.time()
     company_accounts = None
     config_account = None
     try:
@@ -501,10 +559,12 @@ def get_config_from_company(company_key, pdf, file_path):
             config_account = None
     if not config_account:
         raise StatementError(f"Unable to identify the account from the statement provided: {file_path}")
+    log.append(["get_config_from_company", time.time() - start])
     return config_account
 
 
 def get_config_from_statement(pdf, file_path):
+    start = time.time()
     company_leaf = pick_leaf(leaves=config_companies, pdf=pdf)
     if not company_leaf:
         raise StatementError(f"Unable to identify the company from the statement provided: {file_path}")
@@ -514,10 +574,12 @@ def get_config_from_statement(pdf, file_path):
         config_account = get_config_from_company(company_key, pdf, file_path)
     except Exception as e:
         raise StatementError(f"Unable to identify the account from the statement provided: {file_path}") from e
+    log.append(["get_config_from_statement", time.time() - start])
     return config_account
 
 
 def get_config(self):
+    start = time.time()
     config = None
     if self.account_key:
         config = get_config_from_account(self.account_key, self.file_path)
@@ -525,8 +587,11 @@ def get_config(self):
         config = get_config_from_company(self.company_key, self.pdf, self.file_path)
     else:
         config = get_config_from_statement(self.pdf, self.file_path)
+    log.append(["get_config", time.time() - start])
     return config
 
+
+start_all = time.time()
 
 config = get_config(stmt)
 company = config.company.company if config.company and hasattr(config.company, "company") else ""
@@ -538,79 +603,56 @@ config_header = config.statement_type.header.configs if config.statement_type an
 config_pages = config.statement_type.pages.configs if config.statement_type and hasattr(config.statement_type, "pages") else None
 config_lines = config.statement_type.lines.configs if config.statement_type and hasattr(config.statement_type, "lines") else None
 
-# if config_header:
-#     results: pl.DataFrame = pl.DataFrame()
-#     for config in config_header:
-#         results.vstack(get_results(stmt.pdf, "header", config, scope="success", log=False), in_place=True)
-#     results = results.pivot(values="value", on="field")
-#     with pl.Config(tbl_cols=-1, tbl_rows=-1):
-#         print(results)
-#         ...
+start_header = time.time()
 
-# if config_pages:
-#     results: pl.DataFrame = pl.DataFrame()
-#     for config in config_pages:
-#         results.vstack(get_results(stmt.pdf, "pages", config, scope="success", log=False), in_place=True)
-#     results = results.pivot(values="value", index=["page"], on="field")
-#     with pl.Config(tbl_cols=-1, tbl_rows=-1):
-#         print(results)
-#         ...
-
-if config_lines:
+if config_header:
     results: pl.DataFrame = pl.DataFrame()
-    for config in config_lines:
-        results.vstack(get_results(stmt.pdf, "lines", config, scope="success", log=False), in_place=True)
-    # results = results.filter(pl.col("page") == 1, pl.col("row") == 47)
-    results = results.pivot(values="value", index=["page", "row", "transaction_start", "transaction_end"], on="field").sort("page", "row")
-    results = results.with_columns(transaction_number=pl.col("transaction_start").cum_sum()).with_columns(
-        pl.col("date").fill_null(strategy="forward").alias("date"),
-        pl.col("payment_type").fill_null(strategy="forward").alias("payment_type"),
-    )
-    transaction_details = (
-        results.filter(pl.col("transaction_number") > 0)
-        .group_by(pl.col("transaction_number"))
-        .agg(pl.col("details").implode().alias("details_list"))
-    ).with_columns(
-        pl.col("details_list").list.join(separator=" ").alias("details_space"),
-        pl.col("details_list").list.join(separator=" | ").alias("details_pipe"),
-    )
-    results = results.join(transaction_details, on="transaction_number", how="inner", maintain_order="left").filter(
-        pl.col("transaction_end")
-    )
+    for config in config_header:
+        results.vstack(get_results(stmt.pdf, "header", config, scope="success"), in_place=True)
+    results = results.pivot(values="value", on="field")
     with pl.Config(tbl_cols=-1, tbl_rows=-1):
         print(results)
         ...
 
-# if config_pages:
-#     pages_results: pl.DataFrame = pl.DataFrame()
-#     for config in config_pages:
-#         # extract field values
-#         # if config.statement_table:
-#         locations = config.statement_table.locations if config.statement_table else config.locations
-#         spawned_locations = spawn_locations(locations, stmt.pdf)
-#         for i, location in enumerate(spawned_locations):
-#             # table_fields = extract_table_fields(stmt.pdf, location, config.statement_table)
-#             table_fields_df = extract_fields(
-#                 stmt.pdf, location, config.statement_table, config.field, config.config, section="pages", location_id=i
-#             )[1]
-#             pages_results.vstack(table_fields_df.collect(), in_place=True)
-#     with pl.Config(tbl_cols=-1, tbl_rows=-1):
-#         print(pages_results)
-#         ...
+end_header = time.time()
+start_pages = time.time()
 
-# if config_lines:
-#     lines_results: pl.DataFrame = pl.DataFrame()
-#     for config in config_lines:
-#         # extract field values
-#         # if config.statement_table:
-#         locations = config.statement_table.locations if config.statement_table else config.locations
-#         spawned_locations = spawn_locations(locations, stmt.pdf)
-#         for i, location in enumerate(spawned_locations):
-#             # table_fields = extract_table_fields(stmt.pdf, location, config.statement_table)
-#             table_fields_df = extract_fields(
-#                 stmt.pdf, location, config.statement_table, config.field, config.config, section="lines", location_id=i
-#             )[1]
-#             lines_results.vstack(table_fields_df.collect(), in_place=True)
-#     with pl.Config(tbl_cols=-1, tbl_rows=-1):
-#         print(lines_results)
-#         ...
+if config_pages:
+    results: pl.DataFrame = pl.DataFrame()
+    for config in config_pages:
+        results.vstack(get_results(stmt.pdf, "pages", config, scope="success"), in_place=True)
+    results = results.pivot(values="value", index=["page"], on="field")
+    with pl.Config(tbl_cols=-1, tbl_rows=-1):
+        print(results)
+        ...
+end_pages = time.time()
+
+start_lines = time.time()
+
+if config_lines:
+    results: pl.DataFrame = pl.DataFrame()
+    for config in config_lines:
+        results.vstack(get_results(stmt.pdf, "lines", config, scope="success"), in_place=True)
+    with pl.Config(tbl_cols=-1, tbl_rows=-1):
+        print(results)
+        ...
+end_lines = time.time()
+
+end_all = time.time()
+
+print("all:", end_all - start_all)
+print("header:", end_header - start_header)
+print("pages:", end_pages - start_pages)
+print("lines:", end_lines - start_lines)
+print("HPL:", end_lines - start_header)
+
+log_times = (
+    pl.DataFrame(log, strict=False)
+    .transpose(column_names=["function", "seconds"])
+    .group_by(pl.col("function"))
+    .agg(total_seconds=pl.col("seconds").cast(float).fill_null(0).sum(), total_calls=pl.col("function").count())
+    .sort("total_seconds", descending=True)
+)
+
+with pl.Config(tbl_cols=-1, tbl_rows=-1):
+    print(log_times)
