@@ -1,62 +1,80 @@
-[STD_HEADER_STATEMENT_DATE]
+[STD_STATEMENT_DATE]
+    section = "header"
+    type = "date"
     std_refs = [
-        {statement_type="HSBC_UK_CUR", field="statement_date"},
-        {statement_type="HSBC_UK_SAV", field="statement_date"},
-        {statement_type="HSBC_UK_CRD", field="statement_date"},
+        {statement_type="HSBC UK Current Account", field="statement_date", format = "%-d %B %Y"},
+        {statement_type="HSBC UK Saving Account", field="statement_date", format = "%-d %B %Y"},
+        {statement_type="HSBC UK Credit Card", field="statement_date", format = "%-d %B %Y"},
     ]
 
-[STD_HEADER_OPENING_BALANCE]
+[STD_OPENING_BALANCE]
+    section = "header"
+    type = "numeric"
     std_refs = [
-        {statement_type="HSBC_UK_CUR", field="opening_balance"},
-        {statement_type="HSBC_UK_SAV", field="opening_balance"},
-        {statement_type="HSBC_UK_CRD", field="previous_balance"},
+        {statement_type="HSBC UK Current Account", field="opening_balance"},
+        {statement_type="HSBC UK Saving Account", field="opening_balance"},
+        {statement_type="HSBC UK Credit Card", field="previous_balance", multiplier=-1.0000},
     ]
 
-[STD_HEADER_CLOSING_BALANCE]
+[STD_CLOSING_BALANCE]
+    section = "header"
+    type = "numeric"
     std_refs = [
-        {statement_type="HSBC_UK_CUR", field="closing_balance"},
-        {statement_type="HSBC_UK_SAV", field="closing_balance"},
-        {statement_type="HSBC_UK_CRD", field="new_balance"},
+        {statement_type="HSBC UK Current Account", field="closing_balance"},
+        {statement_type="HSBC UK Saving Account", field="closing_balance"},
+        {statement_type="HSBC UK Credit Card", field="new_balance", multiplier=-1.0000},
     ]
 
-[STD_HEADER_PAYMENTS_IN]
+[STD_PAYMENTS_IN]
+    section = "header"
+    type = "numeric"
     std_refs = [
-        {statement_type="HSBC_UK_CUR", field="payments_in"},
-        {statement_type="HSBC_UK_SAV", field="payments_in"},
-        {statement_type="HSBC_UK_CRD", field="credits"},
+        {statement_type="HSBC UK Current Account", field="payments_in"},
+        {statement_type="HSBC UK Saving Account", field="payments_in"},
+        {statement_type="HSBC UK Credit Card", field="credits"},
     ]
 
-[STD_HEADER_PAYMENTS_OUT]
+[STD_PAYMENTS_OUT]
+    section = "header"
+    type = "numeric"
     std_refs = [
-        {statement_type="HSBC_UK_CUR", field="payments_out"},
-        {statement_type="HSBC_UK_SAV", field="payments_out"},
-        {statement_type="HSBC_UK_CRD", field="debits"},
+        {statement_type="HSBC UK Current Account", field="payments_out"},
+        {statement_type="HSBC UK Saving Account", field="payments_out"},
+        {statement_type="HSBC UK Credit Card", field="debits"},
     ]
 
-[STD_LINES_TRANSACTION_DATE]
+[STD_TRANSACTION_DATE]
+    section = "lines"
+    type = "date"
     std_refs = [
-        {statement_type="HSBC_UK_CUR", field="date"},
-        {statement_type="HSBC_UK_SAV", field="date"},
-        {statement_type="HSBC_UK_CRD", field="transaction_date"},
+        {statement_type="HSBC UK Current Account", field="date", format = "%d %b %y"},
+        {statement_type="HSBC UK Saving Account", field="date", format = "%d %b %y"},
+        {statement_type="HSBC UK Credit Card", field="transaction_date", format = "%d %b %y"},
     ]
 
-[STD_LINES_TRANSACTION_DESC]
+[STD_TRANSACTION_DESC]
+    section = "lines"
+    type = "string"
     std_refs = [
-        {statement_type="HSBC_UK_CUR", field="details"},
-        {statement_type="HSBC_UK_SAV", field="details"},
-        {statement_type="HSBC_UK_CRD", field="details"},
+        {statement_type="HSBC UK Current Account", field="details"},
+        {statement_type="HSBC UK Saving Account", field="details"},
+        {statement_type="HSBC UK Credit Card", field="details"},
     ]
 
-[STD_LINES_PAYMENT_IN]
+[STD_PAYMENT_IN]
+    section = "lines"
+    type = "numeric"
     std_refs = [
-        {statement_type="HSBC_UK_CUR", field="£_paid_in"},
-        {statement_type="HSBC_UK_SAV", field="£_paid_in"},
-        {statement_type="HSBC_UK_CRD", field="amount", exclude_positive_values=false},
+        {statement_type="HSBC UK Current Account", field="£_paid_in"},
+        {statement_type="HSBC UK Saving Account", field="£_paid_in"},
+        {statement_type="HSBC UK Credit Card", field="amount", exclude_positive_values=true, multiplier=-1.0000},
     ]
 
-[STD_LINES_PAYMENT_OUT]
+[STD_PAYMENT_OUT]
+    section = "lines"
+    type = "numeric"
     std_refs = [
-        {statement_type="HSBC_UK_CUR", field="£_paid_out", multiplier=-1},
-        {statement_type="HSBC_UK_SAV", field="£_paid_out", multiplier=-1},
-        {statement_type="HSBC_UK_CRD", field="amount", exclude_negative_values=true},
+        {statement_type="HSBC UK Current Account", field="£_paid_out"},
+        {statement_type="HSBC UK Saving Account", field="£_paid_out"},
+        {statement_type="HSBC UK Credit Card", field="amount", exclude_negative_values=true},
     ]

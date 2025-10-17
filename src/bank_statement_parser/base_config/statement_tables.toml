@@ -11,10 +11,6 @@ fields = [
     {field = 'payments_out', cell = {row = 3, col = 1}, vital=true, type = 'numeric', numeric_currency ="GBP"},
     {field = 'closing_balance', cell = {row = 4, col = 1}, vital=true, type = 'numeric', numeric_currency ="GBP", numeric_modifier = {suffix = "D", multiplier = -1}},
 ]
-std_opening_balance = {field = 'opening_balance', vital=true, type = "numeric", numeric_currency = "GBP"}
-std_closing_balance = {field = 'closing_balance', vital=true, type = "numeric", numeric_currency = "GBP"}
-std_statement_credits = {field = 'payments_in', vital=true, type = "numeric", numeric_currency = "GBP"}
-std_statement_debits = {field = 'payments_out', vital=true, type = "numeric", numeric_currency = "GBP"}
 
 [HSBC_UK_CUR_ACCT_DET]
 type = "detail"
@@ -54,17 +50,13 @@ locations = [
 fields = [
     {field = 'credit_limit', cell = {row = 0, col = 1}, vital=false, type = "numeric", numeric_currency = "GBP"},
     {field = 'apr', cell = {row = 1, col = 1}, vital=false, type = "string", string_pattern ='^[0-9]*\.[0-9]{1}$'},
-    {field = 'previous_balance', cell = {row = 2, col = 1}, vital=false, type = "numeric", numeric_currency = "GBP", numeric_modifier = {suffix = "D", multiplier = -1}},
+    {field = 'previous_balance', cell = {row = 2, col = 1}, vital=false, type = "numeric", numeric_currency = "GBP", numeric_modifier = {suffix = "D", multiplier = -1.0000}},
     {field = 'debits', cell = {row = 3, col = 1}, vital=true, type = "numeric", numeric_currency = "GBP"},
     {field = 'credits', cell = {row = 4, col = 1}, vital=true, type = "numeric", numeric_currency = "GBP"},
-    {field = 'new_balance', cell = {row = 5, col = 1}, vital=true, type = "numeric", numeric_currency = "GBP", numeric_modifier = {suffix = "D", multiplier = -1}},
-    {field = 'transaction_balance', cell = {row = 6, col = 1}, vital=true, type = "numeric", numeric_currency = "GBP", numeric_modifier = {suffix = "D", multiplier = -1}},
+    {field = 'new_balance', cell = {row = 5, col = 1}, vital=true, type = "numeric", numeric_currency = "GBP", numeric_modifier = {suffix = "D", multiplier = -1.0000}},
+    {field = 'transaction_balance', cell = {row = 6, col = 1}, vital=true, type = "numeric", numeric_currency = "GBP", numeric_modifier = {suffix = "D", multiplier = -1.0000}},
     {field = 'minimum_payment', cell = {row = 7, col = 1}, vital=false, type = "numeric", numeric_currency = "GBP"}
 ]
-std_opening_balance = {field = 'previous_balance', vital=true, type = "numeric", numeric_currency = "GBP", numeric_modifier = {multiplier = -1}}
-std_closing_balance = {field = 'new_balance', vital=true, type = "numeric", numeric_currency = "GBP", numeric_modifier = {multiplier = -1}}
-std_statement_credits = {field = 'credits', vital=true, type = "numeric", numeric_currency = "GBP"}
-std_statement_debits = {field = 'debits', vital=true, type = "numeric", numeric_currency = "GBP"}
 
 [HSBC_UK_CRD_TRANSACTIONS]
 type = "transaction"
@@ -77,7 +69,7 @@ fields = [
     {field = 'received_by_us', column = 0, vital=true, type = "string", string_pattern ='^[0-3][0-9]\s?[A-Z][a-z]{2}\s?[0-3][0-9]$'},
     {field = 'transaction_date', column = 1, vital=true, type = "string", string_pattern ='^[0-3][0-9]\s?[A-Z][a-z]{2}\s?[0-3][0-9]$'},
     {field = 'details', column = 2, vital=true, type = "string", string_pattern ='.+', string_max_length = 100},
-    {field = 'amount', column = 3, vital=true, type = "numeric", numeric_currency = "GBP", numeric_modifier = {suffix = "CR", multiplier = -1}},
+    {field = 'amount', column = 3, vital=true, type = "numeric", numeric_currency = "GBP", numeric_modifier = {suffix = "CR", multiplier = -1.0000}},
 ]
 delete_success_false = true
 delete_cast_success_false = true
@@ -85,11 +77,6 @@ delete_rows_with_missing_vital_fields = true
 
 [HSBC_UK_CRD_TRANSACTIONS.transaction_spec]
 transaction_bookends = {start_fields = ['received_by_us','transaction_date','details','amount'], min_non_empty_start = 4, end_fields = ['received_by_us','transaction_date','details','amount'], min_non_empty_end = 4}
-
-std_date = {field = 'transaction_date', vital=true, type = "date", date_format="%d %b %y"}
-std_description = {field = 'details', vital=true, type = "string", string_pattern ='.+', strip_chars_start = ')', string_max_length = 100}
-std_credit = {field = 'amount', vital=true, type = "numeric", numeric_currency = "GBP", numeric_modifier = {multiplier = -1, exclude_positive_values = true}}
-std_debit = {field = 'amount', vital=true, type = "numeric", numeric_currency = "GBP", numeric_modifier = {multiplier = 1, exclude_negative_values = true}}
 
 [HSBC_UK_CUR_TRANSACTIONS]
 type = "transaction"
@@ -102,9 +89,9 @@ fields = [
     {field = 'date', column = 0, vital=false, type = "string", string_pattern ='^[0-3][0-9]\s?[A-Z][a-z]{2}\s?[0-3][0-9]$'},
     {field = 'payment_type', column = 1, vital=false, type = "string", string_pattern ='(^[A-Z0-9]{1,3}$)|(^[)]{3}$)'},
     {field = 'details', column = 2, vital=true, type = "string", string_pattern ='.+', string_max_length = 100},
-    {field = '£_paid_out', column = 3, vital=false, type = "numeric", numeric_currency = "GBP", numeric_modifier = {multiplier = -1}},
+    {field = '£_paid_out', column = 3, vital=false, type = "numeric", numeric_currency = "GBP"},
     {field = '£_paid_in', column = 4, vital=false, type = "numeric", numeric_currency = "GBP"},
-    {field = '£_balance', column = 5, vital=false, type = "numeric", numeric_currency = "GBP", numeric_modifier = {suffix = "D", multiplier = -1}},
+    {field = '£_balance', column = 5, vital=false, type = "numeric", numeric_currency = "GBP", numeric_modifier = {suffix = "D", multiplier = -1.0000}},
 ]
 delete_success_false = true
 delete_cast_success_false = true
@@ -114,8 +101,3 @@ delete_rows_with_missing_vital_fields = true
 transaction_bookends = {start_fields = ['payment_type','details'], min_non_empty_start = 2, end_fields = ['£_paid_out','£_paid_in'], min_non_empty_end = 1}
 fill_forward_fields = ['date','payment_type']
 merge_fields = {fields=['details'], separator=' | '}
-
-std_date = {field = 'date', vital=true, type = "date", date_format="%d %b %y"}
-std_description = {field = 'details', vital=true, type = "string", string_pattern ='.+', string_max_length = 100}
-std_credit = {field = '£_paid_in', vital=true, type = "numeric", numeric_currency = "GBP", numeric_modifier = {multiplier = 1}}
-std_debit = {field = '£_paid_out', vital=true, type = "numeric", numeric_currency = "GBP", numeric_modifier = {multiplier = -1}}

@@ -6,7 +6,7 @@ import polars.selectors as cs
 from bank_statement_parser.modules.classes.data_definitions import Config
 from bank_statement_parser.modules.classes.errors import StatementError
 from bank_statement_parser.modules.classes.statement_classes import Statement, StatementTable
-from bank_statement_parser.modules.config import config_accounts, config_companies, config_company_accounts
+from bank_statement_parser.modules.config import config_accounts, config_companies, config_company_accounts, config_standard_fields
 from bank_statement_parser.modules.constants import NUMBERS_GBP, STRIP_GBP_USD
 from bank_statement_parser.modules.currency import currency_spec
 from bank_statement_parser.modules.functions.pdf_functions import page_crop, region_table
@@ -15,8 +15,9 @@ from bank_statement_parser.modules.functions.statement_functions import extract_
 log = []
 
 # stmt = Statement("/home/boscorat/Downloads/2025-07-08_Statement_Advance_Account.pdf")
-# stmt = Statement("/home/boscorat/Downloads/2025-07-08_Statement_Flexible_Saver.pdf")
-stmt = Statement("/home/boscorat/Downloads/2025-07-12_Statement_Rewards_Credit_Card.pdf")
+stmt = Statement("/home/boscorat/Downloads/2025-07-08_Statement_Flexible_Saver.pdf")
+# stmt = Statement("/home/boscorat/Downloads/2025-07-12_Statement_Rewards_Credit_Card.pdf")
+checks_and_balances: pl.DataFrame = pl.DataFrame()
 DEBUG = False
 
 
@@ -215,7 +216,7 @@ def cast(data, field):
     # cast the value back as a string so we don't get mixed types in the column value_cast column
     data = data.with_columns(pl.col(f"value_{step}").cast(str).fill_null("").alias(f"value_{step}"))
     if field.type == "numeric":
-        data = data.with_columns(pl.col(f"value_{step}").str.to_decimal(scale=2).cast(str).alias(f"value_{step}"))
+        data = data.with_columns(pl.col(f"value_{step}").str.to_decimal(scale=4).cast(str).alias(f"value_{step}"))
 
     data = data.with_columns(
         ((pl.col(f"value_{step}").is_not_null()) & (pl.col(f"value_{step}").str.len_bytes() > 0)).alias(f"success_{step}")
@@ -442,35 +443,7 @@ def process_transactions(data, transaction_spec):
             data = data.with_columns(
                 pl.col(mf).str.join(delimiter=mfs.separator).over("transaction_number"),
             )
-    data = data.filter(pl.col("transaction_end"))
-    std_date = transaction_spec.std_date
-    std_date_field = std_date.field
-    std_date_format = std_date.date_format
-    std_credit = transaction_spec.std_credit
-    std_credit_field = std_credit.field
-    std_credit_multiplier = 1 if not std_credit.numeric_modifier else std_credit.numeric_modifier.multiplier
-    std_debit = transaction_spec.std_debit
-    std_debit_field = std_debit.field
-    std_debit_multiplier = 1 if not std_debit.numeric_modifier else std_debit.numeric_modifier.multiplier
-    std_description = transaction_spec.std_description
-    std_description_field = std_description.field
-
-    data = (
-        data.with_columns(
-            std_date=pl.col(std_date_field).str.to_date(format=std_date_format),
-            std_credit=pl.col(std_credit_field).cast(float).mul(std_credit_multiplier).fill_null(0),
-            std_debit=pl.col(std_debit_field).cast(float).mul(std_debit_multiplier).fill_null(0),
-            std_description=pl.col(std_description_field),
-        )
-        .with_columns(
-            std_movement=pl.col("std_credit").sub(pl.col("std_debit")).cast(str).str.to_decimal(scale=2),
-            std_credit=pl.col("std_credit").cast(str).str.to_decimal(scale=2),
-            std_debit=pl.col("std_debit").cast(str).str.to_decimal(scale=2),
-        )
-        .drop("transaction_start", "transaction_end")
-    )
-    # with pl.Config(tbl_cols=-1, tbl_rows=-1):
-    #     print(data.collect())
+    data = data.filter(pl.col("transaction_end")).drop("transaction_start", "transaction_end")
 
     log.append(["process_transactions", time.time() - start])
     return data.collect()
@@ -491,22 +464,6 @@ def get_results(pdf, section, config: Config, scope="success") -> pl.DataFrame: 
         if spec := statement_table.transaction_spec:
             results = results.pipe(process_transactions, spec)
             log.append(["get_results_stmt_transaction", time.time() - start])
-            return results
-        elif statement_table.type == "summary":  # summary tables should have some standard fields
-            results = results.pivot(values="value", index="section", on="field")
-            if sob := statement_table.std_opening_balance:
-                multiplier = 1 if not sob.numeric_modifier else sob.numeric_modifier.multiplier
-                results = results.with_columns(std_opening_balance=pl.col(sob.field).cast(float).mul(multiplier).fill_null(0))
-            if scb := statement_table.std_closing_balance:
-                multiplier = 1 if not scb.numeric_modifier else scb.numeric_modifier.multiplier
-                results = results.with_columns(std_closing_balance=pl.col(scb.field).cast(float).mul(multiplier).fill_null(0))
-            if ssc := statement_table.std_statement_credits:
-                multiplier = 1 if not ssc.numeric_modifier else ssc.numeric_modifier.multiplier
-                results = results.with_columns(std_statement_credits=pl.col(ssc.field).cast(float).mul(multiplier).fill_null(0))
-            if ssd := statement_table.std_statement_debits:
-                multiplier = 1 if not ssd.numeric_modifier else ssd.numeric_modifier.multiplier
-                results = results.with_columns(std_statement_debits=pl.col(ssd.field).cast(float).mul(multiplier).fill_null(0))
-            log.append(["get_results_stmt_summary", time.time() - start])
             return results
 
     if scope == "all":
@@ -608,6 +565,73 @@ def get_config(self):
     return config
 
 
+def get_standard_fields(data, section):
+    global checks_and_balances
+    for std_field, std_config in config_standard_fields.items():
+        if std_config.section == section:
+            ref = [ref for ref in std_config.std_refs if ref.statement_type == statement_type][0]
+            if ref:
+                data = data.with_columns(pl.col(ref.field).alias(std_field))
+                if std_config.type == "numeric":
+                    # if we have credits and debits in the same column we might need to exclude positive or negative values
+                    data = data.with_columns(
+                        pl.when(ref.exclude_negative_values & (pl.col(std_field).cast(float) < 0.0000))
+                        .then(pl.lit(0.0000))
+                        .otherwise(pl.col(std_field))
+                        .alias(std_field)
+                    ).with_columns(
+                        pl.when(ref.exclude_positive_values & (pl.col(std_field).cast(float) > 0.0000))
+                        .then(pl.lit(0.0000))
+                        .otherwise(pl.col(std_field))
+                        .alias(std_field)
+                    )
+                    data = data.with_columns(
+                        pl.col(std_field)
+                        .fill_null(0.0000)
+                        .cast(float)
+                        .mul(ref.multiplier)
+                        .cast(str)
+                        .str.to_decimal(scale=4)
+                        .alias(std_field)
+                    )
+                    # if std_config.type == "decimal":
+                    #     data.with_columns(pl.col(std_field).cast(str).str.to_decimal(scale=2).alias(std_field))
+                elif std_config.type == "date" and ref.format:
+                    try:
+                        data = data.with_columns(pl.col(std_field).str.to_date(format=ref.format))
+                    except pl.exceptions.InvalidOperationError:  # failure to cast as a date
+                        try:  # try removing the middle bit if the statement date is something like '9 July to 8 August 2025'
+                            data = data.with_columns(
+                                pl.col(std_field)
+                                .str.split(by=" ")
+                                .list.gather([0, 1, 5])
+                                .list.join(separator=" ")
+                                .str.to_date(format=ref.format)
+                            )
+                        except pl.exceptions.InvalidOperationError:  # still failed?
+                            continue  # give up and return the date as it is
+    if section == "pages":
+        data = data.with_columns(STD_PAGE_NUMBER=pl.col("page"))
+    if section == "lines":
+        data = data.join(checks_and_balances.select(pl.col("STD_OPENING_BALANCE").alias("STD_RUNNING_BALANCE")), how="cross")
+        data = data.with_columns(STD_MOVEMENT=pl.col("STD_PAYMENT_IN").sub("STD_PAYMENT_OUT")).with_columns(
+            STD_RUNNING_BALANCE=pl.col("STD_RUNNING_BALANCE").add(pl.col("STD_MOVEMENT").cum_sum())
+        )
+    # Checks & Balances updates
+    if section == "header":
+        checks_and_balances = checks_and_balances.hstack(
+            data.select("STD_CLOSING_BALANCE", "STD_OPENING_BALANCE", "STD_PAYMENTS_IN", "STD_PAYMENTS_OUT")
+        )
+        checks_and_balances = checks_and_balances.with_columns(
+            STD_STATEMENT_MOVEMENT=pl.col("STD_CLOSING_BALANCE").sub("STD_OPENING_BALANCE"),
+            STD_BALANCE_OF_PAYMENTS=pl.col("STD_PAYMENTS_IN").sub("STD_PAYMENTS_OUT"),
+        )
+    if section == "lines":
+        checks_and_balances = checks_and_balances.hstack(data.select("STD_PAYMENT_IN", "STD_PAYMENT_OUT", "STD_MOVEMENT").sum())
+        checks_and_balances = checks_and_balances.hstack(data.select(pl.last("STD_RUNNING_BALANCE")))
+    return data
+
+
 start_all = time.time()
 
 config = get_config(stmt)
@@ -627,9 +651,12 @@ if config_header:
     for config in config_header:
         results.vstack(get_results(stmt.pdf, "header", config, scope="success"), in_place=True)
     results = results.pivot(values="value", index="section", on="field")
+    results = results.pipe(get_standard_fields, "header")
     with pl.Config(tbl_cols=-1, tbl_rows=-1):
         print(results)
-        ...
+        # print(checks_and_balances)
+    ...
+
 
 end_header = time.time()
 start_pages = time.time()
@@ -638,10 +665,10 @@ if config_pages:
     results: pl.DataFrame = pl.DataFrame()
     for config in config_pages:
         results.vstack(get_results(stmt.pdf, "pages", config, scope="success"), in_place=True)
-    results = results.pivot(values="value", index=["page"], on="field")
+    results = results.pipe(get_standard_fields, "pages")
     with pl.Config(tbl_cols=-1, tbl_rows=-1):
         print(results)
-        ...
+        # print(checks_and_balances)
 end_pages = time.time()
 
 start_lines = time.time()
@@ -650,10 +677,12 @@ if config_lines:
     results: pl.DataFrame = pl.DataFrame()
     for config in config_lines:
         results.vstack(get_results(stmt.pdf, "lines", config, scope="success"), in_place=True)
+    results = results.pipe(get_standard_fields, "lines")
     with pl.Config(tbl_cols=-1, tbl_rows=-1):
         print(results)
-        ...
+        # print(checks_and_balances)
 end_lines = time.time()
+
 
 log.append(["Total Time", time.time() - start_all])
 
@@ -665,5 +694,22 @@ log_times = (
     .sort("total_seconds", descending=True)
 )
 
+# with pl.Config(tbl_cols=-1, tbl_rows=-1):
+#     print(log_times)
+
+
+# checks and balances
+checks_and_balances = checks_and_balances.with_columns(
+    BAL_PAYMENTS_IN=pl.when(pl.col("STD_PAYMENTS_IN").sub(pl.col("STD_PAYMENT_IN")) == 0).then(pl.lit(True)).otherwise(pl.lit(False)),
+    BAL_PAYMENTS_OUT=pl.when(pl.col("STD_PAYMENTS_OUT").sub(pl.col("STD_PAYMENT_OUT")) == 0).then(pl.lit(True)).otherwise(pl.lit(False)),
+    BAL_MOVEMENT=pl.when(
+        (pl.col("STD_STATEMENT_MOVEMENT").sub(pl.col("STD_MOVEMENT")) == 0)
+        & (pl.col("STD_MOVEMENT").sub(pl.col("STD_BALANCE_OF_PAYMENTS")) == 0)
+    )
+    .then(pl.lit(True))
+    .otherwise(pl.lit(False)),
+    BAL_CLOSING=pl.when(pl.col("STD_CLOSING_BALANCE").sub(pl.col("STD_RUNNING_BALANCE")) == 0).then(pl.lit(True)).otherwise(pl.lit(False)),
+)
+
 with pl.Config(tbl_cols=-1, tbl_rows=-1):
-    print(log_times)
+    print(checks_and_balances)

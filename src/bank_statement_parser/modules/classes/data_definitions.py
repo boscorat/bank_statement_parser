@@ -3,6 +3,23 @@ from typing import Optional
 
 
 @dataclass
+class StdRefs:
+    statement_type: str
+    field: str
+    format: Optional[str]
+    multiplier: Optional[float] = 1
+    exclude_positive_values: Optional[bool] = False
+    exclude_negative_values: Optional[bool] = False
+
+
+@dataclass
+class StandardFields:
+    section: str
+    type: str
+    std_refs: list[StdRefs]
+
+
+@dataclass
 class CurrencySpec:
     symbols: list[str]
     seperator_decimal: str
@@ -21,7 +38,7 @@ class Cell:
 class NumericModifier:
     prefix: Optional[str]
     suffix: Optional[str]
-    multiplier: int = 1
+    multiplier: float = 1
     exclude_negative_values: bool = False
     exclude_positive_values: bool = False
 
@@ -73,10 +90,6 @@ class MergeFields:
 @dataclass
 class TransactionSpec:
     transaction_bookends: StatementBookend
-    std_date: Field
-    std_description: Field
-    std_credit: Field
-    std_debit: Field
     fill_forward_fields: Optional[list[str]]
     merge_fields: Optional[MergeFields]
 
@@ -87,10 +100,6 @@ class StatementTable:
     statement_table: str
     locations: list[Location]
     fields: list[Field]
-    std_opening_balance: Optional[Field]
-    std_closing_balance: Optional[Field]
-    std_statement_credits: Optional[Field]
-    std_statement_debits: Optional[Field]
     table_columns: Optional[int]
     table_rows: Optional[int]
     row_spacing: Optional[int]

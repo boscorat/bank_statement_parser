@@ -6,11 +6,17 @@ import polars as pl
 from dacite import from_dict
 from tomllib import load
 
-from bank_statement_parser.modules.classes.data_definitions import Account, AccountType, Company, StatementTable, StatementType
+from bank_statement_parser.modules.classes.data_definitions import (
+    Account,
+    AccountType,
+    Company,
+    StandardFields,
+    StatementTable,
+    StatementType,
+)
 from bank_statement_parser.modules.classes.errors import ConfigFileError, StatementError
 from bank_statement_parser.modules.functions.statement_functions import extract_field_values
 
-##!!!
 """
 WRITE SOME TESTS TO VALIDATE THE CONFIG FILES!!!!!
 e.g. cell must be set for all non-transaction table fields
@@ -27,6 +33,7 @@ __config_dict = {
     "accounts": {"dataclass": Account, "config": dict()},
     "statement_types": {"dataclass": StatementType, "config": dict()},
     "statement_tables": {"dataclass": StatementTable, "config": dict()},
+    "standard_fields": {"dataclass": StandardFields, "config": dict()},
 }
 
 for key in __config_dict.keys():
@@ -83,6 +90,7 @@ for key, account in __config_dict["accounts"]["config"].items():
 config_accounts = __config_dict["accounts"]["config"]
 config_statement_types = __config_dict["statement_types"]["config"]
 config_companies = __config_dict["companies"]["config"]
+config_standard_fields = __config_dict["standard_fields"]["config"]
 
 config_accounts_df = pl.DataFrame(config_accounts).transpose(include_header=True, header_name="account", column_names=["config"])
 config_statement_types_df = pl.DataFrame(config_statement_types).transpose(
