@@ -1,9 +1,12 @@
 import os
 import pathlib
+import time
 from copy import deepcopy
+from datetime import datetime
 
 import polars as pl
 from dacite import from_dict
+from pdfplumber.pdf import PDF
 from tomllib import load
 
 from bank_statement_parser.modules.classes.data_definitions import (
@@ -15,7 +18,7 @@ from bank_statement_parser.modules.classes.data_definitions import (
     StatementType,
 )
 from bank_statement_parser.modules.classes.errors import ConfigFileError, StatementError
-from bank_statement_parser.modules.functions.statement_functions import extract_field_values
+from bank_statement_parser.modules.functions.statement_functions import get_results
 
 """
 WRITE SOME TESTS TO VALIDATE THE CONFIG FILES!!!!!
@@ -103,101 +106,60 @@ config_companies_df = pl.DataFrame(config_companies).transpose(include_header=Tr
 # print(config_accounts_df)
 
 
-def config_company_accounts(company_key):
+def config_company_accounts(company_key: str) -> list[Account]:
     return [acct for acct in config_accounts.values() if acct.company_key == company_key]
 
 
-def pick_leaf(leaves, statement) -> tuple[Account, str]:
-    """
-    Selects and returns the first matching leaf (account) from a collection of leaves (either a dictionary or list)
-    based on the provided bank statement.
-
-    The function iterates through the leaves, extracting field values using the leaf's configuration and the statement.
-    If a successful extraction is found (i.e., at least one record with 'success' attribute set to True), it returns
-    a tuple containing the matching leaf and its key (if leaves is a dictionary) or an empty string (if leaves is a list).
-
-    Args:
-        leaves (dict or list): A collection of leaf objects, either as a dictionary (keyed by account identifier)
-            or a list. Each leaf must have a 'config' attribute.
-        statement: The bank statement object to be used for extraction.
-
-    Returns:
-        tuple[Account, str]: A tuple containing the matched leaf (account) and its key (if from a dictionary)
-            or an empty string (if from a list).
-
-    Raises:
-        TypeError: If 'leaves' is not a dictionary or list.
-        StatementError: If no matching account can be identified from the statement.
-    """
+def pick_leaf(leaves: list[Account] | dict[str, Company], pdf: PDF, logs: pl.DataFrame, file_path: str) -> tuple:
+    start = time.time()
     result: tuple | None = None
     if isinstance(leaves, dict):
         for key, leaf in leaves.items():
-            if hasattr(leaf, "config"):
-                extracts = extract_field_values(config=leaf.config, pdf=statement)
-                if extracts and (extract := extracts[0]):
-                    if sum([1 for record in extract if getattr(record, "success", False)]):
-                        result = (leaf, key)
-                        break
+            config = leaf.config
+            if not config:
+                continue
+            leaf_result = get_results(pdf, "pick", config, scope="success", logs=logs, file_path=file_path)
+            if len(leaf_result) > 0:
+                result = (leaf, key)
+                break
     elif isinstance(leaves, list):
         for leaf in leaves:
-            if hasattr(leaf, "config"):
-                extracts = extract_field_values(config=leaf.config, pdf=statement)
-                if extracts and (extract := extracts[0]):
-                    if sum([1 for record in extract if getattr(record, "success", False)]):
-                        result = (leaf, "")
-                        break
+            config = leaf.config
+            leaf_result = get_results(pdf, "pick", config, scope="success", logs=logs, file_path=file_path)
+            if len(leaf_result) > 0:
+                result = (leaf, "")
+                break
     else:
         raise TypeError("the pick_leaf() function requires leaves to be a dictionary or list")
     if not result:
         raise StatementError("the account cannot be identified from your statement")
+
+    logs.vstack(
+        pl.DataFrame([[file_path, "config", "pick_leaf", time.time() - start, 1, datetime.now(), ""]], schema=logs.schema, orient="row"),
+        in_place=True,
+    )
     return result
 
 
-def get_config_from_statement(statement, file) -> Account:
-    """
-    Extracts the account configuration from a bank statement.
-
-    This function attempts to identify the company associated with the provided statement,
-    then retrieves the corresponding account configuration. If the company or account cannot
-    be identified, a StatementError is raised.
-
-    Args:
-        statement: The bank statement data to be parsed.
-        file: The file path or identifier of the statement for error reporting.
-
-    Returns:
-        Account: The configuration object for the identified account.
-
-    Raises:
-        StatementError: If the company or account cannot be identified from the statement.
-    """
-    company_leaf = pick_leaf(leaves=config_companies, statement=statement)
-    if not company_leaf:
-        raise StatementError(f"Unable to identify the company from the statement provided: {file}")
-    company_key = company_leaf[1]
-    config_account = None
-    try:
-        config_account = get_config_from_company(company_key, statement, file)
-    except Exception as e:
-        raise StatementError(f"Unable to identify the account from the statement provided: {file}") from e
-    return config_account
+def get_config_from_account(account_key: str, logs: pl.DataFrame, file_path: str) -> Account | None:
+    start = time.time()
+    config_account = config_accounts.get(account_key)
+    if not config_account:
+        raise StatementError(f"Unable to identify the account from the statement provided: {file_path}")
+    else:
+        logs.vstack(
+            pl.DataFrame(
+                [[file_path, "config", "get_config_from_account", time.time() - start, 1, datetime.now(), ""]],
+                schema=logs.schema,
+                orient="row",
+            ),
+            in_place=True,
+        )
+        return config_account
 
 
-def get_config_from_company(company_key: str, statement, file) -> Account:
-    """
-    Retrieves the account configuration for a given company based on the provided statement and file.
-
-    Args:
-        company_key (str): The key identifying the company.
-        statement: The bank statement object used to identify the account.
-        file: The file associated with the statement, used for error reporting.
-
-    Returns:
-        Account: The account configuration object identified from the statement.
-
-    Raises:
-        StatementError: If the company key is invalid or the account cannot be identified from the statement.
-    """
+def get_config_from_company(company_key: str, pdf: PDF, logs: pl.DataFrame, file_path: str) -> Account | None:
+    start = time.time()
     company_accounts = None
     config_account = None
     try:
@@ -206,30 +168,40 @@ def get_config_from_company(company_key: str, statement, file) -> Account:
         print(f"{company_key} is not a valid company key")
     if company_accounts:
         try:
-            config_account = pick_leaf(leaves=company_accounts, statement=statement)[0]
+            config_account = pick_leaf(leaves=company_accounts, pdf=pdf, logs=logs, file_path=file_path)[0]
         except StatementError:
             config_account = None
     if not config_account:
-        raise StatementError(f"Unable to identify the account from the statement provided: {file}")
+        raise StatementError(f"Unable to identify the account from the statement provided: {file_path}")
+    logs.vstack(
+        pl.DataFrame(
+            [[file_path, "config", "get_config_from_company", time.time() - start, 1, datetime.now(), ""]], schema=logs.schema, orient="row"
+        ),
+        in_place=True,
+    )
     return config_account
 
 
-def get_config_from_account(account_key: str, file) -> Account:
-    """
-    Retrieves the configuration for a given account key.
+def get_config_from_statement(pdf: PDF, file_path: str, logs: pl.DataFrame) -> Account | None:
+    start = time.time()
+    company_leaf = pick_leaf(leaves=config_companies, pdf=pdf, logs=logs, file_path=file_path)
+    if not company_leaf:
+        raise StatementError(f"Unable to identify the company from the statement provided: {file_path}")
+    company_key = company_leaf[1]
+    config_account = None
+    try:
+        config_account = get_config_from_company(company_key, pdf, logs, file_path)
+    except Exception as e:
+        raise StatementError(f"Unable to identify the account from the statement provided: {file_path}") from e
+    logs.vstack(
+        pl.DataFrame(
+            [[file_path, "config", "get_config_from_statement", time.time() - start, 1, datetime.now(), ""]],
+            schema=logs.schema,
+            orient="row",
+        ),
+        in_place=True,
+    )
+    return config_account
 
-    Args:
-        account_key (str): The key identifying the account in the configuration.
-        file: The file object or path associated with the bank statement.
 
-    Returns:
-        Account: The configuration object corresponding to the account key.
-
-    Raises:
-        StatementError: If the account key is not found in the configuration.
-    """
-    config_account = config_accounts.get(account_key)
-    if not config_account:
-        raise StatementError(f"Unable to identify the account from the statement provided: {file}")
-    else:
-        return config_account
+...

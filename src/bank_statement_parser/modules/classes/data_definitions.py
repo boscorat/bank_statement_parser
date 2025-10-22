@@ -67,10 +67,11 @@ class Test:
 
 @dataclass
 class Location:
-    page_number: Optional[int]
-    top_left: Optional[list[int]]
-    bottom_right: Optional[list[int]]
-    vertical_lines: Optional[list[int]]
+    page_number: Optional[int] = None
+    top_left: Optional[list[int]] = None
+    bottom_right: Optional[list[int]] = None
+    vertical_lines: Optional[list[int]] = None
+    allow_text_failover: Optional[bool] = False
 
 
 @dataclass
@@ -153,4 +154,5 @@ class Account:
     account_type: Optional[AccountType]
     statement_type_key: str
     statement_type: Optional[StatementType]
+    exclude_last_n_pages: int
     config: Config

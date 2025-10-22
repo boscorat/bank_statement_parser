@@ -8,9 +8,9 @@ statement_type = 'HSBC UK Current Account'
         [[HSBC_UK_CUR.header.configs]]
             config = 'Statement Info'
             locations = [
-                {page_number=1, top_left = [37, 325], bottom_right = [190, 360]}
+                {page_number=1, top_left = [37, 325], bottom_right = [290, 385]}
                 ]
-            field = {field = 'statement_date', vital=true, type = "string", string_pattern ='^[1-3]?[0-9]\s[A-Z][a-z]{2,8}\sto\s[1-3]?[0-9]\s[A-Z][a-z]{2,8}\s[0-9]{4}$'}
+            field = {field = 'statement_date', vital=true, type = "string", string_pattern ='^[1-3]?[0-9]\s[A-Z][a-z]{2,8}\s(\d{4}\s)?to\s[1-3]?[0-9]\s[A-Z][a-z]{2,8}\s[0-9]{4}$'}
 
         [[HSBC_UK_CUR.header.configs]]
             config = 'Account Info'
@@ -39,8 +39,8 @@ statement_type = 'HSBC UK Saving Account'
             
         [[HSBC_UK_SAV.header.configs]]
             config = 'Statement Info'
-            locations = [{page_number=1, top_left = [42, 350], bottom_right = [200, 385]}]
-            field = {field = 'statement_date', vital=true, type = "string", string_pattern ='^[1-3]?[0-9]\s[A-Z][a-z]{2,8}\sto\s[1-3]?[0-9]\s[A-Z][a-z]{2,8}\s[0-9]{4}$'}
+            locations = [{page_number=1, top_left = [37, 325], bottom_right = [290, 385]}]
+            field = {field = 'statement_date', vital=true, type = "string", string_pattern ='^[1-3]?[0-9]\s[A-Z][a-z]{2,8}\s(\d{4}\s)?to\s[1-3]?[0-9]\s[A-Z][a-z]{2,8}\s[0-9]{4}$'}
 
         [[HSBC_UK_SAV.header.configs]]
             config = 'Account Info'

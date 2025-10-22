@@ -5,6 +5,7 @@ account = "Rewards Credit Card"
 company_key = 'HSBC_UK'
 account_type_key = 'CRD'
 statement_type_key = 'HSBC_UK_CRD'
+exclude_last_n_pages = 1
     [HSBC_UK_CRD_RCC.config]
     config = 'Account Info'
     locations = [{page_number = 1, top_left = [275, 20], bottom_right = [575, 70]}]
@@ -15,6 +16,7 @@ account = "Flexible Saver"
 company_key = 'HSBC_UK'
 account_type_key = 'SAV'
 statement_type_key = 'HSBC_UK_SAV'
+exclude_last_n_pages = 1
     [HSBC_UK_SAV_FLX.config]
     config = 'Account Info'
     locations = [{page_number = 1, top_left = [37, 425], bottom_right = [255, 480]}]
@@ -25,16 +27,18 @@ account = "Bank Account"
 company_key = 'HSBC_UK'
 account_type_key = 'CUR'
 statement_type_key = 'HSBC_UK_CUR'
+exclude_last_n_pages = 1
     [HSBC_UK_CUR_STD.config]
     config = 'Account Info'
     locations = [{page_number = 1, top_left = [37, 400], bottom_right = [255, 465]}]
-    field = {field = 'account', vital=true, type = "string", string_pattern = '^Bank[\s]*Account'}
+    field = {field = 'account', vital=true, type = "string", string_pattern = '^(Your[\s])?Bank[\s]*Account'}
 
 [HSBC_UK_CUR_ADV]
 account = "HSBC Advance"
 company_key = 'HSBC_UK'
 account_type_key = 'CUR'
 statement_type_key = 'HSBC_UK_CUR'
+exclude_last_n_pages = 1
     [HSBC_UK_CUR_ADV.config]
     config = 'Account Info'
     locations = [{page_number = 1, top_left = [25, 400], bottom_right = [270, 445]}]
@@ -45,7 +49,8 @@ account = "Online Bonus Saver"
 company_key = 'HSBC_UK'
 account_type_key = 'SAV'
 statement_type_key = 'HSBC_UK_SAV'
+exclude_last_n_pages = 7
     [HSBC_UK_SAV_OBS.config]
     config = 'Account Info'
     locations = [{page_number = 1, top_left = [37, 425], bottom_right = [255, 490]}]
-    field = {field = 'account', vital=true, type = "string", string_pattern = '^Online[\s]*Bonus[\s]*Saver'}
+    field = {field = 'account', vital=true, type = "string", string_pattern = '^(Your[\s])?Online[\s]*Bonus[\s]*Saver'}

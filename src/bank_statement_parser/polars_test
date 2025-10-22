@@ -21,37 +21,6 @@ checks_and_balances: pl.DataFrame = pl.DataFrame()
 DEBUG = False
 
 
-def get_region(location, pdf):
-    start = time.time()
-    region = None
-    exception = None
-    if location.page_number:
-        try:
-            region = page_crop(pdf.pages[location.page_number - 1], location.top_left, location.bottom_right)
-        except IndexError:
-            exception = "Page doesn't exist in Statement"
-        except ValueError:
-            exception = "Specified location outside of the page boundaries"
-    else:
-        exception = "No page number specified for the location"
-    log.append(["get_region", time.time() - start])
-    return (region, exception)
-
-
-def get_table(location, region, statement_table):
-    start = time.time()
-    table = pl.LazyFrame()
-    table = region_table(
-        region=region,
-        table_rows=statement_table.table_rows,
-        table_columns=statement_table.table_columns,
-        row_spacing=statement_table.row_spacing,
-        vertical_lines=location.vertical_lines,
-    )
-    log.append(["get_table", time.time() - start])
-    return table
-
-
 def strip(data, field, spec=None):
     start = time.time()
     src = "raw"
