@@ -1,8 +1,7 @@
-import os
-import pathlib
 import time
 from copy import deepcopy
 from datetime import datetime
+from pathlib import Path
 
 import polars as pl
 from dacite import from_dict
@@ -27,8 +26,8 @@ column must be set for all transaction fields
 numeric fields should have a currency and none of the date or string specific fields
 """
 
-__dir_base = os.path.join(pathlib.Path(__file__).parent.parent, "base_config")
-__dir_user = os.path.join(pathlib.Path(__file__).parent.parent.parent, "user_config")
+__dir_base = Path(__file__).parent.parent.joinpath("base_config")
+__dir_user = Path(__file__).parent.parent.parent.joinpath("user_config")
 
 __config_dict = {
     "companies": {"dataclass": Company, "config": dict()},
@@ -42,12 +41,12 @@ __config_dict = {
 for key in __config_dict.keys():
     file = key + ".toml"
     try:
-        with open(os.path.join(__dir_user, file), "rb") as toml:
+        with open(__dir_user.joinpath(file), "rb") as toml:
             __config_dict[key]["config"] = deepcopy(load(toml))
             toml.close()
     except FileNotFoundError:
         try:
-            with open(os.path.join(__dir_base, file), "rb") as toml:
+            with open(__dir_base.joinpath(file), "rb") as toml:
                 __config_dict[key]["config"] = deepcopy(load(toml))
                 toml.close()
         except FileNotFoundError:

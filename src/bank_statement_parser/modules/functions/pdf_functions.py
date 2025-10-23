@@ -99,6 +99,8 @@ def get_table_from_region(
     row_spacing: int | None = None,
     vertical_lines: list | None = None,
     allow_text_failover: bool | None = None,
+    remove_header: bool | None = None,
+    header_text: str | None = None,
 ) -> pl.LazyFrame:
     """Extract a structured table from a PDF region using configurable extraction settings."""
     start = time.time()
@@ -120,8 +122,16 @@ def get_table_from_region(
         tbl_settings["vertical_strategy"] = "explicit"
         tbl_settings["min_words_vertical"] = 1  # override if explicit vertical lines given
         tbl_settings["min_words_horizontal"] = 1  # override if explicit vertical lines given
-
+        tbl_settings["snap_x_tolerance"] = 10
     table = region.extract_table(table_settings=tbl_settings)
+    if table and remove_header and table[0]:
+        if header_text:
+            line_zero_text = str("".join(table[0])).lower().replace(" ", "")  # type: ignore
+            if line_zero_text == header_text.lower().replace(" ", ""):
+                table = table[1:]
+        else:
+            table = table[1:]
+
     column_names = ["col_" + str(i) for i in range(len(table[0]))] if table else []
     table = pl.LazyFrame(table[0:], schema=column_names, orient="row") if table else pl.LazyFrame()
     # if vertical lines have been specified, they can sometimes fail due to a slight re-positioning of a table

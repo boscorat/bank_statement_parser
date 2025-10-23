@@ -45,13 +45,15 @@ fields = [
 [HSBC_UK_CRD_ACCT_SUM]
 type = "summary"
 statement_table = 'Account Summary'
+header_text = "Account Summary"
+remove_header = true
 row_spacing = 7
 locations = [
-    {page_number=1, top_left = [335, 180], bottom_right = [575, 380]},
+    {page_number=1, top_left = [335, 180], bottom_right = [575, 380], vertical_lines = [360, 475, 475, 550], allow_text_failover = true},
 ]
 fields = [
     {field = 'credit_limit', cell = {row = 0, col = 1}, vital=false, type = "numeric", numeric_currency = "GBP"},
-    {field = 'apr', cell = {row = 1, col = 1}, vital=false, type = "string", string_pattern ='^[0-9]*\.[0-9]{1}$'},
+    {field = 'apr', cell = {row = 1, col = 1}, vital=false, type = "string", string_pattern ='^[0-9]*\.[0-9]{1}[%]?$'},
     {field = 'previous_balance', cell = {row = 2, col = 1}, vital=false, type = "numeric", numeric_currency = "GBP", numeric_modifier = {suffix = "D", multiplier = -1.0000}},
     {field = 'debits', cell = {row = 3, col = 1}, vital=true, type = "numeric", numeric_currency = "GBP"},
     {field = 'credits', cell = {row = 4, col = 1}, vital=true, type = "numeric", numeric_currency = "GBP"},

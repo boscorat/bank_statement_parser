@@ -6,7 +6,7 @@ currency_dict: dict = {
         "seperator_decimal": ".",
         "seperators_thousands": [",", " "],
         "round_decimals": 2,
-        "pattern": r"^[\d]+[.][\d]{1,2}$",
+        "pattern": r"^[\d]+[.][\d]{2}$",
     },
     "USD": {
         "symbols": ["USD", "$"],

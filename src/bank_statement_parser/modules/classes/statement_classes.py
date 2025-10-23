@@ -1,8 +1,7 @@
 import hashlib
-import os
-import pathlib
 import time
 from datetime import datetime
+from pathlib import Path
 
 import polars as pl
 import polars.selectors as cs
@@ -17,12 +16,12 @@ from bank_statement_parser.modules.config import (
 from bank_statement_parser.modules.functions.pdf_functions import pdf_close, pdf_open
 from bank_statement_parser.modules.functions.statement_functions import get_results, get_standard_fields
 
-dir_exports = os.path.join(pathlib.Path(__file__).parent.parent.parent.parent, "exports")
-dir_parquet = os.path.join(dir_exports, "parquet")
-dir_csv = os.path.join(dir_exports, "csv")
-dir_logs = os.path.join(dir_exports, "logs")
-dir_excel = os.path.join(dir_exports, "excel")
-dir_json = os.path.join(dir_exports, "json")
+dir_exports = (Path(__file__).parent.parent.parent.parent).joinpath("exports")
+dir_parquet = dir_exports.joinpath("parquet")
+dir_csv = dir_exports.joinpath("csv")
+dir_logs = dir_exports.joinpath("logs")
+dir_excel = dir_exports.joinpath("excel")
+dir_json = dir_exports.joinpath("json")
 
 
 class Statement:
@@ -38,12 +37,12 @@ class Statement:
         }
     )
 
-    def __init__(self, file_path: str, company_key: str | None = None, account_key: str | None = None):
-        self.file_path = file_path
+    def __init__(self, file: Path, company_key: str | None = None, account_key: str | None = None):
+        self.file = file
         self.company_key = company_key
         self.account_key = account_key
         self.checks_and_balances: pl.DataFrame = pl.DataFrame()
-        self.pdf = pdf_open(file_path, logs=self.logs)
+        self.pdf = pdf_open(str(file.absolute()), logs=self.logs)
         self._key1 = hashlib.sha256(
             bytes([ord(char["text"]) for char in self.pdf.chars[:255] if len(char["text"]) == 1 and 46 <= ord(char["text"]) <= 122])
         ).hexdigest()
@@ -130,9 +129,9 @@ class Statement:
     def export_parquet(self):
         # Fact_Transactions
         record_flags = pl.LazyFrame(
-            data=[[self.key, self.file_path, datetime.now()]],
+            data=[[self.key, str(self.file.absolute()), self.file.name, datetime.now()]],
             orient="row",
-            schema={"STD_STATEMENT": pl.Utf8, "STD_FILEPATH": pl.Utf8, "STD_UPDATETIME": pl.Datetime},
+            schema={"STD_STATEMENT": pl.Utf8, "STD_FILEPATH": pl.Utf8, "STD_FILENAME": pl.Utf8, "STD_UPDATETIME": pl.Datetime},
         )
         FACT_Transaction = (
             self.lines_results.select(cs.starts_with("STD"))
@@ -146,6 +145,7 @@ class Statement:
             cs.contains("MOVEMENT"),
             cs.contains("BALANCE"),
             "STD_FILEPATH",
+            "STD_FILENAME",
             "STD_UPDATETIME",
         )
         # DIM_Statement
@@ -167,6 +167,7 @@ class Statement:
                 cs.contains("MOVEMENT"),
                 cs.contains("BALANCE"),
                 "STD_FILEPATH",
+                "STD_FILENAME",
                 "STD_UPDATETIME",
                 "STD_COMPANY",
                 "STD_ACCOUNT",
@@ -174,7 +175,7 @@ class Statement:
             )
         )
 
-        filepath_FACT_Transaction = os.path.join(dir_parquet, "FACT_Transaction.parquet")
+        filepath_FACT_Transaction = dir_parquet.joinpath("FACT_Transaction.parquet")
         FACT_Transaction_current = pl.scan_parquet(filepath_FACT_Transaction).filter(pl.col("ID_STATEMENT") != self.key).drop("index")
         try:
             export = FACT_Transaction_current.collect().extend(FACT_Transaction.collect())
@@ -184,7 +185,7 @@ class Statement:
             filepath_FACT_Transaction
         )
 
-        filepath_DIM_Statement = os.path.join(dir_parquet, "DIM_Statement.parquet")
+        filepath_DIM_Statement = dir_parquet.joinpath("DIM_Statement.parquet")
         DIM_Statement_current = pl.scan_parquet(filepath_DIM_Statement).filter(pl.col("ID_STATEMENT") != self.key).drop("index")
         try:
             export = DIM_Statement_current.collect().extend(DIM_Statement.collect())
@@ -199,7 +200,7 @@ class Statement:
         )
 
         # Latest By Statement
-        parquet_path = os.path.join(dir_logs, "latest_by_statement.parquet")
+        parquet_path = dir_logs.joinpath("latest_by_statement.parquet")
         current_log = pl.scan_parquet(parquet_path).filter(pl.col("key") != self.key)
         try:
             export = export_log.collect().extend(current_log.drop("index").collect())
@@ -208,7 +209,7 @@ class Statement:
         export.sort("time").with_row_index().write_parquet(parquet_path)
 
         # Latest Run
-        parquet_path = os.path.join(dir_logs, "latest_run.parquet")
+        parquet_path = dir_logs.joinpath("latest_run.parquet")
         current_log = pl.scan_parquet(parquet_path).filter(pl.col("key") != self.key)
         export_log.sort("time").collect().with_row_index().write_parquet(parquet_path)
 
@@ -216,7 +217,7 @@ class Statement:
         export_cab = self.checks_and_balances.lazy().join(
             pl.LazyFrame(data=[[self.key, datetime.now()]], orient="row", schema={"key": pl.Utf8, "log_time": pl.Datetime}), how="cross"
         )
-        parquet_path = os.path.join(dir_logs, "checks_and_balances.parquet")
+        parquet_path = dir_logs.joinpath("checks_and_balances.parquet")
         current_cab = pl.scan_parquet(parquet_path).filter(pl.col("key") != self.key)
         try:
             export = export_cab.collect().extend(current_cab.drop("index").collect())
@@ -238,7 +239,7 @@ class Statement:
                             config,
                             scope="success",
                             logs=self.logs,
-                            file_path=self.file_path,
+                            file_path=str(self.file.absolute()),
                             exclude_last_n_pages=self.config.exclude_last_n_pages,
                         ),
                         in_place=True,
@@ -255,7 +256,7 @@ class Statement:
                             config,
                             scope="success",
                             logs=self.logs,
-                            file_path=self.file_path,
+                            file_path=str(self.file.absolute()),
                             exclude_last_n_pages=self.config.exclude_last_n_pages,
                         ),
                         in_place=True,
@@ -270,7 +271,7 @@ class Statement:
                             config,
                             scope="success",
                             logs=self.logs,
-                            file_path=self.file_path,
+                            file_path=str(self.file.absolute()),
                             exclude_last_n_pages=self.config.exclude_last_n_pages,
                         ),
                         in_place=True,
@@ -284,7 +285,7 @@ class Statement:
                 self.statement_type,
                 self.checks_and_balances,
                 self.logs,
-                self.file_path,
+                str(self.file.absolute()),
             )
         self.logs.rechunk()
         return results.rechunk().lazy()
@@ -294,13 +295,13 @@ class Statement:
             return None
         start = time.time()
         if self.account_key:
-            config = get_config_from_account(self.account_key, self.logs, self.file_path)
+            config = get_config_from_account(self.account_key, self.logs, str(self.file.absolute()))
         elif self.company_key:
-            config = get_config_from_company(self.company_key, self.pdf, self.logs, self.file_path)
+            config = get_config_from_company(self.company_key, self.pdf, self.logs, str(self.file.absolute()))
         else:
-            config = get_config_from_statement(self.pdf, self.file_path, self.logs)
+            config = get_config_from_statement(self.pdf, str(self.file.absolute()), self.logs)
         log = pl.DataFrame(
-            [[self.file_path, "statement_classes", "get_config", time.time() - start, 1, datetime.now(), ""]],
+            [[str(self.file.absolute()), "statement_classes", "get_config", time.time() - start, 1, datetime.now(), ""]],
             schema=self.logs.schema,
             orient="row",
         )
@@ -309,32 +310,42 @@ class Statement:
 
     def close_pdf(self):
         if self.pdf is not None:
-            pdf_close(self.pdf, logs=self.logs, file_path=self.file_path)
+            pdf_close(self.pdf, logs=self.logs, file_path=str(self.file.absolute()))
             self.pdf = None
 
 
-folder = "/home/boscorat/Downloads/2025/quarantine/compare"
-dir_list = os.listdir(folder)
-
-for id, file in enumerate(dir_list):
-    if file in ["quarantine", "success"] or id < 0:
-        continue
-    file_path = os.path.join(folder, file)
-    print(f"\n\n{file_path.center(80, '=')}")
-    stmt = Statement(file_path)
+folder = "/home/boscorat/Downloads/2024"
+pdfs = (file for file in Path(folder).iterdir() if file.is_file() and file.suffix == ".pdf")
+for pdf in pdfs:
+    print(f"\n\n{str(pdf.absolute()).center(80, '=')}")
+    stmt = Statement(file=pdf)
     print(f"\n\n{(stmt.company + '---' + stmt.account).center(80, '=')}")
-    # print(f"\n KEY: {stmt.key}\n")
     print(f"\n SUCCESS: {stmt.success}\n")
     if not stmt.success:
         with pl.Config(tbl_cols=-1, tbl_rows=-1):
             print(stmt.checks_and_balances)
     print()
+    stmt.close_pdf()
 
-with pl.Config(tbl_cols=-1, tbl_rows=-1, set_fmt_str_lengths=100):
-    path = os.path.join(dir_parquet, "DIM_Statement.parquet")
-    print(pl.read_parquet(path))
-    print(pl.read_parquet(path).select("STD_FILEPATH", "STD_STATEMENT_DATE", "STD_ACCOUNT").sort("STD_ACCOUNT", "STD_STATEMENT_DATE"))
-    # path = os.path.join(dir_logs, "checks_and_balances.parquet")
-    # print(pl.read_parquet(path))
-    # path = os.path.join(dir_parquet, "FACT_Transaction.parquet")
-    # print(pl.read_parquet(path))
+# for id, file in enumerate(pdfs):
+#     if file in ["quarantine", "success"] or id < 0:
+#         continue
+#     file_path = os.path.join(folder, file)
+#     print(f"\n\n{file_path.center(80, '=')}")
+#     stmt = Statement(file_path)
+#     print(f"\n\n{(stmt.company + '---' + stmt.account).center(80, '=')}")
+#     # print(f"\n KEY: {stmt.key}\n")
+#     print(f"\n SUCCESS: {stmt.success}\n")
+#     if not stmt.success:
+#         with pl.Config(tbl_cols=-1, tbl_rows=-1):
+#             print(stmt.checks_and_balances)
+#     print()
+
+# with pl.Config(tbl_cols=-1, tbl_rows=-1, set_fmt_str_lengths=100):
+#     path = dir_parquet.joinpath("DIM_Statement.parquet")
+#     print(pl.read_parquet(path))
+#     print(
+#         pl.read_parquet(path)
+#         .select("STD_FILEPATH", "STD_FILENAME", "STD_STATEMENT_DATE", "STD_ACCOUNT")
+#         .sort("STD_ACCOUNT", "STD_STATEMENT_DATE")
+#     )

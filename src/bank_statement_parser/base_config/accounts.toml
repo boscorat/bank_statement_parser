@@ -49,7 +49,7 @@ account = "Online Bonus Saver"
 company_key = 'HSBC_UK'
 account_type_key = 'SAV'
 statement_type_key = 'HSBC_UK_SAV'
-exclude_last_n_pages = 7
+exclude_last_n_pages = 1
     [HSBC_UK_SAV_OBS.config]
     config = 'Account Info'
     locations = [{page_number = 1, top_left = [37, 425], bottom_right = [255, 490]}]

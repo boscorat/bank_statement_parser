@@ -296,12 +296,29 @@ def validate(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: st
 
 
 def cleanup(data: pl.LazyFrame, logs: pl.DataFrame, file_path: str) -> pl.LazyFrame:
+    # DEBUG = True
     start = time.time()
-    if not DEBUG:
-        data = data.select("section", "location", "config", "row", "page", "field", "vital", "value", "success", "error", "hard_fail")
+    if DEBUG:
+        print("Validate")
+        print("Before...")
+        with pl.Config(tbl_cols=-1, tbl_rows=-1):
+            print(data.collect())
+    # if not DEBUG:
+    data = data.select("section", "location", "config", "row", "page", "field", "vital", "value", "success", "error", "hard_fail")
+    # replace zero length values with None
+    data = data.with_columns(
+        value=pl.when(pl.col("value").str.len_bytes() == 0).then(pl.lit(None)).otherwise(pl.col("value")),
+        # val_len=pl.col("value").str.len_bytes(),
+    )
     log = pl.DataFrame(
         [[file_path, "statement_functions", "cleanup", time.time() - start, 1, datetime.now(), ""]], schema=logs.schema, orient="row"
     )
+
+    if DEBUG:
+        print("Validate")
+        print("After...")
+        with pl.Config(tbl_cols=-1, tbl_rows=-1):
+            print(data.collect())
     logs.vstack(log, in_place=True)
     return data
 
@@ -382,6 +399,8 @@ def extract_fields(
                 logs=logs,
                 file_path=file_path,
                 allow_text_failover=location.allow_text_failover,
+                remove_header=statement_table.remove_header,
+                header_text=statement_table.header_text,
             )
             if region
             else pl.LazyFrame()
@@ -465,6 +484,9 @@ def extract_fields(
                     .pipe(validate, field, logs, file_path)
                     .pipe(cleanup, logs, file_path)
                 )
+                # if field.field == "£_paid_out":
+                #     with pl.Config(tbl_cols=-1, tbl_rows=-1):
+                #         print(result.collect())
                 try:
                     results.vstack(result.collect(), in_place=True)
                 except pl.exceptions.ColumnNotFoundError:
@@ -511,6 +533,8 @@ def extract_fields(
                     transaction_end=pl.col("transaction_end").fill_null(False),
                 )
             )
+            # with pl.Config(tbl_cols=-1, tbl_rows=-1):
+            #     print(results)
     log = pl.DataFrame(
         [[file_path, "statement_functions", "extract_fields", time.time() - start, 1, datetime.now(), ""]], schema=logs.schema, orient="row"
     )
@@ -521,11 +545,11 @@ def extract_fields(
 def process_transactions(data: pl.DataFrame, transaction_spec: TransactionSpec, logs: pl.DataFrame, file_path: str) -> pl.DataFrame:
     start = time.time()
     data = (
-        data.filter(pl.col("success"))
-        .pivot(values="value", index=["page", "row", "transaction_start", "transaction_end"], on="field")
-        .sort("page", "row")
+        # data.filter(pl.col("success"))
+        data.pivot(values="value", index=["page", "row", "transaction_start", "transaction_end"], on="field").sort("page", "row")
         # pivot the data
     )
+
     data = data.with_columns(transaction_number=pl.col("transaction_start").cum_sum()).filter(
         pl.col("transaction_number") > 0
     )  # number the transactions and remove rows before the 1st

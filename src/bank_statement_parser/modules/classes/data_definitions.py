@@ -99,6 +99,8 @@ class TransactionSpec:
 class StatementTable:
     type: str
     statement_table: str
+    header_text: Optional[str]
+    remove_header: Optional[bool]
     locations: list[Location]
     fields: list[Field]
     table_columns: Optional[int]
