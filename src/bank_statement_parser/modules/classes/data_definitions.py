@@ -66,12 +66,20 @@ class Test:
 
 
 @dataclass
+class DynamicLineSpec:
+    image_id: int
+    image_location_tag: str
+
+
+@dataclass
 class Location:
     page_number: Optional[int] = None
     top_left: Optional[list[int]] = None
     bottom_right: Optional[list[int]] = None
     vertical_lines: Optional[list[int]] = None
+    dynamic_last_vertical_line: Optional[DynamicLineSpec] = None
     allow_text_failover: Optional[bool] = False
+    try_shift_down: Optional[int] = None
 
 
 @dataclass

@@ -54,12 +54,12 @@ def spawn_locations(
                     spawned_location.page_number = page_number
                     spawned_locations.append(spawned_location)
 
-    log = pl.DataFrame(
-        [[file_path, "statement_functions", "spawn_locations", time.time() - start, 1, datetime.now(), ""]],
-        schema=logs.schema,
-        orient="row",
-    )
-    logs.vstack(log, in_place=True)
+    # log = pl.DataFrame(
+    #     [[file_path, "statement_functions", "spawn_locations", time.time() - start, 1, datetime.now(), ""]],
+    #     schema=logs.schema,
+    #     orient="row",
+    # )
+    # logs.vstack(log, in_place=True)
     return spawned_locations
 
 
@@ -104,10 +104,10 @@ def strip(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: str, 
         with pl.Config(tbl_cols=-1, tbl_rows=-1):
             print(data.collect())
 
-    log = pl.DataFrame(
-        [[file_path, "statement_functions", "strip", time.time() - start, 1, datetime.now(), ""]], schema=logs.schema, orient="row"
-    )
-    logs.vstack(log, in_place=True)
+    # log = pl.DataFrame(
+    #     [[file_path, "statement_functions", "strip", time.time() - start, 1, datetime.now(), ""]], schema=logs.schema, orient="row"
+    # )
+    # logs.vstack(log, in_place=True)
     return data
 
 
@@ -157,10 +157,10 @@ def patmatch(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: st
         print("After...")
         with pl.Config(tbl_cols=-1, tbl_rows=-1):
             print(data.collect())
-    log = pl.DataFrame(
-        [[file_path, "statement_functions", "patmatch", time.time() - start, 1, datetime.now(), ""]], schema=logs.schema, orient="row"
-    )
-    logs.vstack(log, in_place=True)
+    # log = pl.DataFrame(
+    #     [[file_path, "statement_functions", "patmatch", time.time() - start, 1, datetime.now(), ""]], schema=logs.schema, orient="row"
+    # )
+    # logs.vstack(log, in_place=True)
     return data
 
 
@@ -230,10 +230,10 @@ def cast(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: str) -
         print("After...")
         with pl.Config(tbl_cols=-1, tbl_rows=-1):
             print(data.collect())
-    log = pl.DataFrame(
-        [[file_path, "statement_functions", "cast", time.time() - start, 1, datetime.now(), ""]], schema=logs.schema, orient="row"
-    )
-    logs.vstack(log, in_place=True)
+    # log = pl.DataFrame(
+    #     [[file_path, "statement_functions", "cast", time.time() - start, 1, datetime.now(), ""]], schema=logs.schema, orient="row"
+    # )
+    # logs.vstack(log, in_place=True)
     return data
 
 
@@ -263,10 +263,10 @@ def trim(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: str) -
         print("After...")
         with pl.Config(tbl_cols=-1, tbl_rows=-1):
             print(data.collect())
-    log = pl.DataFrame(
-        [[file_path, "statement_functions", "trim", time.time() - start, 1, datetime.now(), ""]], schema=logs.schema, orient="row"
-    )
-    logs.vstack(log, in_place=True)
+    # log = pl.DataFrame(
+    #     [[file_path, "statement_functions", "trim", time.time() - start, 1, datetime.now(), ""]], schema=logs.schema, orient="row"
+    # )
+    # logs.vstack(log, in_place=True)
     return data
 
 
@@ -288,10 +288,10 @@ def validate(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: st
         print("After...")
         with pl.Config(tbl_cols=-1, tbl_rows=-1):
             print(data.collect())
-    log = pl.DataFrame(
-        [[file_path, "statement_functions", "validate", time.time() - start, 1, datetime.now(), ""]], schema=logs.schema, orient="row"
-    )
-    logs.vstack(log, in_place=True)
+    # log = pl.DataFrame(
+    #     [[file_path, "statement_functions", "validate", time.time() - start, 1, datetime.now(), ""]], schema=logs.schema, orient="row"
+    # )
+    # logs.vstack(log, in_place=True)
     return data
 
 
@@ -310,16 +310,16 @@ def cleanup(data: pl.LazyFrame, logs: pl.DataFrame, file_path: str) -> pl.LazyFr
         value=pl.when(pl.col("value").str.len_bytes() == 0).then(pl.lit(None)).otherwise(pl.col("value")),
         # val_len=pl.col("value").str.len_bytes(),
     )
-    log = pl.DataFrame(
-        [[file_path, "statement_functions", "cleanup", time.time() - start, 1, datetime.now(), ""]], schema=logs.schema, orient="row"
-    )
+    # log = pl.DataFrame(
+    #     [[file_path, "statement_functions", "cleanup", time.time() - start, 1, datetime.now(), ""]], schema=logs.schema, orient="row"
+    # )
+    # logs.vstack(log, in_place=True)
 
     if DEBUG:
         print("Validate")
         print("After...")
         with pl.Config(tbl_cols=-1, tbl_rows=-1):
             print(data.collect())
-    logs.vstack(log, in_place=True)
     return data
 
 
@@ -371,27 +371,29 @@ def extract_fields(
             try:
                 results.vstack(result.collect(), in_place=True)
             except pl.exceptions.ColumnNotFoundError:
-                log = pl.DataFrame(
-                    [
-                        [
-                            file_path,
-                            "statement_functions",
-                            "extract_fields_exception",
-                            time.time() - start,
-                            1,
-                            datetime.now(),
-                            f"Column Not Found {config_field.field}",
-                        ]
-                    ],
-                    schema=logs.schema,
-                )
-                logs.vstack(log, in_place=True)
+                # log = pl.DataFrame(
+                #     [
+                #         [
+                #             file_path,
+                #             "statement_functions",
+                #             "extract_fields_exception",
+                #             time.time() - start,
+                #             1,
+                #             datetime.now(),
+                #             f"Column Not Found {config_field.field}",
+                #         ]
+                #     ],
+                #     schema=logs.schema,
+                # )
+                # logs.vstack(log, in_place=True)
                 return results.lazy()
 
     else:  # if there is a statement table
         table = (
             get_table_from_region(
                 region=region,
+                location=location,
+                pdf=pdf,
                 table_rows=statement_table.table_rows,
                 table_columns=statement_table.table_columns,
                 row_spacing=statement_table.row_spacing,
@@ -401,6 +403,8 @@ def extract_fields(
                 allow_text_failover=location.allow_text_failover,
                 remove_header=statement_table.remove_header,
                 header_text=statement_table.header_text,
+                dynamic_last_vertical_line=location.dynamic_last_vertical_line,
+                try_shift_down=location.try_shift_down,
             )
             if region
             else pl.LazyFrame()
@@ -409,6 +413,8 @@ def extract_fields(
 
         if not statement_table.transaction_spec:
             table_eager: pl.DataFrame = table.collect()
+            # with pl.Config(tbl_cols=-1, tbl_rows=-1):
+            #     print(table_eager)
             for field in statement_table.fields:
                 if field.cell is None:
                     continue
@@ -443,21 +449,21 @@ def extract_fields(
                 try:
                     results.vstack(result.collect(), in_place=True)
                 except pl.exceptions.ColumnNotFoundError:
-                    log = pl.DataFrame(
-                        [
-                            [
-                                file_path,
-                                "statement_functions",
-                                "extract_fields_exception",
-                                time.time() - start,
-                                1,
-                                datetime.now(),
-                                f"Column Not Found {field.field}",
-                            ]
-                        ],
-                        schema=logs.schema,
-                    )
-                    logs.vstack(log, in_place=True)
+                    # log = pl.DataFrame(
+                    #     [
+                    #         [
+                    #             file_path,
+                    #             "statement_functions",
+                    #             "extract_fields_exception",
+                    #             time.time() - start,
+                    #             1,
+                    #             datetime.now(),
+                    #             f"Column Not Found {field.field}",
+                    #         ]
+                    #     ],
+                    #     schema=logs.schema,
+                    # )
+                    # logs.vstack(log, in_place=True)
                     continue
 
         else:  # transaction records will be multi-line and have no row specification, but will have a column specification
@@ -490,22 +496,22 @@ def extract_fields(
                 try:
                     results.vstack(result.collect(), in_place=True)
                 except pl.exceptions.ColumnNotFoundError:
-                    log = pl.DataFrame(
-                        [
-                            [
-                                file_path,
-                                "statement_functions",
-                                "extract_fields_exception",
-                                time.time() - start,
-                                1,
-                                datetime.now(),
-                                f"Column Not Found {field.field}",
-                            ]
-                        ],
-                        schema=logs.schema,
-                        orient="row",
-                    )
-                    logs.vstack(log, in_place=True)
+                    # log = pl.DataFrame(
+                    #     [
+                    #         [
+                    #             file_path,
+                    #             "statement_functions",
+                    #             "extract_fields_exception",
+                    #             time.time() - start,
+                    #             1,
+                    #             datetime.now(),
+                    #             f"Column Not Found {field.field}",
+                    #         ]
+                    #     ],
+                    #     schema=logs.schema,
+                    #     orient="row",
+                    # )
+                    # logs.vstack(log, in_place=True)
                     continue
             # Transaction bookends
             bookends = statement_table.transaction_spec.transaction_bookends
@@ -535,10 +541,10 @@ def extract_fields(
             )
             # with pl.Config(tbl_cols=-1, tbl_rows=-1):
             #     print(results)
-    log = pl.DataFrame(
-        [[file_path, "statement_functions", "extract_fields", time.time() - start, 1, datetime.now(), ""]], schema=logs.schema, orient="row"
-    )
-    logs.vstack(log, in_place=True)
+    # log = pl.DataFrame(
+    #     [[file_path, "statement_functions", "extract_fields", time.time() - start, 1, datetime.now(), ""]], schema=logs.schema, orient="row"
+    # )
+    # logs.vstack(log, in_place=True)
     return results.lazy()
 
 
@@ -565,12 +571,12 @@ def process_transactions(data: pl.DataFrame, transaction_spec: TransactionSpec, 
             )
     data = data.filter(pl.col("transaction_end")).drop("transaction_start", "transaction_end")
 
-    log = pl.DataFrame(
-        [[file_path, "statement_functions", "process_transactions", time.time() - start, 1, datetime.now(), ""]],
-        schema=logs.schema,
-        orient="row",
-    )
-    logs.vstack(log, in_place=True)
+    # log = pl.DataFrame(
+    #     [[file_path, "statement_functions", "process_transactions", time.time() - start, 1, datetime.now(), ""]],
+    #     schema=logs.schema,
+    #     orient="row",
+    # )
+    # logs.vstack(log, in_place=True)
     return data
 
 
@@ -601,53 +607,53 @@ def get_results(
         # process transactions if there's a transaction spec
         if spec := statement_table.transaction_spec:
             results = results.pipe(process_transactions, logs=logs, file_path=file_path, transaction_spec=spec)
-            log = pl.DataFrame(
-                [[file_path, "statement_functions", "get_results_stmt_transaction", time.time() - start, 1, datetime.now(), ""]],
-                schema=logs.schema,
-                orient="row",
-            )
-            logs.vstack(log, in_place=True)
+            # log = pl.DataFrame(
+            #     [[file_path, "statement_functions", "get_results_stmt_transaction", time.time() - start, 1, datetime.now(), ""]],
+            #     schema=logs.schema,
+            #     orient="row",
+            # )
+            # logs.vstack(log, in_place=True)
             return results
 
     if scope == "all":
-        log = pl.DataFrame(
-            [[file_path, "statement_functions", "get_results_all", time.time() - start, 1, datetime.now(), ""]],
-            schema=logs.schema,
-            orient="row",
-        )
-        logs.vstack(log, in_place=True)
+        # log = pl.DataFrame(
+        #     [[file_path, "statement_functions", "get_results_all", time.time() - start, 1, datetime.now(), ""]],
+        #     schema=logs.schema,
+        #     orient="row",
+        # )
+        # logs.vstack(log, in_place=True)
         return results
     elif scope == "success":
-        log = pl.DataFrame(
-            [[file_path, "statement_functions", "get_results_success", time.time() - start, 1, datetime.now(), ""]],
-            schema=logs.schema,
-            orient="row",
-        )
-        logs.vstack(log, in_place=True)
+        # log = pl.DataFrame(
+        #     [[file_path, "statement_functions", "get_results_success", time.time() - start, 1, datetime.now(), ""]],
+        #     schema=logs.schema,
+        #     orient="row",
+        # )
+        # logs.vstack(log, in_place=True)
         return results.filter(pl.col("success"))
     elif scope == "fail":
-        log = pl.DataFrame(
-            [[file_path, "statement_functions", "get_results_fail", time.time() - start, 1, datetime.now(), ""]],
-            schema=logs.schema,
-            orient="row",
-        )
-        logs.vstack(log, in_place=True)
+        # log = pl.DataFrame(
+        #     [[file_path, "statement_functions", "get_results_fail", time.time() - start, 1, datetime.now(), ""]],
+        #     schema=logs.schema,
+        #     orient="row",
+        # )
+        # logs.vstack(log, in_place=True)
         return results.filter(~pl.col("success"))
     elif scope == "hard_fail":
-        log = pl.DataFrame(
-            [[file_path, "statement_functions", "get_results_hard_fail", time.time() - start, 1, datetime.now(), ""]],
-            schema=logs.schema,
-            orient="row",
-        )
-        logs.vstack(log, in_place=True)
+        # log = pl.DataFrame(
+        #     [[file_path, "statement_functions", "get_results_hard_fail", time.time() - start, 1, datetime.now(), ""]],
+        #     schema=logs.schema,
+        #     orient="row",
+        # )
+        # logs.vstack(log, in_place=True)
         return results.filter(pl.col("hard_fail"))
     else:
-        log = pl.DataFrame(
-            [[file_path, "statement_functions", "get_results_default", time.time() - start, 1, datetime.now(), ""]],
-            schema=logs.schema,
-            orient="row",
-        )
-        logs.vstack(log, in_place=True)
+        # log = pl.DataFrame(
+        #     [[file_path, "statement_functions", "get_results_default", time.time() - start, 1, datetime.now(), ""]],
+        #     schema=logs.schema,
+        #     orient="row",
+        # )
+        # logs.vstack(log, in_place=True)
         return results
 
 
@@ -731,12 +737,12 @@ def get_standard_fields(
     if section == "lines":
         checks_and_balances.hstack(data.select("STD_PAYMENT_IN", "STD_PAYMENT_OUT", "STD_MOVEMENT").sum(), in_place=True)
         checks_and_balances.hstack(data.select(pl.last("STD_RUNNING_BALANCE")), in_place=True)
-    log = pl.DataFrame(
-        [[file_path, "statement_functions", "get_standard_fields", time.time() - start, 1, datetime.now(), ""]],
-        schema=logs.schema,
-        orient="row",
-    )
-    logs.vstack(log, in_place=True)
+    # log = pl.DataFrame(
+    #     [[file_path, "statement_functions", "get_standard_fields", time.time() - start, 1, datetime.now(), ""]],
+    #     schema=logs.schema,
+    #     orient="row",
+    # )
+    # logs.vstack(log, in_place=True)
     # add a GUID to each record
     data = data.with_columns(STD_GUID=pl.lit(f"{uuid4()}"))
     return data

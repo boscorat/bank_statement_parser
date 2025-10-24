@@ -300,12 +300,12 @@ class Statement:
             config = get_config_from_company(self.company_key, self.pdf, self.logs, str(self.file.absolute()))
         else:
             config = get_config_from_statement(self.pdf, str(self.file.absolute()), self.logs)
-        log = pl.DataFrame(
-            [[str(self.file.absolute()), "statement_classes", "get_config", time.time() - start, 1, datetime.now(), ""]],
-            schema=self.logs.schema,
-            orient="row",
-        )
-        self.logs.vstack(log, in_place=True)
+        # log = pl.DataFrame(
+        #     [[str(self.file.absolute()), "statement_classes", "get_config", time.time() - start, 1, datetime.now(), ""]],
+        #     schema=self.logs.schema,
+        #     orient="row",
+        # )
+        # self.logs.vstack(log, in_place=True)
         return config if config else None
 
     def close_pdf(self):
@@ -314,9 +314,13 @@ class Statement:
             self.pdf = None
 
 
-folder = "/home/boscorat/Downloads/2024"
-pdfs = (file for file in Path(folder).iterdir() if file.is_file() and file.suffix == ".pdf")
-for pdf in pdfs:
+folder = "/home/boscorat/Downloads/2023/quarantine"
+pdfs = [file for file in Path(folder).iterdir() if file.is_file() and file.suffix == ".pdf"]
+pdf_count = len(pdfs)
+for id, pdf in enumerate(pdfs):
+    # if (id + 1) < 29 or (id + 1) in [30, 31, 32, 33, 34, 35, 36, 37]:
+    #     continue
+    print(f"{id + 1} of {pdf_count}")
     print(f"\n\n{str(pdf.absolute()).center(80, '=')}")
     stmt = Statement(file=pdf)
     print(f"\n\n{(stmt.company + '---' + stmt.account).center(80, '=')}")
