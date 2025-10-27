@@ -1,5 +1,6 @@
 import hashlib
 import time
+from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
 
@@ -306,7 +307,7 @@ class Statement:
         #     orient="row",
         # )
         # self.logs.vstack(log, in_place=True)
-        return config if config else None
+        return deepcopy(config) if config else None  # we return a deepcopy in case we need to make statement-specific modifications
 
     def close_pdf(self):
         if self.pdf is not None:
@@ -314,7 +315,7 @@ class Statement:
             self.pdf = None
 
 
-folder = "/home/boscorat/Downloads/2023/quarantine"
+folder = "/home/boscorat/Downloads/2023"
 pdfs = [file for file in Path(folder).iterdir() if file.is_file() and file.suffix == ".pdf"]
 pdf_count = len(pdfs)
 for id, pdf in enumerate(pdfs):

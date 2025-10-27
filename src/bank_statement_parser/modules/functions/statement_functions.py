@@ -409,7 +409,7 @@ def extract_fields(
             if region
             else pl.LazyFrame()
         )
-        table = table.collect().lazy()
+        # table = table.collect().lazy()
 
         if not statement_table.transaction_spec:
             table_eager: pl.DataFrame = table.collect()

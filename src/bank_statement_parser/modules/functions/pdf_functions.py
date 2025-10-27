@@ -165,12 +165,12 @@ def get_table_from_region(
     ):  # if we haven't got enough columns..
         vertical_lines = None  # we unset the vertical lines and have another go (basically reverting to text)
         return get_table_from_region(region, location, pdf, logs, file_path, table_rows, table_columns, row_spacing, vertical_lines)
-    log = pl.DataFrame(
-        [[file_path, "pdf_functions", "get_table_from_region", time.time() - start, 1, datetime.now(), ""]],
-        schema=logs.schema,
-        orient="row",
-    )
-    logs.vstack(log, in_place=True)
+    # log = pl.DataFrame(
+    #     [[file_path, "pdf_functions", "get_table_from_region", time.time() - start, 1, datetime.now(), ""]],
+    #     schema=logs.schema,
+    #     orient="row",
+    # )
+    # logs.vstack(log, in_place=True)
     return table
 
 
