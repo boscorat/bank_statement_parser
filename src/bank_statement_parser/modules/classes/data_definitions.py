@@ -10,6 +10,7 @@ class StdRefs:
     multiplier: Optional[float] = 1
     exclude_positive_values: Optional[bool] = False
     exclude_negative_values: Optional[bool] = False
+    terminator: Optional[str] = None
 
 
 @dataclass
@@ -44,6 +45,16 @@ class NumericModifier:
 
 
 @dataclass
+class FieldOffset:
+    rows_offset: int
+    cols_offset: int
+    vital: bool
+    type: str
+    numeric_currency: Optional[str] = None
+    numeric_modifier: Optional[NumericModifier] = None
+
+
+@dataclass
 class Field:
     field: str
     cell: Optional[Cell]
@@ -57,6 +68,7 @@ class Field:
     string_pattern: Optional[str] = None
     string_max_length: Optional[int] = None
     date_format: Optional[str] = None
+    value_offset: Optional[FieldOffset] = None
 
 
 @dataclass
@@ -83,11 +95,20 @@ class Location:
 
 
 @dataclass
+class FieldValidation:
+    field: str
+    pattern: str
+
+
+@dataclass
 class StatementBookend:
     start_fields: list[str]
     min_non_empty_start: int
     end_fields: list[str]
     min_non_empty_end: int
+    extra_validation_start: Optional[FieldValidation]
+    extra_validation_end: Optional[FieldValidation]
+    sticky_fields: Optional[list[str]]
 
 
 @dataclass
@@ -98,7 +119,7 @@ class MergeFields:
 
 @dataclass
 class TransactionSpec:
-    transaction_bookends: StatementBookend
+    transaction_bookends: list[StatementBookend]
     fill_forward_fields: Optional[list[str]]
     merge_fields: Optional[MergeFields]
 

@@ -4,7 +4,8 @@ company = 'HSBC Bank UK'
     config = 'Company Info'
     locations = [
         {page_number = 1, top_left = [475,110], bottom_right = [575, 130]},
-        {page_number = 1, top_left = [460,144], bottom_right = [575, 165]},
+        {page_number = 1, top_left = [460,145], bottom_right = [575, 165]},
+        {page_number = 1, top_left = [460,165], bottom_right = [575, 185]},
     ]
     field = {field = 'website', vital=true, type="string", string_pattern ='^www\.hsbc\.co\.uk$'}
 

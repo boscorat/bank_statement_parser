@@ -5,7 +5,7 @@ table_columns = 2
 table_rows = 4
 row_spacing = 7
 locations = [
-    {page_number=1, top_left = [345, 180], bottom_right = [575, 300], vertical_lines = [360, 475, 475, 550], allow_text_failover = true},
+    {page_number=1, top_left = [345, 180], bottom_right = [575, 300], vertical_lines = [360, 475, 475, 550], dynamic_last_vertical_line = {image_id = 0, image_location_tag = "x1"}, allow_text_failover = true},
 ]
 fields = [
     {field = 'opening_balance', cell = {row = 1, col = 1}, vital=true, type = 'numeric', numeric_currency ="GBP", numeric_modifier = {suffix = "D", multiplier = -1}},
@@ -70,17 +70,22 @@ locations = [
     {vertical_lines = [52, 105, 105, 185, 185, 475, 475, 560], dynamic_last_vertical_line = {image_id = 1, image_location_tag = "x1"}},
 ]
 fields = [
-    {field = 'received_by_us', column = 0, vital=true, type = "string", string_pattern ='^[0-3][0-9]\s?[A-Z][a-z]{2}\s?[0-3][0-9]$'},
-    {field = 'transaction_date', column = 1, vital=true, type = "string", string_pattern ='^[0-3][0-9]\s?[A-Z][a-z]{2}\s?[0-3][0-9]$'},
+    {field = 'received_by_us', column = 0, vital=false, type = "string", string_pattern ='^[0-3][0-9]\s?[A-Z][a-z]{2}\s?[0-3][0-9]$'},
+    {field = 'transaction_date', column = 1, vital=false, type = "string", string_pattern ='^[0-3][0-9]\s?[A-Z][a-z]{2}\s?[0-3][0-9]$'},
     {field = 'details', column = 2, vital=true, type = "string", string_pattern ='.+', string_max_length = 100},
     {field = 'amount', column = 3, vital=true, type = "numeric", numeric_currency = "GBP", numeric_modifier = {suffix = "CR", multiplier = -1.0000}},
+    # {field = 'interest', column = 2, vital=false, type = "string", numeric_currency = "GBP", string_pattern ='^TOTAL[\S]?INTEREST[\S]?CHARGED', value_offset = {rows_offset = 0, cols_offset = 1, type = "numeric", vital=false, numeric_currency = "GBP"}},
 ]
 delete_success_false = true
 delete_cast_success_false = true
 delete_rows_with_missing_vital_fields = true
 
 [HSBC_UK_CRD_TRANSACTIONS.transaction_spec]
-transaction_bookends = {start_fields = ['received_by_us','transaction_date','details','amount'], min_non_empty_start = 4, end_fields = ['received_by_us','transaction_date','details','amount'], min_non_empty_end = 4}
+# transaction_bookends = {start_fields = ['received_by_us','transaction_date','details','amount'], min_non_empty_start = 4, end_fields = ['received_by_us','transaction_date','details','amount'], min_non_empty_end = 4, sticky_fields = ['interest']}
+transaction_bookends = [
+    {start_fields = ['received_by_us','transaction_date','details','amount'], min_non_empty_start = 4, end_fields = ['received_by_us','transaction_date','details','amount'], min_non_empty_end = 4},
+    {start_fields = ['details','amount'], min_non_empty_start = 2, end_fields = ['details','amount'], min_non_empty_end = 2, extra_validation_start = {field = 'details', pattern = '^TOTAL[\S]?INTEREST[\S]?CHARGED'}},
+]
 
 [HSBC_UK_CUR_TRANSACTIONS]
 type = "transaction"
@@ -102,6 +107,8 @@ delete_cast_success_false = true
 delete_rows_with_missing_vital_fields = true
 
 [HSBC_UK_CUR_TRANSACTIONS.transaction_spec]
-transaction_bookends = {start_fields = ['payment_type','details'], min_non_empty_start = 2, end_fields = ['£_paid_out','£_paid_in'], min_non_empty_end = 1}
+transaction_bookends = [
+    {start_fields = ['payment_type','details'], min_non_empty_start = 2, end_fields = ['£_paid_out','£_paid_in'], min_non_empty_end = 1}
+]
 fill_forward_fields = ['date','payment_type']
 merge_fields = {fields=['details'], separator=' | '}

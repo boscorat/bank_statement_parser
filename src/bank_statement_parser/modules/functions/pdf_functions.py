@@ -81,7 +81,6 @@ def region_search(region: Page, pattern: str, logs: pl.DataFrame, file_path: str
 
 def page_text(page: Page, logs: pl.DataFrame, file_path: str):
     """Extract all text content from a PDF page."""
-    start = time.time()
     page_text = page.extract_text()
     # log = pl.DataFrame(
     #     [[file_path, "pdf_functions", "page_text", time.time() - start, 1, datetime.now(), ""]], schema=logs.schema, orient="row"
@@ -105,9 +104,9 @@ def get_table_from_region(
     header_text: str | None = None,
     dynamic_last_vertical_line: DynamicLineSpec | None = None,
     try_shift_down: int | None = None,
-) -> pl.LazyFrame:
+) -> pl.DataFrame | None:
     """Extract a structured table from a PDF region using configurable extraction settings."""
-    start = time.time()
+    table = None
     tbl_settings: dict = {
         "vertical_strategy": "text",
         "horizontal_strategy": "text",
@@ -126,7 +125,6 @@ def get_table_from_region(
         tbl_settings["vertical_strategy"] = "explicit"
         tbl_settings["min_words_vertical"] = 1  # override if explicit vertical lines given
         tbl_settings["min_words_horizontal"] = 1  # override if explicit vertical lines given
-        tbl_settings["snap_x_tolerance"] = 10
     if vertical_lines and dynamic_last_vertical_line:  # if the last line may be driven by the position of an image we try to allign it
         try:  # not tied to this!  It could fail if a new image is added or removed
             current_final_line = vertical_lines[-1]  # the the current final vertical line
@@ -137,9 +135,16 @@ def get_table_from_region(
                 vertical_lines[-1] = region.images[dynamic_last_vertical_line.image_id][
                     dynamic_last_vertical_line.image_location_tag
                 ]  # replace the exisiting with the dynamic
+            table = region.extract_table(table_settings=tbl_settings)
+            if not table:  # if it hasn't returned a table we reset the final vertical line
+                vertical_lines[-1] = current_final_line
+            elif table_columns and len(table[0]) < table_columns:  # if the table doesn't have enough columns
+                vertical_lines[-1] = current_final_line  # we reset the last line
+                table = None  # and ditch the table
         except (IndexError, KeyError):
             pass  # any issues and we just smile, wave, and move on
-    table = region.extract_table(table_settings=tbl_settings)
+    if not table:  # if we haven't already got a good looking table through the dynamic vertical lines we get it now
+        table = region.extract_table(table_settings=tbl_settings)
     if not table and try_shift_down and location.top_left and location.bottom_right:
         try:
             location.top_left[1] = location.top_left[1] + try_shift_down
@@ -148,6 +153,28 @@ def get_table_from_region(
             table = region.extract_table(table_settings=tbl_settings)
         except IndexError:
             pass
+    if table and table_columns and len(table[0]) < table_columns:  # if we haven't got enough columns..
+        if allow_text_failover and vertical_lines:  # we can try failing over to text extraction
+            vertical_lines = None
+            return get_table_from_region(
+                region,
+                location,
+                pdf,
+                logs,
+                file_path,
+                table_rows,
+                table_columns,
+                row_spacing,
+                vertical_lines,
+                allow_text_failover,
+                remove_header,
+                header_text,
+                dynamic_last_vertical_line,
+                try_shift_down,
+            )
+        else:  # if that doens't work we've got adodgy table and we return None
+            return None
+
     if table and remove_header and table[0]:
         if header_text:
             line_zero_text = str("".join(table[0])).lower().replace(" ", "")  # type: ignore
@@ -157,20 +184,8 @@ def get_table_from_region(
             table = table[1:]
 
     column_names = ["col_" + str(i) for i in range(len(table[0]))] if table else []
-    table = pl.LazyFrame(table[0:], schema=column_names, orient="row") if table else pl.LazyFrame()
-    # if vertical lines have been specified, they can sometimes fail due to a slight re-positioning of a table
-    # we can use the number of colums to test the result
-    if (
-        table_columns and vertical_lines and table.collect_schema().len() < table_columns and allow_text_failover
-    ):  # if we haven't got enough columns..
-        vertical_lines = None  # we unset the vertical lines and have another go (basically reverting to text)
-        return get_table_from_region(region, location, pdf, logs, file_path, table_rows, table_columns, row_spacing, vertical_lines)
-    # log = pl.DataFrame(
-    #     [[file_path, "pdf_functions", "get_table_from_region", time.time() - start, 1, datetime.now(), ""]],
-    #     schema=logs.schema,
-    #     orient="row",
-    # )
-    # logs.vstack(log, in_place=True)
+    table = pl.DataFrame(table[0:], schema=column_names, orient="row") if table else pl.DataFrame()
+
     return table
 
 

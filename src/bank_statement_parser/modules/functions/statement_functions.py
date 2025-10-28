@@ -1,6 +1,5 @@
 import time
 from copy import deepcopy
-from datetime import datetime
 from uuid import uuid4
 
 import polars as pl
@@ -38,7 +37,6 @@ def spawn_locations(
     Returns:
         list: A list of location objects, each with an assigned page number.
     """
-    start = time.time()
     location_page_numbers: list = []
     spawned_locations: list = []
     for location in locations:
@@ -53,18 +51,14 @@ def spawn_locations(
                     spawned_location = deepcopy(location)
                     spawned_location.page_number = page_number
                     spawned_locations.append(spawned_location)
-
-    # log = pl.DataFrame(
-    #     [[file_path, "statement_functions", "spawn_locations", time.time() - start, 1, datetime.now(), ""]],
-    #     schema=logs.schema,
-    #     orient="row",
-    # )
-    # logs.vstack(log, in_place=True)
     return spawned_locations
 
 
 def strip(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: str, spec: CurrencySpec | None = None) -> pl.LazyFrame:
-    start = time.time()
+    # if field.field == "interest":
+    #     DEBUG = True
+    # else:
+    #     DEBUG = False
     src = "raw"
     step = "strip"
     if DEBUG:
@@ -103,11 +97,6 @@ def strip(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: str, 
         print("After...")
         with pl.Config(tbl_cols=-1, tbl_rows=-1):
             print(data.collect())
-
-    # log = pl.DataFrame(
-    #     [[file_path, "statement_functions", "strip", time.time() - start, 1, datetime.now(), ""]], schema=logs.schema, orient="row"
-    # )
-    # logs.vstack(log, in_place=True)
     return data
 
 
@@ -130,7 +119,10 @@ def build_pattern(
 
 
 def patmatch(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: str, spec: CurrencySpec | None = None) -> pl.LazyFrame:
-    start = time.time()
+    # if field.field == "interest":
+    #     DEBUG = True
+    # else:
+    #     DEBUG = False
     src = "strip"
     step = "pattern"
     pattern = build_pattern(
@@ -157,15 +149,10 @@ def patmatch(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: st
         print("After...")
         with pl.Config(tbl_cols=-1, tbl_rows=-1):
             print(data.collect())
-    # log = pl.DataFrame(
-    #     [[file_path, "statement_functions", "patmatch", time.time() - start, 1, datetime.now(), ""]], schema=logs.schema, orient="row"
-    # )
-    # logs.vstack(log, in_place=True)
     return data
 
 
 def cast(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: str) -> pl.LazyFrame:
-    start = time.time()
     src = "pattern"
     step = "cast"
     if DEBUG:
@@ -230,15 +217,10 @@ def cast(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: str) -
         print("After...")
         with pl.Config(tbl_cols=-1, tbl_rows=-1):
             print(data.collect())
-    # log = pl.DataFrame(
-    #     [[file_path, "statement_functions", "cast", time.time() - start, 1, datetime.now(), ""]], schema=logs.schema, orient="row"
-    # )
-    # logs.vstack(log, in_place=True)
     return data
 
 
 def trim(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: str) -> pl.LazyFrame:
-    start = time.time()
     src = "cast"
     step = "trim"
     if DEBUG:
@@ -263,15 +245,10 @@ def trim(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: str) -
         print("After...")
         with pl.Config(tbl_cols=-1, tbl_rows=-1):
             print(data.collect())
-    # log = pl.DataFrame(
-    #     [[file_path, "statement_functions", "trim", time.time() - start, 1, datetime.now(), ""]], schema=logs.schema, orient="row"
-    # )
-    # logs.vstack(log, in_place=True)
     return data
 
 
 def validate(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: str) -> pl.LazyFrame:
-    start = time.time()
     src = "trim"
     if DEBUG:
         print("Validate")
@@ -288,32 +265,25 @@ def validate(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: st
         print("After...")
         with pl.Config(tbl_cols=-1, tbl_rows=-1):
             print(data.collect())
-    # log = pl.DataFrame(
-    #     [[file_path, "statement_functions", "validate", time.time() - start, 1, datetime.now(), ""]], schema=logs.schema, orient="row"
-    # )
-    # logs.vstack(log, in_place=True)
     return data
 
 
 def cleanup(data: pl.LazyFrame, logs: pl.DataFrame, file_path: str) -> pl.LazyFrame:
     # DEBUG = True
-    start = time.time()
     if DEBUG:
         print("Validate")
         print("Before...")
         with pl.Config(tbl_cols=-1, tbl_rows=-1):
             print(data.collect())
     # if not DEBUG:
-    data = data.select("section", "location", "config", "row", "page", "field", "vital", "value", "success", "error", "hard_fail")
+    data = data.select(
+        "section", "location", "config", "row", "page", "field", "vital", "value", "success", "error", "hard_fail", "value_raw_offset"
+    )
     # replace zero length values with None
     data = data.with_columns(
         value=pl.when(pl.col("value").str.len_bytes() == 0).then(pl.lit(None)).otherwise(pl.col("value")),
-        # val_len=pl.col("value").str.len_bytes(),
+        value_raw_offset=pl.when(pl.col("value_raw_offset").str.len_bytes() == 0).then(pl.lit(None)).otherwise(pl.col("value_raw_offset")),
     )
-    # log = pl.DataFrame(
-    #     [[file_path, "statement_functions", "cleanup", time.time() - start, 1, datetime.now(), ""]], schema=logs.schema, orient="row"
-    # )
-    # logs.vstack(log, in_place=True)
 
     if DEBUG:
         print("Validate")
@@ -333,8 +303,7 @@ def extract_fields(
     location_id: int,
     logs: pl.DataFrame,
     file_path: str,
-) -> pl.LazyFrame:
-    start = time.time()
+) -> pl.DataFrame:
     results: pl.DataFrame = pl.DataFrame()
     result: pl.LazyFrame = pl.LazyFrame()
     region = get_region(location, pdf, logs, file_path)
@@ -345,6 +314,7 @@ def extract_fields(
                     pl.Series("field", [config_field.field], dtype=pl.String),
                     pl.Series("vital", [config_field.vital], dtype=pl.Boolean),
                     pl.Series("value_raw", [region.extract_text()], dtype=pl.String),
+                    pl.Series("value_raw_offset", [""], dtype=pl.String),
                 ]
             )
             result = result.select(
@@ -356,6 +326,7 @@ def extract_fields(
                 pl.col("field"),
                 pl.col("vital"),
                 pl.col("value_raw"),
+                pl.col("value_raw_offset"),
             )
             spec = None
             if config_field.type == "numeric":
@@ -371,22 +342,7 @@ def extract_fields(
             try:
                 results.vstack(result.collect(), in_place=True)
             except pl.exceptions.ColumnNotFoundError:
-                # log = pl.DataFrame(
-                #     [
-                #         [
-                #             file_path,
-                #             "statement_functions",
-                #             "extract_fields_exception",
-                #             time.time() - start,
-                #             1,
-                #             datetime.now(),
-                #             f"Column Not Found {config_field.field}",
-                #         ]
-                #     ],
-                #     schema=logs.schema,
-                # )
-                # logs.vstack(log, in_place=True)
-                return results.lazy()
+                return results
 
     else:  # if there is a statement table
         table = (
@@ -407,158 +363,177 @@ def extract_fields(
                 try_shift_down=location.try_shift_down,
             )
             if region
-            else pl.LazyFrame()
+            else None
         )
         # table = table.collect().lazy()
+        if table is not None:
+            if not statement_table.transaction_spec:
+                for field in statement_table.fields:
+                    if field.cell is None:
+                        continue
+                    result = pl.LazyFrame(
+                        data=[
+                            pl.Series("field", [field.field], dtype=pl.String),
+                            pl.Series("vital", [field.vital], dtype=pl.Boolean),
+                            pl.Series("value_raw", [table.item(field.cell.row, field.cell.col)], dtype=pl.String),
+                            pl.Series("value_raw_offset", [""], dtype=pl.String),
+                        ]
+                    )
+                    result = result.select(
+                        pl.lit(section).alias("section"),
+                        pl.lit(location_id).alias("location"),
+                        pl.lit(config).alias("config"),
+                        pl.lit(field.cell.row).alias("row"),
+                        pl.lit(location.page_number).alias("page"),
+                        pl.col("field"),
+                        pl.col("vital"),
+                        pl.col("value_raw"),
+                        pl.col("value_raw_offset"),
+                    )
+                    spec = None
+                    if field.type == "numeric":
+                        spec = currency_spec[field.numeric_currency]
+                    result = (
+                        result.pipe(strip, field, logs, file_path, spec)
+                        .pipe(patmatch, field, logs, file_path, spec)
+                        .pipe(cast, field, logs, file_path)
+                        .pipe(trim, field, logs, file_path)
+                        .pipe(validate, field, logs, file_path)
+                        .pipe(cleanup, logs, file_path)
+                    )
+                    try:
+                        results.vstack(result.collect(), in_place=True)
+                    except pl.exceptions.ColumnNotFoundError:
+                        continue
 
-        if not statement_table.transaction_spec:
-            table_eager: pl.DataFrame = table.collect()
-            # with pl.Config(tbl_cols=-1, tbl_rows=-1):
-            #     print(table_eager)
-            for field in statement_table.fields:
-                if field.cell is None:
-                    continue
-                result = pl.LazyFrame(
-                    data=[
-                        pl.Series("field", [field.field], dtype=pl.String),
-                        pl.Series("vital", [field.vital], dtype=pl.Boolean),
-                        pl.Series("value_raw", [table_eager.item(field.cell.row, field.cell.col)], dtype=pl.String),
-                    ]
-                )
-                result = result.select(
-                    pl.lit(section).alias("section"),
-                    pl.lit(location_id).alias("location"),
-                    pl.lit(config).alias("config"),
-                    pl.lit(field.cell.row).alias("row"),
-                    pl.lit(location.page_number).alias("page"),
-                    pl.col("field"),
-                    pl.col("vital"),
-                    pl.col("value_raw"),
-                )
-                spec = None
-                if field.type == "numeric":
-                    spec = currency_spec[field.numeric_currency]
-                result = (
-                    result.pipe(strip, field, logs, file_path, spec)
-                    .pipe(patmatch, field, logs, file_path, spec)
-                    .pipe(cast, field, logs, file_path)
-                    .pipe(trim, field, logs, file_path)
-                    .pipe(validate, field, logs, file_path)
-                    .pipe(cleanup, logs, file_path)
-                )
-                try:
-                    results.vstack(result.collect(), in_place=True)
-                except pl.exceptions.ColumnNotFoundError:
-                    # log = pl.DataFrame(
-                    #     [
-                    #         [
-                    #             file_path,
-                    #             "statement_functions",
-                    #             "extract_fields_exception",
-                    #             time.time() - start,
-                    #             1,
-                    #             datetime.now(),
-                    #             f"Column Not Found {field.field}",
-                    #         ]
-                    #     ],
-                    #     schema=logs.schema,
-                    # )
-                    # logs.vstack(log, in_place=True)
-                    continue
+            else:  # transaction records will be multi-line and have no row specification, but will have a column specification
+                for field in statement_table.fields:
+                    if field.column is None:
+                        continue
+                    result = (
+                        table.select(
+                            section=pl.lit(section),
+                            location=pl.lit(location_id),
+                            config=pl.lit(config),
+                            page=pl.lit(location.page_number),
+                            field=pl.lit(field.field),
+                            vital=pl.lit(field.vital),
+                            value_raw=pl.nth(field.column),
+                            value_raw_offset=pl.lit("")
+                            if not (field.value_offset and field.value_offset.cols_offset)
+                            else pl.nth(field.column + field.value_offset.cols_offset),
+                        )
+                        .with_row_index("row")
+                        .lazy()
+                    )
+                    spec = None
+                    if field.type == "numeric":
+                        spec = currency_spec[field.numeric_currency]
+                    result = (
+                        result.pipe(strip, field, logs, file_path, spec)
+                        .pipe(patmatch, field, logs, file_path, spec)
+                        .pipe(cast, field, logs, file_path)
+                        .pipe(trim, field, logs, file_path)
+                        .pipe(validate, field, logs, file_path)
+                        .pipe(cleanup, logs, file_path)
+                    )
+                    if field.value_offset:
+                        with pl.Config(tbl_cols=-1, tbl_rows=-1):
+                            result_vo = result.filter(pl.col("success")).collect().with_columns(value_raw=pl.col("value_raw_offset"))
+                            if result_vo.height > 0:
+                                field_vo: Field = deepcopy(field)
+                                field_vo.string_pattern = None
+                                field_vo.value_offset = None
+                                field_vo.numeric_currency = field.value_offset.numeric_currency
+                                field_vo.vital = field.value_offset.vital
+                                field_vo.type = field.value_offset.type
+                                field_vo.numeric_modifier = field.value_offset.numeric_modifier
+                                if field_vo.type == "numeric":
+                                    spec = currency_spec[field.numeric_currency]
 
-        else:  # transaction records will be multi-line and have no row specification, but will have a column specification
-            for field in statement_table.fields:
-                if field.column is None:
-                    continue
-                result = table.select(
-                    section=pl.lit(section),
-                    location=pl.lit(location_id),
-                    config=pl.lit(config),
-                    page=pl.lit(location.page_number),
-                    field=pl.lit(field.field),
-                    vital=pl.lit(field.vital),
-                    value_raw=pl.nth(field.column),
-                ).with_row_index("row")
-                spec = None
-                if field.type == "numeric":
-                    spec = currency_spec[field.numeric_currency]
-                result = (
-                    result.pipe(strip, field, logs, file_path, spec)
-                    .pipe(patmatch, field, logs, file_path, spec)
-                    .pipe(cast, field, logs, file_path)
-                    .pipe(trim, field, logs, file_path)
-                    .pipe(validate, field, logs, file_path)
-                    .pipe(cleanup, logs, file_path)
+                                result_vo = (
+                                    result_vo.lazy()
+                                    .pipe(strip, field_vo, logs, file_path, spec)
+                                    .pipe(patmatch, field_vo, logs, file_path, spec)
+                                    .pipe(cast, field_vo, logs, file_path)
+                                    .pipe(trim, field_vo, logs, file_path)
+                                    .pipe(validate, field_vo, logs, file_path)
+                                    .pipe(cleanup, logs, file_path)
+                                )
+                                result = result_vo
+                    try:
+                        results.vstack(result.drop("value_raw_offset").collect(), in_place=True)
+                    except pl.exceptions.ColumnNotFoundError:
+                        continue
+                # Transaction bookends
+                start_rows_all = pl.DataFrame(schema={"row": pl.UInt32, "transaction_start": pl.Boolean})
+                end_rows_all = pl.DataFrame(schema={"row": pl.UInt32, "transaction_end": pl.Boolean})
+                for bookends in statement_table.transaction_spec.transaction_bookends:
+                    excluded_rows = pl.DataFrame(schema={"row": pl.UInt32})
+                    start_line = bookends.start_fields
+                    end_line = bookends.end_fields
+                    if bookends.extra_validation_start:
+                        invalid = (
+                            results.filter(~pl.col("value").str.contains(bookends.extra_validation_start.pattern))
+                            .filter(pl.col("field") == bookends.extra_validation_start.field)
+                            .select("row")
+                        )
+                        excluded_rows.extend(invalid)
+                    start_rows = (
+                        results.filter(pl.col("field").is_in(start_line))
+                        .group_by("row")
+                        .agg(pl.col("success").implode())
+                        .filter(pl.col("success").list.count_matches(True) >= bookends.min_non_empty_start)
+                        .join(other=excluded_rows, on="row", how="anti")
+                        .join(other=start_rows_all, on="row", how="anti")
+                        .select(pl.col("row"), transaction_start=pl.lit(True))
+                    )
+                    start_rows_all.extend(start_rows)
+                    # print(start_rows_all)
+                    end_rows = (
+                        results.filter(pl.col("field").is_in(end_line))
+                        .group_by("row")
+                        .agg(pl.col("success").implode())
+                        .filter(pl.col("success").list.count_matches(True) >= bookends.min_non_empty_end)
+                        .join(other=excluded_rows, on="row", how="anti")
+                        .join(other=end_rows_all, on="row", how="anti")
+                        .select(pl.col("row"), transaction_end=pl.lit(True))
+                    )
+                    end_rows_all.extend(end_rows)
+                    # print(end_rows_all)
+                results = (
+                    results.join(start_rows_all, on="row", how="left", validate="m:1")
+                    .join(end_rows_all, on="row", how="left", validate="m:1")
+                    .with_columns(
+                        transaction_start=pl.col("transaction_start").fill_null(False),
+                        transaction_end=pl.col("transaction_end").fill_null(False),
+                    )
                 )
-                # if field.field == "£_paid_out":
-                #     with pl.Config(tbl_cols=-1, tbl_rows=-1):
-                #         print(result.collect())
-                try:
-                    results.vstack(result.collect(), in_place=True)
-                except pl.exceptions.ColumnNotFoundError:
-                    # log = pl.DataFrame(
-                    #     [
-                    #         [
-                    #             file_path,
-                    #             "statement_functions",
-                    #             "extract_fields_exception",
-                    #             time.time() - start,
-                    #             1,
-                    #             datetime.now(),
-                    #             f"Column Not Found {field.field}",
-                    #         ]
-                    #     ],
-                    #     schema=logs.schema,
-                    #     orient="row",
-                    # )
-                    # logs.vstack(log, in_place=True)
-                    continue
-            # Transaction bookends
-            bookends = statement_table.transaction_spec.transaction_bookends
-            start_line = bookends.start_fields
-            end_line = bookends.end_fields
-            start_rows = (
-                results.filter(pl.col("field").is_in(start_line))
-                .group_by("row")
-                .agg(pl.col("success").implode())
-                .filter(pl.col("success").list.count_matches(True) >= bookends.min_non_empty_start)
-                .select(pl.col("row"), transaction_start=pl.lit(True))
-            )
-            end_rows = (
-                results.filter(pl.col("field").is_in(end_line))
-                .group_by("row")
-                .agg(pl.col("success").implode())
-                .filter(pl.col("success").list.count_matches(True) >= bookends.min_non_empty_end)
-                .select(pl.col("row"), transaction_end=pl.lit(True))
-            )
-            results = (
-                results.join(start_rows, on="row", how="left", validate="m:1")
-                .join(end_rows, on="row", how="left", validate="m:1")
-                .with_columns(
-                    transaction_start=pl.col("transaction_start").fill_null(False),
-                    transaction_end=pl.col("transaction_end").fill_null(False),
-                )
-            )
-            # with pl.Config(tbl_cols=-1, tbl_rows=-1):
-            #     print(results)
-    # log = pl.DataFrame(
-    #     [[file_path, "statement_functions", "extract_fields", time.time() - start, 1, datetime.now(), ""]], schema=logs.schema, orient="row"
-    # )
-    # logs.vstack(log, in_place=True)
-    return results.lazy()
+                # print(results)
+                # if bookends.sticky_fields:
+                #     results = results.with_columns(
+                #         transaction_start=pl.when(pl.col("field").is_in(bookends.sticky_fields) & pl.col("success"))
+                #         .then(pl.lit(True))
+                #         .otherwise(pl.col("transaction_start")),
+                #         transaction_end=pl.when(pl.col("field").is_in(bookends.sticky_fields) & pl.col("success"))
+                #         .then(pl.lit(True))
+                #         .otherwise(pl.col("transaction_end")),
+                #     )
+                # print(results)
+    return results
 
 
 def process_transactions(data: pl.DataFrame, transaction_spec: TransactionSpec, logs: pl.DataFrame, file_path: str) -> pl.DataFrame:
-    start = time.time()
+    # print(data)
     data = (
-        # data.filter(pl.col("success"))
         data.pivot(values="value", index=["page", "row", "transaction_start", "transaction_end"], on="field").sort("page", "row")
         # pivot the data
     )
-
+    # print(data)
     data = data.with_columns(transaction_number=pl.col("transaction_start").cum_sum()).filter(
         pl.col("transaction_number") > 0
     )  # number the transactions and remove rows before the 1st
+    # print(data)
     if fffs := transaction_spec.fill_forward_fields:  # fill forward if there are any fields in the spec
         for fff in fffs:
             data = data.with_columns(
@@ -571,20 +546,14 @@ def process_transactions(data: pl.DataFrame, transaction_spec: TransactionSpec, 
             )
     data = data.filter(pl.col("transaction_end")).drop("transaction_start", "transaction_end")
 
-    # log = pl.DataFrame(
-    #     [[file_path, "statement_functions", "process_transactions", time.time() - start, 1, datetime.now(), ""]],
-    #     schema=logs.schema,
-    #     orient="row",
-    # )
-    # logs.vstack(log, in_place=True)
+    # print(data)
     return data
 
 
 def get_results(
     pdf: PDF, section: str, config: Config, logs: pl.DataFrame, file_path: str, scope: str = "success", exclude_last_n_pages: int = 0
 ) -> pl.DataFrame:  # scope can be all, success, fail, or hard_fail
-    start = time.time()
-    result: pl.LazyFrame = pl.LazyFrame()
+    result: pl.DataFrame = pl.DataFrame()
     results: pl.DataFrame = pl.DataFrame()
     locations = config.statement_table.locations if config.statement_table else config.locations
     if locations:
@@ -601,59 +570,33 @@ def get_results(
                 logs=logs,
                 file_path=file_path,
             )
-            results.vstack(result.collect(), in_place=True)
+            if result.height > 0:
+                results.vstack(result, in_place=True)
 
     if statement_table := config.statement_table:
         # process transactions if there's a transaction spec
         if spec := statement_table.transaction_spec:
             results = results.pipe(process_transactions, logs=logs, file_path=file_path, transaction_spec=spec)
-            # log = pl.DataFrame(
-            #     [[file_path, "statement_functions", "get_results_stmt_transaction", time.time() - start, 1, datetime.now(), ""]],
-            #     schema=logs.schema,
-            #     orient="row",
-            # )
-            # logs.vstack(log, in_place=True)
             return results
 
     if scope == "all":
-        # log = pl.DataFrame(
-        #     [[file_path, "statement_functions", "get_results_all", time.time() - start, 1, datetime.now(), ""]],
-        #     schema=logs.schema,
-        #     orient="row",
-        # )
-        # logs.vstack(log, in_place=True)
         return results
     elif scope == "success":
-        # log = pl.DataFrame(
-        #     [[file_path, "statement_functions", "get_results_success", time.time() - start, 1, datetime.now(), ""]],
-        #     schema=logs.schema,
-        #     orient="row",
-        # )
-        # logs.vstack(log, in_place=True)
-        return results.filter(pl.col("success"))
+        try:
+            return results.filter(pl.col("success"))
+        except pl.exceptions.ColumnNotFoundError:
+            return results
     elif scope == "fail":
-        # log = pl.DataFrame(
-        #     [[file_path, "statement_functions", "get_results_fail", time.time() - start, 1, datetime.now(), ""]],
-        #     schema=logs.schema,
-        #     orient="row",
-        # )
-        # logs.vstack(log, in_place=True)
-        return results.filter(~pl.col("success"))
+        try:
+            return results.filter(~pl.col("success"))
+        except pl.exceptions.ColumnNotFoundError:
+            return results
     elif scope == "hard_fail":
-        # log = pl.DataFrame(
-        #     [[file_path, "statement_functions", "get_results_hard_fail", time.time() - start, 1, datetime.now(), ""]],
-        #     schema=logs.schema,
-        #     orient="row",
-        # )
-        # logs.vstack(log, in_place=True)
-        return results.filter(pl.col("hard_fail"))
+        try:
+            return results.filter(pl.col("hard_fail"))
+        except pl.exceptions.ColumnNotFoundError:
+            return results
     else:
-        # log = pl.DataFrame(
-        #     [[file_path, "statement_functions", "get_results_default", time.time() - start, 1, datetime.now(), ""]],
-        #     schema=logs.schema,
-        #     orient="row",
-        # )
-        # logs.vstack(log, in_place=True)
         return results
 
 
@@ -663,15 +606,31 @@ def get_standard_fields(
     config_standard_fields: dict,
     statement_type: str,
     checks_and_balances: pl.DataFrame,
-    logs: pl.DataFrame,
-    file_path: str,
 ) -> pl.DataFrame:
-    start = time.time()
     for std_field, std_config in config_standard_fields.items():
         if std_config.section == section:
             ref = [ref for ref in std_config.std_refs if ref.statement_type == statement_type][0]
             if ref:
                 data = data.with_columns(pl.col(ref.field).alias(std_field))
+                if (
+                    ref.terminator
+                ):  # sometimes there's some other info such as BALANCE CARRIED FORWARD that gets pulled into a standard field
+                    data = (
+                        data.with_columns(
+                            pl.col(std_field)
+                            .str.find(pattern=ref.terminator, literal=True, strict=False)
+                            .alias("terminator_id")  # we get the position of the string that should signal the termination of a string
+                        )
+                        .with_columns(
+                            pl.when(pl.col("terminator_id").fill_null(0) > 0)  # if the terminator string exists
+                            .then(
+                                pl.col(std_field).str.head(pl.col("terminator_id"))
+                            )  # we get the start of the string up to the terminator position
+                            .otherwise(pl.col(std_field))  # if no terminator tring we keep the stadard value
+                            .alias(std_field)
+                        )
+                        .drop("terminator_id")
+                    )
                 if std_config.type == "numeric":
                     # if we have credits and debits in the same column we might need to exclude positive or negative values
                     data = data.with_columns(
@@ -702,17 +661,9 @@ def get_standard_fields(
                             data = data.with_columns(
                                 pl.col(std_field).str.split(by=" ").list.slice(-3).list.join(separator=" ").str.to_date(format=ref.format)
                             )
-                        # except pl.exceptions.InvalidOperationError:  # still failed?
-                        #     try:  # try removing the middle bit if the statement date is something like '9 December 2024 to 8 January 2025'
-                        #         data = data.with_columns(
-                        #             pl.col(std_field)
-                        #             .str.split(by=" ")
-                        #             .list.gather([0, 1, 6])
-                        #             .list.join(separator=" ")
-                        #             .str.to_date(format=ref.format)
-                        #         )
                         except pl.exceptions.InvalidOperationError:  # still failed?
                             continue  # give up and return the date as it is
+                    data = data.with_columns(pl.col(std_field).fill_null(strategy="forward"))
     if section == "pages":
         data = data.with_columns(STD_PAGE_NUMBER=pl.col("page"))
     if section == "lines":
@@ -737,12 +688,6 @@ def get_standard_fields(
     if section == "lines":
         checks_and_balances.hstack(data.select("STD_PAYMENT_IN", "STD_PAYMENT_OUT", "STD_MOVEMENT").sum(), in_place=True)
         checks_and_balances.hstack(data.select(pl.last("STD_RUNNING_BALANCE")), in_place=True)
-    # log = pl.DataFrame(
-    #     [[file_path, "statement_functions", "get_standard_fields", time.time() - start, 1, datetime.now(), ""]],
-    #     schema=logs.schema,
-    #     orient="row",
-    # )
-    # logs.vstack(log, in_place=True)
     # add a GUID to each record
     data = data.with_columns(STD_GUID=pl.lit(f"{uuid4()}"))
     return data

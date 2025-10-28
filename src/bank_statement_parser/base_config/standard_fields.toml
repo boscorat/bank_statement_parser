@@ -74,8 +74,8 @@
     section = "lines"
     type = "string"
     std_refs = [
-        {statement_type="HSBC UK Current Account", field="details"},
-        {statement_type="HSBC UK Saving Account", field="details"},
+        {statement_type="HSBC UK Current Account", field="details", terminator=" | BALANCECARRIEDFORWARD"},
+        {statement_type="HSBC UK Saving Account", field="details", terminator=" | BALANCECARRIEDFORWARD"},
         {statement_type="HSBC UK Credit Card", field="details"},
     ]
 

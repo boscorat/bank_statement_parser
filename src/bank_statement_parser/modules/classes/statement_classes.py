@@ -24,6 +24,10 @@ dir_logs = dir_exports.joinpath("logs")
 dir_excel = dir_exports.joinpath("excel")
 dir_json = dir_exports.joinpath("json")
 
+pl.Config.set_tbl_rows(-1)
+pl.Config.set_tbl_cols(-1)
+pl.Config.set_fmt_str_lengths(100)
+
 
 class Statement:
     logs: pl.DataFrame = pl.DataFrame(
@@ -53,7 +57,7 @@ class Statement:
         self._key3 = hashlib.sha256(
             bytes([ord(char["text"]) for char in self.pdf.chars[510:765] if len(char["text"]) == 1 and 46 <= ord(char["text"]) <= 122])
         ).hexdigest()
-        self.key = f"{self._key1}.{self._key2}.{self._key3}"
+        self.ID_STATEMENT = f"{self._key1}.{self._key2}.{self._key3}"
         if self.pdf:
             self.config = self.get_config()
             if self.config:
@@ -98,7 +102,21 @@ class Statement:
                 )
                 .then(pl.lit(True))
                 .otherwise(pl.lit(False)),
-                BAL_CLOSING=pl.when(pl.col("STD_CLOSING_BALANCE").sub(pl.col("STD_RUNNING_BALANCE")) == 0)
+                BAL_CLOSING=pl.when(
+                    (pl.col("STD_CLOSING_BALANCE").sub(pl.col("STD_RUNNING_BALANCE")) == 0)
+                    | (
+                        pl.col("STD_PAYMENTS_IN")
+                        .add(pl.col("STD_PAYMENTS_OUT"))
+                        .add(pl.col("STD_PAYMENT_IN").add(pl.col("STD_PAYMENT_OUT")))
+                        == 0
+                    )
+                )
+                .then(pl.lit(True))
+                .otherwise(pl.lit(False)),
+                ZERO_TRANSACTION_STATEMENT=pl.when(
+                    pl.col("STD_PAYMENTS_IN").add(pl.col("STD_PAYMENTS_OUT")).add(pl.col("STD_PAYMENT_IN").add(pl.col("STD_PAYMENT_OUT")))
+                    == 0
+                )
                 .then(pl.lit(True))
                 .otherwise(pl.lit(False)),
             )
@@ -109,6 +127,10 @@ class Statement:
             self.export_parquet()
 
     def is_successfull(self):
+        if (
+            self.checks_and_balances.filter(pl.col("ZERO_TRANSACTION_STATEMENT")).height > 0
+        ):  # some statments are just a header so there's nothing really to fail
+            return True
         if self.header_results.collect().height == 0:
             return False
         elif self.page_results.collect().height == 0:
@@ -130,7 +152,7 @@ class Statement:
     def export_parquet(self):
         # Fact_Transactions
         record_flags = pl.LazyFrame(
-            data=[[self.key, str(self.file.absolute()), self.file.name, datetime.now()]],
+            data=[[self.ID_STATEMENT, str(self.file.absolute()), self.file.name, datetime.now()]],
             orient="row",
             schema={"STD_STATEMENT": pl.Utf8, "STD_FILEPATH": pl.Utf8, "STD_FILENAME": pl.Utf8, "STD_UPDATETIME": pl.Datetime},
         )
@@ -141,7 +163,8 @@ class Statement:
         ).select(
             cs.starts_with("ID"),
             cs.contains("NUMBER"),
-            cs.contains("TRANSACTION_DATE"),
+            "STD_TRANSACTION_DATE",
+            "STD_TRANSACTION_DESC",
             cs.contains("PAYMENT"),
             cs.contains("MOVEMENT"),
             cs.contains("BALANCE"),
@@ -177,7 +200,9 @@ class Statement:
         )
 
         filepath_FACT_Transaction = dir_parquet.joinpath("FACT_Transaction.parquet")
-        FACT_Transaction_current = pl.scan_parquet(filepath_FACT_Transaction).filter(pl.col("ID_STATEMENT") != self.key).drop("index")
+        FACT_Transaction_current = (
+            pl.scan_parquet(filepath_FACT_Transaction).filter(pl.col("ID_STATEMENT") != self.ID_STATEMENT).drop("index")
+        )
         try:
             export = FACT_Transaction_current.collect().extend(FACT_Transaction.collect())
         except FileNotFoundError:
@@ -187,7 +212,7 @@ class Statement:
         )
 
         filepath_DIM_Statement = dir_parquet.joinpath("DIM_Statement.parquet")
-        DIM_Statement_current = pl.scan_parquet(filepath_DIM_Statement).filter(pl.col("ID_STATEMENT") != self.key).drop("index")
+        DIM_Statement_current = pl.scan_parquet(filepath_DIM_Statement).filter(pl.col("ID_STATEMENT") != self.ID_STATEMENT).drop("index")
         try:
             export = DIM_Statement_current.collect().extend(DIM_Statement.collect())
         except FileNotFoundError:
@@ -197,12 +222,15 @@ class Statement:
     def export_logs(self):
         """Export logs to parquet format"""
         export_log = self.logs.lazy().join(
-            pl.LazyFrame(data=[[self.key, datetime.now()]], orient="row", schema={"key": pl.Utf8, "log_time": pl.Datetime}), how="cross"
+            pl.LazyFrame(
+                data=[[self.ID_STATEMENT, datetime.now()]], orient="row", schema={"ID_STATEMENT": pl.Utf8, "log_time": pl.Datetime}
+            ),
+            how="cross",
         )
 
         # Latest By Statement
         parquet_path = dir_logs.joinpath("latest_by_statement.parquet")
-        current_log = pl.scan_parquet(parquet_path).filter(pl.col("key") != self.key)
+        current_log = pl.scan_parquet(parquet_path).filter(pl.col("ID_STATEMENT") != self.ID_STATEMENT)
         try:
             export = export_log.collect().extend(current_log.drop("index").collect())
         except FileNotFoundError:
@@ -211,15 +239,18 @@ class Statement:
 
         # Latest Run
         parquet_path = dir_logs.joinpath("latest_run.parquet")
-        current_log = pl.scan_parquet(parquet_path).filter(pl.col("key") != self.key)
+        current_log = pl.scan_parquet(parquet_path).filter(pl.col("ID_STATMENT") != self.ID_STATEMENT)
         export_log.sort("time").collect().with_row_index().write_parquet(parquet_path)
 
         # Checks & Balances
         export_cab = self.checks_and_balances.lazy().join(
-            pl.LazyFrame(data=[[self.key, datetime.now()]], orient="row", schema={"key": pl.Utf8, "log_time": pl.Datetime}), how="cross"
+            pl.LazyFrame(
+                data=[[self.ID_STATEMENT, datetime.now()]], orient="row", schema={"ID_STATEMENT": pl.Utf8, "log_time": pl.Datetime}
+            ),
+            how="cross",
         )
         parquet_path = dir_logs.joinpath("checks_and_balances.parquet")
-        current_cab = pl.scan_parquet(parquet_path).filter(pl.col("key") != self.key)
+        current_cab = pl.scan_parquet(parquet_path).filter(pl.col("ID_STATEMENT") != self.ID_STATEMENT)
         try:
             export = export_cab.collect().extend(current_cab.drop("index").collect())
         except FileNotFoundError:
@@ -285,8 +316,8 @@ class Statement:
                 config_standard_fields,
                 self.statement_type,
                 self.checks_and_balances,
-                self.logs,
-                str(self.file.absolute()),
+                # self.logs,
+                # str(self.file.absolute()),
             )
         self.logs.rechunk()
         return results.rechunk().lazy()
@@ -294,19 +325,12 @@ class Statement:
     def get_config(self) -> Account | None:
         if self.pdf is None:
             return None
-        start = time.time()
         if self.account_key:
             config = get_config_from_account(self.account_key, self.logs, str(self.file.absolute()))
         elif self.company_key:
             config = get_config_from_company(self.company_key, self.pdf, self.logs, str(self.file.absolute()))
         else:
             config = get_config_from_statement(self.pdf, str(self.file.absolute()), self.logs)
-        # log = pl.DataFrame(
-        #     [[str(self.file.absolute()), "statement_classes", "get_config", time.time() - start, 1, datetime.now(), ""]],
-        #     schema=self.logs.schema,
-        #     orient="row",
-        # )
-        # self.logs.vstack(log, in_place=True)
         return deepcopy(config) if config else None  # we return a deepcopy in case we need to make statement-specific modifications
 
     def close_pdf(self):
@@ -315,7 +339,7 @@ class Statement:
             self.pdf = None
 
 
-folder = "/home/boscorat/Downloads/2023"
+folder = "/home/boscorat/Downloads/2022"
 pdfs = [file for file in Path(folder).iterdir() if file.is_file() and file.suffix == ".pdf"]
 pdf_count = len(pdfs)
 for id, pdf in enumerate(pdfs):
@@ -348,9 +372,19 @@ for id, pdf in enumerate(pdfs):
 
 # with pl.Config(tbl_cols=-1, tbl_rows=-1, set_fmt_str_lengths=100):
 #     path = dir_parquet.joinpath("DIM_Statement.parquet")
-#     print(pl.read_parquet(path))
-#     print(
-#         pl.read_parquet(path)
-#         .select("STD_FILEPATH", "STD_FILENAME", "STD_STATEMENT_DATE", "STD_ACCOUNT")
-#         .sort("STD_ACCOUNT", "STD_STATEMENT_DATE")
-#     )
+#     dim_statement = pl.read_parquet(path).filter(pl.col("STD_FILENAME") == "2022-08-08_Statement.pdf")
+#     print(dim_statement)
+
+#     path = dir_logs.joinpath("checks_and_balances.parquet")
+#     cab = pl.read_parquet(path).join(dim_statement.select("ID_STATEMENT"), on="ID_STATEMENT", coalesce=True)
+#     print(cab)
+
+#     path = dir_parquet.joinpath("FACT_Transaction.parquet")
+#     fact_transaction = pl.read_parquet(path).join(dim_statement.select("ID_STATEMENT"), on="ID_STATEMENT", coalesce=True)
+#     print(fact_transaction)
+
+#     # print(
+#     #     pl.read_parquet(path)
+#     #     .select("STD_FILEPATH", "STD_FILENAME", "STD_STATEMENT_DATE", "STD_ACCOUNT")
+#     #     .sort("STD_ACCOUNT", "STD_STATEMENT_DATE")
+#     # )
