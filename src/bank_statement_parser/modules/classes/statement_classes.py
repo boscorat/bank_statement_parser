@@ -1,5 +1,4 @@
 import hashlib
-import time
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
@@ -14,6 +13,7 @@ from bank_statement_parser.modules.config import (
     get_config_from_company,
     get_config_from_statement,
 )
+from bank_statement_parser.modules.constants import PATH_DIM_STATEMENT, PATH_FACT_TRANSACTION
 from bank_statement_parser.modules.functions.pdf_functions import pdf_close, pdf_open
 from bank_statement_parser.modules.functions.statement_functions import get_results, get_standard_fields
 
@@ -73,11 +73,6 @@ class Statement:
                     if self.config.statement_type and hasattr(self.config.statement_type, "header")
                     else None
                 )
-                self.config_pages = (
-                    self.config.statement_type.pages.configs
-                    if self.config.statement_type and hasattr(self.config.statement_type, "pages")
-                    else None
-                )
                 self.config_lines = (
                     self.config.statement_type.lines.configs
                     if self.config.statement_type and hasattr(self.config.statement_type, "lines")
@@ -85,7 +80,6 @@ class Statement:
                 )
 
             self.header_results = self.get_results("header")
-            self.page_results = self.get_results("pages")
             self.lines_results = self.get_results("lines")
 
             # checks and balances
@@ -132,8 +126,6 @@ class Statement:
         ):  # some statments are just a header so there's nothing really to fail
             return True
         if self.header_results.collect().height == 0:
-            return False
-        elif self.page_results.collect().height == 0:
             return False
         elif self.lines_results.collect().height == 0:
             return False
@@ -339,7 +331,7 @@ class Statement:
             self.pdf = None
 
 
-folder = "/home/boscorat/Downloads/2021"
+folder = "/home/boscorat/Downloads/2025"
 pdfs = [file for file in Path(folder).iterdir() if file.is_file() and file.suffix == ".pdf"]
 pdf_count = len(pdfs)
 for id, pdf in enumerate(pdfs):
@@ -356,22 +348,22 @@ for id, pdf in enumerate(pdfs):
     print()
     stmt.close_pdf()
 
-# for id, file in enumerate(pdfs):
-#     if file in ["quarantine", "success"] or id < 0:
-#         continue
-#     file_path = os.path.join(folder, file)
-#     print(f"\n\n{file_path.center(80, '=')}")
-#     stmt = Statement(file_path)
-#     print(f"\n\n{(stmt.company + '---' + stmt.account).center(80, '=')}")
-#     # print(f"\n KEY: {stmt.key}\n")
-#     print(f"\n SUCCESS: {stmt.success}\n")
-#     if not stmt.success:
-#         with pl.Config(tbl_cols=-1, tbl_rows=-1):
-#             print(stmt.checks_and_balances)
-#     print()
+    # for id, file in enumerate(pdfs):
+    #     if file in ["quarantine", "success"] or id < 0:
+    #         continue
+    #     file_path = os.path.join(folder, file)
+    #     print(f"\n\n{file_path.center(80, '=')}")
+    #     stmt = Statement(file_path)
+    #     print(f"\n\n{(stmt.company + '---' + stmt.account).center(80, '=')}")
+    #     # print(f"\n KEY: {stmt.key}\n")
+    #     print(f"\n SUCCESS: {stmt.success}\n")
+    #     if not stmt.success:
+    #         with pl.Config(tbl_cols=-1, tbl_rows=-1):
+    #             print(stmt.checks_and_balances)
+    #     print()
 
-# with pl.Config(tbl_cols=-1, tbl_rows=-1, set_fmt_str_lengths=100):
-#     path = dir_parquet.joinpath("DIM_Statement.parquet")
+    # with pl.Config(tbl_cols=-1, tbl_rows=-1, set_fmt_str_lengths=100):
+# path = dir_parquet.joinpath("DIM_Statement.parquet")
 #     dim_statement = pl.read_parquet(path).filter(pl.col("STD_FILENAME") == "2022-08-08_Statement.pdf")
 #     print(dim_statement)
 
@@ -383,8 +375,20 @@ for id, pdf in enumerate(pdfs):
 #     fact_transaction = pl.read_parquet(path).join(dim_statement.select("ID_STATEMENT"), on="ID_STATEMENT", coalesce=True)
 #     print(fact_transaction)
 
-#     # print(
-#     #     pl.read_parquet(path)
-#     #     .select("STD_FILEPATH", "STD_FILENAME", "STD_STATEMENT_DATE", "STD_ACCOUNT")
-#     #     .sort("STD_ACCOUNT", "STD_STATEMENT_DATE")
-#     # )
+print(
+    pl.read_parquet(PATH_DIM_STATEMENT)
+    .select("STD_FILENAME", "STD_STATEMENT_DATE", "STD_ACCOUNT", "STD_OPENING_BALANCE", "STD_CLOSING_BALANCE")
+    .sort("STD_ACCOUNT", "STD_STATEMENT_DATE")
+    .with_row_index()
+    .with_columns(
+        gap=pl.when(pl.col("index") == 0)
+        .then(pl.lit(False))
+        .otherwise(
+            pl.when(pl.col("STD_ACCOUNT") != pl.col("STD_ACCOUNT").shift())
+            .then(pl.lit(False))
+            .otherwise(
+                pl.when(pl.col("STD_OPENING_BALANCE") == pl.col("STD_CLOSING_BALANCE").shift()).then(pl.lit(False)).otherwise(pl.lit(True))
+            )
+        )
+    )
+)

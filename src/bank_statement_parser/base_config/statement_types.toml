@@ -16,15 +16,6 @@ statement_type = 'HSBC UK Current Account'
             config = 'Account Info'
             statement_table_key = 'HSBC_UK_CUR_ACCT_DET'
 
-    [HSBC_UK_CUR.pages]
-            [[HSBC_UK_CUR.pages.configs]]
-            config = 'Page Info'
-            locations = [
-                {page_number = 1, top_left = [485, 388], bottom_right = [550, 410]}, #first page
-                {top_left = [485, 163], bottom_right = [550, 185]} # all other pages
-            ]
-            field = {field = 'sheet_number', vital=false, type = "string", string_pattern ='^[0-9]+$'}
-
     [HSBC_UK_CUR.lines]
         [[HSBC_UK_CUR.lines.configs]]
             config = 'Transaction Lines'
@@ -45,15 +36,6 @@ statement_type = 'HSBC UK Saving Account'
         [[HSBC_UK_SAV.header.configs]]
             config = 'Account Info'
             statement_table_key = 'HSBC_UK_SAV_ACCT_DET'
-
-    [HSBC_UK_SAV.page]
-        [[HSBC_UK_SAV.pages.configs]]
-            config = 'Page Info'
-            locations = [
-                {page_number = 1, top_left = [485, 408], bottom_right = [550, 425], try_shift_down = -8}, #first page
-                {top_left = [485, 163], bottom_right = [550, 185]} # all other pages
-            ]
-            field = {field = 'sheet_number', vital=false, type = "string", string_pattern ='^[0-9]+$'}
 
     [HSBC_UK_SAV.lines]
         [[HSBC_UK_SAV.lines.configs]]
@@ -82,15 +64,6 @@ statement_type = 'HSBC UK Credit Card'
             locations = [{page_number=2, top_left = [220, 175], bottom_right = [340, 197]}]
             field = {field = 'card_number', vital=true, type = "string", string_pattern ='^[0-9]{4}\s[0-9]{4}\s[0-9]{4}\s[0-9]{4}\s?$'}
 
-    [HSBC_UK_CRD.page]
-        [[HSBC_UK_CRD.pages.configs]]
-            config = 'Page Info'
-            locations = [
-                {page_number = 1, top_left = [480, 470], bottom_right = [590, 500]}, #first page
-                {page_number = 2, top_left = [475, 145], bottom_right = [590, 185]}, #first page
-                {top_left = [460, 80], bottom_right = [590, 130]} # all other pages
-            ]
-            field = {field = 'sheet_number', vital=false, type = "string", string_pattern ='^Sheet[\s]*number[\s]*[0-9]+[\s]*of[\s]*[0-9]+$'}
     [HSBC_UK_CRD.lines]
         [[HSBC_UK_CRD.lines.configs]]
             config = 'Transaction Lines'

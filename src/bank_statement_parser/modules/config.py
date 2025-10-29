@@ -60,7 +60,7 @@ for v in __config_dict.values():
         v["config"][k] = from_dict(data_class=v["dataclass"], data=v["config"][k])
 
 # Link statement table configurations to their corresponding statement type configs.
-# For each statement type, if any header, page, or line config references a statement_table_key,
+# For each statement type, if any header or line config references a statement_table_key,
 # assign the corresponding StatementTable object from config_dict["statement_tables"]["config"]
 # to the statement_table attribute of that config group.
 for key, statement_type in __config_dict["statement_types"]["config"].items():
@@ -68,12 +68,6 @@ for key, statement_type in __config_dict["statement_types"]["config"].items():
         for id, config_group in enumerate(statement_type.header.configs):
             if config_group.statement_table_key:
                 __config_dict["statement_types"]["config"][key].header.configs[id].statement_table = __config_dict["statement_tables"][
-                    "config"
-                ][config_group.statement_table_key]
-    if statement_type.pages.configs:
-        for id, config_group in enumerate(statement_type.pages.configs):
-            if config_group.statement_table_key:
-                __config_dict["statement_types"]["config"][key].pages.configs[id].statement_table = __config_dict["statement_tables"][
                     "config"
                 ][config_group.statement_table_key]
     if statement_type.lines.configs:

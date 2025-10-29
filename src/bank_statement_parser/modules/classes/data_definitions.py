@@ -160,7 +160,6 @@ class ConfigGroup:
 class StatementType:
     statement_type: str
     header: ConfigGroup
-    pages: ConfigGroup
     lines: ConfigGroup
 
 
