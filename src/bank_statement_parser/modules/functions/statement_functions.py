@@ -308,6 +308,14 @@ def extract_fields(
     result: pl.LazyFrame = pl.LazyFrame()
     region = get_region(location, pdf, logs, file_path)
     if not statement_table:
+        if region and len(region.chars) == 0 and location.try_shift_down:  # if the region is empty
+            try:
+                if location.top_left and location.bottom_right:
+                    location.top_left[1] = location.top_left[1] + location.try_shift_down
+                    location.bottom_right[1] = location.bottom_right[1] + location.try_shift_down
+                    region = get_region(location, pdf, logs, file_path)
+            except IndexError:
+                pass
         if region and config_field:
             result = pl.LazyFrame(
                 data=[

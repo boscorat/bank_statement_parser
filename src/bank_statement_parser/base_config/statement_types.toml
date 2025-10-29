@@ -50,7 +50,7 @@ statement_type = 'HSBC UK Saving Account'
         [[HSBC_UK_SAV.pages.configs]]
             config = 'Page Info'
             locations = [
-                {page_number = 1, top_left = [485, 408], bottom_right = [550, 425]}, #first page
+                {page_number = 1, top_left = [485, 408], bottom_right = [550, 425], try_shift_down = -8}, #first page
                 {top_left = [485, 163], bottom_right = [550, 185]} # all other pages
             ]
             field = {field = 'sheet_number', vital=false, type = "string", string_pattern ='^[0-9]+$'}

@@ -339,7 +339,7 @@ class Statement:
             self.pdf = None
 
 
-folder = "/home/boscorat/Downloads/2022"
+folder = "/home/boscorat/Downloads/2021"
 pdfs = [file for file in Path(folder).iterdir() if file.is_file() and file.suffix == ".pdf"]
 pdf_count = len(pdfs)
 for id, pdf in enumerate(pdfs):
