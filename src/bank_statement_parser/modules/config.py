@@ -1,14 +1,13 @@
 import time
 from copy import deepcopy
 from datetime import datetime
-from pathlib import Path
 
 import polars as pl
 from dacite import from_dict
 from pdfplumber.pdf import PDF
 from tomllib import load
 
-from bank_statement_parser.modules.classes.data_definitions import (
+from bank_statement_parser.modules.classes.data import (
     Account,
     AccountType,
     Company,
@@ -17,7 +16,8 @@ from bank_statement_parser.modules.classes.data_definitions import (
     StatementType,
 )
 from bank_statement_parser.modules.classes.errors import ConfigFileError, StatementError
-from bank_statement_parser.modules.functions.statement_functions import get_results
+from bank_statement_parser.modules.functions.statements import get_results
+from bank_statement_parser.modules.paths import PATH_BASE_CONFIG, PATH_USER_CONFIG
 
 """
 WRITE SOME TESTS TO VALIDATE THE CONFIG FILES!!!!!
@@ -26,8 +26,8 @@ column must be set for all transaction fields
 numeric fields should have a currency and none of the date or string specific fields
 """
 
-__dir_base = Path(__file__).parent.parent.joinpath("base_config")
-__dir_user = Path(__file__).parent.parent.parent.joinpath("user_config")
+__dir_base = PATH_BASE_CONFIG
+__dir_user = PATH_USER_CONFIG
 
 __config_dict = {
     "companies": {"dataclass": Company, "config": dict()},
@@ -93,10 +93,6 @@ config_statement_types_df = pl.DataFrame(config_statement_types).transpose(
     include_header=True, header_name="statement_type", column_names=["config"]
 )
 config_companies_df = pl.DataFrame(config_companies).transpose(include_header=True, header_name="company", column_names=["config"])
-
-# print(config_accounts_df)
-# print(config_statement_types_df)
-# print(config_accounts_df)
 
 
 def config_company_accounts(company_key: str) -> list[Account]:
@@ -195,6 +191,3 @@ def get_config_from_statement(pdf: PDF, file_path: str, logs: pl.DataFrame) -> A
         in_place=True,
     )
     return config_account
-
-
-...

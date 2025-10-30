@@ -2,31 +2,24 @@ import hashlib
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
+from time import gmtime, strftime, time
+from uuid import uuid4
 
+# from typing import Generator
 import polars as pl
 import polars.selectors as cs
 
-from bank_statement_parser.modules.classes.data_definitions import Account
+from bank_statement_parser.modules.classes.data import Account
+from bank_statement_parser.modules.classes.database import BatchHeads, BatchLines
 from bank_statement_parser.modules.config import (
     config_standard_fields,
     get_config_from_account,
     get_config_from_company,
     get_config_from_statement,
 )
-from bank_statement_parser.modules.constants import PATH_DIM_STATEMENT, PATH_FACT_TRANSACTION
-from bank_statement_parser.modules.functions.pdf_functions import pdf_close, pdf_open
-from bank_statement_parser.modules.functions.statement_functions import get_results, get_standard_fields
-
-dir_exports = (Path(__file__).parent.parent.parent.parent).joinpath("exports")
-dir_parquet = dir_exports.joinpath("parquet")
-dir_csv = dir_exports.joinpath("csv")
-dir_logs = dir_exports.joinpath("logs")
-dir_excel = dir_exports.joinpath("excel")
-dir_json = dir_exports.joinpath("json")
-
-pl.Config.set_tbl_rows(-1)
-pl.Config.set_tbl_cols(-1)
-pl.Config.set_fmt_str_lengths(100)
+from bank_statement_parser.modules.functions.pdfs import pdf_close, pdf_open
+from bank_statement_parser.modules.functions.statements import get_results, get_standard_fields
+from bank_statement_parser.modules.paths import PATH_CAB, PATH_DIM_STATEMENT, PATH_FACT_TRANSACTION
 
 
 class Statement:
@@ -191,48 +184,44 @@ class Statement:
             )
         )
 
-        filepath_FACT_Transaction = dir_parquet.joinpath("FACT_Transaction.parquet")
-        FACT_Transaction_current = (
-            pl.scan_parquet(filepath_FACT_Transaction).filter(pl.col("ID_STATEMENT") != self.ID_STATEMENT).drop("index")
-        )
+        FACT_Transaction_current = pl.scan_parquet(PATH_FACT_TRANSACTION).filter(pl.col("ID_STATEMENT") != self.ID_STATEMENT).drop("index")
         try:
             export = FACT_Transaction_current.collect().extend(FACT_Transaction.collect())
         except FileNotFoundError:
             export = FACT_Transaction.collect()
         export.sort("STD_UPDATETIME", "STD_TRANSACTION_NUMBER", descending=[False, False]).with_row_index().write_parquet(
-            filepath_FACT_Transaction
+            PATH_FACT_TRANSACTION
         )
 
-        filepath_DIM_Statement = dir_parquet.joinpath("DIM_Statement.parquet")
-        DIM_Statement_current = pl.scan_parquet(filepath_DIM_Statement).filter(pl.col("ID_STATEMENT") != self.ID_STATEMENT).drop("index")
+        DIM_Statement_current = pl.scan_parquet(PATH_DIM_STATEMENT).filter(pl.col("ID_STATEMENT") != self.ID_STATEMENT).drop("index")
         try:
             export = DIM_Statement_current.collect().extend(DIM_Statement.collect())
         except FileNotFoundError:
             export = DIM_Statement.collect()
-        export.sort("STD_UPDATETIME", descending=False).with_row_index().write_parquet(filepath_DIM_Statement)
+        export.sort("STD_UPDATETIME", descending=False).with_row_index().write_parquet(PATH_DIM_STATEMENT)
 
     def export_logs(self):
         """Export logs to parquet format"""
-        export_log = self.logs.lazy().join(
-            pl.LazyFrame(
-                data=[[self.ID_STATEMENT, datetime.now()]], orient="row", schema={"ID_STATEMENT": pl.Utf8, "log_time": pl.Datetime}
-            ),
-            how="cross",
-        )
+        # export_log = self.logs.lazy().join(
+        #     pl.LazyFrame(
+        #         data=[[self.ID_STATEMENT, datetime.now()]], orient="row", schema={"ID_STATEMENT": pl.Utf8, "log_time": pl.Datetime}
+        #     ),
+        #     how="cross",
+        # )
 
-        # Latest By Statement
-        parquet_path = dir_logs.joinpath("latest_by_statement.parquet")
-        current_log = pl.scan_parquet(parquet_path).filter(pl.col("ID_STATEMENT") != self.ID_STATEMENT)
-        try:
-            export = export_log.collect().extend(current_log.drop("index").collect())
-        except FileNotFoundError:
-            export = export_log.collect()
-        export.sort("time").with_row_index().write_parquet(parquet_path)
+        # # Latest By Statement
+        # parquet_path = dir_logs.joinpath("latest_by_statement.parquet")
+        # current_log = pl.scan_parquet(parquet_path).filter(pl.col("ID_STATEMENT") != self.ID_STATEMENT)
+        # try:
+        #     export = export_log.collect().extend(current_log.drop("index").collect())
+        # except FileNotFoundError:
+        #     export = export_log.collect()
+        # export.sort("time").with_row_index().write_parquet(parquet_path)
 
-        # Latest Run
-        parquet_path = dir_logs.joinpath("latest_run.parquet")
-        current_log = pl.scan_parquet(parquet_path).filter(pl.col("ID_STATMENT") != self.ID_STATEMENT)
-        export_log.sort("time").collect().with_row_index().write_parquet(parquet_path)
+        # # Latest Run
+        # parquet_path = dir_logs.joinpath("latest_run.parquet")
+        # current_log = pl.scan_parquet(parquet_path).filter(pl.col("ID_STATMENT") != self.ID_STATEMENT)
+        # export_log.sort("time").collect().with_row_index().write_parquet(parquet_path)
 
         # Checks & Balances
         export_cab = self.checks_and_balances.lazy().join(
@@ -241,13 +230,12 @@ class Statement:
             ),
             how="cross",
         )
-        parquet_path = dir_logs.joinpath("checks_and_balances.parquet")
-        current_cab = pl.scan_parquet(parquet_path).filter(pl.col("ID_STATEMENT") != self.ID_STATEMENT)
+        current_cab = pl.scan_parquet(PATH_CAB).filter(pl.col("ID_STATEMENT") != self.ID_STATEMENT)
         try:
             export = export_cab.collect().extend(current_cab.drop("index").collect())
         except FileNotFoundError:
             export = export_cab.collect()
-        export.sort("log_time").with_row_index().write_parquet(parquet_path)
+        export.sort("log_time").with_row_index().write_parquet(PATH_CAB)
 
     def get_results(self, section: str) -> pl.LazyFrame:
         results: pl.DataFrame = pl.DataFrame()
@@ -270,21 +258,6 @@ class Statement:
                     )
             if results.height > 0:
                 results = results.pivot(values="value", index="section", on="field")
-        elif section == "pages" and self.config_pages:
-            for config in self.config_pages:
-                if self.pdf:
-                    results.vstack(
-                        get_results(
-                            self.pdf,
-                            section,
-                            config,
-                            scope="success",
-                            logs=self.logs,
-                            file_path=str(self.file.absolute()),
-                            exclude_last_n_pages=self.config.exclude_last_n_pages,
-                        ),
-                        in_place=True,
-                    )
         elif section == "lines" and self.config_lines:
             for config in self.config_lines:
                 if self.pdf:
@@ -331,64 +304,73 @@ class Statement:
             self.pdf = None
 
 
-folder = "/home/boscorat/Downloads/2025"
-pdfs = [file for file in Path(folder).iterdir() if file.is_file() and file.suffix == ".pdf"]
-pdf_count = len(pdfs)
-for id, pdf in enumerate(pdfs):
-    # if (id + 1) < 29 or (id + 1) in [30, 31, 32, 33, 34, 35, 36, 37]:
-    #     continue
-    print(f"{id + 1} of {pdf_count}")
-    print(f"\n\n{str(pdf.absolute()).center(80, '=')}")
-    stmt = Statement(file=pdf)
-    print(f"\n\n{(stmt.company + '---' + stmt.account).center(80, '=')}")
-    print(f"\n SUCCESS: {stmt.success}\n")
-    if not stmt.success:
-        with pl.Config(tbl_cols=-1, tbl_rows=-1):
-            print(stmt.checks_and_balances)
-    print()
-    stmt.close_pdf()
+class StatementBatch:
+    def __init__(self, path: str, company_key: str | None = None, account_key: str | None = None, print_log: bool = True):
+        print("processing...")
+        self.process_time: datetime = datetime.now()
+        self.path: str = path
+        self.ID_BATCH: str = str(uuid4())
+        self.__path_type = "file" if Path(self.path).is_file() else "folder"
+        self.company_key = company_key
+        self.account_key = account_key
+        self.print_log = print_log
+        if self.__path_type == "folder":
+            self.pdfs: list[Path] = [file for file in Path(path).iterdir() if file.is_file() and file.suffix == ".pdf"]
+        elif self.__path_type == "file" and Path(path).suffix == ".pdf":
+            self.pdfs = [Path(path)]
+        else:
+            self.pdfs = []
+        self.pdf_count: int = len(self.pdfs)
+        self.log: list = []
+        self.errors: int = 0
+        self.duration_secs: int = 0
+        self.process_batch()
 
-    # for id, file in enumerate(pdfs):
-    #     if file in ["quarantine", "success"] or id < 0:
-    #         continue
-    #     file_path = os.path.join(folder, file)
-    #     print(f"\n\n{file_path.center(80, '=')}")
-    #     stmt = Statement(file_path)
-    #     print(f"\n\n{(stmt.company + '---' + stmt.account).center(80, '=')}")
-    #     # print(f"\n KEY: {stmt.key}\n")
-    #     print(f"\n SUCCESS: {stmt.success}\n")
-    #     if not stmt.success:
-    #         with pl.Config(tbl_cols=-1, tbl_rows=-1):
-    #             print(stmt.checks_and_balances)
-    #     print()
+    def process_batch(self) -> None:
+        timer_start: float = time()
+        batch_lines: list[dict] = []
 
-    # with pl.Config(tbl_cols=-1, tbl_rows=-1, set_fmt_str_lengths=100):
-# path = dir_parquet.joinpath("DIM_Statement.parquet")
-#     dim_statement = pl.read_parquet(path).filter(pl.col("STD_FILENAME") == "2022-08-08_Statement.pdf")
-#     print(dim_statement)
+        for id, pdf in enumerate(self.pdfs):
+            line_start = time()
+            batch_line: dict = {}
+            batch_line["ID_BATCH"] = self.ID_BATCH
+            batch_line["ID_BATCHLINE"] = self.ID_BATCH + "_" + str(id + 1)
+            batch_line["ID_STATEMENT"] = ""
+            batch_line["STD_BATCH_LINE"] = id + 1
+            batch_line["STD_FILENAME"] = pdf.name
+            batch_line["STD_ACCOUNT"] = ""
+            batch_line["STD_DURATION_SECS"] = 0.00
+            batch_line["STD_UPDATETIME"] = datetime.now()
+            batch_line["STD_SUCCESS"] = False
+            batch_line["STD_ERROR_MESSAGE"] = ""
+            batch_line["ERROR_CAB"] = False
+            batch_line["ERROR_CONFIG"] = False
+            try:
+                stmt = Statement(file=pdf, company_key=self.company_key, account_key=self.account_key)
+                batch_line["ID_STATEMENT"] = stmt.ID_STATEMENT
+                batch_line["STD_ACCOUNT"] = stmt.account
+                batch_line["STD_SUCCESS"] = stmt.success
+                if not stmt.success:
+                    self.errors += 1
+                    batch_line["ERROR_CAB"] = True
+                    batch_line["STD_ERROR_MESSAGE"] += "** Checks & Balances Failure **"
+            except BaseException:
+                self.errors += 1
+                batch_line["ERROR_CONFIG"] = True
+                batch_line["STD_ERROR_MESSAGE"] += "** Configuration Failure **"
+            stmt.close_pdf()
+            line_end = time()
+            batch_line["STD_DURATION_SECS"] = line_end - line_start
+            batch_line["STD_UPDATETIME"] = datetime.now()
+            batch_lines.append(batch_line)
+        timer_end: float = time()
+        self.duration_secs = int(timer_end) - int(timer_start)
+        self.db_updates(batch_lines)
 
-#     path = dir_logs.joinpath("checks_and_balances.parquet")
-#     cab = pl.read_parquet(path).join(dim_statement.select("ID_STATEMENT"), on="ID_STATEMENT", coalesce=True)
-#     print(cab)
-
-#     path = dir_parquet.joinpath("FACT_Transaction.parquet")
-#     fact_transaction = pl.read_parquet(path).join(dim_statement.select("ID_STATEMENT"), on="ID_STATEMENT", coalesce=True)
-#     print(fact_transaction)
-
-print(
-    pl.read_parquet(PATH_DIM_STATEMENT)
-    .select("STD_FILENAME", "STD_STATEMENT_DATE", "STD_ACCOUNT", "STD_OPENING_BALANCE", "STD_CLOSING_BALANCE")
-    .sort("STD_ACCOUNT", "STD_STATEMENT_DATE")
-    .with_row_index()
-    .with_columns(
-        gap=pl.when(pl.col("index") == 0)
-        .then(pl.lit(False))
-        .otherwise(
-            pl.when(pl.col("STD_ACCOUNT") != pl.col("STD_ACCOUNT").shift())
-            .then(pl.lit(False))
-            .otherwise(
-                pl.when(pl.col("STD_OPENING_BALANCE") == pl.col("STD_CLOSING_BALANCE").shift()).then(pl.lit(False)).otherwise(pl.lit(True))
-            )
-        )
-    )
-)
+    def db_updates(self, batch_lines):
+        db_heads = BatchHeads(self)
+        db_heads.create()
+        print(db_heads.db_records)
+        db_lines = BatchLines(batch_lines)
+        db_lines.create()
+        print(db_lines.db_records)

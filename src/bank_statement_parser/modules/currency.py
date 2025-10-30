@@ -1,4 +1,4 @@
-from bank_statement_parser.modules.classes.data_definitions import CurrencySpec
+from bank_statement_parser.modules.classes.data import CurrencySpec
 
 currency_dict: dict = {
     "GBP": {

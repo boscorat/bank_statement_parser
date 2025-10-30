@@ -1,4 +1,3 @@
-import time
 from copy import deepcopy
 from uuid import uuid4
 
@@ -6,7 +5,7 @@ import polars as pl
 import polars.selectors as cs
 from pdfplumber.pdf import PDF
 
-from bank_statement_parser.modules.classes.data_definitions import (
+from bank_statement_parser.modules.classes.data import (
     Config,
     CurrencySpec,
     Field,
@@ -15,9 +14,7 @@ from bank_statement_parser.modules.classes.data_definitions import (
     TransactionSpec,
 )
 from bank_statement_parser.modules.currency import currency_spec
-from bank_statement_parser.modules.functions.pdf_functions import get_region, get_table_from_region
-
-DEBUG = False
+from bank_statement_parser.modules.functions.pdfs import get_region, get_table_from_region
 
 
 def spawn_locations(
@@ -55,17 +52,8 @@ def spawn_locations(
 
 
 def strip(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: str, spec: CurrencySpec | None = None) -> pl.LazyFrame:
-    # if field.field == "interest":
-    #     DEBUG = True
-    # else:
-    #     DEBUG = False
     src = "raw"
     step = "strip"
-    if DEBUG:
-        print(f"{step}: {field.field}")
-        print("Before...")
-        with pl.Config(tbl_cols=-1, tbl_rows=-1):
-            print(data.collect())
     data = data.with_columns(
         pl.col(f"value_{src}").fill_null("").alias(f"value_{step}"),
         pl.lit(False).alias(f"success_{step}"),
@@ -93,10 +81,6 @@ def strip(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: str, 
     data = data.with_columns(
         ((pl.col(f"value_{step}").is_not_null()) & (pl.col(f"value_{step}").str.len_bytes() > 0)).alias(f"success_{step}")
     ).with_columns(pl.when(pl.col(f"success_{step}")).then(None).otherwise(pl.col(f"error_{step}")).alias(f"error_{step}"))
-    if DEBUG:
-        print("After...")
-        with pl.Config(tbl_cols=-1, tbl_rows=-1):
-            print(data.collect())
     return data
 
 
@@ -119,10 +103,6 @@ def build_pattern(
 
 
 def patmatch(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: str, spec: CurrencySpec | None = None) -> pl.LazyFrame:
-    # if field.field == "interest":
-    #     DEBUG = True
-    # else:
-    #     DEBUG = False
     src = "strip"
     step = "pattern"
     pattern = build_pattern(
@@ -131,11 +111,6 @@ def patmatch(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: st
         prefix=field.numeric_modifier.prefix if field.numeric_modifier else None,
         suffix=field.numeric_modifier.suffix if field.numeric_modifier else None,
     )
-    if DEBUG:
-        print(f"{step}: spec: {pattern}")
-        print("Before...")
-        with pl.Config(tbl_cols=-1, tbl_rows=-1):
-            print(data.collect())
     data = data.with_columns(
         pl.lit("").alias(f"value_{step}"),
         pl.lit(False).alias(f"success_{step}"),
@@ -145,21 +120,13 @@ def patmatch(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: st
     data = data.with_columns(
         ((pl.col(f"value_{step}").is_not_null()) & (pl.col(f"value_{step}").str.len_bytes() > 0)).alias(f"success_{step}")
     ).with_columns(pl.when(pl.col(f"success_{step}")).then(None).otherwise(pl.col(f"error_{step}")).alias(f"error_{step}"))
-    if DEBUG:
-        print("After...")
-        with pl.Config(tbl_cols=-1, tbl_rows=-1):
-            print(data.collect())
+
     return data
 
 
 def cast(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: str) -> pl.LazyFrame:
     src = "pattern"
     step = "cast"
-    if DEBUG:
-        print(f"{step}: {field.numeric_modifier}")
-        print("Before...")
-        with pl.Config(tbl_cols=-1, tbl_rows=-1):
-            print(data.collect())
     data = data.with_columns(
         pl.lit("").alias(f"value_{step}"),
         pl.lit(False).alias(f"success_{step}"),
@@ -213,21 +180,13 @@ def cast(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: str) -
     data = data.with_columns(
         ((pl.col(f"value_{step}").is_not_null()) & (pl.col(f"value_{step}").str.len_bytes() > 0)).alias(f"success_{step}")
     ).with_columns(pl.when(pl.col(f"success_{step}")).then(None).otherwise(pl.col(f"error_{step}")).alias(f"error_{step}"))
-    if DEBUG:
-        print("After...")
-        with pl.Config(tbl_cols=-1, tbl_rows=-1):
-            print(data.collect())
+
     return data
 
 
 def trim(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: str) -> pl.LazyFrame:
     src = "cast"
     step = "trim"
-    if DEBUG:
-        print(f"{step}: {field.string_max_length}")
-        print("Before...")
-        with pl.Config(tbl_cols=-1, tbl_rows=-1):
-            print(data.collect())
     data = data.with_columns(
         pl.lit("").alias(f"value_{step}"),
         pl.lit(False).alias(f"success_{step}"),
@@ -241,41 +200,20 @@ def trim(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: str) -
     data = data.with_columns(
         ((pl.col(f"value_{step}").is_not_null()) & (pl.col(f"value_{step}").str.len_bytes() > 0)).alias(f"success_{step}")
     ).with_columns(pl.when(pl.col(f"success_{step}")).then(None).otherwise(pl.col(f"error_{step}")).alias(f"error_{step}"))
-    if DEBUG:
-        print("After...")
-        with pl.Config(tbl_cols=-1, tbl_rows=-1):
-            print(data.collect())
     return data
 
 
 def validate(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: str) -> pl.LazyFrame:
     src = "trim"
-    if DEBUG:
-        print("Validate")
-        print("Before...")
-        with pl.Config(tbl_cols=-1, tbl_rows=-1):
-            print(data.collect())
-
     data = data.with_columns(
         value=pl.col(f"value_{src}"),
         success=pl.concat_list(cs.starts_with("success_")).list.all(),
         error=pl.concat_list(cs.starts_with("error_")).list.drop_nulls().list.first(),
     ).with_columns(hard_fail=~pl.col("success") & field.vital)
-    if DEBUG:
-        print("After...")
-        with pl.Config(tbl_cols=-1, tbl_rows=-1):
-            print(data.collect())
     return data
 
 
 def cleanup(data: pl.LazyFrame, logs: pl.DataFrame, file_path: str) -> pl.LazyFrame:
-    # DEBUG = True
-    if DEBUG:
-        print("Validate")
-        print("Before...")
-        with pl.Config(tbl_cols=-1, tbl_rows=-1):
-            print(data.collect())
-    # if not DEBUG:
     data = data.select(
         "section", "location", "config", "row", "page", "field", "vital", "value", "success", "error", "hard_fail", "value_raw_offset"
     )
@@ -284,12 +222,6 @@ def cleanup(data: pl.LazyFrame, logs: pl.DataFrame, file_path: str) -> pl.LazyFr
         value=pl.when(pl.col("value").str.len_bytes() == 0).then(pl.lit(None)).otherwise(pl.col("value")),
         value_raw_offset=pl.when(pl.col("value_raw_offset").str.len_bytes() == 0).then(pl.lit(None)).otherwise(pl.col("value_raw_offset")),
     )
-
-    if DEBUG:
-        print("Validate")
-        print("After...")
-        with pl.Config(tbl_cols=-1, tbl_rows=-1):
-            print(data.collect())
     return data
 
 
@@ -383,7 +315,7 @@ def extract_fields(
                         data=[
                             pl.Series("field", [field.field], dtype=pl.String),
                             pl.Series("vital", [field.vital], dtype=pl.Boolean),
-                            pl.Series("value_raw", [table.item(field.cell.row, field.cell.col)], dtype=pl.String),
+                            pl.Series("value_raw", [table.collect().item(field.cell.row, field.cell.col)], dtype=pl.String),
                             pl.Series("value_raw_offset", [""], dtype=pl.String),
                         ]
                     )
@@ -418,22 +350,18 @@ def extract_fields(
                 for field in statement_table.fields:
                     if field.column is None:
                         continue
-                    result = (
-                        table.select(
-                            section=pl.lit(section),
-                            location=pl.lit(location_id),
-                            config=pl.lit(config),
-                            page=pl.lit(location.page_number),
-                            field=pl.lit(field.field),
-                            vital=pl.lit(field.vital),
-                            value_raw=pl.nth(field.column),
-                            value_raw_offset=pl.lit("")
-                            if not (field.value_offset and field.value_offset.cols_offset)
-                            else pl.nth(field.column + field.value_offset.cols_offset),
-                        )
-                        .with_row_index("row")
-                        .lazy()
-                    )
+                    result = table.select(
+                        section=pl.lit(section),
+                        location=pl.lit(location_id),
+                        config=pl.lit(config),
+                        page=pl.lit(location.page_number),
+                        field=pl.lit(field.field),
+                        vital=pl.lit(field.vital),
+                        value_raw=pl.nth(field.column),
+                        value_raw_offset=pl.lit("")
+                        if not (field.value_offset and field.value_offset.cols_offset)
+                        else pl.nth(field.column + field.value_offset.cols_offset),
+                    ).with_row_index("row")
                     spec = None
                     if field.type == "numeric":
                         spec = currency_spec[field.numeric_currency]
@@ -517,17 +445,6 @@ def extract_fields(
                         transaction_end=pl.col("transaction_end").fill_null(False),
                     )
                 )
-                # print(results)
-                # if bookends.sticky_fields:
-                #     results = results.with_columns(
-                #         transaction_start=pl.when(pl.col("field").is_in(bookends.sticky_fields) & pl.col("success"))
-                #         .then(pl.lit(True))
-                #         .otherwise(pl.col("transaction_start")),
-                #         transaction_end=pl.when(pl.col("field").is_in(bookends.sticky_fields) & pl.col("success"))
-                #         .then(pl.lit(True))
-                #         .otherwise(pl.col("transaction_end")),
-                #     )
-                # print(results)
     return results
 
 

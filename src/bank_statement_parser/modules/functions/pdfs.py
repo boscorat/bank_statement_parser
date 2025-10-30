@@ -1,12 +1,11 @@
 import time
-from datetime import datetime
 
 import polars as pl
 from pdfplumber import open
 from pdfplumber.page import Page
 from pdfplumber.pdf import PDF
 
-from bank_statement_parser.modules.classes.data_definitions import DynamicLineSpec, Location
+from bank_statement_parser.modules.classes.data import DynamicLineSpec, Location
 
 
 def get_region(location: Location, pdf: PDF, logs: pl.DataFrame, file_path: str) -> Page | None:
@@ -104,7 +103,7 @@ def get_table_from_region(
     header_text: str | None = None,
     dynamic_last_vertical_line: DynamicLineSpec | None = None,
     try_shift_down: int | None = None,
-) -> pl.DataFrame | None:
+) -> pl.LazyFrame | None:
     """Extract a structured table from a PDF region using configurable extraction settings."""
     table = None
     tbl_settings: dict = {
@@ -184,7 +183,7 @@ def get_table_from_region(
             table = table[1:]
 
     column_names = ["col_" + str(i) for i in range(len(table[0]))] if table else []
-    table = pl.DataFrame(table[0:], schema=column_names, orient="row") if table else pl.DataFrame()
+    table = pl.LazyFrame(table[0:], schema=column_names, orient="row") if table else pl.LazyFrame()
 
     return table
 
