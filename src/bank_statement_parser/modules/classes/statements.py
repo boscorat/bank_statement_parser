@@ -10,7 +10,7 @@ import polars as pl
 import polars.selectors as cs
 
 from bank_statement_parser.modules.classes.data import Account
-from bank_statement_parser.modules.classes.database import BatchHeads, BatchLines
+from bank_statement_parser.modules.classes.database import BatchHeads, BatchLines, ChecksAndBalances, StatementHeads, StatementLines
 from bank_statement_parser.modules.config import (
     config_standard_fields,
     get_config_from_account,
@@ -19,7 +19,7 @@ from bank_statement_parser.modules.config import (
 )
 from bank_statement_parser.modules.functions.pdfs import pdf_close, pdf_open
 from bank_statement_parser.modules.functions.statements import get_results, get_standard_fields
-from bank_statement_parser.modules.paths import PATH_CAB, PATH_DIM_STATEMENT, PATH_FACT_TRANSACTION
+from bank_statement_parser.modules.paths import CAB
 
 
 class Statement:
@@ -35,10 +35,11 @@ class Statement:
         }
     )
 
-    def __init__(self, file: Path, company_key: str | None = None, account_key: str | None = None):
+    def __init__(self, file: Path, company_key: str | None = None, account_key: str | None = None, ID_BATCH: str | None = None):
         self.file = file
         self.company_key = company_key
         self.account_key = account_key
+        self.ID_BATCH = ID_BATCH
         self.checks_and_balances: pl.DataFrame = pl.DataFrame()
         self.pdf = pdf_open(str(file.absolute()), logs=self.logs)
         self._key1 = hashlib.sha256(
@@ -111,7 +112,7 @@ class Statement:
         self.export_logs()
         self.success = self.is_successfull()
         if self.success:
-            self.export_parquet()
+            self.db_updates()
 
     def is_successfull(self):
         if (
@@ -134,71 +135,79 @@ class Statement:
             return False
         return True
 
-    def export_parquet(self):
-        # Fact_Transactions
-        record_flags = pl.LazyFrame(
-            data=[[self.ID_STATEMENT, str(self.file.absolute()), self.file.name, datetime.now()]],
-            orient="row",
-            schema={"STD_STATEMENT": pl.Utf8, "STD_FILEPATH": pl.Utf8, "STD_FILENAME": pl.Utf8, "STD_UPDATETIME": pl.Datetime},
-        )
-        FACT_Transaction = (
-            self.lines_results.select(cs.starts_with("STD"))
-            .join(record_flags, how="cross")
-            .with_columns(ID_TRANSACTION=pl.col("STD_GUID"), ID_STATEMENT=pl.col("STD_STATEMENT"))
-        ).select(
-            cs.starts_with("ID"),
-            cs.contains("NUMBER"),
-            "STD_TRANSACTION_DATE",
-            "STD_TRANSACTION_DESC",
-            cs.contains("PAYMENT"),
-            cs.contains("MOVEMENT"),
-            cs.contains("BALANCE"),
-            "STD_FILEPATH",
-            "STD_FILENAME",
-            "STD_UPDATETIME",
-        )
-        # DIM_Statement
-        DIM_Statement = (
-            self.header_results.select(cs.starts_with("STD"))
-            .join(record_flags, how="cross")
-            .with_columns(
-                ID_STATEMENT=pl.col("STD_STATEMENT"),
-                STD_COMPANY=pl.lit(self.company),
-                STD_ACCOUNT=pl.lit(self.account),
-                STD_TYPE=pl.lit(self.statement_type),
-            )
-            .select(
-                cs.starts_with("ID"),
-                "STD_ACCOUNT_NUMBER",
-                "STD_ACCOUNT_HOLDER",
-                cs.contains("STATEMENT_DATE"),
-                cs.contains("PAYMENT"),
-                cs.contains("MOVEMENT"),
-                cs.contains("BALANCE"),
-                "STD_FILEPATH",
-                "STD_FILENAME",
-                "STD_UPDATETIME",
-                "STD_COMPANY",
-                "STD_ACCOUNT",
-                "STD_TYPE",
-            )
-        )
+    def db_updates(self):
+        db_heads = StatementHeads(self)
+        db_heads.update()
+        db_lines = StatementLines(self)
+        db_lines.update()
+        db_cab = ChecksAndBalances(self)
+        db_cab.create()
 
-        FACT_Transaction_current = pl.scan_parquet(PATH_FACT_TRANSACTION).filter(pl.col("ID_STATEMENT") != self.ID_STATEMENT).drop("index")
-        try:
-            export = FACT_Transaction_current.collect().extend(FACT_Transaction.collect())
-        except FileNotFoundError:
-            export = FACT_Transaction.collect()
-        export.sort("STD_UPDATETIME", "STD_TRANSACTION_NUMBER", descending=[False, False]).with_row_index().write_parquet(
-            PATH_FACT_TRANSACTION
-        )
+    # def export_parquet(self):
+    #     # Fact_Transactions
+    #     record_flags = pl.LazyFrame(
+    #         data=[[self.ID_STATEMENT, str(self.file.absolute()), self.file.name, datetime.now()]],
+    #         orient="row",
+    #         schema={"STD_STATEMENT": pl.Utf8, "STD_FILEPATH": pl.Utf8, "STD_FILENAME": pl.Utf8, "STD_UPDATETIME": pl.Datetime},
+    #     )
+    #     FACT_Transaction = (
+    #         self.lines_results.select(cs.starts_with("STD"))
+    #         .join(record_flags, how="cross")
+    #         .with_columns(ID_TRANSACTION=pl.col("STD_GUID"), ID_STATEMENT=pl.col("STD_STATEMENT"))
+    #     ).select(
+    #         cs.starts_with("ID"),
+    #         cs.contains("NUMBER"),
+    #         "STD_TRANSACTION_DATE",
+    #         "STD_TRANSACTION_DESC",
+    #         cs.contains("PAYMENT"),
+    #         cs.contains("MOVEMENT"),
+    #         cs.contains("BALANCE"),
+    #         "STD_FILEPATH",
+    #         "STD_FILENAME",
+    #         "STD_UPDATETIME",
+    #     )
+    #     # DIM_Statement
+    #     DIM_Statement = (
+    #         self.header_results.select(cs.starts_with("STD"))
+    #         .join(record_flags, how="cross")
+    #         .with_columns(
+    #             ID_STATEMENT=pl.col("STD_STATEMENT"),
+    #             STD_COMPANY=pl.lit(self.company),
+    #             STD_ACCOUNT=pl.lit(self.account),
+    #             STD_TYPE=pl.lit(self.statement_type),
+    #         )
+    #         .select(
+    #             cs.starts_with("ID"),
+    #             "STD_ACCOUNT_NUMBER",
+    #             "STD_ACCOUNT_HOLDER",
+    #             cs.contains("STATEMENT_DATE"),
+    #             cs.contains("PAYMENT"),
+    #             cs.contains("MOVEMENT"),
+    #             cs.contains("BALANCE"),
+    #             "STD_FILEPATH",
+    #             "STD_FILENAME",
+    #             "STD_UPDATETIME",
+    #             "STD_COMPANY",
+    #             "STD_ACCOUNT",
+    #             "STD_TYPE",
+    #         )
+    #     )
 
-        DIM_Statement_current = pl.scan_parquet(PATH_DIM_STATEMENT).filter(pl.col("ID_STATEMENT") != self.ID_STATEMENT).drop("index")
-        try:
-            export = DIM_Statement_current.collect().extend(DIM_Statement.collect())
-        except FileNotFoundError:
-            export = DIM_Statement.collect()
-        export.sort("STD_UPDATETIME", descending=False).with_row_index().write_parquet(PATH_DIM_STATEMENT)
+    #     FACT_Transaction_current = pl.scan_parquet(FACT_TRANSACTION).filter(pl.col("ID_STATEMENT") != self.ID_STATEMENT).drop("index")
+    #     try:
+    #         export = FACT_Transaction_current.collect().extend(FACT_Transaction.collect())
+    #     except FileNotFoundError:
+    #         export = FACT_Transaction.collect()
+    #     export.sort("STD_UPDATETIME", "STD_TRANSACTION_NUMBER", descending=[False, False]).with_row_index().write_parquet(
+    #         FACT_TRANSACTION
+    #     )
+
+    #     DIM_Statement_current = pl.scan_parquet(DIM_STATEMENT).filter(pl.col("ID_STATEMENT") != self.ID_STATEMENT).drop("index")
+    #     try:
+    #         export = DIM_Statement_current.collect().extend(DIM_Statement.collect())
+    #     except FileNotFoundError:
+    #         export = DIM_Statement.collect()
+    #     export.sort("STD_UPDATETIME", descending=False).with_row_index().write_parquet(DIM_STATEMENT)
 
     def export_logs(self):
         """Export logs to parquet format"""
@@ -224,18 +233,18 @@ class Statement:
         # export_log.sort("time").collect().with_row_index().write_parquet(parquet_path)
 
         # Checks & Balances
-        export_cab = self.checks_and_balances.lazy().join(
-            pl.LazyFrame(
-                data=[[self.ID_STATEMENT, datetime.now()]], orient="row", schema={"ID_STATEMENT": pl.Utf8, "log_time": pl.Datetime}
-            ),
-            how="cross",
-        )
-        current_cab = pl.scan_parquet(PATH_CAB).filter(pl.col("ID_STATEMENT") != self.ID_STATEMENT)
-        try:
-            export = export_cab.collect().extend(current_cab.drop("index").collect())
-        except FileNotFoundError:
-            export = export_cab.collect()
-        export.sort("log_time").with_row_index().write_parquet(PATH_CAB)
+        # export_cab = self.checks_and_balances.lazy().join(
+        #     pl.LazyFrame(
+        #         data=[[self.ID_STATEMENT, datetime.now()]], orient="row", schema={"ID_STATEMENT": pl.Utf8, "log_time": pl.Datetime}
+        #     ),
+        #     how="cross",
+        # )
+        # current_cab = pl.scan_parquet(CAB).filter(pl.col("ID_STATEMENT") != self.ID_STATEMENT)
+        # try:
+        #     export = export_cab.collect().extend(current_cab.drop("index").collect())
+        # except FileNotFoundError:
+        #     export = export_cab.collect()
+        # export.sort("log_time").with_row_index().write_parquet(CAB)
 
     def get_results(self, section: str) -> pl.LazyFrame:
         results: pl.DataFrame = pl.DataFrame()
@@ -310,13 +319,13 @@ class StatementBatch:
         self.process_time: datetime = datetime.now()
         self.path: str = path
         self.ID_BATCH: str = str(uuid4())
-        self.__path_type = "file" if Path(self.path).is_file() else "folder"
+        self.__type = "file" if Path(self.path).is_file() else "folder"
         self.company_key = company_key
         self.account_key = account_key
         self.print_log = print_log
-        if self.__path_type == "folder":
+        if self.__type == "folder":
             self.pdfs: list[Path] = [file for file in Path(path).iterdir() if file.is_file() and file.suffix == ".pdf"]
-        elif self.__path_type == "file" and Path(path).suffix == ".pdf":
+        elif self.__type == "file" and Path(path).suffix == ".pdf":
             self.pdfs = [Path(path)]
         else:
             self.pdfs = []
@@ -346,7 +355,7 @@ class StatementBatch:
             batch_line["ERROR_CAB"] = False
             batch_line["ERROR_CONFIG"] = False
             try:
-                stmt = Statement(file=pdf, company_key=self.company_key, account_key=self.account_key)
+                stmt = Statement(file=pdf, company_key=self.company_key, account_key=self.account_key, ID_BATCH=self.ID_BATCH)
                 batch_line["ID_STATEMENT"] = stmt.ID_STATEMENT
                 batch_line["STD_ACCOUNT"] = stmt.account
                 batch_line["STD_SUCCESS"] = stmt.success
@@ -354,7 +363,8 @@ class StatementBatch:
                     self.errors += 1
                     batch_line["ERROR_CAB"] = True
                     batch_line["STD_ERROR_MESSAGE"] += "** Checks & Balances Failure **"
-            except BaseException:
+            except BaseException as e:
+                print(e)
                 self.errors += 1
                 batch_line["ERROR_CONFIG"] = True
                 batch_line["STD_ERROR_MESSAGE"] += "** Configuration Failure **"
@@ -370,7 +380,5 @@ class StatementBatch:
     def db_updates(self, batch_lines):
         db_heads = BatchHeads(self)
         db_heads.create()
-        print(db_heads.db_records)
         db_lines = BatchLines(batch_lines)
         db_lines.create()
-        print(db_lines.db_records)

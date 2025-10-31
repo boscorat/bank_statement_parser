@@ -1,6 +1,6 @@
 from copy import deepcopy
-from uuid import uuid4
 
+# from uuid import uuid4
 import polars as pl
 import polars.selectors as cs
 from pdfplumber.pdf import PDF
@@ -613,6 +613,6 @@ def get_standard_fields(
     if section == "lines":
         checks_and_balances.hstack(data.select("STD_PAYMENT_IN", "STD_PAYMENT_OUT", "STD_MOVEMENT").sum(), in_place=True)
         checks_and_balances.hstack(data.select(pl.last("STD_RUNNING_BALANCE")), in_place=True)
-    # add a GUID to each record
-    data = data.with_columns(STD_GUID=pl.lit(f"{uuid4()}"))
+    # # add a GUID to each record
+    # data = data.with_columns(STD_GUID=pl.lit(f"{uuid4()}"))
     return data

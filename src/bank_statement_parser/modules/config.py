@@ -17,7 +17,7 @@ from bank_statement_parser.modules.classes.data import (
 )
 from bank_statement_parser.modules.classes.errors import ConfigFileError, StatementError
 from bank_statement_parser.modules.functions.statements import get_results
-from bank_statement_parser.modules.paths import PATH_BASE_CONFIG, PATH_USER_CONFIG
+from bank_statement_parser.modules.paths import BASE_CONFIG, USER_CONFIG
 
 """
 WRITE SOME TESTS TO VALIDATE THE CONFIG FILES!!!!!
@@ -26,8 +26,8 @@ column must be set for all transaction fields
 numeric fields should have a currency and none of the date or string specific fields
 """
 
-__dir_base = PATH_BASE_CONFIG
-__dir_user = PATH_USER_CONFIG
+__dir_base = BASE_CONFIG
+__dir_user = USER_CONFIG
 
 __config_dict = {
     "companies": {"dataclass": Company, "config": dict()},

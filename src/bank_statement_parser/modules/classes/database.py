@@ -3,14 +3,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from bank_statement_parser.modules.classes.statements import StatementBatch
+    from bank_statement_parser.modules.classes.statements import Statement, StatementBatch
 
-from datetime import datetime
 from pathlib import Path
 
 import polars as pl
 
-from bank_statement_parser.modules.paths import PATH_BATCH_HEADS, PATH_BATCH_LINES
+from bank_statement_parser.modules.paths import BATCH_HEADS, BATCH_LINES, CAB, STATEMENT_HEADS, STATEMENT_LINES
 
 
 class Database:
@@ -21,14 +20,14 @@ class Database:
         self.key = key
         self.db_records: pl.DataFrame = schema
         try:
-            self.db_records = pl.read_parquet(file)
+            self.db_records = pl.read_parquet(file).drop("index")
         except FileNotFoundError:
             pass
 
     def create(self):  # only to be used if we know the record doesn't exist
         if self.records is not None:
             self.db_records = self.db_records.extend(self.records)
-            self.db_records.write_parquet(self.file)
+            self.db_records.with_row_index().write_parquet(self.file)
             return True
         return False
 
@@ -36,18 +35,158 @@ class Database:
         if self.records is not None and self.key is not None:
             self.db_records = self.db_records.remove(pl.col(self.key).is_in(self.records[self.key].implode()))
             self.db_records = self.db_records.extend(self.records)
-            self.db_records.write_parquet(self.file)
+            self.db_records.with_row_index().write_parquet(self.file)
 
     def delete(self):  # deletes the records from the database with the matched keys
         if self.records is not None and self.key is not None:  # delete the specified records
             self.db_records = self.db_records.remove(pl.col(self.key).is_in(self.records[self.key].implode()))
-            self.db_records.write_parquet(self.file)
+            self.db_records.with_row_index().write_parquet(self.file)
             return True
         else:
             return False
 
     def truncate(self):  # clears all records and replaces with a blank schema
-        self.schema.write_parquet(self.file)
+        self.schema.with_row_index().write_parquet(self.file)
+
+
+class ChecksAndBalances(Database):
+    def __init__(self, statement: Statement | None = None) -> None:
+        self.stmt = statement
+        self.schema = pl.DataFrame(
+            orient="row",
+            schema={
+                "ID_CAB": pl.Utf8,
+                "ID_STATEMENT": pl.Utf8,
+                "ID_BATCH": pl.Utf8,
+                "HAS_TRANSACTIONS": pl.Boolean,
+                "STD_OPENING_BALANCE_HEADS": pl.Decimal(16, 4),
+                "STD_PAYMENTS_IN_HEADS": pl.Decimal(16, 4),
+                "STD_PAYMENTS_OUT_HEADS": pl.Decimal(16, 4),
+                "STD_MOVEMENT_HEADS": pl.Decimal(16, 4),
+                "STD_CLOSING_BALANCE_HEADS": pl.Decimal(16, 4),
+                "STD_OPENING_BALANCE_LINES": pl.Decimal(16, 4),
+                "STD_PAYMENTS_IN_LINES": pl.Decimal(16, 4),
+                "STD_PAYMENTS_OUT_LINES": pl.Decimal(16, 4),
+                "STD_MOVEMENT_LINES": pl.Decimal(16, 4),
+                "STD_CLOSING_BALANCE_LINES": pl.Decimal(16, 4),
+                "CHECK_PAYMENTS_IN": pl.Boolean,
+                "CHECK_PAYMENTS_OUT": pl.Boolean,
+                "CHECK_MOVEMENT": pl.Boolean,
+                "CHECK_CLOSING": pl.Boolean,
+            },
+        )
+        self.records: pl.DataFrame | None = None
+        if self.stmt:
+            self.records = self.schema.clone().extend(
+                self.stmt.checks_and_balances.select(
+                    ID_CAB=pl.lit(self.stmt.ID_STATEMENT).add(pl.lit(".").add(pl.lit(self.stmt.ID_BATCH))),
+                    ID_STATEMENT=pl.lit(self.stmt.ID_STATEMENT),
+                    ID_BATCH=pl.lit(self.stmt.ID_BATCH),
+                    HAS_TRANSACTIONS=~pl.col("ZERO_TRANSACTION_STATEMENT"),
+                    STD_OPENING_BALANCE_HEADS="STD_OPENING_BALANCE",
+                    STD_PAYMENTS_IN_HEADS="STD_PAYMENTS_IN",
+                    STD_PAYMENTS_OUT_HEADS="STD_PAYMENTS_OUT",
+                    STD_MOVEMENT_HEADS="STD_STATEMENT_MOVEMENT",
+                    STD_CLOSING_BALANCE_HEADS="STD_CLOSING_BALANCE",
+                    STD_OPENING_BALANCE_LINES=pl.col("STD_RUNNING_BALANCE").sub(pl.col("STD_MOVEMENT")),
+                    STD_PAYMENTS_IN_LINES="STD_PAYMENT_IN",
+                    STD_PAYMENTS_OUT_LINES="STD_PAYMENT_OUT",
+                    STD_MOVEMENT_LINES="STD_MOVEMENT",
+                    STD_CLOSING_BALANCE_LINES="STD_RUNNING_BALANCE",
+                    CHECK_PAYMENTS_IN="BAL_PAYMENTS_IN",
+                    CHECK_PAYMENTS_OUT="BAL_PAYMENTS_OUT",
+                    CHECK_MOVEMENT="BAL_MOVEMENT",
+                    CHECK_CLOSING="BAL_CLOSING",
+                )
+            )
+        self.key = "ID_CAB"
+        super().__init__(CAB, self.schema, self.records, self.key)
+
+
+class StatementHeads(Database):
+    def __init__(self, statement: Statement | None = None) -> None:
+        self.stmt = statement
+        self.schema = pl.DataFrame(
+            orient="row",
+            schema={
+                "ID_STATEMENT": pl.Utf8,
+                "ID_BATCH": pl.Utf8,
+                "STD_COMPANY": pl.Utf8,
+                "STD_STATEMENT_TYPE": pl.Utf8,
+                "STD_ACCOUNT": pl.Utf8,
+                "STD_ACCOUNT_NUMBER": pl.Utf8,
+                "STD_ACCOUNT_HOLDER": pl.Utf8,
+                "STD_STATEMENT_DATE": pl.Date,
+                "STD_OPENING_BALANCE": pl.Decimal(16, 4),
+                "STD_PAYMENTS_IN": pl.Decimal(16, 4),
+                "STD_PAYMENTS_OUT": pl.Decimal(16, 4),
+                "STD_CLOSING_BALANCE": pl.Decimal(16, 4),
+            },
+        )
+        self.records: pl.DataFrame | None = None
+        if self.stmt:
+            self.records = self.schema.clone().extend(
+                pl.DataFrame(
+                    data={
+                        "ID_STATEMENT": self.stmt.ID_STATEMENT,
+                        "ID_BATCH": self.stmt.ID_BATCH,
+                        "STD_COMPANY": self.stmt.company,
+                        "STD_STATEMENT_TYPE": self.stmt.statement_type,
+                        "STD_ACCOUNT": self.stmt.account,
+                    },
+                    orient="row",
+                ).hstack(
+                    self.stmt.header_results.select(
+                        "STD_ACCOUNT_NUMBER",
+                        "STD_ACCOUNT_HOLDER",
+                        "STD_STATEMENT_DATE",
+                        "STD_OPENING_BALANCE",
+                        "STD_PAYMENTS_IN",
+                        "STD_PAYMENTS_OUT",
+                        "STD_CLOSING_BALANCE",
+                    ).collect()
+                )
+            )
+        self.key = "ID_STATEMENT"
+        super().__init__(STATEMENT_HEADS, self.schema, self.records, self.key)
+
+
+class StatementLines(Database):
+    def __init__(self, statement: Statement | None = None) -> None:
+        self.stmt = statement
+        self.schema = pl.DataFrame(
+            orient="row",
+            schema={
+                "ID_TRANSACTION": pl.Utf8,
+                "ID_STATEMENT": pl.Utf8,
+                "STD_PAGE_NUMBER": pl.Int32,
+                "STD_TRANSACTION_DATE": pl.Date,
+                "STD_TRANSACTION_NUMBER": pl.UInt32,
+                "STD_TRANSACTION_DESC": pl.Utf8,
+                "STD_OPENING_BALANCE": pl.Decimal(16, 4),
+                "STD_PAYMENTS_IN": pl.Decimal(16, 4),
+                "STD_PAYMENTS_OUT": pl.Decimal(16, 4),
+                "STD_CLOSING_BALANCE": pl.Decimal(16, 4),
+            },
+        )
+        self.records: pl.DataFrame | None = None
+        if self.stmt:
+            self.records = self.schema.clone().extend(
+                self.stmt.lines_results.collect().select(
+                    ID_TRANSACTION=pl.lit(self.stmt.ID_STATEMENT).add(pl.lit(".").add(pl.col("STD_TRANSACTION_NUMBER").cast(str))),
+                    ID_STATEMENT=pl.lit(self.stmt.ID_STATEMENT),
+                    STD_PAGE_NUMBER="STD_PAGE_NUMBER",
+                    STD_TRANSACTION_DATE="STD_TRANSACTION_DATE",
+                    STD_TRANSACTION_NUMBER="STD_TRANSACTION_NUMBER",
+                    STD_TRANSACTION_DESC="STD_TRANSACTION_DESC",
+                    STD_OPENING_BALANCE=pl.col("STD_RUNNING_BALANCE").sub(pl.col("STD_MOVEMENT")),
+                    STD_PAYMENTS_IN="STD_PAYMENT_IN",
+                    STD_PAYMENTS_OUT="STD_PAYMENT_OUT",
+                    STD_CLOSING_BALANCE="STD_RUNNING_BALANCE",
+                )
+            )
+        self.key = "ID_TRANSACTION"
+        super().__init__(STATEMENT_LINES, self.schema, self.records, self.key)
 
 
 class BatchHeads(Database):
@@ -67,24 +206,24 @@ class BatchHeads(Database):
             },
         )
         self.records: pl.DataFrame | None = None
-        if batch:
+        if self.batch:
             self.records = self.schema.clone().extend(
                 pl.DataFrame(
                     data={
-                        "ID_BATCH": batch.ID_BATCH,
-                        "STD_PATH": batch.path,
-                        "STD_COMPANY": batch.company_key,
-                        "STD_ACCOUNT": batch.account_key,
-                        "STD_PDF_COUNT": batch.pdf_count,
-                        "STD_ERROR_COUNT": batch.errors,
-                        "STD_DURATION_SECS": batch.duration_secs,
-                        "STD_UPDATETIME": batch.process_time,
+                        "ID_BATCH": self.batch.ID_BATCH,
+                        "STD_PATH": self.batch.path,
+                        "STD_COMPANY": self.batch.company_key,
+                        "STD_ACCOUNT": self.batch.account_key,
+                        "STD_PDF_COUNT": self.batch.pdf_count,
+                        "STD_ERROR_COUNT": self.batch.errors,
+                        "STD_DURATION_SECS": self.batch.duration_secs,
+                        "STD_UPDATETIME": self.batch.process_time,
                     },
                     orient="row",
                 )
             )
         self.key = "ID_BATCH"
-        super().__init__(PATH_BATCH_HEADS, self.schema, self.records, self.key)
+        super().__init__(BATCH_HEADS, self.schema, self.records, self.key)
 
 
 class BatchLines(Database):
@@ -108,69 +247,13 @@ class BatchLines(Database):
             },
         )
         self.records: pl.DataFrame | None = None
-        if batch_lines:
-            self.records = self.schema.clone().extend(pl.DataFrame(batch_lines))
+        if self.batch_lines:
+            self.records = self.schema.clone().extend(pl.DataFrame(self.batch_lines))
         self.key = "ID_BATCHLINE"
-        super().__init__(PATH_BATCH_LINES, self.schema, self.records, self.key)
+        super().__init__(BATCH_LINES, self.schema, self.records, self.key)
 
 
-def main():
-    print(BatchLines().db_records)
-    print(BatchHeads().db_records)
-    BatchLines().truncate()
-    BatchHeads().truncate()
-    # batch_lines: list[dict] = []
-    # batch_line: dict = {}
-    # batch_line["ID_BATCH"] = "ID1"
-    # batch_line["ID_BATCHLINE"] = "ID1" + "_" + str(1)
-    # batch_line["STD_BATCH_LINE"] = 1
-    # batch_line["STD_FILENAME"] = "file 1"
-    # batch_line["STD_DURATION_SECS"] = 3.2
-    # batch_line["STD_UPDATETIME"] = datetime.now()
-    # batch_line["STD_SUCCESS"] = True
-    # batch_line["STD_ERROR_MESSAGE"] = ""
-    # batch_line["ERROR_CAB"] = False
-    # batch_line["ERROR_CONFIG"] = False
-    # batch_lines.append(batch_line)
-    # batch_line: dict = {}
-    # batch_line["ID_BATCH"] = "ID2"
-    # batch_line["ID_BATCHLINE"] = "ID2" + "_" + str(2)
-    # batch_line["STD_BATCH_LINE"] = 2
-    # batch_line["STD_FILENAME"] = "file 2"
-    # batch_line["STD_DURATION_SECS"] = 2.3
-    # batch_line["STD_UPDATETIME"] = datetime.now()
-    # batch_line["STD_SUCCESS"] = False
-    # batch_line["STD_ERROR_MESSAGE"] = "** Checks & Balances Failure **"
-    # batch_line["ERROR_CAB"] = True
-    # batch_line["ERROR_CONFIG"] = False
-    # batch_lines.append(batch_line)
-    # batch_line: dict = {}
-    # batch_line["ID_BATCH"] = "ID3"
-    # batch_line["ID_BATCHLINE"] = "ID3" + "_" + str(3)
-    # batch_line["STD_BATCH_LINE"] = 3
-    # batch_line["STD_FILENAME"] = "file 3"
-    # batch_line["STD_DURATION_SECS"] = 1.2
-    # batch_line["STD_UPDATETIME"] = datetime.now()
-    # batch_line["STD_SUCCESS"] = False
-    # batch_line["STD_ERROR_MESSAGE"] = "** Configuration Failure **"
-    # batch_line["ERROR_CAB"] = False
-    # batch_line["ERROR_CONFIG"] = True
-    # batch_lines.append(batch_line)
-
-    # bl = BatchLines(batch_lines)
-    # bl.create()
-    # print(bl.db_records)
-
-    # batch: StatementBatch = StatementBatch("/home/boscorat/Downloads/2025")
-    # BatchHeads().truncate()  # empty the BatchHeads table
-    # bh = BatchHeads(batch=batch)  # create a new record
-    # print(bh.db_records)
-    # bh.update()
-    # print(bh.db_records)
-    # bh.create()
-    # print(bh.db_records)
-    # bh.delete()
-    # print(bh.db_records)
+def main(): ...
 
 
 if __name__ == "__main__":
