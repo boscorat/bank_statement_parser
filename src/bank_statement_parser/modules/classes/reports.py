@@ -30,6 +30,20 @@ class DimTime:
             weekday=pl.col("ID_DATE").dt.to_string("%A"),
             weekday_abbrv=pl.col("ID_DATE").dt.to_string("%a"),
             weekday_initial=pl.col("ID_DATE").dt.to_string("%a").str.head(1),
+            is_last_day_of_month=pl.when(pl.col("ID_DATE").dt.days_in_month() == pl.col("ID_DATE").dt.day())
+            .then(pl.lit(True))
+            .otherwise(pl.lit(False)),
+            is_last_day_of_quarter=pl.when(
+                (pl.col("ID_DATE").dt.days_in_month() == pl.col("ID_DATE").dt.day()) & (pl.col("ID_DATE").dt.month() % 3 == 0)
+            )
+            .then(pl.lit(True))
+            .otherwise(pl.lit(False)),
+            is_last_day_of_year=pl.when(
+                (pl.col("ID_DATE").dt.days_in_month() == pl.col("ID_DATE").dt.day()) & (pl.col("ID_DATE").dt.month() == 12)
+            )
+            .then(pl.lit(True))
+            .otherwise(pl.lit(False)),
+            is_weekday=pl.col("ID_DATE").dt.is_business_day(),
         )
 
 
@@ -69,12 +83,10 @@ class FactStatement:
             value_out="STD_PAYMENTS_OUT_right",
             value=pl.col("STD_PAYMENTS_IN_right").add(pl.col("STD_PAYMENTS_OUT_right").mul(-1)),
         )
-        print(self.all)
-        ...
 
 
 def main():
-    FactStatement()
+    DimTime()
 
 
 class GapReport:
@@ -174,7 +186,7 @@ class GapReport:
 
 
 if __name__ == "__main__":
-    pl.Config.set_tbl_rows(50)
+    pl.Config.set_tbl_rows(70)
     pl.Config.set_tbl_cols(55)
     pl.Config.set_fmt_str_lengths(25)
     main()
