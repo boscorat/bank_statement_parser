@@ -91,48 +91,53 @@ def main():
 
 class GapReport:
     def __init__(self):
-        self.raw = (
-            pl.read_parquet(pt.STATEMENT_HEADS)
-            .select(
-                "STD_ACCOUNT",
-                "STD_ACCOUNT_NUMBER",
-                "STD_ACCOUNT_HOLDER",
-                "STD_STATEMENT_DATE",
-                "STD_OPENING_BALANCE",
-                "STD_CLOSING_BALANCE",
-            )
-            .sort("STD_ACCOUNT", "STD_ACCOUNT_NUMBER", "STD_STATEMENT_DATE")
-            .with_row_index()
-            .with_columns(
-                gap=pl.when(pl.col("index") == 0)
-                .then(pl.lit(False))
-                .otherwise(
-                    pl.when(
-                        pl.col("STD_ACCOUNT").add(pl.col("STD_ACCOUNT_NUMBER"))
-                        != pl.col("STD_ACCOUNT").shift().add(pl.col("STD_ACCOUNT_NUMBER").shift())
-                    )
+        try:
+            self.raw = (
+                pl.read_parquet(pt.STATEMENT_HEADS)
+                .select(
+                    "STD_ACCOUNT",
+                    "STD_ACCOUNT_NUMBER",
+                    "STD_ACCOUNT_HOLDER",
+                    "STD_STATEMENT_DATE",
+                    "STD_OPENING_BALANCE",
+                    "STD_CLOSING_BALANCE",
+                )
+                .sort("STD_ACCOUNT", "STD_ACCOUNT_NUMBER", "STD_STATEMENT_DATE")
+                .with_row_index()
+                .with_columns(
+                    gap=pl.when(pl.col("index") == 0)
                     .then(pl.lit(False))
                     .otherwise(
-                        pl.when(pl.col("STD_OPENING_BALANCE") == pl.col("STD_CLOSING_BALANCE").shift())
+                        pl.when(
+                            pl.col("STD_ACCOUNT").add(pl.col("STD_ACCOUNT_NUMBER"))
+                            != pl.col("STD_ACCOUNT").shift().add(pl.col("STD_ACCOUNT_NUMBER").shift())
+                        )
                         .then(pl.lit(False))
-                        .otherwise(pl.lit(True))
+                        .otherwise(
+                            pl.when(pl.col("STD_OPENING_BALANCE") == pl.col("STD_CLOSING_BALANCE").shift())
+                            .then(pl.lit(False))
+                            .otherwise(pl.lit(True))
+                        )
                     )
                 )
             )
-        )
-        self.all = self.raw.select(
-            account_type="STD_ACCOUNT",
-            account_number="STD_ACCOUNT_NUMBER",
-            account_holder="STD_ACCOUNT_HOLDER",
-            statement_date="STD_STATEMENT_DATE",
-            opening_balance="STD_OPENING_BALANCE",
-            closing_balance="STD_CLOSING_BALANCE",
-            gap_flag=pl.when(pl.col("gap")).then(pl.lit("GAP")).otherwise(pl.lit("")),
-        )
-        self.gaps = self.all.join(
-            other=self.all.filter(pl.col("gap_flag") == "GAP").select("account_type", "account_number").unique(),
-            on=["account_type", "account_number"],
-        )
+            self.all = self.raw.select(
+                account_type="STD_ACCOUNT",
+                account_number="STD_ACCOUNT_NUMBER",
+                account_holder="STD_ACCOUNT_HOLDER",
+                statement_date="STD_STATEMENT_DATE",
+                opening_balance="STD_OPENING_BALANCE",
+                closing_balance="STD_CLOSING_BALANCE",
+                gap_flag=pl.when(pl.col("gap")).then(pl.lit("GAP")).otherwise(pl.lit("")),
+            )
+            self.gaps = self.all.join(
+                other=self.all.filter(pl.col("gap_flag") == "GAP").select("account_type", "account_number").unique(),
+                on=["account_type", "account_number"],
+            )
+        except FileNotFoundError:
+            self.raw = None
+            self.all = None
+            self.gaps = None
 
 
 # class FACT_Balance:

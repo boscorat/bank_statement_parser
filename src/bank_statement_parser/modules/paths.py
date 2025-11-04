@@ -26,9 +26,29 @@ FUNCTIONS = MODULES.joinpath("functions")
 CAB = PARQUET.joinpath("checks_and_balances.parquet")
 BATCH_HEADS = PARQUET.joinpath("batch_heads.parquet")
 BATCH_LINES = PARQUET.joinpath("batch_lines.parquet")
-STATEMENT_HEADS = PARQUET.joinpath("invoice_heads.parquet")
-STATEMENT_LINES = PARQUET.joinpath("invoice_lines.parquet")
+STATEMENT_HEADS = PARQUET.joinpath("statement_heads.parquet")
+STATEMENT_LINES = PARQUET.joinpath("statement_lines.parquet")
+
+
+def CAB_TEMP(id: int):
+    return PARQUET.joinpath(f"checks_and_balances_{str(id)}.parquet")
+
+
+def BATCH_LINES_TEMP(id: int):
+    return PARQUET.joinpath(f"batch_lines_{str(id)}.parquet")
+
+
+def STATEMENT_HEADS_TEMP(id: int):
+    return PARQUET.joinpath(f"statement_heads_{str(id)}.parquet")
+
+
+def STATEMENT_LINES_TEMP(id: int):
+    return PARQUET.joinpath(f"statement_lines_{str(id)}.parquet")
+
 
 # logs
 LOG_ERROR = LOGS.joinpath("error.parquet")
 LOG_PERF = LOGS.joinpath("perf.parquet")
+
+
+# dynamic
