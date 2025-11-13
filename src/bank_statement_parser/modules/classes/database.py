@@ -150,6 +150,7 @@ class StatementHeads(Database):
             schema={
                 "ID_STATEMENT": pl.Utf8,
                 "ID_BATCH": pl.Utf8,
+                "ID_ACCOUNT": pl.Utf8,
                 "STD_COMPANY": pl.Utf8,
                 "STD_STATEMENT_TYPE": pl.Utf8,
                 "STD_ACCOUNT": pl.Utf8,
@@ -172,6 +173,7 @@ class StatementHeads(Database):
                     data={
                         "ID_STATEMENT": self.stmt.ID_STATEMENT,
                         "ID_BATCH": self.stmt.ID_BATCH,
+                        "ID_ACCOUNT": self.stmt.ID_ACCOUNT,
                         "STD_COMPANY": self.stmt.company,
                         "STD_STATEMENT_TYPE": self.stmt.statement_type,
                         "STD_ACCOUNT": self.stmt.account,
@@ -289,7 +291,7 @@ class BatchHeads(Database):
                 pl.DataFrame(
                     data={
                         "ID_BATCH": self.batch.ID_BATCH,
-                        "STD_PATH": self.batch.path,
+                        "STD_PATH": str(self.batch.path),
                         "STD_COMPANY": self.batch.company_key,
                         "STD_ACCOUNT": self.batch.account_key,
                         "STD_PDF_COUNT": self.batch.pdf_count,

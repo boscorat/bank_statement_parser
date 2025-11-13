@@ -50,5 +50,11 @@ def STATEMENT_LINES_TEMP(id: int):
 LOG_ERROR = LOGS.joinpath("error.parquet")
 LOG_PERF = LOGS.joinpath("perf.parquet")
 
-
-# dynamic
+# build export structure if it doesn't exist....
+if not EXPORTS.exists():
+    EXPORTS.mkdir()
+    CSV.mkdir()
+    EXCEL.mkdir()
+    JSON.mkdir()
+    LOGS.mkdir()
+    PARQUET.mkdir()

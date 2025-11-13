@@ -27,24 +27,24 @@ CPU_WORKERS = os.cpu_count()
 
 
 class Statement:
-    __slots__ = (
-        "company_key",
-        "file",
-        "account_key",
-        "ID_BATCH",
-        "checks_and_balances",
-        "pdf",
-        "ID_STATEMENT",
-        "config",
-        "company",
-        "account",
-        "statement_type",
-        "config_header",
-        "config_lines",
-        "header_results",
-        "lines_results",
-        "success",
-    )
+    # __slots__ = (
+    #     "company_key",
+    #     "file",
+    #     "account_key",
+    #     "ID_BATCH",
+    #     "checks_and_balances",
+    #     "pdf",
+    #     "ID_STATEMENT",
+    #     "config",
+    #     "company",
+    #     "account",
+    #     "statement_type",
+    #     "config_header",
+    #     "config_lines",
+    #     "header_results",
+    #     "lines_results",
+    #     "success",
+    # )
     logs: pl.DataFrame = pl.DataFrame(
         schema={
             "file_path": pl.Utf8,
@@ -63,14 +63,17 @@ class Statement:
         company_key: str | None = None,
         account_key: str | None = None,
         ID_BATCH: str | None = None,
+        smart_rename: bool = False,
     ):
         self.file = file
+        self.file_renamed = None
         self.company_key = company_key
         self.account_key = account_key
         self.ID_BATCH = ID_BATCH
         self.checks_and_balances: pl.DataFrame = pl.DataFrame()
         self.pdf = pdf_open(str(file.absolute()), logs=self.logs)
         self.ID_STATEMENT = self.build_id()
+        self.ID_ACCOUNT: str | None = None
         if self.pdf:
             self.config = self.get_config()
             if self.config:
@@ -129,6 +132,13 @@ class Statement:
             )
         self.logs.rechunk()
         self.success = self.is_successfull()
+        if self.success:
+            if self.config:
+                acct_number = str(self.header_results.select("STD_ACCOUNT_NUMBER").collect().head(1).item()).replace(" ", "")
+                self.ID_ACCOUNT = f"{self.config.company_key}_{self.config.account_type_key}_{acct_number}"
+                if smart_rename:
+                    stmt_date = str(self.header_results.select("STD_STATEMENT_DATE").collect().head(1).item()).replace("-", "")
+                    self.file_renamed = f"{self.ID_ACCOUNT}_{str(stmt_date)}.pdf"
 
     def build_id(self):
         """
@@ -258,21 +268,29 @@ class StatementBatch:
         "timer_start",
         "statements",
         "turbo",
+        "smart_rename",
     )
 
     def __init__(
-        self, path: str, company_key: str | None = None, account_key: str | None = None, print_log: bool = True, turbo: bool = False
+        self,
+        path: Path,
+        company_key: str | None = None,
+        account_key: str | None = None,
+        print_log: bool = True,
+        turbo: bool = False,
+        smart_rename: bool = True,
     ):
         print("processing...")
         self.process_time: datetime = datetime.now()
         self.timer_start = time()
-        self.path: str = path
+        self.path: Path = path
         self.ID_BATCH: str = str(uuid4())
-        self.__type = "file" if Path(self.path).is_file() else "folder"
+        self.__type = "file" if self.path.is_file() else "folder"
         self.company_key = company_key
         self.account_key = account_key
         self.print_log = print_log
         self.turbo = turbo
+        self.smart_rename = smart_rename
         if self.__type == "folder":
             self.pdfs: list[Path] = [file for file in Path(path).iterdir() if file.is_file() and file.suffix == ".pdf"]
         elif self.__type == "file" and Path(path).suffix == ".pdf":
@@ -334,7 +352,11 @@ class StatementBatch:
         batch_line["ERROR_CAB"] = False
         batch_line["ERROR_CONFIG"] = False
         try:
-            stmt = Statement(file=pdf, company_key=self.company_key, account_key=self.account_key, ID_BATCH=self.ID_BATCH)
+            stmt = Statement(
+                file=pdf, company_key=self.company_key, account_key=self.account_key, ID_BATCH=self.ID_BATCH, smart_rename=self.smart_rename
+            )
+            # if self.smart_rename:
+            #     stmt.file.rename(stmt.file.with_name(f"{stmt.company}_{stmt.account_key}_{stmt.account}"))
             batch_line["ID_STATEMENT"] = stmt.ID_STATEMENT
             batch_line["STD_ACCOUNT"] = stmt.account
             batch_line["STD_SUCCESS"] = stmt.success
@@ -368,8 +390,12 @@ class StatementBatch:
             cab_file = db_cab.file
             db_cab.cleanup()
             db_cab = None
+            file_old = deepcopy(stmt.file)
+            file_new = stmt.file_renamed if stmt.file_renamed else str(file_old)
             stmt.cleanup()
             stmt = None
+            if self.smart_rename:
+                file_old.rename(file_old.with_name(file_new))
         except BaseException as e:
             print(e)
             self.errors += 1

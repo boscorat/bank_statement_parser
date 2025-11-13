@@ -3,5 +3,6 @@
         "./src/bank_statement_parser",
         "./src/config",
         "./src/bank_statement_parser/modules"
-    ]
+    ],
+    "python-envs.pythonProjects": []
 }

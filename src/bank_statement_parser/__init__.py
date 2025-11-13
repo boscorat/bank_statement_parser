@@ -1,5 +1,6 @@
 import asyncio
 import time
+from pathlib import Path
 
 import polars as pl
 
@@ -25,10 +26,12 @@ def main():
 
     # db.BatchLines().delete_file()
 
-    # statements.StatementBatch("/home/boscorat/Downloads/2025", turbo=True)
-    # statements.StatementBatch("/home/boscorat/Downloads/2025/success", turbo=True)
-    # statements.StatementBatch("/home/boscorat/Downloads/2025/success/run1", turbo=True)
-    # statements.StatementBatch("/home/boscorat/Downloads/2025/success/run2", turbo=True)
+    statements.StatementBatch(Path("C:\\Users\\Admin\\repos\\bsp\\stmts"), turbo=True, smart_rename=False)
+
+    # statements.StatementBatch(Path("/home/boscorat/Downloads/2025"), turbo=True)
+    # statements.StatementBatch(Path("/home/boscorat/Downloads/2025/success"), turbo=True)
+    # statements.StatementBatch(Path("/home/boscorat/Downloads/2025/success/run1"), turbo=True)
+    # statements.StatementBatch(Path("/home/boscorat/Downloads/2025/success/run2"), turbo=True)
     # statements.StatementBatch("/home/boscorat/Downloads/2024", turbo=True)
     # statements.StatementBatch("/home/boscorat/Downloads/2023", turbo=True)
     # statements.StatementBatch("/home/boscorat/Downloads/2022", turbo=True)
@@ -47,7 +50,7 @@ def main():
 
     # print(f"\n{batch.pdf_count} processed with {batch.errors} errors in {batch.duration}")
     # print("*" * 10)
-    # print(pl.read_parquet(pt.BATCH_HEADS))
+    print(pl.read_parquet(pt.BATCH_HEADS))
     # print(pl.read_parquet(pt.BATCH_LINES))
 
     # print(pl.read_parquet(pt.STATEMENT_HEADS))
@@ -58,7 +61,7 @@ def main():
     # print(pl.read_parquet(pt.STATEMENT_HEADS))
     # print(pl.read_parquet(pt.STATEMENT_LINES))
     # print(pl.read_parquet(pt.CAB))
-    print(rp.GapReport().all)
+    # print(rp.GapReport().all)
 
 
 if __name__ == "__main__":

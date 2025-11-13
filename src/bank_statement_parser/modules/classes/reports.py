@@ -4,13 +4,102 @@ import bank_statement_parser.modules.classes.database as db
 import bank_statement_parser.modules.paths as pt
 
 
+class FactBalance:
+    def __init__(self) -> None:
+        self._cartesian_date_account: pl.DataFrame = (
+            DimTime().all.select("id_date").join(pl.read_parquet(pt.STATEMENT_HEADS).select(id_account="ID_ACCOUNT").unique(), how="cross")
+        )
+        self._account_days: pl.DataFrame = (
+            pl.read_parquet(pt.STATEMENT_HEADS)
+            .select(id_statement="ID_STATEMENT", id_account="ID_ACCOUNT")
+            .join(
+                pl.read_parquet(pt.STATEMENT_LINES).select(
+                    id_statement="ID_STATEMENT",
+                    id_date="STD_TRANSACTION_DATE",
+                    trnno="STD_TRANSACTION_NUMBER",
+                    opening_balance="STD_OPENING_BALANCE",
+                    closing_balance="STD_CLOSING_BALANCE",
+                    movement=pl.col("STD_PAYMENTS_IN").sub(pl.col("STD_PAYMENTS_OUT")),
+                ),
+                how="inner",
+                on="id_statement",
+            )
+            .sort("id_account", "id_date", "trnno")
+            .group_by("id_account", "id_date")
+            .agg(
+                opening_balance=pl.col("opening_balance").first(),
+                closing_balance=pl.col("closing_balance").last(),
+                movement=pl.col("movement").sum(),
+            )
+            .sort("id_account", "id_date")
+        )
+        self._bookends: pl.DataFrame = self._account_days.group_by("id_account").agg(
+            first_day=pl.col("id_date").min(), last_day=pl.col("id_date").max()
+        )
+        self.raw: pl.DataFrame = self._cartesian_date_account.join(self._bookends, how="inner", on="id_account", validate="m:1").join(
+            self._account_days, on=["id_account", "id_date"], how="left", validate="1:1"
+        )
+        self.all: pl.DataFrame = pl.DataFrame()
+
+        for acct in self.raw.partition_by("id_account"):
+            self.all.vstack(
+                acct.sort("id_date")
+                .with_columns(
+                    opening_balance=pl.col("closing_balance").fill_null(strategy="forward").sub(pl.col("movement").fill_null(0.0000)),
+                    closing_balance=pl.col("closing_balance").fill_null(strategy="forward"),
+                    pre_date=pl.when(pl.col("id_date") < pl.col("first_day")).then(pl.lit(True)).otherwise(pl.lit(False)),
+                    post_date=pl.when(pl.col("id_date") > pl.col("last_day")).then(pl.lit(True)).otherwise(pl.lit(False)),
+                )
+                .with_columns(outside_date=pl.col("pre_date").or_(pl.col("post_date")))
+                .with_columns(
+                    pl.col("opening_balance").fill_null(strategy="backward"), pl.col("closing_balance").fill_null(strategy="backward")
+                )
+                .drop("movement"),
+                in_place=True,
+            )
+
+        # pl.DataFrame = (
+        #     DimTime()
+        #     .all.select("id_date")
+        #     .join(pl.read_parquet(pt.STATEMENT_HEADS).select(""), how="cross")
+        #     .join(
+        #         pl.read_parquet(pt.STATEMENT_LINES).select(
+        #             id_date="STD_TRANSACTION_DATE",
+        #             id_statement="ID_STATEMENT",
+        #             trnno="STD_TRANSACTION_NUMBER",
+        #             opening_balance="STD_OPENING_BALANCE",
+        #             closing_balance="STD_CLOSING_BALANCE",
+        #         ),
+        #         how="left",
+        #         on=["id_statement", "id_date"],
+        #     )
+        # ).filter((pl.col("id_date").dt.year() == 2024) & (pl.col("id_account") == "HSBC_UK_CUR_31243535"))
+        ...
+
+
+def main():
+    fb = FactBalance()
+    # print(fb._cartesian_date_account)
+    # print(fb._account_days)
+    # print(fb.raw.filter((pl.col("id_date").dt.year() == 2024) & (pl.col("id_account") == "HSBC_UK_CUR_31243535")))
+    # print(fb.all.filter((pl.col("id_date").dt.year() == 2024) & (pl.col("id_account") == "HSBC_UK_CUR_31243535")))
+    # print(fb.raw.filter((pl.col("id_account") == "HSBC_UK_CUR_31243535")))
+    print(fb._account_days.filter((pl.col("id_account") == "HSBC_UK_CUR_51115626")).head(50))
+    print(fb._cartesian_date_account.filter((pl.col("id_account") == "HSBC_UK_CUR_51115626")).head(50))
+    print(fb.raw.filter((pl.col("id_account") == "HSBC_UK_CUR_51115626")).head(50))
+    print(fb.all.filter((pl.col("id_account") == "HSBC_UK_CUR_51115626")).head(50))
+    # print(pl.read_parquet(pt.STATEMENT_HEADS).filter(pl.col("ID_ACCOUNT") == "HSBC_UK_CUR_31243535").head(10))
+    # print(pl.read_parquet(pt.STATEMENT_LINES).head(10))
+    ...
+
+
 class DimTime:
     def __init__(self) -> None:
         self.start_date: str = pl.read_parquet(pt.STATEMENT_LINES).select("STD_TRANSACTION_DATE").min().item()
         self.end_date: str = pl.read_parquet(pt.STATEMENT_HEADS).select("STD_STATEMENT_DATE").max().item()
         self.date_series: pl.Series = pl.Series("ID_DATE", pl.date_ranges(self.start_date, self.end_date, eager=True)).explode()
         self.all: pl.DataFrame = pl.DataFrame(self.date_series).select(
-            date="ID_DATE",
+            id_date="ID_DATE",
             date_local_format=pl.col("ID_DATE").dt.to_string("%x"),
             date_integer=pl.col("ID_DATE").dt.year().mul(100).add(pl.col("ID_DATE").dt.month()).mul(100).add(pl.col("ID_DATE").dt.day()),
             year=pl.col("ID_DATE").dt.year(),
@@ -54,6 +143,7 @@ class DimStatement:
         )
         self.all: pl.DataFrame = self.raw.select(
             id_statement="ID_STATEMENT",
+            id_account="ID_ACCOUNT",
             id_statement_int="index",
             company="STD_COMPANY",
             account_type="STD_ACCOUNT_NUMBER",
@@ -66,7 +156,7 @@ class DimStatement:
         )
 
 
-class FactStatement:
+class FactTransaction:
     def __init__(self) -> None:
         self.raw: pl.DataFrame = pl.read_parquet(pt.STATEMENT_HEADS).join(
             other=pl.read_parquet(pt.STATEMENT_LINES), on="ID_STATEMENT", how="inner", validate="1:m", coalesce=True
@@ -83,10 +173,6 @@ class FactStatement:
             value_out="STD_PAYMENTS_OUT_right",
             value=pl.col("STD_PAYMENTS_IN_right").add(pl.col("STD_PAYMENTS_OUT_right").mul(-1)),
         )
-
-
-def main():
-    DimTime()
 
 
 class GapReport:
@@ -191,7 +277,7 @@ class GapReport:
 
 
 if __name__ == "__main__":
-    pl.Config.set_tbl_rows(70)
+    pl.Config.set_tbl_rows(100)
     pl.Config.set_tbl_cols(55)
     pl.Config.set_fmt_str_lengths(25)
     main()
