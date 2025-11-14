@@ -70,6 +70,16 @@
         {statement_type="HSBC UK Credit Card", field="transaction_date", format = "%d %b %y"},
     ]
 
+[STD_TRANSACTION_TYPE]
+    section = 'lines'
+    type = 'str'
+    std_refs = [
+        {statement_type="HSBC UK Current Account", field="payment_type", format = "%d %b %y"},
+        {statement_type="HSBC UK Saving Account", field="payment_type", format = "%d %b %y"},
+        {statement_type="HSBC UK Credit Card", default="CC"},
+    ]
+
+
 [STD_TRANSACTION_DESC]
     section = "lines"
     type = "string"

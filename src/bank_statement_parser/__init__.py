@@ -26,7 +26,7 @@ def main():
 
     # db.BatchLines().delete_file()
 
-    statements.StatementBatch(Path("C:\\Users\\Admin\\repos\\bsp\\stmts"), turbo=True, smart_rename=False)
+    statements.StatementBatch(Path("C:\\Users\\Admin\\repos\\bsp\\stmts"), turbo=False, smart_rename=True)
 
     # statements.StatementBatch(Path("/home/boscorat/Downloads/2025"), turbo=True)
     # statements.StatementBatch(Path("/home/boscorat/Downloads/2025/success"), turbo=True)

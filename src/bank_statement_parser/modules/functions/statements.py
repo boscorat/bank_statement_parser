@@ -536,7 +536,11 @@ def get_standard_fields(
         if std_config.section == section:
             ref = [ref for ref in std_config.std_refs if ref.statement_type == statement_type][0]
             if ref:
-                data = data.with_columns(pl.col(ref.field).alias(std_field))
+                data = (
+                    data.with_columns(pl.col(ref.field).alias(std_field))
+                    if ref.field
+                    else data.with_columns(pl.lit(ref.default).alias(std_field))
+                )
                 if (
                     ref.terminator
                 ):  # sometimes there's some other info such as BALANCE CARRIED FORWARD that gets pulled into a standard field
@@ -597,6 +601,7 @@ def get_standard_fields(
         data = data.with_columns(STD_MOVEMENT=pl.col("STD_PAYMENT_IN").sub("STD_PAYMENT_OUT")).with_columns(
             STD_RUNNING_BALANCE=pl.col("STD_RUNNING_BALANCE").add(pl.col("STD_MOVEMENT").cum_sum())
         )
+        data = data.with_columns(STD_CD=pl.when(pl.col("STD_MOVEMENT") > 0).then(pl.lit("C")).otherwise(pl.lit("D")))
     # Checks & Balances updates
     if section == "header":
         checks_and_balances.hstack(

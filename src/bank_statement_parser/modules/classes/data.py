@@ -5,8 +5,9 @@ from typing import Optional
 @dataclass
 class StdRefs:
     statement_type: str
-    field: str
+    field: Optional[str]
     format: Optional[str]
+    default: Optional[str]
     multiplier: Optional[float] = 1
     exclude_positive_values: Optional[bool] = False
     exclude_negative_values: Optional[bool] = False
