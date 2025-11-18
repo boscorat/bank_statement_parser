@@ -1,15 +1,26 @@
 [STD_STATEMENT_DATE]
     section = "header"
     type = "date"
+    vital = true
     std_refs = [
         {statement_type="HSBC UK Current Account", field="statement_date", format = "%-d %B %Y"},
         {statement_type="HSBC UK Saving Account", field="statement_date", format = "%-d %B %Y"},
         {statement_type="HSBC UK Credit Card", field="statement_date", format = "%-d %B %Y"},
     ]
 
+[STD_SORTCODE]
+    section = "header"
+    type = "string"
+    vital = false
+    std_refs = [
+        {statement_type="HSBC UK Current Account", field="sortcode"},
+        {statement_type="HSBC UK Saving Account", field="sortcode"},
+    ]
+
 [STD_ACCOUNT_NUMBER]
     section = "header"
     type = "string"
+    vital = true
     std_refs = [
         {statement_type="HSBC UK Current Account", field="account_number"},
         {statement_type="HSBC UK Saving Account", field="account_number"},
@@ -19,6 +30,7 @@
 [STD_ACCOUNT_HOLDER]
     section = "header"
     type = "string"
+    vital = true
     std_refs = [
         {statement_type="HSBC UK Current Account", field="account_name"},
         {statement_type="HSBC UK Saving Account", field="account_name"},
@@ -28,6 +40,7 @@
 [STD_OPENING_BALANCE]
     section = "header"
     type = "numeric"
+    vital = true
     std_refs = [
         {statement_type="HSBC UK Current Account", field="opening_balance"},
         {statement_type="HSBC UK Saving Account", field="opening_balance"},
@@ -37,6 +50,7 @@
 [STD_CLOSING_BALANCE]
     section = "header"
     type = "numeric"
+    vital = true
     std_refs = [
         {statement_type="HSBC UK Current Account", field="closing_balance"},
         {statement_type="HSBC UK Saving Account", field="closing_balance"},
@@ -46,6 +60,7 @@
 [STD_PAYMENTS_IN]
     section = "header"
     type = "numeric"
+    vital = true
     std_refs = [
         {statement_type="HSBC UK Current Account", field="payments_in"},
         {statement_type="HSBC UK Saving Account", field="payments_in"},
@@ -55,6 +70,7 @@
 [STD_PAYMENTS_OUT]
     section = "header"
     type = "numeric"
+    vital = true
     std_refs = [
         {statement_type="HSBC UK Current Account", field="payments_out"},
         {statement_type="HSBC UK Saving Account", field="payments_out"},
@@ -64,6 +80,7 @@
 [STD_TRANSACTION_DATE]
     section = "lines"
     type = "date"
+    vital = true
     std_refs = [
         {statement_type="HSBC UK Current Account", field="date", format = "%d %b %y"},
         {statement_type="HSBC UK Saving Account", field="date", format = "%d %b %y"},
@@ -73,6 +90,7 @@
 [STD_TRANSACTION_TYPE]
     section = 'lines'
     type = 'str'
+    vital = true
     std_refs = [
         {statement_type="HSBC UK Current Account", field="payment_type", format = "%d %b %y"},
         {statement_type="HSBC UK Saving Account", field="payment_type", format = "%d %b %y"},
@@ -83,6 +101,7 @@
 [STD_TRANSACTION_DESC]
     section = "lines"
     type = "string"
+    vital = true
     std_refs = [
         {statement_type="HSBC UK Current Account", field="details", terminator=" | BALANCECARRIEDFORWARD"},
         {statement_type="HSBC UK Saving Account", field="details", terminator=" | BALANCECARRIEDFORWARD"},
@@ -92,6 +111,7 @@
 [STD_PAYMENT_IN]
     section = "lines"
     type = "numeric"
+    vital = true
     std_refs = [
         {statement_type="HSBC UK Current Account", field="£_paid_in"},
         {statement_type="HSBC UK Saving Account", field="£_paid_in"},
@@ -101,6 +121,7 @@
 [STD_PAYMENT_OUT]
     section = "lines"
     type = "numeric"
+    vital = true
     std_refs = [
         {statement_type="HSBC UK Current Account", field="£_paid_out"},
         {statement_type="HSBC UK Saving Account", field="£_paid_out"},

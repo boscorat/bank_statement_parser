@@ -90,6 +90,7 @@ class FlatTransaction:
             "company",
             "account_type",
             "account_number",
+            "sortcode",
             "account_holder",
             "transaction_number",
             pl.col("transaction_credit_or_debit").alias("CD"),
@@ -248,6 +249,7 @@ class DimAccount:
                 company="STD_COMPANY",
                 account_type="STD_ACCOUNT",
                 account_number="STD_ACCOUNT_NUMBER",
+                sortcode="STD_SORTCODE",
                 account_holder="STD_ACCOUNT_HOLDER",
             )
             .group_by("id_account")

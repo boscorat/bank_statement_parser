@@ -154,6 +154,7 @@ class StatementHeads(Database):
                 "STD_COMPANY": pl.Utf8,
                 "STD_STATEMENT_TYPE": pl.Utf8,
                 "STD_ACCOUNT": pl.Utf8,
+                "STD_SORTCODE": pl.Utf8,
                 "STD_ACCOUNT_NUMBER": pl.Utf8,
                 "STD_ACCOUNT_HOLDER": pl.Utf8,
                 "STD_STATEMENT_DATE": pl.Date,
@@ -181,6 +182,7 @@ class StatementHeads(Database):
                     orient="row",
                 ).hstack(
                     self.stmt.header_results.select(
+                        "STD_SORTCODE",
                         "STD_ACCOUNT_NUMBER",
                         "STD_ACCOUNT_HOLDER",
                         "STD_STATEMENT_DATE",

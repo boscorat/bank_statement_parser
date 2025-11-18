@@ -1,15 +1,13 @@
-import asyncio
-import time
 from pathlib import Path
 
 import polars as pl
 
-import bank_statement_parser.modules.classes.database as db
-import bank_statement_parser.modules.classes.reports as rp
-import bank_statement_parser.modules.paths as pt
+# import bank_statement_parser.modules.classes.database as db
+# import bank_statement_parser.modules.classes.reports as rp
+# import bank_statement_parser.modules.paths as pt
 from bank_statement_parser.modules.classes import statements
 
-# from bank_statement_parser.modules.classes.reports import GapReport
+# from bank_statement_parser.modules.classes.reports import DimAccount
 
 
 def main():
@@ -26,7 +24,7 @@ def main():
 
     # db.BatchLines().delete_file()
 
-    statements.StatementBatch(Path("C:\\Users\\Admin\\repos\\bsp\\stmts"), turbo=True, smart_rename=True)
+    statements.StatementBatch(Path("C:\\Users\\Admin\\repos\\bsp\\stmts"), turbo=True, smart_rename=False)
 
     # statements.StatementBatch(Path("/home/boscorat/Downloads/2025"), turbo=True)
     # statements.StatementBatch(Path("/home/boscorat/Downloads/2025/success"), turbo=True)
@@ -50,8 +48,14 @@ def main():
 
     # print(f"\n{batch.pdf_count} processed with {batch.errors} errors in {batch.duration}")
     # print("*" * 10)
-    print(pl.read_parquet(pt.BATCH_HEADS))
-    # print(pl.read_parquet(pt.BATCH_LINES))
+    # last_batch = pl.read_parquet(pt.BATCH_HEADS).select(pl.col("ID_BATCH").last()).item()
+    # print(pl.read_parquet(pt.BATCH_HEADS))
+    # print(
+    #     pl.read_parquet(pt.BATCH_LINES)
+    #     .join(pl.read_parquet(pt.BATCH_HEADS), how="inner", on="ID_BATCH")
+    #     .filter(pl.col("ID_BATCH") == pl.lit(last_batch))
+    # )
+    # print(DimAccount(ID_BATCH=last_batch).all.collect())
 
     # print(pl.read_parquet(pt.STATEMENT_HEADS))
     # print(pl.read_parquet(pt.STATEMENT_LINES))

@@ -18,6 +18,7 @@ class StdRefs:
 class StandardFields:
     section: str
     type: str
+    vital: bool
     std_refs: list[StdRefs]
 
 

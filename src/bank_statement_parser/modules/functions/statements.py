@@ -13,6 +13,7 @@ from bank_statement_parser.modules.classes.data import (
     StatementTable,
     TransactionSpec,
 )
+from bank_statement_parser.modules.classes.errors import ConfigError
 from bank_statement_parser.modules.currency import currency_spec
 from bank_statement_parser.modules.functions.pdfs import get_region, get_table_from_region
 
@@ -534,7 +535,10 @@ def get_standard_fields(
 ) -> pl.DataFrame:
     for std_field, std_config in config_standard_fields.items():
         if std_config.section == section:
-            ref = [ref for ref in std_config.std_refs if ref.statement_type == statement_type][0]
+            try:
+                ref = [ref for ref in std_config.std_refs if ref.statement_type == statement_type][0]
+            except IndexError:
+                ref = None
             if ref:
                 data = (
                     data.with_columns(pl.col(ref.field).alias(std_field))
@@ -593,6 +597,11 @@ def get_standard_fields(
                         except pl.exceptions.InvalidOperationError:  # still failed?
                             continue  # give up and return the date as it is
                     data = data.with_columns(pl.col(std_field).fill_null(strategy="forward"))
+            else:
+                if std_config.vital:
+                    raise ConfigError("Standard field is vital but not specified for this statement type")
+                else:
+                    data = data.with_columns(pl.lit(None).alias(std_field))
     if section == "pages":
         data = data.with_columns(STD_PAGE_NUMBER=pl.col("page"))
     if section == "lines":
