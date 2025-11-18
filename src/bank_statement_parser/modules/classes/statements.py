@@ -9,7 +9,6 @@ from time import time
 from uuid import uuid4
 
 import polars as pl
-from memory_profiler import profile
 
 import bank_statement_parser.modules.classes.database as db
 from bank_statement_parser.modules.classes.data import Account
@@ -22,29 +21,30 @@ from bank_statement_parser.modules.config import (
 from bank_statement_parser.modules.functions.pdfs import pdf_close, pdf_open
 from bank_statement_parser.modules.functions.statements import get_results, get_standard_fields
 
-DOWNLOAD_LIMIT = 4
 CPU_WORKERS = os.cpu_count()
 
 
 class Statement:
-    # __slots__ = (
-    #     "company_key",
-    #     "file",
-    #     "account_key",
-    #     "ID_BATCH",
-    #     "checks_and_balances",
-    #     "pdf",
-    #     "ID_STATEMENT",
-    #     "config",
-    #     "company",
-    #     "account",
-    #     "statement_type",
-    #     "config_header",
-    #     "config_lines",
-    #     "header_results",
-    #     "lines_results",
-    #     "success",
-    # )
+    __slots__ = (
+        "company_key",
+        "file",
+        "file_renamed",
+        "account_key",
+        "ID_BATCH",
+        "ID_ACCOUNT",
+        "checks_and_balances",
+        "pdf",
+        "ID_STATEMENT",
+        "config",
+        "company",
+        "account",
+        "statement_type",
+        "config_header",
+        "config_lines",
+        "header_results",
+        "lines_results",
+        "success",
+    )
     logs: pl.DataFrame = pl.DataFrame(
         schema={
             "file_path": pl.Utf8,
