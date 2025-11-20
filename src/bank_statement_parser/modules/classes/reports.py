@@ -1,9 +1,76 @@
 from pathlib import Path
+from typing import Literal
 
 import polars as pl
+from sqlalchemy import create_engine
 from xlsxwriter import Workbook
 
 import bank_statement_parser.modules.paths as pt
+
+
+def export_db_mssql(
+    servername: str = "T5810",
+    instancename: str = "\\SQLEXPRESS",
+    database: str = "banking",
+    schema: str = "tmp",
+    username: str = "",
+    password: str = "",
+    type: str = "full",
+    driver: str = "SQL Server Native Client 11.0",
+    if_table_exists: Literal["fail", "append", "replace"] = "replace",  # can be fail, append or replace
+    ID_BATCH: str | None = None,
+):  # type can be full or simple):
+    connection = f"mssql+pyodbc://{username}:{password}@{servername}{instancename}/{database}?driver={driver}"
+    engine = create_engine(connection, fast_executemany=True)
+
+    if type == "full":
+        DimStatement(ID_BATCH).all.collect().write_database(
+            table_name=f"{schema}.statement", connection=engine, if_table_exists=if_table_exists
+        )
+        DimAccount(ID_BATCH).all.collect().write_database(
+            table_name=f"{schema}.account", connection=engine, if_table_exists=if_table_exists
+        )
+        DimTime(ID_BATCH).all.collect().write_database(table_name=f"{schema}.calendar", connection=engine, if_table_exists=if_table_exists)
+        FactTransaction(ID_BATCH).all.collect().write_database(
+            table_name=f"{schema}.transactions", connection=engine, if_table_exists=if_table_exists
+        )
+        FactBalance(ID_BATCH).all.collect().write_database(
+            table_name=f"{schema}.balances", connection=engine, if_table_exists=if_table_exists
+        )
+        GapReport().all.collect().write_database(table_name=f"{schema}.gaps", connection=engine, if_table_exists=if_table_exists)
+    elif type == "simple":
+        FlatTransaction(ID_BATCH).all.collect().write_database(
+            table_name=f"{schema}.transactions_table", connection=engine, if_table_exists=if_table_exists
+        )
+
+
+def export_csv(folder: Path, type: str = "full", ID_BATCH: str | None = None):  # type can be full or simple
+    if type == "full":
+        DimStatement(ID_BATCH).all.collect().write_csv(
+            file=folder.joinpath("statement.csv"), separator=",", include_header=True, quote_style="non_numeric", float_precision=2
+        )
+        DimAccount(ID_BATCH).all.collect().write_csv(
+            file=folder.joinpath("account.csv"), separator=",", include_header=True, quote_style="non_numeric", float_precision=2
+        )
+        DimTime(ID_BATCH).all.collect().write_csv(
+            file=folder.joinpath("calendar.csv"), separator=",", include_header=True, quote_style="non_numeric", float_precision=2
+        )
+        FactTransaction(ID_BATCH).all.collect().write_csv(
+            file=folder.joinpath("transactions.csv"), separator=",", include_header=True, quote_style="non_numeric", float_precision=2
+        )
+        FactBalance(ID_BATCH).all.collect().write_csv(
+            file=folder.joinpath("balances.csv"), separator=",", include_header=True, quote_style="non_numeric", float_precision=2
+        )
+        GapReport().all.collect().write_csv(
+            file=folder.joinpath("gaps.csv"), separator=",", include_header=True, quote_style="non_numeric", float_precision=2
+        )
+        FlatTransaction(ID_BATCH).all.collect().write_csv(
+            file=folder.joinpath("flat.csv"), separator=",", include_header=True, quote_style="non_numeric", float_precision=2
+        )
+    elif type == "simple":
+        FlatTransaction(ID_BATCH).all.collect().write_csv(
+            file=folder.joinpath("transactions_table.csv"), separator=",", include_header=True, quote_style="non_numeric", float_precision=2
+        )
 
 
 def export_excel(path: Path, type: str = "full", ID_BATCH: str | None = None):  # type can be full or simple
@@ -63,7 +130,7 @@ def export_excel(path: Path, type: str = "full", ID_BATCH: str | None = None):  
         elif type == "simple":
             FlatTransaction(ID_BATCH).all.collect().write_excel(
                 workbook=wb,
-                worksheet="transactions",
+                worksheet="transactions_table",
                 autofit=False,
                 table_name="flat",
                 table_style="Table Style Medium 4",
