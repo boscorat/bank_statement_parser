@@ -1,47 +1,46 @@
 from pathlib import Path
-from typing import Literal
 
 import polars as pl
-from sqlalchemy import create_engine
 from xlsxwriter import Workbook
 
 import bank_statement_parser.modules.paths as pt
 
+# this function to export database objects is functiona;, but requires significant dependencies for little benefit
+# this is being commented out, and the dependencies removed, but may be re-instated in future if seen as having significant benefit
+# def export_db_mssql(
+#     servername: str = "T5810",
+#     instancename: str = "\\SQLEXPRESS",
+#     database: str = "banking",
+#     schema: str = "tmp",
+#     username: str = "",
+#     password: str = "",
+#     type: str = "full",
+#     driver: str = "SQL Server Native Client 11.0",
+#     if_table_exists: Literal["fail", "append", "replace"] = "replace",  # can be fail, append or replace
+#     ID_BATCH: str | None = None,
+# ):  # type can be full or simple):
+#     connection = f"mssql+pyodbc://{username}:{password}@{servername}{instancename}/{database}?driver={driver}"
+#     engine = create_engine(connection, fast_executemany=True)
 
-def export_db_mssql(
-    servername: str = "T5810",
-    instancename: str = "\\SQLEXPRESS",
-    database: str = "banking",
-    schema: str = "tmp",
-    username: str = "",
-    password: str = "",
-    type: str = "full",
-    driver: str = "SQL Server Native Client 11.0",
-    if_table_exists: Literal["fail", "append", "replace"] = "replace",  # can be fail, append or replace
-    ID_BATCH: str | None = None,
-):  # type can be full or simple):
-    connection = f"mssql+pyodbc://{username}:{password}@{servername}{instancename}/{database}?driver={driver}"
-    engine = create_engine(connection, fast_executemany=True)
-
-    if type == "full":
-        DimStatement(ID_BATCH).all.collect().write_database(
-            table_name=f"{schema}.statement", connection=engine, if_table_exists=if_table_exists
-        )
-        DimAccount(ID_BATCH).all.collect().write_database(
-            table_name=f"{schema}.account", connection=engine, if_table_exists=if_table_exists
-        )
-        DimTime(ID_BATCH).all.collect().write_database(table_name=f"{schema}.calendar", connection=engine, if_table_exists=if_table_exists)
-        FactTransaction(ID_BATCH).all.collect().write_database(
-            table_name=f"{schema}.transactions", connection=engine, if_table_exists=if_table_exists
-        )
-        FactBalance(ID_BATCH).all.collect().write_database(
-            table_name=f"{schema}.balances", connection=engine, if_table_exists=if_table_exists
-        )
-        GapReport().all.collect().write_database(table_name=f"{schema}.gaps", connection=engine, if_table_exists=if_table_exists)
-    elif type == "simple":
-        FlatTransaction(ID_BATCH).all.collect().write_database(
-            table_name=f"{schema}.transactions_table", connection=engine, if_table_exists=if_table_exists
-        )
+#     if type == "full":
+#         DimStatement(ID_BATCH).all.collect().write_database(
+#             table_name=f"{schema}.statement", connection=engine, if_table_exists=if_table_exists
+#         )
+#         DimAccount(ID_BATCH).all.collect().write_database(
+#             table_name=f"{schema}.account", connection=engine, if_table_exists=if_table_exists
+#         )
+#         DimTime(ID_BATCH).all.collect().write_database(table_name=f"{schema}.calendar", connection=engine, if_table_exists=if_table_exists)
+#         FactTransaction(ID_BATCH).all.collect().write_database(
+#             table_name=f"{schema}.transactions", connection=engine, if_table_exists=if_table_exists
+#         )
+#         FactBalance(ID_BATCH).all.collect().write_database(
+#             table_name=f"{schema}.balances", connection=engine, if_table_exists=if_table_exists
+#         )
+#         GapReport().all.collect().write_database(table_name=f"{schema}.gaps", connection=engine, if_table_exists=if_table_exists)
+#     elif type == "simple":
+#         FlatTransaction(ID_BATCH).all.collect().write_database(
+#             table_name=f"{schema}.transactions_table", connection=engine, if_table_exists=if_table_exists
+#         )
 
 
 def export_csv(folder: Path, type: str = "full", ID_BATCH: str | None = None):  # type can be full or simple
