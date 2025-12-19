@@ -11,3 +11,6 @@ wheels/
 
 # export folders
 src/exports
+
+#performance profiling tools
+*profile.*
