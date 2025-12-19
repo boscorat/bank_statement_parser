@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class StdRefs:
     statement_type: str
     field: Optional[str]
@@ -14,7 +14,7 @@ class StdRefs:
     terminator: Optional[str] = None
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class StandardFields:
     section: str
     type: str
@@ -22,7 +22,7 @@ class StandardFields:
     std_refs: list[StdRefs]
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class CurrencySpec:
     symbols: list[str]
     seperator_decimal: str
@@ -31,13 +31,13 @@ class CurrencySpec:
     pattern: str
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class Cell:
     row: int
     col: int
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class NumericModifier:
     prefix: Optional[str]
     suffix: Optional[str]
@@ -46,7 +46,7 @@ class NumericModifier:
     exclude_positive_values: bool = False
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class FieldOffset:
     rows_offset: int
     cols_offset: int
@@ -56,7 +56,7 @@ class FieldOffset:
     numeric_modifier: Optional[NumericModifier] = None
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class Field:
     field: str
     cell: Optional[Cell]
@@ -73,19 +73,19 @@ class Field:
     value_offset: Optional[FieldOffset] = None
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class Test:
     test_desc: str
     assertion: str
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class DynamicLineSpec:
     image_id: int
     image_location_tag: str
 
 
-@dataclass
+@dataclass(frozen=False, slots=True)
 class Location:
     page_number: Optional[int] = None
     top_left: Optional[list[int]] = None
@@ -96,13 +96,13 @@ class Location:
     try_shift_down: Optional[int] = None
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class FieldValidation:
     field: str
     pattern: str
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class StatementBookend:
     start_fields: list[str]
     min_non_empty_start: int
@@ -113,20 +113,20 @@ class StatementBookend:
     sticky_fields: Optional[list[str]]
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class MergeFields:
     fields: list[str]
     separator: str
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class TransactionSpec:
     transaction_bookends: list[StatementBookend]
     fill_forward_fields: Optional[list[str]]
     merge_fields: Optional[MergeFields]
 
 
-@dataclass
+@dataclass(frozen=False, slots=True)
 class StatementTable:
     type: str
     statement_table: str
@@ -144,7 +144,7 @@ class StatementTable:
     transaction_spec: Optional[TransactionSpec]
 
 
-@dataclass
+@dataclass(frozen=False, slots=True)
 class Config:
     config: str
     statement_table_key: Optional[str]
@@ -153,31 +153,31 @@ class Config:
     field: Optional[Field]
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class ConfigGroup:
     configs: Optional[list[Config]]
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class StatementType:
     statement_type: str
     header: ConfigGroup
     lines: ConfigGroup
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class AccountType:
     account_type: str
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class Company:
     company: str
     config: Optional[Config]
     accounts: Optional[dict]
 
 
-@dataclass
+@dataclass(frozen=False, slots=True)
 class Account:
     account: str
     company_key: str
