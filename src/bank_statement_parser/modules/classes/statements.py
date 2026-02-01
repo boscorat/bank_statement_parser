@@ -240,8 +240,6 @@ class Statement:
     def cleanup(self):
         if self.pdf is not None:
             pdf_close(self.pdf, logs=self.logs, file_path=str(self.file.absolute()))
-            self.pdf = None
-        self.ID_STATEMENT = None
         self.config = None
         self.config_header = None
         self.config_lines = None
@@ -355,8 +353,6 @@ class StatementBatch:
             stmt = Statement(
                 file=pdf, company_key=self.company_key, account_key=self.account_key, ID_BATCH=self.ID_BATCH, smart_rename=self.smart_rename
             )
-            # if self.smart_rename:
-            #     stmt.file.rename(stmt.file.with_name(f"{stmt.company}_{stmt.account_key}_{stmt.account}"))
             batch_line["ID_STATEMENT"] = stmt.ID_STATEMENT
             batch_line["STD_ACCOUNT"] = stmt.account
             batch_line["STD_SUCCESS"] = stmt.success

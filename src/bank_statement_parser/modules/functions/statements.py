@@ -378,15 +378,19 @@ def extract_fields(
                         with pl.Config(tbl_cols=-1, tbl_rows=-1):
                             result_vo = result.filter(pl.col("success")).collect().with_columns(value_raw=pl.col("value_raw_offset"))
                             if result_vo.height > 0:
-                                field_vo: Field = deepcopy(field)
-                                field_vo.string_pattern = None
-                                field_vo.value_offset = None
-                                field_vo.numeric_currency = field.value_offset.numeric_currency
-                                field_vo.vital = field.value_offset.vital
-                                field_vo.type = field.value_offset.type
-                                field_vo.numeric_modifier = field.value_offset.numeric_modifier
+                                from dataclasses import replace
+
+                                field_vo: Field = replace(
+                                    field,
+                                    string_pattern=None,
+                                    value_offset=None,
+                                    numeric_currency=field.value_offset.numeric_currency,
+                                    vital=field.value_offset.vital,
+                                    type=field.value_offset.type,
+                                    numeric_modifier=field.value_offset.numeric_modifier,
+                                )
                                 if field_vo.type == "numeric":
-                                    spec = currency_spec[field.numeric_currency]
+                                    spec = currency_spec[field_vo.numeric_currency]
 
                                 result_vo = (
                                     result_vo.lazy()
