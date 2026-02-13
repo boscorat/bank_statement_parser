@@ -1,7 +1,6 @@
 import sqlite3
 from pathlib import Path
 
-
 SCHEMAS = {
     "checks_and_balances": {
         "ID_CAB": "TEXT",
@@ -82,26 +81,38 @@ SCHEMAS = {
 
 FOREIGN_KEYS = {
     "checks_and_balances": [
-        "FOREIGN KEY (ID_STATEMENT) REFERENCES statement_heads(ID_STATEMENT)",
-        "FOREIGN KEY (ID_BATCH) REFERENCES batch_heads(ID_BATCH)",
+        "FOREIGN KEY (ID_STATEMENT) REFERENCES statement_heads(ID_STATEMENT) ON UPDATE CASCADE ON DELETE CASCADE",
+        "FOREIGN KEY (ID_BATCH) REFERENCES batch_heads(ID_BATCH) ON UPDATE CASCADE ON DELETE CASCADE",
     ],
     "statement_heads": [
-        "FOREIGN KEY (ID_BATCH) REFERENCES batch_heads(ID_BATCH)",
+        "FOREIGN KEY (ID_BATCH) REFERENCES batch_heads(ID_BATCH) ON UPDATE CASCADE ON DELETE CASCADE",
     ],
     "statement_lines": [
-        "FOREIGN KEY (ID_STATEMENT) REFERENCES statement_heads(ID_STATEMENT)",
+        "FOREIGN KEY (ID_STATEMENT) REFERENCES statement_heads(ID_STATEMENT) ON UPDATE CASCADE ON DELETE CASCADE",
     ],
     "batch_lines": [
-        "FOREIGN KEY (ID_BATCH) REFERENCES batch_heads(ID_BATCH)",
-        "FOREIGN KEY (ID_STATEMENT) REFERENCES statement_heads(ID_STATEMENT)",
+        "FOREIGN KEY (ID_BATCH) REFERENCES batch_heads(ID_BATCH) ON UPDATE CASCADE ON DELETE CASCADE",
+        "FOREIGN KEY (ID_STATEMENT) REFERENCES statement_heads(ID_STATEMENT) ON UPDATE CASCADE ON DELETE CASCADE",
     ],
+}
+
+
+PRIMARY_KEYS = {
+    "checks_and_balances": "ID_CAB",
+    "statement_heads": "ID_STATEMENT",
+    "statement_lines": "ID_TRANSACTION",
+    "batch_heads": "ID_BATCH",
+    "batch_lines": "ID_BATCHLINE",
 }
 
 
 def create_table(conn, table_name, schema: dict, with_fk: bool = False):
     col_defs = []
     for col_name, col_type in schema.items():
-        col_defs.append(f'"{col_name}" {col_type}')
+        if with_fk and table_name in PRIMARY_KEYS and PRIMARY_KEYS[table_name] == col_name:
+            col_defs.append(f'"{col_name}" {col_type} NOT NULL PRIMARY KEY')
+        else:
+            col_defs.append(f'"{col_name}" {col_type}')
 
     if with_fk and table_name in FOREIGN_KEYS:
         col_defs.extend(FOREIGN_KEYS[table_name])
@@ -113,8 +124,7 @@ def create_table(conn, table_name, schema: dict, with_fk: bool = False):
     conn.execute(create_sql)
 
 
-def main(with_fk: bool = False):
-    db_name = "v2.db" if with_fk else "v1.db"
+def main(db_name: str, with_fk: bool = False):
     db_path = Path(__file__).parent / db_name
     if db_path.exists():
         db_path.unlink()
@@ -134,5 +144,5 @@ def main(with_fk: bool = False):
 
 
 if __name__ == "__main__":
-    main(with_fk=False)
-    main(with_fk=True)
+    # main(db_name="project_basic.db", with_fk=False)
+    main(db_name="project.db", with_fk=True)
