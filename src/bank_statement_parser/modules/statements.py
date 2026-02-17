@@ -10,16 +10,16 @@ from uuid import uuid4
 
 import polars as pl
 
-import bank_statement_parser.modules.classes.database as db
-from bank_statement_parser.modules.classes.data import Account
+import bank_statement_parser.modules.database as db
 from bank_statement_parser.modules.config import (
     config_standard_fields,
     get_config_from_account,
     get_config_from_company,
     get_config_from_statement,
 )
-from bank_statement_parser.modules.functions.pdfs import pdf_close, pdf_open
-from bank_statement_parser.modules.functions.statements import get_results, get_standard_fields
+from bank_statement_parser.modules.data import Account
+from bank_statement_parser.modules.pdf_functions import pdf_close, pdf_open
+from bank_statement_parser.modules.statement_functions import get_results, get_standard_fields
 
 CPU_WORKERS = os.cpu_count()
 

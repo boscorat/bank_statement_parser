@@ -14,3 +14,6 @@ src/exports
 
 #performance profiling tools
 *profile.*
+
+#any database files
+*.db

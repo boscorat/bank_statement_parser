@@ -5,7 +5,7 @@ from pdfplumber import open
 from pdfplumber.page import Page
 from pdfplumber.pdf import PDF
 
-from bank_statement_parser.modules.classes.data import DynamicLineSpec, Location
+from bank_statement_parser.modules.data import DynamicLineSpec, Location
 
 
 def get_region(location: Location, pdf: PDF, logs: pl.DataFrame, file_path: str) -> Page | None:
