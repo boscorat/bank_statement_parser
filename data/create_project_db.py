@@ -124,8 +124,7 @@ def create_table(conn, table_name, schema: dict, with_fk: bool = False):
     conn.execute(create_sql)
 
 
-def main(db_name: str, with_fk: bool = False):
-    db_path = Path(__file__).parent / db_name
+def main(db_path: Path, with_fk: bool = False):
     if db_path.exists():
         db_path.unlink()
 
@@ -145,4 +144,4 @@ def main(db_name: str, with_fk: bool = False):
 
 if __name__ == "__main__":
     # main(db_name="project_basic.db", with_fk=False)
-    main(db_name="project.db", with_fk=True)
+    main(db_path=Path(__file__).parent.joinpath("project.db"), with_fk=True)
