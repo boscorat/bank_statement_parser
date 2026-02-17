@@ -44,6 +44,7 @@ class Statement:
         "header_results",
         "lines_results",
         "success",
+        "config_path",
     )
     logs: pl.DataFrame = pl.DataFrame(
         schema={
@@ -64,6 +65,7 @@ class Statement:
         account_key: str | None = None,
         ID_BATCH: str | None = None,
         smart_rename: bool = False,
+        config_path: Path | None = None,
     ):
         self.file = file
         self.file_renamed = None
@@ -74,6 +76,7 @@ class Statement:
         self.pdf = pdf_open(str(file.absolute()), logs=self.logs)
         self.ID_STATEMENT = self.build_id()
         self.ID_ACCOUNT: str | None = None
+        self.config_path = config_path
         if self.pdf:
             self.config = self.get_config()
             if self.config:
@@ -230,11 +233,11 @@ class Statement:
         if self.pdf is None:
             return None
         if self.account_key:
-            config = get_config_from_account(self.account_key, self.logs, str(self.file.absolute()))
+            config = get_config_from_account(self.account_key, self.logs, str(self.file.absolute()), self.config_path)
         elif self.company_key:
-            config = get_config_from_company(self.company_key, self.pdf, self.logs, str(self.file.absolute()))
+            config = get_config_from_company(self.company_key, self.pdf, self.logs, str(self.file.absolute()), self.config_path)
         else:
-            config = get_config_from_statement(self.pdf, str(self.file.absolute()), self.logs)
+            config = get_config_from_statement(self.pdf, str(self.file.absolute()), self.logs, self.config_path)
         return deepcopy(config) if config else None  # we return a deepcopy in case we need to make statement-specific modifications
 
     def cleanup(self):
@@ -267,6 +270,7 @@ class StatementBatch:
         "statements",
         "turbo",
         "smart_rename",
+        "config_path",
     )
 
     def __init__(
@@ -277,6 +281,7 @@ class StatementBatch:
         print_log: bool = True,
         turbo: bool = False,
         smart_rename: bool = True,
+        config_path: Path | None = None,
     ):
         print("processing...")
         self.process_time: datetime = datetime.now()
@@ -289,6 +294,7 @@ class StatementBatch:
         self.print_log = print_log
         self.turbo = turbo
         self.smart_rename = smart_rename
+        self.config_path = config_path
         if self.__type == "folder":
             self.pdfs: list[Path] = [file for file in Path(path).iterdir() if file.is_file() and file.suffix == ".pdf"]
         elif self.__type == "file" and Path(path).suffix == ".pdf":
@@ -351,7 +357,12 @@ class StatementBatch:
         batch_line["ERROR_CONFIG"] = False
         try:
             stmt = Statement(
-                file=pdf, company_key=self.company_key, account_key=self.account_key, ID_BATCH=self.ID_BATCH, smart_rename=self.smart_rename
+                file=pdf,
+                company_key=self.company_key,
+                account_key=self.account_key,
+                ID_BATCH=self.ID_BATCH,
+                smart_rename=self.smart_rename,
+                config_path=self.config_path,
             )
             batch_line["ID_STATEMENT"] = stmt.ID_STATEMENT
             batch_line["STD_ACCOUNT"] = stmt.account

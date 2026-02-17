@@ -9,7 +9,12 @@ from bank_statement_parser.modules import statements
 
 def main():
     # laptop
-    statements.StatementBatch(Path("/home/boscorat/Downloads/2025"), turbo=False, smart_rename=False)
+    statements.StatementBatch(
+        Path("/home/boscorat/Downloads/2025"),
+        turbo=False,
+        smart_rename=False,
+        config_path=Path("/home/boscorat/repos/bank_statement_parser/src/bank_statement_parser/base_config"),
+    )
     # #windows
     # statements.StatementBatch(Path("C:\\Users\\Admin\\repos\\bsp\\stmts"), turbo=True, smart_rename=False)
 

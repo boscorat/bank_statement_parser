@@ -1,5 +1,3 @@
-import time
-
 import polars as pl
 from pdfplumber import open
 from pdfplumber.page import Page
@@ -10,7 +8,7 @@ from bank_statement_parser.modules.data import DynamicLineSpec, Location
 
 def get_region(location: Location, pdf: PDF, logs: pl.DataFrame, file_path: str) -> Page | None:
     """Extract a cropped page region from a PDF based on location coordinates."""
-    start = time.time()
+    # start = time.time()
     if location.page_number:
         region = page_crop(pdf.pages[location.page_number - 1], location.top_left, location.bottom_right, logs, file_path)
     else:
@@ -26,7 +24,7 @@ def get_region(location: Location, pdf: PDF, logs: pl.DataFrame, file_path: str)
 
 def pdf_open(file_path: str, logs: pl.DataFrame) -> PDF:
     """Open a PDF file and return the PDF object with performance logging."""
-    start = time.time()
+    # start = time.time()
     pdf = open(file_path)
     # log = pl.DataFrame(
     #     [[file_path, "pdf_functions", "pdf_open", time.time() - start, 1, datetime.now(), ""]], schema=logs.schema, orient="row"
@@ -37,7 +35,7 @@ def pdf_open(file_path: str, logs: pl.DataFrame) -> PDF:
 
 def pdf_close(pdf: PDF, logs: pl.DataFrame, file_path: str) -> bool:
     """Close a PDF file and log the operation duration."""
-    start = time.time()
+    # start = time.time()
     pdf.close()
     # log = pl.DataFrame(
     #     [[file_path, "pdf_functions", "pdf_close", time.time() - start, 1, datetime.now(), ""]], schema=logs.schema, orient="row"
@@ -48,7 +46,7 @@ def pdf_close(pdf: PDF, logs: pl.DataFrame, file_path: str) -> bool:
 
 def page_crop(page: Page, top_left: list | None, bottom_right: list | None, logs: pl.DataFrame, file_path: str) -> Page:
     """Crop a PDF page to the specified bounding box coordinates, with smart defaults."""
-    start = time.time()
+    # start = time.time()
     if not top_left and not bottom_right:  # no need to crop if not specified
         return page
     elif not top_left:  # set top left to 0,0 if only bottom right specified
@@ -66,7 +64,7 @@ def page_crop(page: Page, top_left: list | None, bottom_right: list | None, logs
 
 def region_search(region: Page, pattern: str, logs: pl.DataFrame, file_path: str) -> str | None:
     """Search for a regex pattern within a PDF region and return the first match text."""
-    start = time.time()
+    # start = time.time()
     try:
         search_result = region.search(pattern, regex=True)[0]["text"]  # text of 1st result
     except IndexError:
