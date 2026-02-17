@@ -28,7 +28,7 @@ class Database:
 
     def cleanup(self):
         self.db_records = pl.DataFrame()
-        self.file = None
+        self.file = Path()
 
     def create(self):  # only to be used if we know the record doesn't exist
         if self.records is not None and self.file:
