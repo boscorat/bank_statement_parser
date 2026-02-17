@@ -5,7 +5,8 @@ import polars as pl
 import polars.selectors as cs
 from pdfplumber.pdf import PDF
 
-from bank_statement_parser.modules.classes.data import (
+from bank_statement_parser.modules.currency import currency_spec
+from bank_statement_parser.modules.data import (
     Config,
     CurrencySpec,
     Field,
@@ -13,9 +14,8 @@ from bank_statement_parser.modules.classes.data import (
     StatementTable,
     TransactionSpec,
 )
-from bank_statement_parser.modules.classes.errors import ConfigError
-from bank_statement_parser.modules.currency import currency_spec
-from bank_statement_parser.modules.functions.pdfs import get_region, get_table_from_region
+from bank_statement_parser.modules.errors import ConfigError
+from bank_statement_parser.modules.pdf_functions import get_region, get_table_from_region
 
 
 def spawn_locations(

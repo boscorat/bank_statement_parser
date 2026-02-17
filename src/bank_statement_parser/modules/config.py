@@ -7,7 +7,7 @@ from dacite import from_dict
 from pdfplumber.pdf import PDF
 from tomllib import load
 
-from bank_statement_parser.modules.classes.data import (
+from bank_statement_parser.modules.data import (
     Account,
     AccountType,
     Company,
@@ -15,9 +15,9 @@ from bank_statement_parser.modules.classes.data import (
     StatementTable,
     StatementType,
 )
-from bank_statement_parser.modules.classes.errors import ConfigFileError, StatementError
-from bank_statement_parser.modules.functions.statements import get_results
+from bank_statement_parser.modules.errors import ConfigFileError, StatementError
 from bank_statement_parser.modules.paths import BASE_CONFIG, USER_CONFIG
+from bank_statement_parser.modules.statement_functions import get_results
 
 """
 WRITE SOME TESTS TO VALIDATE THE CONFIG FILES!!!!!
