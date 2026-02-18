@@ -642,7 +642,7 @@ class StatementBatch:
 
         return (batch_lines_file, statement_heads_file, statement_lines_file, cab_file)
 
-    def update_parquet(self):
+    def update_parquet(self, folder: Path | None = None):
         """
         Update parquet files with processed results from all PDFs.
 
@@ -652,7 +652,25 @@ class StatementBatch:
 
         This method should be called after processing to finalize the batch
         and write the batch header information.
+
+        Args:
+            folder: Optional custom folder path for parquet output.
+                    If not provided, uses the default exports/parquet folder.
         """
+        custom_batch_lines = None
+        custom_statement_heads = None
+        custom_statement_lines = None
+        custom_cab = None
+        custom_batch_heads = None
+
+        if folder:
+            folder.mkdir(parents=True, exist_ok=True)
+            custom_batch_lines = folder.joinpath("batch_lines.parquet")
+            custom_statement_heads = folder.joinpath("statement_heads.parquet")
+            custom_statement_lines = folder.joinpath("statement_lines.parquet")
+            custom_cab = folder.joinpath("checks_and_balances.parquet")
+            custom_batch_heads = folder.joinpath("batch_heads.parquet")
+
         update_start = time()
         for pdf in self.processed_pdfs:
             # Skip any exceptions that occurred during processing
@@ -661,25 +679,25 @@ class StatementBatch:
             elif type(pdf) is tuple:
                 batch, head, lines, cab = pdf
                 if batch:
-                    bl = pq.BatchLines(source_file=batch)
+                    bl = pq.BatchLines(source_file=batch, destination_file=custom_batch_lines)
                     bl.update()
                     bl.delete_source_file()
                     bl.cleanup()
                     bl = None
                 if head:
-                    sh = pq.StatementHeads(source_file=head)
+                    sh = pq.StatementHeads(source_file=head, destination_file=custom_statement_heads)
                     sh.update()
                     sh.delete_source_file()
                     sh.cleanup()
                     sh = None
                 if lines:
-                    sl = pq.StatementLines(source_file=lines)
+                    sl = pq.StatementLines(source_file=lines, destination_file=custom_statement_lines)
                     sl.update()
                     sl.delete_source_file()
                     sl.cleanup()
                     sl = None
                 if cab:
-                    cb = pq.ChecksAndBalances(source_file=cab)
+                    cb = pq.ChecksAndBalances(source_file=cab, destination_file=custom_cab)
                     cb.update()
                     cb.delete_source_file()
                     cb.cleanup()
@@ -690,7 +708,7 @@ class StatementBatch:
         self.duration_secs += self.parquet_secs
 
         # Write batch header metadata to parquet
-        pq_heads = pq.BatchHeads(self)
+        pq_heads = pq.BatchHeads(self, destination_file=custom_batch_heads)
         pq_heads.create()
         pq_heads.cleanup()
         pq_heads = None

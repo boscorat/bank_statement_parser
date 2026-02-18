@@ -276,10 +276,11 @@ class StatementLines(Parquet):
 
 
 class BatchHeads(Parquet):
-    __slots__ = "batch"
+    __slots__ = ("batch", "destination_file")
 
-    def __init__(self, batch: StatementBatch | None = None) -> None:
+    def __init__(self, batch: StatementBatch | None = None, destination_file: Path | None = None) -> None:
         self.batch = batch
+        self.destination_file = destination_file
         self.schema = pl.DataFrame(
             orient="row",
             schema={
@@ -311,7 +312,7 @@ class BatchHeads(Parquet):
                 )
             )
         self.key = "ID_BATCH"
-        super().__init__(pt.BATCH_HEADS, self.schema, self.records, self.key)
+        super().__init__(self.destination_file if self.destination_file else pt.BATCH_HEADS, self.schema, self.records, self.key)
 
 
 class BatchLines(Parquet):
