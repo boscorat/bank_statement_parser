@@ -111,7 +111,7 @@ PRIMARY_KEYS = {
 def create_table(conn, table_name, schema: dict, with_fk: bool = False):
     col_defs = []
     for col_name, col_type in schema.items():
-        if with_fk and table_name in PRIMARY_KEYS and PRIMARY_KEYS[table_name] == col_name:
+        if table_name in PRIMARY_KEYS and PRIMARY_KEYS[table_name] == col_name:
             col_defs.append(f'"{col_name}" {col_type} NOT NULL PRIMARY KEY')
         else:
             col_defs.append(f'"{col_name}" {col_type}')
