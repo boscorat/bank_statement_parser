@@ -1,3 +1,15 @@
+"""
+Bank statement parsing and processing module.
+
+This module provides classes for parsing and processing bank statement PDFs,
+extracting transaction data, and validating financial information through
+checks and balances calculations.
+
+Classes:
+    Statement: Represents a single bank statement PDF with extraction and validation.
+    StatementBatch: Handles batch processing of multiple bank statements.
+"""
+
 import asyncio
 import hashlib
 import os
@@ -10,7 +22,7 @@ from uuid import uuid4
 
 import polars as pl
 
-import bank_statement_parser.modules.database as db
+import bank_statement_parser.modules.parquet as pq
 from bank_statement_parser.modules.config import (
     config_standard_fields,
     get_config_from_account,
@@ -25,6 +37,38 @@ CPU_WORKERS = os.cpu_count()
 
 
 class Statement:
+    """
+    Represents a single bank statement PDF with data extraction and validation.
+
+    This class handles opening a PDF bank statement, extracting header and line
+    data using configured patterns, performing checks and balances validation,
+    and generating unique identifiers for the statement.
+
+    Attributes:
+        company_key: Optional company identifier for config lookup.
+        file: Path to the PDF file.
+        file_renamed: New filename after smart rename (if enabled).
+        account_key: Optional account identifier for config lookup.
+        ID_BATCH: Batch identifier this statement belongs to.
+        ID_ACCOUNT: Unique account identifier based on company, account type, and account number.
+        checks_and_balances: DataFrame containing validation results for extracted data.
+        pdf: Open PDF document handle.
+        ID_STATEMENT: Unique SHA512-based identifier for the statement.
+        config: Parsed configuration for statement extraction.
+        company: Company name from config.
+        account: Account number/identifier from statement.
+        statement_type: Type of statement (e.g., checking, savings).
+        config_header: Header extraction configurations.
+        config_lines: Line/transaction extraction configurations.
+        header_results: Extracted header data as LazyFrame.
+        lines_results: Extracted transaction lines as LazyFrame.
+        success: Whether statement processing passed all validation checks.
+        config_path: Optional custom path to configuration files.
+
+    Class Attributes:
+        logs: DataFrame storing execution logs for debugging and performance tracking.
+    """
+
     __slots__ = (
         "company_key",
         "file",
@@ -67,6 +111,21 @@ class Statement:
         smart_rename: bool = False,
         config_path: Path | None = None,
     ):
+        """
+        Initialize a Statement object by parsing the PDF and extracting data.
+
+        Args:
+            file: Path to the PDF bank statement file.
+            company_key: Optional company identifier for configuration lookup.
+            account_key: Optional account identifier for configuration lookup.
+            ID_BATCH: Optional batch identifier to associate this statement with.
+            smart_rename: If True, rename file based on extracted account and date.
+            config_path: Optional custom path to configuration files directory.
+
+        The constructor opens the PDF, loads the appropriate extraction config,
+        extracts header and line data, performs validation checks, and determines
+        if the statement was successfully processed.
+        """
         self.file = file
         self.file_renamed = None
         self.company_key = company_key
@@ -101,20 +160,25 @@ class Statement:
             self.header_results = self.get_results("header")
             self.lines_results = self.get_results("lines")
 
-            # checks and balances
+            # Perform validation checks on extracted financial data
+            # Compares calculated totals against stated totals from the statement
             self.checks_and_balances = self.checks_and_balances.with_columns(
+                # Verify payments in (deposits) match between extracted and stated values
                 BAL_PAYMENTS_IN=pl.when(pl.col("STD_PAYMENTS_IN").sub(pl.col("STD_PAYMENT_IN")) == 0)
                 .then(pl.lit(True))
                 .otherwise(pl.lit(False)),
+                # Verify payments out (withdrawals) match between extracted and stated values
                 BAL_PAYMENTS_OUT=pl.when(pl.col("STD_PAYMENTS_OUT").sub(pl.col("STD_PAYMENT_OUT")) == 0)
                 .then(pl.lit(True))
                 .otherwise(pl.lit(False)),
+                # Verify net movement equals balance change and matches payments difference
                 BAL_MOVEMENT=pl.when(
                     (pl.col("STD_STATEMENT_MOVEMENT").sub(pl.col("STD_MOVEMENT")) == 0)
                     & (pl.col("STD_MOVEMENT").sub(pl.col("STD_BALANCE_OF_PAYMENTS")) == 0)
                 )
                 .then(pl.lit(True))
                 .otherwise(pl.lit(False)),
+                # Verify closing balance matches running balance or payments calculation
                 BAL_CLOSING=pl.when(
                     (pl.col("STD_CLOSING_BALANCE").sub(pl.col("STD_RUNNING_BALANCE")) == 0)
                     | (
@@ -126,6 +190,7 @@ class Statement:
                 )
                 .then(pl.lit(True))
                 .otherwise(pl.lit(False)),
+                # Check if statement has zero transactions (header-only statement)
                 ZERO_TRANSACTION_STATEMENT=pl.when(
                     pl.col("STD_PAYMENTS_IN").add(pl.col("STD_PAYMENTS_OUT")).add(pl.col("STD_PAYMENT_IN").add(pl.col("STD_PAYMENT_OUT")))
                     == 0
@@ -137,16 +202,23 @@ class Statement:
         self.success = self.is_successfull()
         if self.success:
             if self.config:
+                # Build unique account ID from company key, account type, and account number
                 acct_number = str(self.header_results.select("STD_ACCOUNT_NUMBER").collect().head(1).item()).replace(" ", "")
                 self.ID_ACCOUNT = f"{self.config.company_key}_{self.config.account_type_key}_{acct_number}"
                 if smart_rename:
+                    # Generate descriptive filename: {account_id}_{date}.pdf
                     stmt_date = str(self.header_results.select("STD_STATEMENT_DATE").collect().head(1).item()).replace("-", "")
                     self.file_renamed = f"{self.ID_ACCOUNT}_{str(stmt_date)}.pdf"
 
     def build_id(self):
         """
-        Generates a unique SHA256-based ID for the statement based on the first 765 characters of the PDF text.
-        The returned ID is a string in the format "{key1}.{key2}.{key3}", where each key is a SHA256 hash of a slice of the PDF text.
+        Generate a unique SHA512-based identifier for the statement.
+
+        Creates a hash based on the text content from the first page of the PDF,
+        providing a unique fingerprint for deduplication and identification.
+
+        Returns:
+            str: A hex string of the SHA512 hash, or "0" if PDF failed to open.
         """
         if not self.pdf:
             return "0"
@@ -159,6 +231,16 @@ class Statement:
         return id
 
     def is_successfull(self):
+        """
+        Determine if the statement was successfully processed and validated.
+
+        A statement is considered successful if:
+        - It has valid header and line results (unless it's a zero-transaction statement)
+        - All checks and balances validations pass
+
+        Returns:
+            bool: True if processing passed all validation checks, False otherwise.
+        """
         if (
             self.checks_and_balances.filter(pl.col("ZERO_TRANSACTION_STATEMENT")).height > 0
         ):  # some statments are just a header so there's nothing really to fail
@@ -180,10 +262,23 @@ class Statement:
         return True
 
     def get_results(self, section: str) -> pl.LazyFrame:
+        """
+        Extract data from the PDF for a given section (header or lines).
+
+        Applies configured extraction patterns to the PDF and transforms
+        the results into a standardized format with pivot tables.
+
+        Args:
+            section: The section to extract - either "header" or "lines".
+
+        Returns:
+            pl.LazyFrame: Extracted data as a Polars LazyFrame with standardized fields.
+        """
         results: pl.DataFrame = pl.DataFrame()
         if not self.config:
             return results.lazy()
         if section == "header" and self.config_header:
+            # Iterate through header configurations and extract matching data
             for config in self.config_header:
                 if self.pdf:
                     results.vstack(
@@ -199,8 +294,10 @@ class Statement:
                         in_place=True,
                     )
             if results.height > 0:
+                # Pivot results to have fields as columns for easier access
                 results = results.pivot(values="value", index="section", on="field")
         elif section == "lines" and self.config_lines:
+            # Iterate through line configurations and extract transaction data
             for config in self.config_lines:
                 if self.pdf:
                     results.vstack(
@@ -217,6 +314,7 @@ class Statement:
                     )
 
         if self.statement_type:
+            # Apply standard field transformations based on statement type
             results = results.pipe(
                 get_standard_fields,
                 section,
@@ -230,17 +328,34 @@ class Statement:
         return results.rechunk().lazy()
 
     def get_config(self) -> Account | None:
+        """
+        Load the appropriate configuration for statement extraction.
+
+        Determines which config to use based on provided keys or attempts
+        to auto-detect from the statement content.
+
+        Returns:
+            Account: Deep copy of the configuration object, or None if not found.
+        """
         if self.pdf is None:
             return None
         if self.account_key:
+            # Use explicit account key if provided
             config = get_config_from_account(self.account_key, self.logs, str(self.file.absolute()), self.config_path)
         elif self.company_key:
+            # Use explicit company key if provided
             config = get_config_from_company(self.company_key, self.pdf, self.logs, str(self.file.absolute()), self.config_path)
         else:
+            # Attempt auto-detection from statement content
             config = get_config_from_statement(self.pdf, str(self.file.absolute()), self.logs, self.config_path)
         return deepcopy(config) if config else None  # we return a deepcopy in case we need to make statement-specific modifications
 
     def cleanup(self):
+        """
+        Release resources and clear references to aid garbage collection.
+
+        Closes the PDF document and clears large data structures to free memory.
+        """
         if self.pdf is not None:
             pdf_close(self.pdf, logs=self.logs, file_path=str(self.file.absolute()))
         self.config = None
@@ -252,6 +367,36 @@ class Statement:
 
 
 class StatementBatch:
+    """
+    Handles batch processing of multiple bank statement PDFs.
+
+    This class manages the processing of multiple bank statements, either
+    sequentially or in parallel using multiprocessing. It handles parquet
+    file updates, error tracking, and optional file renaming.
+
+    Attributes:
+        process_time: Timestamp when batch processing started.
+        path: String representation of parent directories of PDFs.
+        ID_BATCH: Unique identifier for this batch.
+        company_key: Optional company identifier for all statements.
+        account_key: Optional account identifier for all statements.
+        print_log: Whether to print progress messages.
+        pdfs: List of PDF file paths to process.
+        pdf_count: Number of PDFs in the batch.
+        log: List of log messages.
+        errors: Count of failed statement processings.
+        duration_secs: Total processing time in seconds.
+        process_secs: Time spent processing PDFs.
+        parquet_secs: Time spent updating parquet files.
+        db_secs: Time spent on database operations.
+        batch_lines: List of batch line data for parquet.
+        statements: List of processed Statement objects.
+        turbo: Whether to use parallel processing.
+        smart_rename: Whether to rename files based on extracted data.
+        config_path: Optional custom path to configuration files.
+        processed_pdfs: List of processed PDF results (tuples or exceptions).
+    """
+
     __slots__ = (
         "process_time",
         "path",
@@ -265,17 +410,21 @@ class StatementBatch:
         "log",
         "errors",
         "duration_secs",
+        "process_secs",
+        "parquet_secs",
+        "db_secs",
         "batch_lines",
         "timer_start",
         "statements",
         "turbo",
         "smart_rename",
         "config_path",
+        "processed_pdfs",
     )
 
     def __init__(
         self,
-        path: Path,
+        pdfs: list[Path],
         company_key: str | None = None,
         account_key: str | None = None,
         print_log: bool = True,
@@ -283,60 +432,130 @@ class StatementBatch:
         smart_rename: bool = True,
         config_path: Path | None = None,
     ):
+        """
+        Initialize and process a batch of bank statements.
+
+        Args:
+            pdfs: List of PDF file paths to process.
+            company_key: Optional company identifier for config lookup.
+            account_key: Optional account identifier for config lookup.
+            print_log: Whether to print progress messages to console.
+            turbo: If True, use parallel processing with multiprocessing.
+            smart_rename: If True, rename processed files based on extracted data.
+            config_path: Optional custom path to configuration files directory.
+
+        The constructor automatically begins processing upon initialization.
+        Processing time is tracked in process_secs, and parquet update time
+        is tracked separately (call update_parquet() to complete the process).
+        """
         print("processing...")
         self.process_time: datetime = datetime.now()
         self.timer_start = time()
-        self.path: Path = path
         self.ID_BATCH: str = str(uuid4())
-        self.__type = "file" if self.path.is_file() else "folder"
         self.company_key = company_key
         self.account_key = account_key
         self.print_log = print_log
         self.turbo = turbo
         self.smart_rename = smart_rename
         self.config_path = config_path
-        if self.__type == "folder":
-            self.pdfs: list[Path] = [file for file in Path(path).iterdir() if file.is_file() and file.suffix == ".pdf"]
-        elif self.__type == "file" and Path(path).suffix == ".pdf":
-            self.pdfs = [Path(path)]
-        else:
-            self.pdfs = []
+        self.pdfs = pdfs
+        # Build path string from unique parent directories of all PDFs
+        self.path: str = ", ".join(map(str, set([p.parent for p in self.pdfs])))
         self.pdf_count: int = len(self.pdfs)
         self.log: list = []
         self.errors: int = 0
         self.duration_secs: float = 0.00
+        self.process_secs: float = 0.00
+        self.parquet_secs: float = 0.00
+        self.db_secs: float = 0.00
         self.batch_lines = []
         self.statements = []
+        self.processed_pdfs: list[BaseException | tuple] = []
         if self.turbo:
+            # Use async parallel processing for better performance
             asyncio.run(self.process_turbo(), debug=False)
+            self.process_secs = time() - self.timer_start
+            self.duration_secs += self.process_secs
         else:
+            # Use sequential processing
             self.process()
+            self.process_secs = time() - self.timer_start
+            self.duration_secs += self.process_secs
 
     def process(self):
-        processed_pdfs = self.__process_batch()
-        self.db_updates(processed_pdfs)
+        """
+        Process the batch sequentially.
+
+        This is the main entry point for sequential processing,
+        calling the internal batch processor. Results are stored
+        in self.processed_pdfs for later parquet file updates via
+        update_parquet().
+        """
+        self.__process_batch()
 
     def __process_batch(self):
+        """
+        Internal method to process all PDFs sequentially.
+
+        Iterates through each PDF and processes it individually.
+        Results are stored in self.processed_pdfs for later parquet updates.
+        """
         for id, pdf in enumerate(self.pdfs):
-            self.process_single_pdf(id, pdf)
+            self.processed_pdfs.append(self.process_single_pdf(id, pdf))
 
     async def process_turbo(self):
-        processed_pdfs = await self.__process_batch_turbo()
-        self.db_updates(processed_pdfs)
+        """
+        Process the batch in parallel using async/await with ProcessPoolExecutor.
+
+        Launches parallel processing and then updates the database with results.
+
+        Returns:
+            bool: True when complete.
+        """
+        self.processed_pdfs = await self.__process_batch_turbo()
         return True
 
     async def __process_batch_turbo(self):
+        """
+        Internal async method for parallel PDF processing.
+
+        Uses ProcessPoolExecutor to distribute PDF processing across
+        multiple CPU cores for improved performance.
+
+        Returns:
+            list: List of processed PDF results from all workers.
+        """
         self.turbo = True
         loop = asyncio.get_running_loop()
 
         with ProcessPoolExecutor(max_workers=CPU_WORKERS) as executor:
+            # Submit all PDF processing tasks to the executor
             tasks = [loop.run_in_executor(executor, self.process_single_pdf, id, pdf) for id, pdf in enumerate(self.pdfs)]
 
+            # Wait for all tasks to complete and collect results
             processed_pdfs = await asyncio.gather(*tasks, return_exceptions=True)
 
         return processed_pdfs
 
     def process_single_pdf(self, id, pdf):
+        """
+        Process a single PDF file and save results to parquet files.
+
+        This method handles the complete processing workflow for one PDF:
+        1. Creates a Statement object to parse the PDF
+        2. Extracts header and line data
+        3. Saves results to parquet files
+        4. Optionally renames the file based on extracted data
+        5. Cleans up resources
+
+        Args:
+            id: Index position of this PDF in the batch.
+            pdf: Path to the PDF file to process.
+
+        Returns:
+            tuple: A tuple containing file paths for batch lines, statement heads,
+                   statement lines, and checks & balances parquet files.
+        """
         batch_lines_file: Path | None = None
         statement_heads_file: Path | None = None
         statement_lines_file: Path | None = None
@@ -356,6 +575,7 @@ class StatementBatch:
         batch_line["ERROR_CAB"] = False
         batch_line["ERROR_CONFIG"] = False
         try:
+            # Parse and extract data from the PDF statement
             stmt = Statement(
                 file=pdf,
                 company_key=self.company_key,
@@ -368,35 +588,33 @@ class StatementBatch:
             batch_line["STD_ACCOUNT"] = stmt.account
             batch_line["STD_SUCCESS"] = stmt.success
             if not stmt.success:
+                # Mark as error if validation checks failed
                 self.errors += 1
                 batch_line["ERROR_CAB"] = True
                 batch_line["STD_ERROR_MESSAGE"] += "** Checks & Balances Failure **"
             else:
-                db_statement_heads = db.StatementHeads(statement=stmt, id=id) if self.turbo else db.StatementHeads(statement=stmt)
-                if self.turbo:
-                    db_statement_heads.create()
-                else:
-                    db_statement_heads.update()
-                statement_heads_file = db_statement_heads.file
-                db_statement_heads.cleanup()
-                db_statement_heads = None
+                # Save extracted header data
+                pq_statement_heads = pq.StatementHeads(statement=stmt, id=id)
+                pq_statement_heads.create()
+                statement_heads_file = pq_statement_heads.file
+                pq_statement_heads.cleanup()
+                pq_statement_heads = None
 
-                db_statement_lines = db.StatementLines(statement=stmt, id=id) if self.turbo else db.StatementLines(statement=stmt)
-                if self.turbo:
-                    db_statement_lines.create()
-                else:
-                    db_statement_lines.update()
-                statement_lines_file = db_statement_lines.file
-                db_statement_lines.cleanup()
-                db_statement_lines = None
-            db_cab = db.ChecksAndBalances(statement=stmt, id=id) if self.turbo else db.ChecksAndBalances(statement=stmt)
-            if self.turbo:
-                db_cab.create()
-            else:
-                db_cab.update()
-            cab_file = db_cab.file
-            db_cab.cleanup()
-            db_cab = None
+                # Save extracted transaction line data
+                pq_statement_lines = pq.StatementLines(statement=stmt, id=id)
+                pq_statement_lines.create()
+                statement_lines_file = pq_statement_lines.file
+                pq_statement_lines.cleanup()
+                pq_statement_lines = None
+
+            # Save validation/check results regardless of success
+            pq_cab = pq.ChecksAndBalances(statement=stmt, id=id)
+            pq_cab.create()
+            cab_file = pq_cab.file
+            pq_cab.cleanup()
+            pq_cab = None
+
+            # Handle file renaming if enabled
             file_old = deepcopy(stmt.file)
             file_new = stmt.file_renamed if stmt.file_renamed else str(file_old)
             stmt.cleanup()
@@ -404,57 +622,75 @@ class StatementBatch:
             if self.smart_rename:
                 file_old.rename(file_old.with_name(file_new))
         except BaseException as e:
+            # Handle configuration or parsing errors
             print(e)
             self.errors += 1
             batch_line["ERROR_CONFIG"] = True
             batch_line["STD_ERROR_MESSAGE"] += "** Configuration Failure **"
+
+        # Record processing time and timestamp
         line_end = time()
         batch_line["STD_DURATION_SECS"] = line_end - line_start
         batch_line["STD_UPDATETIME"] = datetime.now()
-        if self.turbo:
-            db_batch_lines = db.BatchLines(batch_lines=[batch_line], id=id)
-            db_batch_lines.create()
-            batch_lines_file = db_batch_lines.file
-            db_batch_lines.cleanup()
-            db_batch_lines = None
-        else:
-            self.batch_lines.append(batch_line)
+
+        # Save batch line data (different handling for turbo vs sequential)
+        pq_batch_lines = pq.BatchLines(batch_lines=[batch_line], id=id)
+        pq_batch_lines.create()
+        batch_lines_file = pq_batch_lines.file
+        pq_batch_lines.cleanup()
+        pq_batch_lines = None
+
         return (batch_lines_file, statement_heads_file, statement_lines_file, cab_file)
 
-    def db_updates(self, processed_pdfs):
-        if self.turbo:
-            for batch, head, lines, cab in processed_pdfs:
+    def update_parquet(self):
+        """
+        Update parquet files with processed results from all PDFs.
+
+        Iterates through processed PDFs, handles any exceptions, and updates
+        the main parquet files from temporary files created during processing.
+        Records timing in parquet_secs and updates total duration.
+
+        This method should be called after processing to finalize the batch
+        and write the batch header information.
+        """
+        update_start = time()
+        for pdf in self.processed_pdfs:
+            # Skip any exceptions that occurred during processing
+            if type(pdf) is BaseException:
+                return None
+            elif type(pdf) is tuple:
+                batch, head, lines, cab = pdf
                 if batch:
-                    bl = db.BatchLines(source_file=batch)
+                    bl = pq.BatchLines(source_file=batch)
                     bl.update()
                     bl.delete_source_file()
                     bl.cleanup()
                     bl = None
                 if head:
-                    sh = db.StatementHeads(source_file=head)
+                    sh = pq.StatementHeads(source_file=head)
                     sh.update()
                     sh.delete_source_file()
                     sh.cleanup()
                     sh = None
                 if lines:
-                    sl = db.StatementLines(source_file=lines)
+                    sl = pq.StatementLines(source_file=lines)
                     sl.update()
                     sl.delete_source_file()
                     sl.cleanup()
                     sl = None
                 if cab:
-                    cb = db.ChecksAndBalances(source_file=cab)
+                    cb = pq.ChecksAndBalances(source_file=cab)
                     cb.update()
                     cb.delete_source_file()
                     cb.cleanup()
                     cb = None
-        else:
-            db_batch_lines = db.BatchLines(self.batch_lines)
-            db_batch_lines.create()
-            db_batch_lines.cleanup()
-            db_batch_lines = None
-        self.duration_secs = time() - self.timer_start
-        db_heads = db.BatchHeads(self)
-        db_heads.create()
-        db_heads.cleanup()
-        db_heads = None
+
+        # Record parquet update time and update total duration
+        self.parquet_secs = time() - update_start
+        self.duration_secs += self.parquet_secs
+
+        # Write batch header metadata to parquet
+        pq_heads = pq.BatchHeads(self)
+        pq_heads.create()
+        pq_heads.cleanup()
+        pq_heads = None

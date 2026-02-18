@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from bank_statement_parser.modules.classes.statements import Statement, StatementBatch
+    from bank_statement_parser.modules.statements import Statement, StatementBatch
 
 from pathlib import Path
 
@@ -12,7 +12,7 @@ import polars as pl
 import bank_statement_parser.modules.paths as pt
 
 
-class Database:
+class Parquet:
     __slots__ = ("file", "schema", "records", "key", "db_records")
 
     def __init__(self, file: Path, schema: pl.DataFrame, records: pl.DataFrame | None, key: str | None) -> None:
@@ -60,7 +60,7 @@ class Database:
             self.file.unlink()
 
 
-class ChecksAndBalances(Database):
+class ChecksAndBalances(Parquet):
     __slots__ = ("stmt", "id", "source_file", "destination_file")
 
     def __init__(
@@ -135,7 +135,7 @@ class ChecksAndBalances(Database):
             return True
 
 
-class StatementHeads(Database):
+class StatementHeads(Parquet):
     __slots__ = ("stmt", "id", "source_file", "destination_file")
 
     def __init__(
@@ -210,7 +210,7 @@ class StatementHeads(Database):
             return True
 
 
-class StatementLines(Database):
+class StatementLines(Parquet):
     __slots__ = ("stmt", "id", "source_file", "destination_file")
 
     def __init__(
@@ -275,7 +275,7 @@ class StatementLines(Database):
             return True
 
 
-class BatchHeads(Database):
+class BatchHeads(Parquet):
     __slots__ = "batch"
 
     def __init__(self, batch: StatementBatch | None = None) -> None:
@@ -314,7 +314,7 @@ class BatchHeads(Database):
         super().__init__(pt.BATCH_HEADS, self.schema, self.records, self.key)
 
 
-class BatchLines(Database):
+class BatchLines(Parquet):
     __slots__ = ("batch_lines", "id", "source_file", "destination_file")
 
     def __init__(
