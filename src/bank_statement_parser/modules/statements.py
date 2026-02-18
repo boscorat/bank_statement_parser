@@ -758,6 +758,14 @@ class StatementBatch:
 
         conn = sqlite3.connect(db_path)
 
+        PRIMARY_KEYS = {
+            "checks_and_balances": "ID_CAB",
+            "statement_heads": "ID_STATEMENT",
+            "statement_lines": "ID_TRANSACTION",
+            "batch_heads": "ID_BATCH",
+            "batch_lines": "ID_BATCHLINE",
+        }
+
         def _insert_df(df: pl.DataFrame, table_name: str):
             if df.is_empty():
                 return
@@ -766,9 +774,16 @@ class StatementBatch:
             for col in df_to_insert.columns:
                 if df_to_insert[col].dtype == pl.Decimal:
                     df_to_insert = df_to_insert.with_columns(pl.col(col).cast(pl.Float64))
+
+            pk = PRIMARY_KEYS.get(table_name)
+            if pk and pk in df_to_insert.columns:
+                pk_values = df_to_insert.select(pk).to_series().to_list()
+                placeholders = ", ".join(["?"] * len(pk_values))
+                conn.execute(f"DELETE FROM {table_name} WHERE {pk} IN ({placeholders})", pk_values)
+
             placeholders = ", ".join(["?"] * len(columns))
             cols_str = ", ".join([f'"{col}"' for col in columns])
-            sql = f"INSERT OR REPLACE INTO {table_name} ({cols_str}) VALUES ({placeholders})"
+            sql = f"INSERT INTO {table_name} ({cols_str}) VALUES ({placeholders})"
             rows = df_to_insert.rows()
             conn.executemany(sql, rows)
 
