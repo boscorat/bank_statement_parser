@@ -22,7 +22,7 @@ def get_region(location: Location, pdf: PDF, logs: pl.DataFrame, file_path: str)
     return region
 
 
-def pdf_open(file_path: str, logs: pl.DataFrame) -> PDF:
+def pdf_open(file_path: str, logs: pl.DataFrame) -> PDF | None:
     """Open a PDF file and return the PDF object with performance logging."""
     # start = time.time()
     pdf = open(file_path)
@@ -30,7 +30,10 @@ def pdf_open(file_path: str, logs: pl.DataFrame) -> PDF:
     #     [[file_path, "pdf_functions", "pdf_open", time.time() - start, 1, datetime.now(), ""]], schema=logs.schema, orient="row"
     # )
     # logs.vstack(log, in_place=True)
-    return pdf
+    if type(pdf) is PDF:
+        return pdf
+    else:
+        return None
 
 
 def pdf_close(pdf: PDF, logs: pl.DataFrame, file_path: str) -> bool:
@@ -49,17 +52,17 @@ def page_crop(page: Page, top_left: list | None, bottom_right: list | None, logs
     # start = time.time()
     if not top_left and not bottom_right:  # no need to crop if not specified
         return page
-    elif not top_left:  # set top left to 0,0 if only bottom right specified
-        top_left = [0, 0]
-    elif not bottom_right:  # set bottom right to page width,height if only top left specified
-        bottom_right = [page.width, page.height]
     else:
+        if not top_left:  # set top left to 0,0 if only bottom right specified
+            top_left = [0, 0]
+        if not bottom_right:  # set bottom right to page width,height if only top left specified
+            bottom_right = [page.width, page.height]
         page_cropped = page.within_bbox((top_left[0], top_left[1], bottom_right[0], bottom_right[1]))
-    # log = pl.DataFrame(
-    #     [[file_path, "pdf_functions", "page_crop", time.time() - start, 1, datetime.now(), ""]], schema=logs.schema, orient="row"
-    # )
-    # logs.vstack(log, in_place=True)
-    return page_cropped
+        # log = pl.DataFrame(
+        #     [[file_path, "pdf_functions", "page_crop", time.time() - start, 1, datetime.now(), ""]], schema=logs.schema, orient="row"
+        # )
+        # logs.vstack(log, in_place=True)
+        return page_cropped
 
 
 def region_search(region: Page, pattern: str, logs: pl.DataFrame, file_path: str) -> str | None:

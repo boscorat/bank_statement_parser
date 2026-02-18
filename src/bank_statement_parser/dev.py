@@ -3,14 +3,13 @@ from pathlib import Path
 import polars as pl
 
 import bank_statement_parser.modules.paths as pt
-import bank_statement_parser.modules.reports as rp
 from bank_statement_parser.modules import statements
 
 
 def main():
     # laptop
     batch = statements.StatementBatch(
-        pdfs=[file for file in Path("/home/boscorat/Downloads/2024").iterdir() if file.is_file() and file.suffix == ".pdf"],
+        pdfs=[file for file in Path("/home/boscorat/Downloads/2025").iterdir() if file.is_file() and file.suffix == ".pdf"],
         turbo=True,
         smart_rename=False,
         config_path=Path("/home/boscorat/repos/bank_statement_parser/src/bank_statement_parser/base_config"),
@@ -51,4 +50,4 @@ def main():
 # print(rp.GapReport().all)
 
 
-main()
+# main()
