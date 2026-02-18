@@ -13,6 +13,7 @@ Classes:
 import asyncio
 import hashlib
 import os
+import sqlite3
 from concurrent.futures import ProcessPoolExecutor
 from copy import deepcopy
 from datetime import datetime
@@ -23,6 +24,7 @@ from uuid import uuid4
 import polars as pl
 
 import bank_statement_parser.modules.parquet as pq
+import bank_statement_parser.modules.paths as pt
 from bank_statement_parser.modules.config import (
     config_standard_fields,
     get_config_from_account,
@@ -681,25 +683,21 @@ class StatementBatch:
                 if batch:
                     bl = pq.BatchLines(source_file=batch, destination_file=custom_batch_lines)
                     bl.update()
-                    bl.delete_source_file()
                     bl.cleanup()
                     bl = None
                 if head:
                     sh = pq.StatementHeads(source_file=head, destination_file=custom_statement_heads)
                     sh.update()
-                    sh.delete_source_file()
                     sh.cleanup()
                     sh = None
                 if lines:
                     sl = pq.StatementLines(source_file=lines, destination_file=custom_statement_lines)
                     sl.update()
-                    sl.delete_source_file()
                     sl.cleanup()
                     sl = None
                 if cab:
                     cb = pq.ChecksAndBalances(source_file=cab, destination_file=custom_cab)
                     cb.update()
-                    cb.delete_source_file()
                     cb.cleanup()
                     cb = None
 
@@ -712,3 +710,112 @@ class StatementBatch:
         pq_heads.create()
         pq_heads.cleanup()
         pq_heads = None
+
+    def delete_temp_files(self, folder: Path | None = None):
+        """
+        Delete temporary parquet files created during processing.
+
+        This method cleans up the temporary parquet files that were created
+        when processing each PDF. Call this method after calling both
+        update_parquet() and update_db() to persist the data in multiple
+        formats.
+
+        Args:
+            folder: Optional custom folder path where temp files are located.
+                    If not provided, uses the default exports/parquet folder.
+        """
+        for pdf in self.processed_pdfs:
+            if type(pdf) is BaseException:
+                return None
+            elif type(pdf) is tuple:
+                batch, head, lines, cab = pdf
+                if batch and batch.exists():
+                    batch.unlink()
+                if head and head.exists():
+                    head.unlink()
+                if lines and lines.exists():
+                    lines.unlink()
+                if cab and cab.exists():
+                    cab.unlink()
+
+    def update_db(self, db_path: Path | None = None):
+        """
+        Update database tables with processed results from all PDFs.
+
+        Iterates through processed PDFs, handles any exceptions, and inserts
+        the data from temporary parquet files into the corresponding database
+        tables. Records timing in db_secs and updates total duration.
+
+        This method should be called after processing to finalize the batch
+        and write the batch header information to the database.
+
+        Args:
+            db_path: Optional custom path to the database file.
+                    If not provided, uses the default project database.
+        """
+        if db_path is None:
+            db_path = pt.PROJECT_DB
+
+        conn = sqlite3.connect(db_path)
+
+        def _insert_df(df: pl.DataFrame, table_name: str):
+            if df.is_empty():
+                return
+            columns = [col for col in df.columns if col != "index"]
+            df_to_insert = df.select(columns)
+            for col in df_to_insert.columns:
+                if df_to_insert[col].dtype == pl.Decimal:
+                    df_to_insert = df_to_insert.with_columns(pl.col(col).cast(pl.Float64))
+            placeholders = ", ".join(["?"] * len(columns))
+            cols_str = ", ".join([f'"{col}"' for col in columns])
+            sql = f"INSERT OR REPLACE INTO {table_name} ({cols_str}) VALUES ({placeholders})"
+            rows = df_to_insert.rows()
+            conn.executemany(sql, rows)
+
+        update_start = time()
+        for pdf in self.processed_pdfs:
+            if type(pdf) is BaseException:
+                conn.close()
+                return None
+            elif type(pdf) is tuple:
+                batch, head, lines, cab = pdf
+                if batch and batch.exists():
+                    df = pl.read_parquet(batch)
+                    _insert_df(df, "batch_lines")
+                    batch.unlink()
+                if head and head.exists():
+                    df = pl.read_parquet(head)
+                    _insert_df(df, "statement_heads")
+                    head.unlink()
+                if lines and lines.exists():
+                    df = pl.read_parquet(lines)
+                    _insert_df(df, "statement_lines")
+                    lines.unlink()
+                if cab and cab.exists():
+                    df = pl.read_parquet(cab)
+                    _insert_df(df, "checks_and_balances")
+                    cab.unlink()
+
+        self.db_secs = time() - update_start
+        self.duration_secs += self.db_secs
+
+        batch_heads_df = pl.DataFrame(
+            {
+                "ID_BATCH": [self.ID_BATCH],
+                "STD_PATH": [self.path],
+                "STD_COMPANY": [self.company_key],
+                "STD_ACCOUNT": [self.account_key],
+                "STD_PDF_COUNT": [self.pdf_count],
+                "STD_ERROR_COUNT": [self.errors],
+                "STD_DURATION_SECS": [self.duration_secs],
+                "STD_UPDATETIME": [self.process_time.isoformat()],
+            }
+        )
+        _insert_df(batch_heads_df, "batch_heads")
+
+        conn.commit()
+        conn.close()
+
+    def __del__(self):
+        """Destructor to ensure temporary files are cleaned up."""
+        self.delete_temp_files()

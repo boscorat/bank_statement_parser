@@ -16,6 +16,8 @@ def main():
     )
     print(f"total: {batch.duration_secs}, process: {batch.process_secs}, parquet: {batch.parquet_secs}, db: {batch.db_secs}")
     batch.update_parquet()
+    batch.update_db(db_path=Path("/home/boscorat/repos/bank_statement_parser/src/bank_statement_parser/data/project.db"))
+    batch.delete_temp_files()
     print(f"total: {batch.duration_secs}, process: {batch.process_secs}, parquet: {batch.parquet_secs}, db: {batch.db_secs}")
     # print(
     #     f"pdfs: {batch.pdf_count}, queued: {batch.queued_count}, processed: {batch.processed_count}, parquet: {batch.parquet_written_count}, db: {batch.db_written_count}"

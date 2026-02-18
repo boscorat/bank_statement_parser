@@ -5,6 +5,7 @@ SRC = Path(__file__).parent.parent.parent
 # level 1
 BSP = SRC.joinpath("bank_statement_parser")
 EXPORTS = SRC.joinpath("exports")
+TESTS = SRC.joinpath("tests")
 USER_CONFIG = SRC.joinpath("user_config")
 # level 2
 # exports
@@ -16,7 +17,7 @@ PARQUET = EXPORTS.joinpath("parquet")
 # bsp
 BASE_CONFIG = BSP.joinpath("base_config")
 MODULES = BSP.joinpath("modules")
-TESTS = BSP.joinpath("tests")
+DATA = BSP.joinpath("data")
 # level 3
 # modules
 CLASSES = MODULES.joinpath("classes")
@@ -28,6 +29,8 @@ BATCH_HEADS = PARQUET.joinpath("batch_heads.parquet")
 BATCH_LINES = PARQUET.joinpath("batch_lines.parquet")
 STATEMENT_HEADS = PARQUET.joinpath("statement_heads.parquet")
 STATEMENT_LINES = PARQUET.joinpath("statement_lines.parquet")
+# database
+PROJECT_DB = DATA.joinpath("project.db")
 
 
 def CAB_TEMP(id: int):
