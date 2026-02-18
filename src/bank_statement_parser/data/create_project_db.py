@@ -1,6 +1,8 @@
 import sqlite3
 from pathlib import Path
 
+from bank_statement_parser.data.create_project_db_views import create_views
+
 SCHEMAS = {
     "checks_and_balances": {
         "ID_CAB": "TEXT",
@@ -141,7 +143,9 @@ def main(db_path: Path, with_fk: bool = False):
     conn.close()
     print(f"Database created: {db_path}")
 
+    create_views(db_path)
+
 
 if __name__ == "__main__":
     # main(db_name="project_basic.db", with_fk=False)
-    main(db_path=Path(__file__).parent.joinpath("project.db"), with_fk=True)
+    main(db_path=Path(__file__).parent.joinpath("project.db"), with_fk=False)

@@ -17,3 +17,6 @@ src/exports
 
 #any database files
 *.db
+
+# ai agent files
+AGENTS.md
