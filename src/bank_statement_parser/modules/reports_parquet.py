@@ -5,6 +5,11 @@ from xlsxwriter import Workbook
 
 import bank_statement_parser.modules.paths as pt
 
+
+def _get_parquet_path(folder: Path | None, default: Path) -> Path:
+    return folder.joinpath(default.name) if folder else default
+
+
 # this function to export database objects is functiona;, but requires significant dependencies for little benefit
 # this is being commented out, and the dependencies removed, but may be re-instated in future if seen as having significant benefit
 # def export_db_mssql(
@@ -43,60 +48,60 @@ import bank_statement_parser.modules.paths as pt
 #         )
 
 
-def export_csv(folder: Path, type: str = "full", ID_BATCH: str | None = None):  # type can be full or simple
+def export_csv(folder: Path, type: str = "full", ID_BATCH: str | None = None, parquet_folder: Path | None = None):
     if type == "full":
-        DimStatement(ID_BATCH).all.collect().write_csv(
+        DimStatement(ID_BATCH, parquet_folder).all.collect().write_csv(
             file=folder.joinpath("statement.csv"), separator=",", include_header=True, quote_style="non_numeric", float_precision=2
         )
-        DimAccount(ID_BATCH).all.collect().write_csv(
+        DimAccount(ID_BATCH, parquet_folder).all.collect().write_csv(
             file=folder.joinpath("account.csv"), separator=",", include_header=True, quote_style="non_numeric", float_precision=2
         )
-        DimTime(ID_BATCH).all.collect().write_csv(
+        DimTime(ID_BATCH, parquet_folder).all.collect().write_csv(
             file=folder.joinpath("calendar.csv"), separator=",", include_header=True, quote_style="non_numeric", float_precision=2
         )
-        FactTransaction(ID_BATCH).all.collect().write_csv(
+        FactTransaction(ID_BATCH, parquet_folder).all.collect().write_csv(
             file=folder.joinpath("transactions.csv"), separator=",", include_header=True, quote_style="non_numeric", float_precision=2
         )
-        FactBalance(ID_BATCH).all.collect().write_csv(
+        FactBalance(ID_BATCH, parquet_folder).all.collect().write_csv(
             file=folder.joinpath("balances.csv"), separator=",", include_header=True, quote_style="non_numeric", float_precision=2
         )
-        GapReport().all.collect().write_csv(
+        GapReport(parquet_folder).all.collect().write_csv(
             file=folder.joinpath("gaps.csv"), separator=",", include_header=True, quote_style="non_numeric", float_precision=2
         )
-        FlatTransaction(ID_BATCH).all.collect().write_csv(
+        FlatTransaction(ID_BATCH, parquet_folder).all.collect().write_csv(
             file=folder.joinpath("flat.csv"), separator=",", include_header=True, quote_style="non_numeric", float_precision=2
         )
     elif type == "simple":
-        FlatTransaction(ID_BATCH).all.collect().write_csv(
+        FlatTransaction(ID_BATCH, parquet_folder).all.collect().write_csv(
             file=folder.joinpath("transactions_table.csv"), separator=",", include_header=True, quote_style="non_numeric", float_precision=2
         )
 
 
-def export_excel(path: Path, type: str = "full", ID_BATCH: str | None = None):  # type can be full or simple
+def export_excel(path: Path, type: str = "full", ID_BATCH: str | None = None, parquet_folder: Path | None = None):
     with Workbook(str(path)) as wb:
         if type == "full":
-            DimStatement(ID_BATCH).all.collect().write_excel(
+            DimStatement(ID_BATCH, parquet_folder).all.collect().write_excel(
                 workbook=wb,
                 worksheet="statement",
                 autofit=False,
                 table_name="statement",
                 table_style="Table Style Medium 4",
             )
-            DimAccount(ID_BATCH).all.collect().write_excel(
+            DimAccount(ID_BATCH, parquet_folder).all.collect().write_excel(
                 workbook=wb,
                 worksheet="account",
                 autofit=False,
                 table_name="account",
                 table_style="Table Style Medium 4",
             )
-            DimTime(ID_BATCH).all.collect().write_excel(
+            DimTime(ID_BATCH, parquet_folder).all.collect().write_excel(
                 workbook=wb,
                 worksheet="calendar",
                 autofit=False,
                 table_name="calendar",
                 table_style="Table Style Medium 4",
             )
-            FactTransaction(ID_BATCH).all.collect().write_excel(
+            FactTransaction(ID_BATCH, parquet_folder).all.collect().write_excel(
                 workbook=wb,
                 worksheet="transactions",
                 autofit=False,
@@ -104,7 +109,7 @@ def export_excel(path: Path, type: str = "full", ID_BATCH: str | None = None):  
                 table_style="Table Style Medium 4",
                 float_precision=2,
             )
-            FactBalance(ID_BATCH).all.collect().write_excel(
+            FactBalance(ID_BATCH, parquet_folder).all.collect().write_excel(
                 workbook=wb,
                 worksheet="balances",
                 autofit=False,
@@ -112,14 +117,14 @@ def export_excel(path: Path, type: str = "full", ID_BATCH: str | None = None):  
                 table_style="Table Style Medium 4",
                 float_precision=2,
             )
-            GapReport().all.collect().write_excel(
+            GapReport(parquet_folder).all.collect().write_excel(
                 workbook=wb,
                 worksheet="gaps",
                 autofit=False,
                 table_name="gaps",
                 table_style="Table Style Medium 4",
             )
-            FlatTransaction(ID_BATCH).all.collect().write_excel(
+            FlatTransaction(ID_BATCH, parquet_folder).all.collect().write_excel(
                 workbook=wb,
                 worksheet="flat",
                 autofit=False,
@@ -127,7 +132,7 @@ def export_excel(path: Path, type: str = "full", ID_BATCH: str | None = None):  
                 table_style="Table Style Medium 4",
             )
         elif type == "simple":
-            FlatTransaction(ID_BATCH).all.collect().write_excel(
+            FlatTransaction(ID_BATCH, parquet_folder).all.collect().write_excel(
                 workbook=wb,
                 worksheet="transactions_table",
                 autofit=False,
@@ -142,12 +147,12 @@ def main():
 
 
 class FlatTransaction:
-    def __init__(self, ID_BATCH: str | None = None) -> None:
+    def __init__(self, ID_BATCH: str | None = None, folder: Path | None = None) -> None:
         self.base: pl.LazyFrame = (
-            FactTransaction(ID_BATCH)
-            .all.join(DimTime().all, on="id_date", how="inner")
-            .join(DimAccount().all, on="id_account", how="inner")
-            .join(DimStatement().all, on="id_statement", how="inner")
+            FactTransaction(ID_BATCH, folder)
+            .all.join(DimTime(ID_BATCH, folder).all, on="id_date", how="inner")
+            .join(DimAccount(ID_BATCH, folder).all, on="id_account", how="inner")
+            .join(DimStatement(ID_BATCH, folder).all, on="id_statement", how="inner")
         )
         self.all: pl.LazyFrame = self.base.select(
             pl.col("id_date").alias("transaction_date"),
@@ -170,17 +175,21 @@ class FlatTransaction:
 
 
 class FactBalance:
-    def __init__(self, ID_BATCH: str | None = None) -> None:
+    def __init__(self, ID_BATCH: str | None = None, folder: Path | None = None) -> None:
+        stmt_heads = _get_parquet_path(folder, pt.STATEMENT_HEADS)
+        stmt_lines = _get_parquet_path(folder, pt.STATEMENT_LINES)
         self.__heads: pl.LazyFrame = (
-            pl.read_parquet(pt.STATEMENT_HEADS).filter((pl.lit(ID_BATCH).is_null()) | (pl.col("ID_BATCH") == pl.lit(ID_BATCH))).lazy()
+            pl.read_parquet(stmt_heads).filter((pl.lit(ID_BATCH).is_null()) | (pl.col("ID_BATCH") == pl.lit(ID_BATCH))).lazy()
         )
         self._cartesian_date_account: pl.LazyFrame = (
-            DimTime(ID_BATCH=ID_BATCH).all.select("id_date").join(self.__heads.select(id_account="ID_ACCOUNT").unique().lazy(), how="cross")
+            DimTime(ID_BATCH=ID_BATCH, folder=folder)
+            .all.select("id_date")
+            .join(self.__heads.select(id_account="ID_ACCOUNT").unique().lazy(), how="cross")
         )
         self._account_days: pl.LazyFrame = (
             self.__heads.select(id_statement="ID_STATEMENT", id_account="ID_ACCOUNT")
             .join(
-                pl.read_parquet(pt.STATEMENT_LINES)
+                pl.read_parquet(stmt_lines)
                 .lazy()
                 .select(
                     id_statement="ID_STATEMENT",
@@ -233,17 +242,15 @@ class FactBalance:
 
 
 class DimTime:
-    def __init__(self, ID_BATCH: str | None = None) -> None:
-        self.__heads: pl.DataFrame = pl.read_parquet(pt.STATEMENT_HEADS).filter(
+    def __init__(self, ID_BATCH: str | None = None, folder: Path | None = None) -> None:
+        stmt_heads = _get_parquet_path(folder, pt.STATEMENT_HEADS)
+        stmt_lines = _get_parquet_path(folder, pt.STATEMENT_LINES)
+        self.__heads: pl.DataFrame = pl.read_parquet(stmt_heads).filter(
             (pl.lit(ID_BATCH).is_null()) | (pl.col("ID_BATCH") == pl.lit(ID_BATCH))
         )
         self.end_date: str = self.__heads.select("STD_STATEMENT_DATE").max().item()
         self.start_date: str = (
-            pl.read_parquet(pt.STATEMENT_LINES)
-            .join(self.__heads, on="ID_STATEMENT", how="semi")
-            .select("STD_TRANSACTION_DATE")
-            .min()
-            .item()
+            pl.read_parquet(stmt_lines).join(self.__heads, on="ID_STATEMENT", how="semi").select("STD_TRANSACTION_DATE").min().item()
         )
         self.date_series: pl.Series = pl.Series("ID_DATE", pl.date_ranges(self.start_date, self.end_date, eager=True)).explode()
         self.all: pl.LazyFrame = pl.LazyFrame(self.date_series).select(
@@ -285,12 +292,14 @@ class DimTime:
 
 
 class DimStatement:
-    def __init__(self, ID_BATCH: str | None = None) -> None:
+    def __init__(self, ID_BATCH: str | None = None, folder: Path | None = None) -> None:
+        stmt_heads = _get_parquet_path(folder, pt.STATEMENT_HEADS)
+        batch_lines = _get_parquet_path(folder, pt.BATCH_LINES)
         self.__heads: pl.LazyFrame = (
-            pl.read_parquet(pt.STATEMENT_HEADS).filter((pl.lit(ID_BATCH).is_null()) | (pl.col("ID_BATCH") == pl.lit(ID_BATCH))).lazy()
+            pl.read_parquet(stmt_heads).filter((pl.lit(ID_BATCH).is_null()) | (pl.col("ID_BATCH") == pl.lit(ID_BATCH))).lazy()
         )
         self.raw: pl.LazyFrame = self.__heads.join(
-            other=pl.read_parquet(pt.BATCH_LINES).lazy(), on=["ID_STATEMENT", "ID_BATCH"], how="inner", validate="1:1", coalesce=True
+            other=pl.read_parquet(batch_lines).lazy(), on=["ID_STATEMENT", "ID_BATCH"], how="inner", validate="1:1", coalesce=True
         )
         self.all: pl.LazyFrame = self.raw.select(
             id_statement="ID_STATEMENT",
@@ -302,12 +311,14 @@ class DimStatement:
 
 
 class DimAccount:
-    def __init__(self, ID_BATCH: str | None = None) -> None:
+    def __init__(self, ID_BATCH: str | None = None, folder: Path | None = None) -> None:
+        stmt_heads = _get_parquet_path(folder, pt.STATEMENT_HEADS)
+        batch_lines = _get_parquet_path(folder, pt.BATCH_LINES)
         self.__heads: pl.LazyFrame = (
-            pl.read_parquet(pt.STATEMENT_HEADS).filter((pl.lit(ID_BATCH).is_null()) | (pl.col("ID_BATCH") == pl.lit(ID_BATCH))).lazy()
+            pl.read_parquet(stmt_heads).filter((pl.lit(ID_BATCH).is_null()) | (pl.col("ID_BATCH") == pl.lit(ID_BATCH))).lazy()
         )
         self.raw: pl.LazyFrame = self.__heads.join(
-            other=pl.read_parquet(pt.BATCH_LINES).lazy(), on=["ID_STATEMENT", "ID_BATCH"], how="inner", validate="1:1", coalesce=True
+            other=pl.read_parquet(batch_lines).lazy(), on=["ID_STATEMENT", "ID_BATCH"], how="inner", validate="1:1", coalesce=True
         )
         self.all: pl.LazyFrame = (
             self.raw.select(
@@ -324,12 +335,14 @@ class DimAccount:
 
 
 class FactTransaction:
-    def __init__(self, ID_BATCH: str | None = None) -> None:
+    def __init__(self, ID_BATCH: str | None = None, folder: Path | None = None) -> None:
+        stmt_heads = _get_parquet_path(folder, pt.STATEMENT_HEADS)
+        stmt_lines = _get_parquet_path(folder, pt.STATEMENT_LINES)
         self.__heads: pl.LazyFrame = (
-            pl.read_parquet(pt.STATEMENT_HEADS).filter((pl.lit(ID_BATCH).is_null()) | (pl.col("ID_BATCH") == pl.lit(ID_BATCH))).lazy()
+            pl.read_parquet(stmt_heads).filter((pl.lit(ID_BATCH).is_null()) | (pl.col("ID_BATCH") == pl.lit(ID_BATCH))).lazy()
         )
         self.raw: pl.LazyFrame = self.__heads.join(
-            other=pl.read_parquet(pt.STATEMENT_LINES).lazy(), on="ID_STATEMENT", how="inner", validate="1:m", coalesce=True
+            other=pl.read_parquet(stmt_lines).lazy(), on="ID_STATEMENT", how="inner", validate="1:m", coalesce=True
         )
         self.all: pl.LazyFrame = self.raw.select(
             id_transaction="ID_TRANSACTION",
@@ -350,9 +363,10 @@ class FactTransaction:
 
 
 class GapReport:
-    def __init__(self):
+    def __init__(self, folder: Path | None = None):
+        stmt_heads = _get_parquet_path(folder, pt.STATEMENT_HEADS)
         self.raw: pl.LazyFrame = (
-            pl.read_parquet(pt.STATEMENT_HEADS)
+            pl.read_parquet(stmt_heads)
             .select(
                 "STD_ACCOUNT",
                 "STD_ACCOUNT_NUMBER",
