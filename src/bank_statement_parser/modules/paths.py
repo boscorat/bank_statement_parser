@@ -5,7 +5,6 @@ SRC = Path(__file__).parent.parent.parent
 # level 1
 BSP = SRC.joinpath("bank_statement_parser")
 EXPORTS = SRC.joinpath("exports")
-TESTS = SRC.joinpath("tests")
 USER_CONFIG = SRC.joinpath("user_config")
 # level 2
 # exports

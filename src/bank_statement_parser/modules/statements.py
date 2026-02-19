@@ -814,6 +814,7 @@ class StatementBatch:
         _insert_df(batch_heads_df, "batch_heads")
 
         conn.commit()
+        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
         conn.close()
 
     def __del__(self):

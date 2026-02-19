@@ -5,10 +5,11 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 
-def generate_mock_data(db_path: Path):
+def generate_mock_data(db_path: Path, num_batches: int = 10, statements_per_batch: int = 20, transactions_per_statement: int = 50):
     conn = sqlite3.connect(str(db_path))
-    conn.execute("PRAGMA foreign_keys = ON;")
     cursor = conn.cursor()
+
+    cursor.execute("PRAGMA foreign_keys = OFF;")
 
     cursor.execute("DELETE FROM checks_and_balances")
     cursor.execute("DELETE FROM statement_lines")
@@ -19,10 +20,10 @@ def generate_mock_data(db_path: Path):
 
     random.seed(42)
 
-    companies = ["Acme Corp", "Beta Ltd", "Gamma Inc"]
-    account_holders = ["John Smith", "Jane Doe", "Bob Wilson"]
-    account_numbers = ["12345678", "87654321", "11223344"]
-    sortcodes = ["00-11-22", "33-44-55", "66-77-88"]
+    companies = ["Acme Corp", "Beta Ltd", "Gamma Inc", "Delta Co", "Epsilon Ltd"]
+    account_holders = ["John Smith", "Jane Doe", "Bob Wilson", "Alice Brown", "Charlie Davis"]
+    account_numbers = ["12345678", "87654321", "11223344", "55667788", "99887766"]
+    sortcodes = ["00-11-22", "33-44-55", "66-77-88", "99-00-11", "22-33-44"]
     account_types = ["Current", "Business", "Savings"]
 
     transaction_types = [
@@ -54,12 +55,9 @@ def generate_mock_data(db_path: Path):
         "Insurance Premium",
     ]
 
-    batch_ids = [str(uuid.uuid4()) for _ in range(3)]
-    batch_dates = [
-        "2024-01-15 10:00:00",
-        "2024-02-15 11:00:00",
-        "2024-03-15 12:00:00",
-    ]
+    batch_ids = [str(uuid.uuid4()) for _ in range(num_batches)]
+    start_date = datetime(2024, 1, 1)
+    batch_dates = [(start_date + timedelta(days=i * 30)).strftime("%Y-%m-%d %H:%M:%S") for i in range(num_batches)]
 
     batch_heads_data = []
     for i, batch_id in enumerate(batch_ids):
@@ -69,34 +67,23 @@ def generate_mock_data(db_path: Path):
                 f"/path/to/batch_{i + 1}",
                 companies[i % len(companies)],
                 account_types[i % len(account_types)],
-                random.randint(3, 4),
+                statements_per_batch,
                 0,
                 random.uniform(10.0, 60.0),
                 batch_dates[i],
             )
         )
 
-    cursor.executemany(
-        "INSERT INTO batch_heads (ID_BATCH, STD_PATH, STD_COMPANY, STD_ACCOUNT, STD_PDF_COUNT, STD_ERROR_COUNT, STD_DURATION_SECS, STD_UPDATETIME) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        batch_heads_data,
-    )
-    print(f"Inserted {len(batch_heads_data)} batch_heads")
+    total_statements = num_batches * statements_per_batch
+    statement_ids = [str(uuid.uuid4()) for _ in range(total_statements)]
+    batch_assignment = [i // statements_per_batch for i in range(total_statements)]
 
-    statement_ids = [str(uuid.uuid4()) for _ in range(10)]
-    statement_dates = [
-        "2024-01-31",
-        "2024-02-15",
-        "2024-02-29",
-        "2024-02-29",
-        "2024-03-15",
-        "2024-03-31",
-        "2024-03-31",
-        "2024-04-15",
-        "2024-04-30",
-        "2024-04-30",
-    ]
-
-    batch_assignment = [0, 0, 0, 0, 1, 1, 1, 1, 2, 2]
+    statement_dates = []
+    for batch_idx in range(num_batches):
+        base_date = datetime(2024, 1, 1) + timedelta(days=batch_idx * 30)
+        for stmt_idx in range(statements_per_batch):
+            stmt_date = (base_date + timedelta(days=random.randint(10, 25))).strftime("%Y-%m-%d")
+            statement_dates.append(stmt_date)
 
     statement_heads_data = []
     for i, statement_id in enumerate(statement_ids):
@@ -108,9 +95,6 @@ def generate_mock_data(db_path: Path):
         account_type = account_types[batch_idx % len(account_types)]
         id_account = f"{sortcode.replace('-', '')}{account_number}"
         id_batch = batch_ids[batch_idx]
-
-        cursor.execute("SELECT SUM(STD_PAYMENTS_IN), SUM(STD_PAYMENTS_OUT) FROM statement_lines WHERE ID_STATEMENT = ?", (statement_id,))
-        result = cursor.fetchone()
 
         opening_balance = random.uniform(1000, 5000)
         payments_in = random.uniform(2000, 8000)
@@ -170,7 +154,7 @@ def generate_mock_data(db_path: Path):
 
     statement_lines_data = []
     for stmt_idx, statement_id in enumerate(statement_ids):
-        num_transactions = 30
+        num_transactions = transactions_per_statement
         current_balance = statement_heads_data[stmt_idx][10]
 
         for trn_idx in range(num_transactions):
@@ -264,10 +248,20 @@ def generate_mock_data(db_path: Path):
     )
     print(f"Inserted {len(checks_and_balances_data)} checks_and_balances")
 
+    cursor.executemany(
+        "INSERT INTO batch_heads (ID_BATCH, STD_PATH, STD_COMPANY, STD_ACCOUNT, STD_PDF_COUNT, STD_ERROR_COUNT, STD_DURATION_SECS, STD_UPDATETIME) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        batch_heads_data,
+    )
+    print(f"Inserted {len(batch_heads_data)} batch_heads (written last as in production)")
+
     conn.commit()
+    cursor.execute("PRAGMA foreign_keys = ON;")
+    conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
     conn.close()
     print(f"\nMock data inserted successfully into {db_path}")
 
 
 if __name__ == "__main__":
-    generate_mock_data(db_path=Path(__file__).parent.joinpath("project.db"))
+    generate_mock_data(
+        db_path=Path(__file__).parent.joinpath("project.db"), num_batches=10, statements_per_batch=20, transactions_per_statement=50
+    )

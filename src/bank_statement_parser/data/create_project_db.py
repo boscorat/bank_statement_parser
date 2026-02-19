@@ -145,7 +145,31 @@ def main(db_path: Path, with_fk: bool = False):
 
     create_views(db_path)
 
+    create_indexes(db_path)
+
+
+def create_indexes(db_path: Path):
+    conn = sqlite3.connect(db_path)
+
+    indexes = [
+        "CREATE INDEX IF NOT EXISTS idx_statement_heads_id_account ON statement_heads(ID_ACCOUNT)",
+        "CREATE INDEX IF NOT EXISTS idx_statement_heads_id_batch ON statement_heads(ID_BATCH)",
+        "CREATE INDEX IF NOT EXISTS idx_statement_lines_id_statement ON statement_lines(ID_STATEMENT)",
+        "CREATE INDEX IF NOT EXISTS idx_statement_lines_date ON statement_lines(STD_TRANSACTION_DATE)",
+        "CREATE INDEX IF NOT EXISTS idx_statement_lines_account_date ON statement_lines(ID_STATEMENT, STD_TRANSACTION_DATE, STD_TRANSACTION_NUMBER)",
+        "CREATE INDEX IF NOT EXISTS idx_batch_lines_id_batch ON batch_lines(ID_BATCH)",
+        "CREATE INDEX IF NOT EXISTS idx_batch_lines_id_statement ON batch_lines(ID_STATEMENT)",
+        "CREATE INDEX IF NOT EXISTS idx_sh_stmt_acct ON statement_heads(ID_STATEMENT, ID_ACCOUNT)",
+    ]
+
+    for idx_sql in indexes:
+        print(f"Creating index: {idx_sql}")
+        conn.execute(idx_sql)
+
+    conn.commit()
+    conn.close()
+    print("Indexes created successfully")
+
 
 if __name__ == "__main__":
-    # main(db_name="project_basic.db", with_fk=False)
-    main(db_path=Path(__file__).parent.joinpath("project.db"), with_fk=False)
+    main(db_path=Path(__file__).parent.joinpath("project.db"), with_fk=True)
