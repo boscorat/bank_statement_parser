@@ -13,6 +13,8 @@ Classes:
 import asyncio
 import hashlib
 import os
+import sys
+import traceback
 from concurrent.futures import ProcessPoolExecutor
 from copy import deepcopy
 from datetime import datetime
@@ -22,14 +24,14 @@ from uuid import uuid4
 
 import polars as pl
 
+import bank_statement_parser.modules.config as _config_module
 import bank_statement_parser.modules.parquet as pq
 from bank_statement_parser.modules.config import (
-    config_standard_fields,
     get_config_from_account,
     get_config_from_company,
     get_config_from_statement,
 )
-from bank_statement_parser.modules.data import Account
+from bank_statement_parser.modules.data import Account, StandardFields
 from bank_statement_parser.modules.database import update_db
 from bank_statement_parser.modules.pdf_functions import pdf_close, pdf_open
 from bank_statement_parser.modules.statement_functions import get_results, get_standard_fields
@@ -65,8 +67,6 @@ class Statement:
         lines_results: Extracted transaction lines as LazyFrame.
         success: Whether statement processing passed all validation checks.
         config_path: Optional custom path to configuration files.
-
-    Class Attributes:
         logs: DataFrame storing execution logs for debugging and performance tracking.
     """
 
@@ -90,17 +90,7 @@ class Statement:
         "lines_results",
         "success",
         "config_path",
-    )
-    logs: pl.DataFrame = pl.DataFrame(
-        schema={
-            "file_path": pl.Utf8,
-            "function_file": pl.Utf8,
-            "function": pl.Utf8,
-            "duration": pl.Float64,
-            "log_count": pl.Int64,
-            "time": pl.Datetime,
-            "exception": pl.Utf8,
-        }
+        "logs",
     )
 
     def __init__(
@@ -127,6 +117,17 @@ class Statement:
         extracts header and line data, performs validation checks, and determines
         if the statement was successfully processed.
         """
+        self.logs: pl.DataFrame = pl.DataFrame(
+            schema={
+                "file_path": pl.Utf8,
+                "function_file": pl.Utf8,
+                "function": pl.Utf8,
+                "duration": pl.Float64,
+                "log_count": pl.Int64,
+                "time": pl.Datetime,
+                "exception": pl.Utf8,
+            }
+        )
         self.file = file
         self.file_renamed = None
         self.company_key = company_key
@@ -226,10 +227,10 @@ class Statement:
 
         text_p1 = "".join([chr["text"] for chr in self.pdf.pages[0].chars])
         bytes_p1 = text_p1.encode("UTF-8")
-        id = hashlib.sha512(bytes_p1, usedforsecurity=False).hexdigest()
+        stmt_hash = hashlib.sha512(bytes_p1, usedforsecurity=False).hexdigest()
         text_p1 = None
         bytes_p1 = None
-        return id
+        return stmt_hash
 
     def is_successfull(self):
         """
@@ -315,11 +316,20 @@ class Statement:
                     )
 
         if self.statement_type:
+            # Resolve config_standard_fields at call time via the module reference so that:
+            #   a) the lazy __getattr__ singleton is not frozen at import time, and
+            #   b) a custom config_path on this Statement is respected.
+            if self.config_path:
+                from bank_statement_parser.modules.config import ConfigManager
+
+                std_fields: dict[str, StandardFields] = ConfigManager(self.config_path).standard_fields
+            else:
+                std_fields = _config_module.config_standard_fields  # type: ignore[assignment]
             # Apply standard field transformations based on statement type
             results = results.pipe(
                 get_standard_fields,
                 section,
-                config_standard_fields,
+                std_fields,
                 self.statement_type,
                 self.checks_and_balances,
                 # self.logs,
@@ -368,7 +378,7 @@ class Statement:
 
 
 def process_pdf_statement(
-    id: int,
+    idx: int,
     pdf: Path,
     batch_id: str,
     company_key: str | None,
@@ -387,7 +397,7 @@ def process_pdf_statement(
     5. Cleans up resources
 
     Args:
-        id: Index position of this PDF in the batch.
+        idx: Index position of this PDF in the batch.
         pdf: Path to the PDF file to process.
         batch_id: Unique identifier for the batch this PDF belongs to.
         company_key: Optional company identifier for config lookup.
@@ -413,9 +423,9 @@ def process_pdf_statement(
     line_start = time()
     batch_line: dict = {}
     batch_line["ID_BATCH"] = batch_id
-    batch_line["ID_BATCHLINE"] = batch_id + "_" + str(id + 1)
+    batch_line["ID_BATCHLINE"] = batch_id + "_" + str(idx + 1)
     batch_line["ID_STATEMENT"] = ""
-    batch_line["STD_BATCH_LINE"] = id + 1
+    batch_line["STD_BATCH_LINE"] = idx + 1
     batch_line["STD_FILENAME"] = pdf.name
     batch_line["STD_ACCOUNT"] = ""
     batch_line["STD_DURATION_SECS"] = 0.00
@@ -452,7 +462,7 @@ def process_pdf_statement(
                 statement_type=stmt.statement_type,
                 account=stmt.account,
                 header_results=stmt.header_results,
-                id=id,
+                id=idx,
             )
             pq_statement_heads.create()
             statement_heads_file = pq_statement_heads.file
@@ -463,7 +473,7 @@ def process_pdf_statement(
             pq_statement_lines = pq.StatementLines(
                 id_statement=stmt.ID_STATEMENT,
                 lines_results=stmt.lines_results,
-                id=id,
+                id=idx,
             )
             pq_statement_lines.create()
             statement_lines_file = pq_statement_lines.file
@@ -475,7 +485,7 @@ def process_pdf_statement(
             id_statement=stmt.ID_STATEMENT,
             id_batch=stmt.ID_BATCH,
             checks_and_balances=stmt.checks_and_balances,
-            id=id,
+            id=idx,
         )
         pq_cab.create()
         cab_file = pq_cab.file
@@ -489,12 +499,15 @@ def process_pdf_statement(
         stmt = None
         if smart_rename:
             file_old.rename(file_old.with_name(file_new))
-    except BaseException as e:
-        # Handle configuration or parsing errors
-        print(e)
+    except Exception as e:
+        # Record the error details in the batch line so it is persisted to parquet,
+        # then log to stderr. We do NOT re-raise — a single bad PDF must not abort
+        # the rest of the batch. BaseException subclasses (KeyboardInterrupt, SystemExit)
+        # are intentionally left uncaught so the process can still be interrupted.
         error_config = True
         batch_line["ERROR_CONFIG"] = True
-        batch_line["STD_ERROR_MESSAGE"] += "** Configuration Failure **"
+        batch_line["STD_ERROR_MESSAGE"] += f"** Configuration Failure **: {e}"
+        traceback.print_exc(file=sys.stderr)
 
     # Record processing time and timestamp
     line_end = time()
@@ -502,7 +515,7 @@ def process_pdf_statement(
     batch_line["STD_UPDATETIME"] = datetime.now()
 
     # Save batch line data
-    pq_batch_lines = pq.BatchLines(batch_lines=[batch_line], id=id)
+    pq_batch_lines = pq.BatchLines(batch_lines=[batch_line], id=idx)
     pq_batch_lines.create()
     batch_lines_file = pq_batch_lines.file
     pq_batch_lines.cleanup()
@@ -777,8 +790,8 @@ class StatementBatch:
         Iterates through each PDF and processes it individually.
         Results are stored in self.processed_pdfs for later parquet updates.
         """
-        for id, pdf in enumerate(self.pdfs):
-            self.processed_pdfs.append(self.process_single_pdf(id, pdf))
+        for idx, pdf in enumerate(self.pdfs):
+            self.processed_pdfs.append(self.process_single_pdf(idx, pdf))
 
     async def process_turbo(self):
         """
@@ -807,14 +820,14 @@ class StatementBatch:
 
         with ProcessPoolExecutor(max_workers=CPU_WORKERS) as executor:
             # Submit all PDF processing tasks to the executor
-            tasks = [loop.run_in_executor(executor, self.process_single_pdf, id, pdf) for id, pdf in enumerate(self.pdfs)]
+            tasks = [loop.run_in_executor(executor, self.process_single_pdf, idx, pdf) for idx, pdf in enumerate(self.pdfs)]
 
             # Wait for all tasks to complete and collect results
             processed_pdfs = await asyncio.gather(*tasks, return_exceptions=True)
 
         return processed_pdfs
 
-    def process_single_pdf(self, id: int, pdf: Path) -> tuple[Path | None, Path | None, Path | None, Path | None]:
+    def process_single_pdf(self, idx: int, pdf: Path) -> tuple[Path | None, Path | None, Path | None, Path | None]:
         """
         Process a single PDF file and save results to parquet files.
 
@@ -823,7 +836,7 @@ class StatementBatch:
         Error counters are updated on this instance based on the returned flags.
 
         Args:
-            id: Index position of this PDF in the batch.
+            idx: Index position of this PDF in the batch.
             pdf: Path to the PDF file to process.
 
         Returns:
@@ -831,7 +844,7 @@ class StatementBatch:
                    statement lines, and checks & balances parquet files.
         """
         batch_lines_file, statement_heads_file, statement_lines_file, cab_file, error_cab, error_config = process_pdf_statement(
-            id=id,
+            idx=idx,
             pdf=pdf,
             batch_id=self.ID_BATCH,
             company_key=self.company_key,

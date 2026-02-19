@@ -9,6 +9,7 @@ import time
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
+from typing import Any, TypedDict
 
 import polars as pl
 from dacite import from_dict
@@ -26,6 +27,13 @@ from bank_statement_parser.modules.data import (
 from bank_statement_parser.modules.errors import StatementError
 from bank_statement_parser.modules.paths import BASE_CONFIG, USER_CONFIG
 from bank_statement_parser.modules.statement_functions import get_results
+
+
+class _ConfigEntry(TypedDict):
+    """Internal structure for each section of the config loading dict."""
+
+    dataclass: type
+    config: dict[str, Any]
 
 
 REQUIRED_CONFIG_FILES = [
@@ -138,7 +146,7 @@ class ConfigManager:
         Converts raw TOML data to dataclasses and links references between
         statement tables and account objects.
         """
-        config_dict = {
+        config_dict: dict[str, _ConfigEntry] = {
             "companies": {"dataclass": Company, "config": dict()},
             "account_types": {"dataclass": AccountType, "config": dict()},
             "accounts": {"dataclass": Account, "config": dict()},
@@ -162,7 +170,7 @@ class ConfigManager:
 
         self._config_dict = config_dict
 
-    def _load_toml_file(self, config_dict: dict, key: str, file_path: Path) -> None:
+    def _load_toml_file(self, config_dict: dict[str, _ConfigEntry], key: str, file_path: Path) -> None:
         """
         Load a single TOML file into the config dictionary.
 
@@ -177,7 +185,7 @@ class ConfigManager:
         except FileNotFoundError:
             pass
 
-    def _link_statement_tables(self, config_dict: dict) -> None:
+    def _link_statement_tables(self, config_dict: dict[str, _ConfigEntry]) -> None:
         """
         Link statement table configurations to their parent statement types.
 
@@ -191,7 +199,7 @@ class ConfigManager:
                         if cfg.statement_table_key:
                             config_group[idx].statement_table = config_dict["statement_tables"]["config"][cfg.statement_table_key]
 
-    def _link_account_references(self, config_dict: dict) -> None:
+    def _link_account_references(self, config_dict: dict[str, _ConfigEntry]) -> None:
         """
         Link account objects to their corresponding account type, statement type, and company.
 
@@ -428,11 +436,25 @@ def _get_standard_fields() -> dict[str, StandardFields]:
 
 
 # Backward-compatible module-level exports
-# These provide access to default config without needing to instantiate ConfigManager
-config_accounts = _get_accounts()
-config_statement_types = _get_statement_types()
-config_companies = _get_companies()
-config_standard_fields = _get_standard_fields()
+# Singletons are initialised lazily on first access via __getattr__ so that
+# importing this module does NOT trigger TOML file I/O immediately.
+_LAZY_SINGLETONS: dict[str, object] = {}
+
+_LAZY_FACTORIES: dict[str, object] = {
+    "config_accounts": _get_accounts,
+    "config_statement_types": _get_statement_types,
+    "config_companies": _get_companies,
+    "config_standard_fields": _get_standard_fields,
+}
+
+
+def __getattr__(name: str) -> object:
+    """Lazily initialise module-level config singletons on first access."""
+    if name in _LAZY_FACTORIES:
+        if name not in _LAZY_SINGLETONS:
+            _LAZY_SINGLETONS[name] = _LAZY_FACTORIES[name]()  # type: ignore[operator]
+        return _LAZY_SINGLETONS[name]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def get_config_from_account(account_key: str, logs: pl.DataFrame, file_path: str, config_path: Path | None = None) -> Account:
