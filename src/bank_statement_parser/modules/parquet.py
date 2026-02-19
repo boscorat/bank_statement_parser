@@ -1,10 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from bank_statement_parser.modules.statements import Statement, StatementBatch
-
+from datetime import datetime
 from pathlib import Path
 
 import polars as pl
@@ -61,12 +57,17 @@ class Parquet:
 
 
 class ChecksAndBalances(Parquet):
-    __slots__ = ("stmt", "id", "source_file", "destination_file")
+    __slots__ = ("id", "source_file", "destination_file")
 
     def __init__(
-        self, statement: Statement | None = None, id: int = -1, source_file: Path | None = None, destination_file: Path | None = None
+        self,
+        id_statement: str | None = None,
+        id_batch: str | None = None,
+        checks_and_balances: pl.DataFrame | None = None,
+        id: int = -1,
+        source_file: Path | None = None,
+        destination_file: Path | None = None,
     ) -> None:
-        self.stmt = statement
         self.id = id
         self.source_file = source_file
         self.destination_file = destination_file
@@ -97,12 +98,12 @@ class ChecksAndBalances(Parquet):
         self.records: pl.DataFrame | None = None
         if self.source_file:
             self.records = pl.read_parquet(self.source_file).drop("index")
-        elif self.stmt:
+        elif checks_and_balances is not None and id_statement is not None and id_batch is not None:
             self.records = self.schema.clone().extend(
-                self.stmt.checks_and_balances.select(
-                    ID_CAB=pl.lit(self.stmt.ID_STATEMENT).add(pl.lit(".").add(pl.lit(self.stmt.ID_BATCH))),
-                    ID_STATEMENT=pl.lit(self.stmt.ID_STATEMENT),
-                    ID_BATCH=pl.lit(self.stmt.ID_BATCH),
+                checks_and_balances.select(
+                    ID_CAB=pl.lit(id_statement).add(pl.lit(".").add(pl.lit(id_batch))),
+                    ID_STATEMENT=pl.lit(id_statement),
+                    ID_BATCH=pl.lit(id_batch),
                     HAS_TRANSACTIONS=~pl.col("ZERO_TRANSACTION_STATEMENT"),
                     STD_OPENING_BALANCE_HEADS="STD_OPENING_BALANCE",
                     STD_PAYMENTS_IN_HEADS="STD_PAYMENTS_IN",
@@ -136,12 +137,21 @@ class ChecksAndBalances(Parquet):
 
 
 class StatementHeads(Parquet):
-    __slots__ = ("stmt", "id", "source_file", "destination_file")
+    __slots__ = ("id", "source_file", "destination_file")
 
     def __init__(
-        self, statement: Statement | None = None, id: int = -1, source_file: Path | None = None, destination_file: Path | None = None
+        self,
+        id_statement: str | None = None,
+        id_batch: str | None = None,
+        id_account: str | None = None,
+        company: str | None = None,
+        statement_type: str | None = None,
+        account: str | None = None,
+        header_results: pl.LazyFrame | None = None,
+        id: int = -1,
+        source_file: Path | None = None,
+        destination_file: Path | None = None,
     ) -> None:
-        self.stmt = statement
         self.id = id
         self.source_file = source_file
         self.destination_file = destination_file
@@ -168,20 +178,20 @@ class StatementHeads(Parquet):
         self.records: pl.DataFrame | None = None
         if self.source_file:
             self.records = pl.read_parquet(self.source_file).drop("index")
-        elif self.stmt:
+        elif header_results is not None and id_statement is not None:
             self.records = self.schema.clone().extend(
                 pl.DataFrame(
                     data={
-                        "ID_STATEMENT": self.stmt.ID_STATEMENT,
-                        "ID_BATCH": self.stmt.ID_BATCH,
-                        "ID_ACCOUNT": self.stmt.ID_ACCOUNT,
-                        "STD_COMPANY": self.stmt.company,
-                        "STD_STATEMENT_TYPE": self.stmt.statement_type,
-                        "STD_ACCOUNT": self.stmt.account,
+                        "ID_STATEMENT": id_statement,
+                        "ID_BATCH": id_batch,
+                        "ID_ACCOUNT": id_account,
+                        "STD_COMPANY": company,
+                        "STD_STATEMENT_TYPE": statement_type,
+                        "STD_ACCOUNT": account,
                     },
                     orient="row",
                 ).hstack(
-                    self.stmt.header_results.select(
+                    header_results.select(
                         "STD_SORTCODE",
                         "STD_ACCOUNT_NUMBER",
                         "STD_ACCOUNT_HOLDER",
@@ -211,12 +221,16 @@ class StatementHeads(Parquet):
 
 
 class StatementLines(Parquet):
-    __slots__ = ("stmt", "id", "source_file", "destination_file")
+    __slots__ = ("id", "source_file", "destination_file")
 
     def __init__(
-        self, statement: Statement | None = None, id: int = -1, source_file: Path | None = None, destination_file: Path | None = None
+        self,
+        id_statement: str | None = None,
+        lines_results: pl.LazyFrame | None = None,
+        id: int = -1,
+        source_file: Path | None = None,
+        destination_file: Path | None = None,
     ) -> None:
-        self.stmt = statement
         self.id = id
         self.source_file = source_file
         self.destination_file = destination_file
@@ -242,11 +256,11 @@ class StatementLines(Parquet):
         self.records: pl.DataFrame | None = None
         if self.source_file:
             self.records = pl.read_parquet(self.source_file).drop("index")
-        elif self.stmt:
+        elif lines_results is not None and id_statement is not None:
             self.records = self.schema.clone().extend(
-                self.stmt.lines_results.collect().select(
-                    ID_TRANSACTION=pl.lit(self.stmt.ID_STATEMENT).add(pl.lit(".").add(pl.col("STD_TRANSACTION_NUMBER").cast(str))),
-                    ID_STATEMENT=pl.lit(self.stmt.ID_STATEMENT),
+                lines_results.collect().select(
+                    ID_TRANSACTION=pl.lit(id_statement).add(pl.lit(".").add(pl.col("STD_TRANSACTION_NUMBER").cast(str))),
+                    ID_STATEMENT=pl.lit(id_statement),
                     STD_PAGE_NUMBER="STD_PAGE_NUMBER",
                     STD_TRANSACTION_DATE="STD_TRANSACTION_DATE",
                     STD_TRANSACTION_NUMBER="STD_TRANSACTION_NUMBER",
@@ -276,10 +290,20 @@ class StatementLines(Parquet):
 
 
 class BatchHeads(Parquet):
-    __slots__ = ("batch", "destination_file")
+    __slots__ = ("destination_file",)
 
-    def __init__(self, batch: StatementBatch | None = None, destination_file: Path | None = None) -> None:
-        self.batch = batch
+    def __init__(
+        self,
+        batch_id: str | None = None,
+        path: str | None = None,
+        company_key: str | None = None,
+        account_key: str | None = None,
+        pdf_count: int | None = None,
+        errors: int | None = None,
+        duration_secs: float | None = None,
+        process_time: datetime | None = None,
+        destination_file: Path | None = None,
+    ) -> None:
         self.destination_file = destination_file
         self.schema = pl.DataFrame(
             orient="row",
@@ -295,18 +319,18 @@ class BatchHeads(Parquet):
             },
         )
         self.records: pl.DataFrame | None = None
-        if self.batch:
+        if batch_id is not None:
             self.records = self.schema.clone().extend(
                 pl.DataFrame(
                     data={
-                        "ID_BATCH": self.batch.ID_BATCH,
-                        "STD_PATH": str(self.batch.path),
-                        "STD_COMPANY": self.batch.company_key,
-                        "STD_ACCOUNT": self.batch.account_key,
-                        "STD_PDF_COUNT": self.batch.pdf_count,
-                        "STD_ERROR_COUNT": self.batch.errors,
-                        "STD_DURATION_SECS": self.batch.duration_secs,
-                        "STD_UPDATETIME": self.batch.process_time,
+                        "ID_BATCH": batch_id,
+                        "STD_PATH": str(path),
+                        "STD_COMPANY": company_key,
+                        "STD_ACCOUNT": account_key,
+                        "STD_PDF_COUNT": pdf_count,
+                        "STD_ERROR_COUNT": errors,
+                        "STD_DURATION_SECS": duration_secs,
+                        "STD_UPDATETIME": process_time,
                     },
                     orient="row",
                 )

@@ -13,7 +13,6 @@ Classes:
 import asyncio
 import hashlib
 import os
-import sqlite3
 from concurrent.futures import ProcessPoolExecutor
 from copy import deepcopy
 from datetime import datetime
@@ -24,7 +23,6 @@ from uuid import uuid4
 import polars as pl
 
 import bank_statement_parser.modules.parquet as pq
-import bank_statement_parser.modules.paths as pt
 from bank_statement_parser.modules.config import (
     config_standard_fields,
     get_config_from_account,
@@ -32,6 +30,7 @@ from bank_statement_parser.modules.config import (
     get_config_from_statement,
 )
 from bank_statement_parser.modules.data import Account
+from bank_statement_parser.modules.database import update_db
 from bank_statement_parser.modules.pdf_functions import pdf_close, pdf_open
 from bank_statement_parser.modules.statement_functions import get_results, get_standard_fields
 
@@ -368,6 +367,282 @@ class Statement:
         self.checks_and_balances: pl.DataFrame = pl.DataFrame()
 
 
+def process_pdf_statement(
+    id: int,
+    pdf: Path,
+    batch_id: str,
+    company_key: str | None,
+    account_key: str | None,
+    config_path: Path | None,
+    smart_rename: bool,
+) -> tuple[Path | None, Path | None, Path | None, Path | None, bool, bool]:
+    """
+    Process a single bank statement PDF and save results to parquet files.
+
+    This standalone function handles the complete processing workflow for one PDF:
+    1. Creates a Statement object to parse the PDF
+    2. Extracts header and line data
+    3. Saves results to parquet files
+    4. Optionally renames the file based on extracted data
+    5. Cleans up resources
+
+    Args:
+        id: Index position of this PDF in the batch.
+        pdf: Path to the PDF file to process.
+        batch_id: Unique identifier for the batch this PDF belongs to.
+        company_key: Optional company identifier for config lookup.
+        account_key: Optional account identifier for config lookup.
+        config_path: Optional custom path to configuration files directory.
+        smart_rename: If True, rename the file based on extracted account and date.
+
+    Returns:
+        tuple: A 6-element tuple containing:
+            - batch_lines_file (Path | None): Path to the batch lines parquet file.
+            - statement_heads_file (Path | None): Path to the statement heads parquet file.
+            - statement_lines_file (Path | None): Path to the statement lines parquet file.
+            - cab_file (Path | None): Path to the checks & balances parquet file.
+            - error_cab (bool): True if a checks & balances validation failure occurred.
+            - error_config (bool): True if a configuration or parsing failure occurred.
+    """
+    batch_lines_file: Path | None = None
+    statement_heads_file: Path | None = None
+    statement_lines_file: Path | None = None
+    cab_file: Path | None = None
+    error_cab: bool = False
+    error_config: bool = False
+    line_start = time()
+    batch_line: dict = {}
+    batch_line["ID_BATCH"] = batch_id
+    batch_line["ID_BATCHLINE"] = batch_id + "_" + str(id + 1)
+    batch_line["ID_STATEMENT"] = ""
+    batch_line["STD_BATCH_LINE"] = id + 1
+    batch_line["STD_FILENAME"] = pdf.name
+    batch_line["STD_ACCOUNT"] = ""
+    batch_line["STD_DURATION_SECS"] = 0.00
+    batch_line["STD_UPDATETIME"] = datetime.now()
+    batch_line["STD_SUCCESS"] = False
+    batch_line["STD_ERROR_MESSAGE"] = ""
+    batch_line["ERROR_CAB"] = False
+    batch_line["ERROR_CONFIG"] = False
+    try:
+        # Parse and extract data from the PDF statement
+        stmt = Statement(
+            file=pdf,
+            company_key=company_key,
+            account_key=account_key,
+            ID_BATCH=batch_id,
+            smart_rename=smart_rename,
+            config_path=config_path,
+        )
+        batch_line["ID_STATEMENT"] = stmt.ID_STATEMENT
+        batch_line["STD_ACCOUNT"] = stmt.account
+        batch_line["STD_SUCCESS"] = stmt.success
+        if not stmt.success:
+            # Mark as error if validation checks failed
+            error_cab = True
+            batch_line["ERROR_CAB"] = True
+            batch_line["STD_ERROR_MESSAGE"] += "** Checks & Balances Failure **"
+        else:
+            # Save extracted header data
+            pq_statement_heads = pq.StatementHeads(
+                id_statement=stmt.ID_STATEMENT,
+                id_batch=stmt.ID_BATCH,
+                id_account=stmt.ID_ACCOUNT,
+                company=stmt.company,
+                statement_type=stmt.statement_type,
+                account=stmt.account,
+                header_results=stmt.header_results,
+                id=id,
+            )
+            pq_statement_heads.create()
+            statement_heads_file = pq_statement_heads.file
+            pq_statement_heads.cleanup()
+            pq_statement_heads = None
+
+            # Save extracted transaction line data
+            pq_statement_lines = pq.StatementLines(
+                id_statement=stmt.ID_STATEMENT,
+                lines_results=stmt.lines_results,
+                id=id,
+            )
+            pq_statement_lines.create()
+            statement_lines_file = pq_statement_lines.file
+            pq_statement_lines.cleanup()
+            pq_statement_lines = None
+
+        # Save validation/check results regardless of success
+        pq_cab = pq.ChecksAndBalances(
+            id_statement=stmt.ID_STATEMENT,
+            id_batch=stmt.ID_BATCH,
+            checks_and_balances=stmt.checks_and_balances,
+            id=id,
+        )
+        pq_cab.create()
+        cab_file = pq_cab.file
+        pq_cab.cleanup()
+        pq_cab = None
+
+        # Handle file renaming if enabled
+        file_old = deepcopy(stmt.file)
+        file_new = stmt.file_renamed if stmt.file_renamed else str(file_old)
+        stmt.cleanup()
+        stmt = None
+        if smart_rename:
+            file_old.rename(file_old.with_name(file_new))
+    except BaseException as e:
+        # Handle configuration or parsing errors
+        print(e)
+        error_config = True
+        batch_line["ERROR_CONFIG"] = True
+        batch_line["STD_ERROR_MESSAGE"] += "** Configuration Failure **"
+
+    # Record processing time and timestamp
+    line_end = time()
+    batch_line["STD_DURATION_SECS"] = line_end - line_start
+    batch_line["STD_UPDATETIME"] = datetime.now()
+
+    # Save batch line data
+    pq_batch_lines = pq.BatchLines(batch_lines=[batch_line], id=id)
+    pq_batch_lines.create()
+    batch_lines_file = pq_batch_lines.file
+    pq_batch_lines.cleanup()
+    pq_batch_lines = None
+
+    return (batch_lines_file, statement_heads_file, statement_lines_file, cab_file, error_cab, error_config)
+
+
+def delete_temp_files(processed_pdfs: list[BaseException | tuple]) -> None:
+    """
+    Delete temporary parquet files created during batch processing.
+
+    Cleans up the temporary parquet files that were created when processing
+    each PDF. Should be called after calling both update_parquet() and
+    update_db() to ensure data has been persisted before deletion.
+
+    Args:
+        processed_pdfs: List of processed PDF results as returned by
+            process_pdf_statement — each entry is either a BaseException
+            (indicating a fatal worker error) or a 4-element tuple of
+            (batch_lines_file, statement_heads_file, statement_lines_file,
+            cab_file) Path values that may be None.
+    """
+    for pdf in processed_pdfs:
+        if type(pdf) is BaseException:
+            return None
+        elif type(pdf) is tuple:
+            batch, head, lines, cab = pdf
+            if batch and batch.exists():
+                batch.unlink()
+            if head and head.exists():
+                head.unlink()
+            if lines and lines.exists():
+                lines.unlink()
+            if cab and cab.exists():
+                cab.unlink()
+
+
+def update_parquet(
+    processed_pdfs: list[BaseException | tuple],
+    batch_id: str,
+    path: str,
+    company_key: str | None,
+    account_key: str | None,
+    pdf_count: int,
+    errors: int,
+    duration_secs: float,
+    process_time: datetime,
+    folder: Path | None = None,
+) -> float:
+    """
+    Update parquet files with processed results from all PDFs in a batch.
+
+    Iterates through processed PDFs, handles any exceptions, and updates
+    the main parquet files from temporary files created during processing.
+    Also writes batch header metadata. Should be called after all PDFs have
+    been processed to finalise the batch.
+
+    Args:
+        processed_pdfs: List of processed PDF results — each entry is either a
+            BaseException (fatal worker error) or a 4-element tuple of
+            (batch_lines_file, statement_heads_file, statement_lines_file,
+            cab_file) Path values that may be None.
+        batch_id: Unique identifier for this batch.
+        path: String representation of parent directories of the processed PDFs.
+        company_key: Optional company identifier used for this batch.
+        account_key: Optional account identifier used for this batch.
+        pdf_count: Total number of PDFs in the batch.
+        errors: Count of failed statement processings.
+        duration_secs: Total processing time accumulated so far (seconds).
+        process_time: Timestamp when batch processing started.
+        folder: Optional custom folder path for parquet output.
+            If not provided, uses the default exports/parquet folder.
+
+    Returns:
+        float: Time spent updating parquet files (seconds).
+    """
+    custom_batch_lines = None
+    custom_statement_heads = None
+    custom_statement_lines = None
+    custom_cab = None
+    custom_batch_heads = None
+
+    if folder:
+        folder.mkdir(parents=True, exist_ok=True)
+        custom_batch_lines = folder.joinpath("batch_lines.parquet")
+        custom_statement_heads = folder.joinpath("statement_heads.parquet")
+        custom_statement_lines = folder.joinpath("statement_lines.parquet")
+        custom_cab = folder.joinpath("checks_and_balances.parquet")
+        custom_batch_heads = folder.joinpath("batch_heads.parquet")
+
+    update_start = time()
+    for pdf in processed_pdfs:
+        # Skip any exceptions that occurred during processing
+        if type(pdf) is BaseException:
+            return 0.0
+        elif type(pdf) is tuple:
+            batch, head, lines, cab = pdf
+            if batch:
+                bl = pq.BatchLines(source_file=batch, destination_file=custom_batch_lines)
+                bl.update()
+                bl.cleanup()
+                bl = None
+            if head:
+                sh = pq.StatementHeads(source_file=head, destination_file=custom_statement_heads)
+                sh.update()
+                sh.cleanup()
+                sh = None
+            if lines:
+                sl = pq.StatementLines(source_file=lines, destination_file=custom_statement_lines)
+                sl.update()
+                sl.cleanup()
+                sl = None
+            if cab:
+                cb = pq.ChecksAndBalances(source_file=cab, destination_file=custom_cab)
+                cb.update()
+                cb.cleanup()
+                cb = None
+
+    parquet_secs = time() - update_start
+
+    # Write batch header metadata to parquet
+    pq_heads = pq.BatchHeads(
+        batch_id=batch_id,
+        path=path,
+        company_key=company_key,
+        account_key=account_key,
+        pdf_count=pdf_count,
+        errors=errors,
+        duration_secs=duration_secs + parquet_secs,
+        process_time=process_time,
+        destination_file=custom_batch_heads,
+    )
+    pq_heads.create()
+    pq_heads.cleanup()
+    pq_heads = None
+
+    return parquet_secs
+
+
 class StatementBatch:
     """
     Handles batch processing of multiple bank statement PDFs.
@@ -539,16 +814,13 @@ class StatementBatch:
 
         return processed_pdfs
 
-    def process_single_pdf(self, id, pdf):
+    def process_single_pdf(self, id: int, pdf: Path) -> tuple[Path | None, Path | None, Path | None, Path | None]:
         """
         Process a single PDF file and save results to parquet files.
 
-        This method handles the complete processing workflow for one PDF:
-        1. Creates a Statement object to parse the PDF
-        2. Extracts header and line data
-        3. Saves results to parquet files
-        4. Optionally renames the file based on extracted data
-        5. Cleans up resources
+        Delegates to the module-level `process_pdf_statement` function, passing
+        only the data required (no reference to this StatementBatch instance).
+        Error counters are updated on this instance based on the returned flags.
 
         Args:
             id: Index position of this PDF in the batch.
@@ -558,98 +830,25 @@ class StatementBatch:
             tuple: A tuple containing file paths for batch lines, statement heads,
                    statement lines, and checks & balances parquet files.
         """
-        batch_lines_file: Path | None = None
-        statement_heads_file: Path | None = None
-        statement_lines_file: Path | None = None
-        cab_file: Path | None = None
-        line_start = time()
-        batch_line: dict = {}
-        batch_line["ID_BATCH"] = self.ID_BATCH
-        batch_line["ID_BATCHLINE"] = self.ID_BATCH + "_" + str(id + 1)
-        batch_line["ID_STATEMENT"] = ""
-        batch_line["STD_BATCH_LINE"] = id + 1
-        batch_line["STD_FILENAME"] = pdf.name
-        batch_line["STD_ACCOUNT"] = ""
-        batch_line["STD_DURATION_SECS"] = 0.00
-        batch_line["STD_UPDATETIME"] = datetime.now()
-        batch_line["STD_SUCCESS"] = False
-        batch_line["STD_ERROR_MESSAGE"] = ""
-        batch_line["ERROR_CAB"] = False
-        batch_line["ERROR_CONFIG"] = False
-        try:
-            # Parse and extract data from the PDF statement
-            stmt = Statement(
-                file=pdf,
-                company_key=self.company_key,
-                account_key=self.account_key,
-                ID_BATCH=self.ID_BATCH,
-                smart_rename=self.smart_rename,
-                config_path=self.config_path,
-            )
-            batch_line["ID_STATEMENT"] = stmt.ID_STATEMENT
-            batch_line["STD_ACCOUNT"] = stmt.account
-            batch_line["STD_SUCCESS"] = stmt.success
-            if not stmt.success:
-                # Mark as error if validation checks failed
-                self.errors += 1
-                batch_line["ERROR_CAB"] = True
-                batch_line["STD_ERROR_MESSAGE"] += "** Checks & Balances Failure **"
-            else:
-                # Save extracted header data
-                pq_statement_heads = pq.StatementHeads(statement=stmt, id=id)
-                pq_statement_heads.create()
-                statement_heads_file = pq_statement_heads.file
-                pq_statement_heads.cleanup()
-                pq_statement_heads = None
-
-                # Save extracted transaction line data
-                pq_statement_lines = pq.StatementLines(statement=stmt, id=id)
-                pq_statement_lines.create()
-                statement_lines_file = pq_statement_lines.file
-                pq_statement_lines.cleanup()
-                pq_statement_lines = None
-
-            # Save validation/check results regardless of success
-            pq_cab = pq.ChecksAndBalances(statement=stmt, id=id)
-            pq_cab.create()
-            cab_file = pq_cab.file
-            pq_cab.cleanup()
-            pq_cab = None
-
-            # Handle file renaming if enabled
-            file_old = deepcopy(stmt.file)
-            file_new = stmt.file_renamed if stmt.file_renamed else str(file_old)
-            stmt.cleanup()
-            stmt = None
-            if self.smart_rename:
-                file_old.rename(file_old.with_name(file_new))
-        except BaseException as e:
-            # Handle configuration or parsing errors
-            print(e)
+        batch_lines_file, statement_heads_file, statement_lines_file, cab_file, error_cab, error_config = process_pdf_statement(
+            id=id,
+            pdf=pdf,
+            batch_id=self.ID_BATCH,
+            company_key=self.company_key,
+            account_key=self.account_key,
+            config_path=self.config_path,
+            smart_rename=self.smart_rename,
+        )
+        if error_cab or error_config:
             self.errors += 1
-            batch_line["ERROR_CONFIG"] = True
-            batch_line["STD_ERROR_MESSAGE"] += "** Configuration Failure **"
-
-        # Record processing time and timestamp
-        line_end = time()
-        batch_line["STD_DURATION_SECS"] = line_end - line_start
-        batch_line["STD_UPDATETIME"] = datetime.now()
-
-        # Save batch line data (different handling for turbo vs sequential)
-        pq_batch_lines = pq.BatchLines(batch_lines=[batch_line], id=id)
-        pq_batch_lines.create()
-        batch_lines_file = pq_batch_lines.file
-        pq_batch_lines.cleanup()
-        pq_batch_lines = None
-
         return (batch_lines_file, statement_heads_file, statement_lines_file, cab_file)
 
-    def update_parquet(self, folder: Path | None = None):
+    def update_parquet(self, folder: Path | None = None) -> None:
         """
         Update parquet files with processed results from all PDFs.
 
-        Iterates through processed PDFs, handles any exceptions, and updates
-        the main parquet files from temporary files created during processing.
+        Delegates to the module-level `update_parquet` function, passing only
+        the data required (no reference to this StatementBatch instance).
         Records timing in parquet_secs and updates total duration.
 
         This method should be called after processing to finalize the batch
@@ -659,92 +858,41 @@ class StatementBatch:
             folder: Optional custom folder path for parquet output.
                     If not provided, uses the default exports/parquet folder.
         """
-        custom_batch_lines = None
-        custom_statement_heads = None
-        custom_statement_lines = None
-        custom_cab = None
-        custom_batch_heads = None
-
-        if folder:
-            folder.mkdir(parents=True, exist_ok=True)
-            custom_batch_lines = folder.joinpath("batch_lines.parquet")
-            custom_statement_heads = folder.joinpath("statement_heads.parquet")
-            custom_statement_lines = folder.joinpath("statement_lines.parquet")
-            custom_cab = folder.joinpath("checks_and_balances.parquet")
-            custom_batch_heads = folder.joinpath("batch_heads.parquet")
-
-        update_start = time()
-        for pdf in self.processed_pdfs:
-            # Skip any exceptions that occurred during processing
-            if type(pdf) is BaseException:
-                return None
-            elif type(pdf) is tuple:
-                batch, head, lines, cab = pdf
-                if batch:
-                    bl = pq.BatchLines(source_file=batch, destination_file=custom_batch_lines)
-                    bl.update()
-                    bl.cleanup()
-                    bl = None
-                if head:
-                    sh = pq.StatementHeads(source_file=head, destination_file=custom_statement_heads)
-                    sh.update()
-                    sh.cleanup()
-                    sh = None
-                if lines:
-                    sl = pq.StatementLines(source_file=lines, destination_file=custom_statement_lines)
-                    sl.update()
-                    sl.cleanup()
-                    sl = None
-                if cab:
-                    cb = pq.ChecksAndBalances(source_file=cab, destination_file=custom_cab)
-                    cb.update()
-                    cb.cleanup()
-                    cb = None
-
-        # Record parquet update time and update total duration
-        self.parquet_secs = time() - update_start
+        self.parquet_secs = update_parquet(
+            processed_pdfs=self.processed_pdfs,
+            batch_id=self.ID_BATCH,
+            path=self.path,
+            company_key=self.company_key,
+            account_key=self.account_key,
+            pdf_count=self.pdf_count,
+            errors=self.errors,
+            duration_secs=self.duration_secs,
+            process_time=self.process_time,
+            folder=folder,
+        )
         self.duration_secs += self.parquet_secs
 
-        # Write batch header metadata to parquet
-        pq_heads = pq.BatchHeads(self, destination_file=custom_batch_heads)
-        pq_heads.create()
-        pq_heads.cleanup()
-        pq_heads = None
-
-    def delete_temp_files(self, folder: Path | None = None):
+    def delete_temp_files(self) -> None:
         """
         Delete temporary parquet files created during processing.
+
+        Delegates to the module-level `delete_temp_files` function, passing
+        only the processed PDF results list (no reference to this instance).
 
         This method cleans up the temporary parquet files that were created
         when processing each PDF. Call this method after calling both
         update_parquet() and update_db() to persist the data in multiple
         formats.
-
-        Args:
-            folder: Optional custom folder path where temp files are located.
-                    If not provided, uses the default exports/parquet folder.
         """
-        for pdf in self.processed_pdfs:
-            if type(pdf) is BaseException:
-                return None
-            elif type(pdf) is tuple:
-                batch, head, lines, cab = pdf
-                if batch and batch.exists():
-                    batch.unlink()
-                if head and head.exists():
-                    head.unlink()
-                if lines and lines.exists():
-                    lines.unlink()
-                if cab and cab.exists():
-                    cab.unlink()
+        delete_temp_files(self.processed_pdfs)
 
     def update_db(self, db_path: Path | None = None):
         """
         Update database tables with processed results from all PDFs.
 
-        Iterates through processed PDFs, handles any exceptions, and inserts
-        the data from temporary parquet files into the corresponding database
-        tables. Records timing in db_secs and updates total duration.
+        Delegates to the module-level `update_db` function in database.py,
+        passing only the data required (no reference to this StatementBatch
+        instance). Records timing in db_secs and updates total duration.
 
         This method should be called after processing to finalize the batch
         and write the batch header information to the database.
@@ -753,69 +901,19 @@ class StatementBatch:
             db_path: Optional custom path to the database file.
                     If not provided, uses the default project database.
         """
-        if db_path is None:
-            db_path = pt.PROJECT_DB
-
-        conn = sqlite3.connect(db_path)
-
-        def _insert_df(df: pl.DataFrame, table_name: str):
-            if df.is_empty():
-                return
-            columns = [col for col in df.columns if col != "index"]
-            df_to_insert = df.select(columns)
-            for col in df_to_insert.columns:
-                if df_to_insert[col].dtype == pl.Decimal:
-                    df_to_insert = df_to_insert.with_columns(pl.col(col).cast(pl.Float64))
-            placeholders = ", ".join(["?"] * len(columns))
-            cols_str = ", ".join([f'"{col}"' for col in columns])
-            sql = f"INSERT OR REPLACE INTO {table_name} ({cols_str}) VALUES ({placeholders})"
-            rows = df_to_insert.rows()
-            conn.executemany(sql, rows)
-
-        update_start = time()
-        for pdf in self.processed_pdfs:
-            if type(pdf) is BaseException:
-                conn.close()
-                return None
-            elif type(pdf) is tuple:
-                batch, head, lines, cab = pdf
-                if batch and batch.exists():
-                    df = pl.read_parquet(batch)
-                    _insert_df(df, "batch_lines")
-                    batch.unlink()
-                if head and head.exists():
-                    df = pl.read_parquet(head)
-                    _insert_df(df, "statement_heads")
-                    head.unlink()
-                if lines and lines.exists():
-                    df = pl.read_parquet(lines)
-                    _insert_df(df, "statement_lines")
-                    lines.unlink()
-                if cab and cab.exists():
-                    df = pl.read_parquet(cab)
-                    _insert_df(df, "checks_and_balances")
-                    cab.unlink()
-
-        self.db_secs = time() - update_start
-        self.duration_secs += self.db_secs
-
-        batch_heads_df = pl.DataFrame(
-            {
-                "ID_BATCH": [self.ID_BATCH],
-                "STD_PATH": [self.path],
-                "STD_COMPANY": [self.company_key],
-                "STD_ACCOUNT": [self.account_key],
-                "STD_PDF_COUNT": [self.pdf_count],
-                "STD_ERROR_COUNT": [self.errors],
-                "STD_DURATION_SECS": [self.duration_secs],
-                "STD_UPDATETIME": [self.process_time.isoformat()],
-            }
+        self.db_secs = update_db(
+            processed_pdfs=self.processed_pdfs,
+            batch_id=self.ID_BATCH,
+            path=self.path,
+            company_key=self.company_key,
+            account_key=self.account_key,
+            pdf_count=self.pdf_count,
+            errors=self.errors,
+            duration_secs=self.duration_secs,
+            process_time=self.process_time,
+            db_path=db_path,
         )
-        _insert_df(batch_heads_df, "batch_heads")
-
-        conn.commit()
-        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-        conn.close()
+        self.duration_secs += self.db_secs
 
     def __del__(self):
         """Destructor to ensure temporary files are cleaned up."""
