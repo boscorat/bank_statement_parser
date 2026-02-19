@@ -37,9 +37,10 @@ FactTransaction, GapReport) plus ``export_csv`` / ``export_excel`` helpers.
 
 Database utilities
 ------------------
-    bsp.build_datamart(db_path)   -- rebuild star-schema mart tables
-    bsp.create_db(db_path)        -- create (or recreate) the raw database
-    bsp.Housekeeping(db_path)     -- orphan-detection and cascaded-delete
+    bsp.build_datamart(db_path)      -- rebuild star-schema mart tables
+    bsp.create_db(db_path)           -- create (or recreate) the raw database
+    bsp.Housekeeping(db_path)        -- orphan-detection and cascaded-delete
+    bsp.copy_default_config(dest)    -- copy shipped TOML configs to a directory
 """
 
 __app_name__ = "bank-statement-parser"
@@ -67,6 +68,11 @@ from bank_statement_parser.modules.statements import (
 # Errors
 # ---------------------------------------------------------------------------
 from bank_statement_parser.modules.errors import StatementError
+
+# ---------------------------------------------------------------------------
+# Config helpers
+# ---------------------------------------------------------------------------
+from bank_statement_parser.modules.config import copy_default_config
 
 # ---------------------------------------------------------------------------
 # Low-level PDF helpers
@@ -99,6 +105,8 @@ __all__ = [
     "update_parquet",
     # Errors
     "StatementError",
+    # Config helpers
+    "copy_default_config",
     # Low-level PDF helpers
     "pdf_open",
     "page_crop",

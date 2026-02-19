@@ -5,6 +5,7 @@ This module provides ConfigManager class for loading and accessing TOML-based
 configuration files, as well as backward-compatible module-level functions.
 """
 
+import shutil
 import time
 from copy import deepcopy
 from datetime import datetime
@@ -44,6 +45,54 @@ REQUIRED_CONFIG_FILES = [
     "statement_tables.toml",
     "standard_fields.toml",
 ]
+
+
+def copy_default_config(destination: Path, overwrite: bool = False) -> list[Path]:
+    """
+    Copy all default TOML configuration files to a destination directory.
+
+    Copies every ``*.toml`` file from the shipped ``base_config`` folder into
+    *destination*, creating the directory (and any parents) if it does not
+    already exist.  The copied files are the starting-point for a user config
+    override: place the returned files in a directory and pass that directory
+    as ``config_path`` to ``ConfigManager`` (or ``Statement``/``StatementBatch``)
+    to override the built-in defaults.
+
+    Args:
+        destination: Directory to copy the TOML files into.
+        overwrite: If ``True``, existing files in *destination* are replaced.
+                   If ``False`` (the default), existing files are left untouched
+                   and skipped silently.
+
+    Returns:
+        List of ``Path`` objects for every file that was actually copied.
+
+    Raises:
+        NotADirectoryError: If *destination* exists but is a file, not a directory.
+
+    Example::
+
+        import bank_statement_parser as bsp
+        from pathlib import Path
+
+        copied = bsp.copy_default_config(Path("my_config"))
+        # Edit the TOML files, then:
+        batch = bsp.StatementBatch(pdfs=[...], config_path=Path("my_config"))
+    """
+    if destination.exists() and not destination.is_dir():
+        raise NotADirectoryError(f"Destination exists and is not a directory: {destination}")
+
+    destination.mkdir(parents=True, exist_ok=True)
+
+    copied: list[Path] = []
+    for src in BASE_CONFIG.glob("*.toml"):
+        dst = destination / src.name
+        if dst.exists() and not overwrite:
+            continue
+        shutil.copy2(src, dst)
+        copied.append(dst)
+
+    return copied
 
 
 class ConfigManager:
