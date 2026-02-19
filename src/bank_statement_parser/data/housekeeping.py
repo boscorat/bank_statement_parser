@@ -21,10 +21,42 @@ class Housekeeping:
         "batch_heads",
     ]
 
+    # All table names and column names that are permitted in dynamically-constructed SQL.
+    # Any identifier not in this set will raise ValueError, preventing SQL injection.
+    _ALLOWED_TABLES: frozenset[str] = frozenset(
+        [rel[0] for rel in [
+            ("checks_and_balances", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
+            ("checks_and_balances", "ID_BATCH", "batch_heads", "ID_BATCH"),
+            ("statement_heads", "ID_BATCH", "batch_heads", "ID_BATCH"),
+            ("statement_lines", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
+            ("batch_lines", "ID_BATCH", "batch_heads", "ID_BATCH"),
+            ("batch_lines", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
+        ]]
+        + [rel[2] for rel in [
+            ("checks_and_balances", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
+            ("checks_and_balances", "ID_BATCH", "batch_heads", "ID_BATCH"),
+            ("statement_heads", "ID_BATCH", "batch_heads", "ID_BATCH"),
+            ("statement_lines", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
+            ("batch_lines", "ID_BATCH", "batch_heads", "ID_BATCH"),
+            ("batch_lines", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
+        ]]
+    )
+    _ALLOWED_COLUMNS: frozenset[str] = frozenset(["ID_STATEMENT", "ID_BATCH"])
+
     def __init__(self, db_path: Path):
         self.db_path = db_path
 
+    @staticmethod
+    def _validate_identifier(value: str, allowed: frozenset[str], label: str) -> None:
+        """Raise ValueError if *value* is not in the *allowed* whitelist."""
+        if value not in allowed:
+            raise ValueError(f"Unsafe SQL identifier for {label}: {value!r}")
+
     def find_orphans(self, conn: sqlite3.Connection, table: str, fk_column: str, parent_table: str, parent_key: str) -> list:
+        self._validate_identifier(table, self._ALLOWED_TABLES, "table")
+        self._validate_identifier(fk_column, self._ALLOWED_COLUMNS, "fk_column")
+        self._validate_identifier(parent_table, self._ALLOWED_TABLES, "parent_table")
+        self._validate_identifier(parent_key, self._ALLOWED_COLUMNS, "parent_key")
         query = f"""
             SELECT t.{fk_column}
             FROM {table} t
@@ -35,6 +67,9 @@ class Housekeeping:
         return [row[0] for row in cursor.fetchall()]
 
     def delete_orphans_cascade(self, conn: sqlite3.Connection, table: str, fk_column: str, parent_key: str, orphan_ids: list) -> int:
+        self._validate_identifier(table, self._ALLOWED_TABLES, "table")
+        self._validate_identifier(fk_column, self._ALLOWED_COLUMNS, "fk_column")
+        self._validate_identifier(parent_key, self._ALLOWED_COLUMNS, "parent_key")
         if not orphan_ids:
             return 0
 
@@ -47,6 +82,8 @@ class Housekeeping:
         return cursor.rowcount
 
     def get_children_for_parent(self, conn: sqlite3.Connection, table: str, parent_key: str, parent_id: str) -> dict:
+        self._validate_identifier(table, self._ALLOWED_TABLES, "table")
+        self._validate_identifier(parent_key, self._ALLOWED_COLUMNS, "parent_key")
         children = {}
         for child_table, fk_column, _, _ in self.FK_RELATIONSHIPS:
             if child_table == table:
@@ -60,6 +97,8 @@ class Housekeeping:
         return children
 
     def delete_orphans_cascade_for_parent(self, conn: sqlite3.Connection, table: str, parent_key: str, parent_id: str) -> int:
+        self._validate_identifier(table, self._ALLOWED_TABLES, "table")
+        self._validate_identifier(parent_key, self._ALLOWED_COLUMNS, "parent_key")
         deleted_count = 0
 
         for child_table, fk_column, _, _ in self.FK_RELATIONSHIPS:
@@ -75,6 +114,8 @@ class Housekeeping:
                 for child_id in child_ids:
                     deleted_count += self.delete_orphans_cascade_for_parent(conn, child_table, fk_column, child_id)
 
+        self._validate_identifier(table, self._ALLOWED_TABLES, "table")
+        self._validate_identifier(parent_key, self._ALLOWED_COLUMNS, "parent_key")
         delete_query = f"DELETE FROM {table} WHERE {parent_key} = ?"
         cursor = conn.execute(delete_query, (parent_id,))
         deleted_count += cursor.rowcount

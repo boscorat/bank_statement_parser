@@ -309,6 +309,8 @@ def extract_fields(
         # table = table.collect().lazy()
         if table is not None:
             if not statement_table.transaction_spec:
+                # Collect once outside the loop so the lazy plan is not re-executed per field.
+                table_collected = table.collect()
                 for field in statement_table.fields:
                     if field.cell is None:
                         continue
@@ -316,7 +318,7 @@ def extract_fields(
                         data=[
                             pl.Series("field", [field.field], dtype=pl.String),
                             pl.Series("vital", [field.vital], dtype=pl.Boolean),
-                            pl.Series("value_raw", [table.collect().item(field.cell.row, field.cell.col)], dtype=pl.String),
+                            pl.Series("value_raw", [table_collected.item(field.cell.row, field.cell.col)], dtype=pl.String),
                             pl.Series("value_raw_offset", [""], dtype=pl.String),
                         ]
                     )

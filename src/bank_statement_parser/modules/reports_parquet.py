@@ -217,28 +217,38 @@ class FactBalance:
         self.raw: pl.LazyFrame = self._cartesian_date_account.join(self._bookends, how="inner", on="id_account", validate="m:1").join(
             self._account_days, on=["id_account", "id_date"], how="left", validate="1:1"
         )
-        self.__all: pl.DataFrame = pl.DataFrame()
-
-        for acct in self.raw.collect().partition_by("id_account"):
-            self.__all.vstack(
-                acct.sort("id_date")
-                .with_columns(
-                    opening_balance=pl.col("closing_balance")
-                    .fill_null(strategy="forward")
-                    .sub(pl.col("movement").fill_null(0.0000))
-                    .cast(float),
-                    closing_balance=pl.col("closing_balance").fill_null(strategy="forward").cast(float),
-                    pre_date=pl.when(pl.col("id_date") < pl.col("first_day")).then(pl.lit(True)).otherwise(pl.lit(False)),
-                    post_date=pl.when(pl.col("id_date") > pl.col("last_day")).then(pl.lit(True)).otherwise(pl.lit(False)),
-                )
-                .with_columns(outside_date=pl.col("pre_date").or_(pl.col("post_date")))
-                .with_columns(
-                    pl.col("opening_balance").fill_null(strategy="backward"), pl.col("closing_balance").fill_null(strategy="backward")
-                )
-                .drop("movement"),
-                in_place=True,
+        # Build the full balance series using pure window expressions — no Python-level
+        # partition loop needed.  The frame must be sorted by (id_account, id_date) first
+        # so that forward/backward fill runs in chronological order within each account.
+        self.all: pl.LazyFrame = (
+            self.raw
+            .sort("id_account", "id_date")
+            .with_columns(
+                # Forward-fill closing_balance within each account (fills dates with no txn)
+                closing_balance=pl.col("closing_balance")
+                .fill_null(strategy="forward")
+                .over("id_account")
+                .cast(float),
             )
-        self.all = self.__all.lazy()
+            .with_columns(
+                opening_balance=pl.col("closing_balance")
+                .sub(pl.col("movement").fill_null(0.0000))
+                .cast(float),
+                pre_date=pl.col("id_date").lt(pl.col("first_day")),
+                post_date=pl.col("id_date").gt(pl.col("last_day")),
+            )
+            .with_columns(outside_date=pl.col("pre_date").or_(pl.col("post_date")))
+            .with_columns(
+                # Backward-fill to cover any remaining nulls before the first known balance
+                opening_balance=pl.col("opening_balance")
+                .fill_null(strategy="backward")
+                .over("id_account"),
+                closing_balance=pl.col("closing_balance")
+                .fill_null(strategy="backward")
+                .over("id_account"),
+            )
+            .drop("movement")
+        )
 
 
 class DimTime:
