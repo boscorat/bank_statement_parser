@@ -2,9 +2,10 @@
 Tests that validate the data mart (DimTime, DimAccount, DimStatement,
 FactTransaction, FactBalance) against the raw source tables.
 
-Each test class covers one mart table or one cross-cutting concern.
-The tests require a populated project.db (run create_project_db.py,
-mock_project_data.py, and build_datamart.py before running the suite).
+A session-scoped fixture creates a fresh SQLite database in the tests/
+directory, populates it with deterministic mock data, builds the data mart,
+runs all tests, and then deletes the database.  No external setup step is
+required.
 
 Run with:
     pytest tests/test_datamart.py -v
@@ -17,7 +18,11 @@ from typing import Any
 
 import pytest
 
-DB_PATH = Path(__file__).parent.parent / "src" / "bank_statement_parser" / "data" / "project.db"
+from bank_statement_parser.data.build_datamart import build_datamart
+from bank_statement_parser.data.create_project_db import main as create_db
+from bank_statement_parser.data.mock_project_data import generate_mock_data
+
+_TEST_DB = Path(__file__).parent / "test_project.db"
 FLOAT_TOL = 0.005  # absolute tolerance for monetary comparisons
 
 
@@ -26,12 +31,22 @@ FLOAT_TOL = 0.005  # absolute tolerance for monetary comparisons
 # ---------------------------------------------------------------------------
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _db_lifecycle():
+    """Create, populate, and build the test database once per session; delete it afterwards."""
+    _TEST_DB.parent.mkdir(parents=True, exist_ok=True)
+    create_db(db_path=_TEST_DB, with_fk=True)
+    generate_mock_data(db_path=_TEST_DB, num_batches=10, statements_per_batch=20, transactions_per_statement=50)
+    build_datamart(db_path=_TEST_DB, verbose=False)
+    yield
+    if _TEST_DB.exists():
+        _TEST_DB.unlink()
+
+
 @pytest.fixture(scope="module")
-def conn():
-    """Read-only connection to project.db, shared across all tests in the module."""
-    if not DB_PATH.exists():
-        pytest.skip(f"project.db not found at {DB_PATH} — run the setup scripts first")
-    connection = sqlite3.connect(str(DB_PATH))
+def conn(_db_lifecycle):
+    """Read-only connection to the test database, shared across all tests in the module."""
+    connection = sqlite3.connect(str(_TEST_DB))
     yield connection
     connection.close()
 

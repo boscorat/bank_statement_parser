@@ -9,8 +9,10 @@ wheels/
 # Virtual environments
 .venv
 
-# export folders
-src/exports
+# project folder — exclude everything except the shipped config TOMLs
+src/bank_statement_parser/project/**
+!src/bank_statement_parser/project/config/
+!src/bank_statement_parser/project/config/*.toml
 
 #performance profiling tools
 *profile.*

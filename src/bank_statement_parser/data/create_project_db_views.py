@@ -103,4 +103,4 @@ def create_views(db_path: Path):
 
 
 if __name__ == "__main__":
-    create_views(Path(__file__).parent.joinpath("project.db"))
+    create_views(Path(__file__).parent.parent.joinpath("project", "database", "project.db"))

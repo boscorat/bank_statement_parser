@@ -26,6 +26,9 @@ Quick start
     # Rebuild the star-schema mart after loading
     bsp.build_datamart(db_path=Path("project.db"))
 
+    # Copy project folder structure to a new location (no files, dirs only)
+    bsp.copy_project_folders(Path("~/my_project").expanduser())
+
 Namespaced report backends
 --------------------------
 Both ``bsp.parquet`` and ``bsp.db`` expose the same class names
@@ -37,10 +40,18 @@ FactTransaction, GapReport) plus ``export_csv`` / ``export_excel`` helpers.
 
 Database utilities
 ------------------
-    bsp.build_datamart(db_path)      -- rebuild star-schema mart tables
-    bsp.create_db(db_path)           -- create (or recreate) the raw database
-    bsp.Housekeeping(db_path)        -- orphan-detection and cascaded-delete
-    bsp.copy_default_config(dest)    -- copy shipped TOML configs to a directory
+    bsp.build_datamart(db_path)                 -- rebuild star-schema mart tables
+    bsp.create_db(db_path)                      -- create (or recreate) the raw database
+    bsp.Housekeeping(db_path)                   -- orphan-detection and cascaded-delete
+    bsp.copy_default_config(dest)               -- copy shipped TOML configs to a directory
+    bsp.copy_project_folders(dest)              -- copy project folder structure (dirs only)
+    bsp.validate_or_initialise_project(path)    -- validate or scaffold a project directory
+
+Errors
+------
+    bsp.StatementError          -- base exception
+    bsp.ProjectDatabaseMissing  -- project.db absent in an otherwise-valid project
+    bsp.ProjectConfigMissing    -- config/ absent or empty in an otherwise-valid project
 """
 
 __app_name__ = "bank-statement-parser"
@@ -67,12 +78,17 @@ from bank_statement_parser.modules.statements import (
 # ---------------------------------------------------------------------------
 # Errors
 # ---------------------------------------------------------------------------
-from bank_statement_parser.modules.errors import StatementError
+from bank_statement_parser.modules.errors import (
+    ProjectConfigMissing,
+    ProjectDatabaseMissing,
+    StatementError,
+)
 
 # ---------------------------------------------------------------------------
 # Config helpers
 # ---------------------------------------------------------------------------
 from bank_statement_parser.modules.config import copy_default_config
+from bank_statement_parser.modules.paths import copy_project_folders, validate_or_initialise_project
 
 # ---------------------------------------------------------------------------
 # Low-level PDF helpers
@@ -105,8 +121,12 @@ __all__ = [
     "update_parquet",
     # Errors
     "StatementError",
+    "ProjectDatabaseMissing",
+    "ProjectConfigMissing",
     # Config helpers
     "copy_default_config",
+    "copy_project_folders",
+    "validate_or_initialise_project",
     # Low-level PDF helpers
     "pdf_open",
     "page_crop",

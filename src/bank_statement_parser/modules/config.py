@@ -25,8 +25,8 @@ from bank_statement_parser.modules.data import (
     StatementTable,
     StatementType,
 )
-from bank_statement_parser.modules.errors import StatementError
-from bank_statement_parser.modules.paths import BASE_CONFIG, USER_CONFIG
+from bank_statement_parser.modules.errors import ProjectConfigMissing, StatementError
+from bank_statement_parser.modules.paths import BASE_CONFIG, get_paths
 from bank_statement_parser.modules.statement_functions import get_results
 
 
@@ -54,9 +54,9 @@ def copy_default_config(destination: Path, overwrite: bool = False) -> list[Path
     Copies every ``*.toml`` file from the shipped ``base_config`` folder into
     *destination*, creating the directory (and any parents) if it does not
     already exist.  The copied files are the starting-point for a user config
-    override: place the returned files in a directory and pass that directory
-    as ``config_path`` to ``ConfigManager`` (or ``Statement``/``StatementBatch``)
-    to override the built-in defaults.
+    override: place the returned files in ``<project_path>/config/`` and pass
+    that project root as ``project_path`` to ``ConfigManager`` (or
+    ``Statement``/``StatementBatch``) to override the built-in defaults.
 
     Args:
         destination: Directory to copy the TOML files into.
@@ -75,9 +75,9 @@ def copy_default_config(destination: Path, overwrite: bool = False) -> list[Path
         import bank_statement_parser as bsp
         from pathlib import Path
 
-        copied = bsp.copy_default_config(Path("my_config"))
+        copied = bsp.copy_default_config(Path("my_project/config"))
         # Edit the TOML files, then:
-        batch = bsp.StatementBatch(pdfs=[...], config_path=Path("my_config"))
+        batch = bsp.StatementBatch(pdfs=[...], project_path=Path("my_project"))
     """
     if destination.exists() and not destination.is_dir():
         raise NotADirectoryError(f"Destination exists and is not a directory: {destination}")
@@ -104,7 +104,7 @@ class ConfigManager:
     access to account, company, and statement type configurations.
 
     Attributes:
-        _config_path: Optional custom config directory path.
+        _project_path: Optional project root directory path.
         _config_dict: Internal storage for loaded configuration.
         _accounts_df: Lazy-loaded DataFrame of accounts.
         _statement_types_df: Lazy-loaded DataFrame of statement types.
@@ -116,26 +116,28 @@ class ConfigManager:
         >>> accounts = config.get_accounts_for_company("my_company")
     """
 
-    def __init__(self, config_path: Path | None = None):
+    def __init__(self, project_path: Path | None = None):
         """
-        Initialize ConfigManager with optional custom config path.
+        Initialize ConfigManager with optional project path.
 
         Args:
-            config_path: Optional Path to a custom configuration directory.
-                        If None, uses USER_CONFIG or BASE_CONFIG.
+            project_path: Optional Path to the project root directory.
+                          Config files are read from ``project_path / "config"``.
+                          If None, falls back to the shipped ``BASE_CONFIG``
+                          directory bundled with the package.
         """
-        self._config_path = config_path
+        self._project_path = project_path
         self._config_dict: dict | None = None
         self._accounts_df: pl.DataFrame | None = None
         self._statement_types_df: pl.DataFrame | None = None
         self._companies_df: pl.DataFrame | None = None
 
     @property
-    def config_path(self) -> Path:
+    def config_dir(self) -> Path:
         """Return the effective configuration directory path."""
-        if self._config_path is not None:
-            return self._config_path
-        return USER_CONFIG if USER_CONFIG.exists() else BASE_CONFIG
+        if self._project_path is not None:
+            return get_paths(self._project_path).config
+        return BASE_CONFIG
 
     @property
     def config_dict(self) -> dict:
@@ -187,14 +189,34 @@ class ConfigManager:
             self._companies_df = pl.DataFrame(self.companies).transpose(include_header=True, header_name="company", column_names=["config"])
         return self._companies_df
 
+    def _require_config_dir(self) -> None:
+        """
+        Validate that the project config directory exists and contains .toml files.
+
+        Only called when ``_project_path`` is not ``None``.  The project is
+        expected to have been initialised already (by
+        :func:`~bank_statement_parser.modules.paths.validate_or_initialise_project`
+        called from ``Statement`` or ``StatementBatch``).
+
+        Raises:
+            ProjectConfigMissing: If ``config/`` is absent or contains no
+                ``.toml`` files.
+        """
+        config_dir = self.config_dir
+        if not config_dir.is_dir() or not list(config_dir.glob("*.toml")):
+            raise ProjectConfigMissing(config_dir)
+
     def _load_config(self) -> None:
         """
         Load and parse all TOML configuration files.
 
-        Attempts to load from USER_CONFIG first, falling back to BASE_CONFIG.
+        Attempts to load from BASE_CONFIG.
         Converts raw TOML data to dataclasses and links references between
         statement tables and account objects.
         """
+        if self._project_path is not None:
+            self._require_config_dir()
+
         config_dict: dict[str, _ConfigEntry] = {
             "companies": {"dataclass": Company, "config": dict()},
             "account_types": {"dataclass": AccountType, "config": dict()},
@@ -206,9 +228,7 @@ class ConfigManager:
 
         for key in config_dict:
             file_path = f"{key}.toml"
-            self._load_toml_file(config_dict, key, USER_CONFIG / file_path)
-            if not config_dict[key]["config"]:
-                self._load_toml_file(config_dict, key, BASE_CONFIG / file_path)
+            self._load_toml_file(config_dict, key, self.config_dir / file_path)
 
         for v in config_dict.values():
             for k in v["config"]:
@@ -506,7 +526,7 @@ def __getattr__(name: str) -> object:
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-def get_config_from_account(account_key: str, logs: pl.DataFrame, file_path: str, config_path: Path | None = None) -> Account:
+def get_config_from_account(account_key: str, logs: pl.DataFrame, file_path: str, project_path: Path | None = None) -> Account:
     """
     Retrieve account configuration by key (backward-compatible function).
 
@@ -514,7 +534,7 @@ def get_config_from_account(account_key: str, logs: pl.DataFrame, file_path: str
         account_key: The account identifier.
         logs: Polars DataFrame for logging operations.
         file_path: Path to the PDF file being processed.
-        config_path: Optional custom config directory path.
+        project_path: Optional project root directory path.
 
     Returns:
         The Account object.
@@ -522,11 +542,11 @@ def get_config_from_account(account_key: str, logs: pl.DataFrame, file_path: str
     Raises:
         StatementError: If the account cannot be found.
     """
-    config = ConfigManager(config_path) if config_path else _get_default_config()
+    config = ConfigManager(project_path) if project_path else _get_default_config()
     return config.get_config_from_account(account_key, logs, file_path)
 
 
-def get_config_from_company(company_key: str, pdf: PDF, logs: pl.DataFrame, file_path: str, config_path: Path | None = None) -> Account:
+def get_config_from_company(company_key: str, pdf: PDF, logs: pl.DataFrame, file_path: str, project_path: Path | None = None) -> Account:
     """
     Identify account from company by testing against PDF (backward-compatible function).
 
@@ -535,7 +555,7 @@ def get_config_from_company(company_key: str, pdf: PDF, logs: pl.DataFrame, file
         pdf: The opened PDF object.
         logs: Polars DataFrame for logging operations.
         file_path: Path to the PDF file being processed.
-        config_path: Optional custom config directory path.
+        project_path: Optional project root directory path.
 
     Returns:
         The matched Account object.
@@ -543,11 +563,11 @@ def get_config_from_company(company_key: str, pdf: PDF, logs: pl.DataFrame, file
     Raises:
         StatementError: If no account can be matched.
     """
-    config = ConfigManager(config_path) if config_path else _get_default_config()
+    config = ConfigManager(project_path) if project_path else _get_default_config()
     return config.get_config_from_company(company_key, pdf, logs, file_path)
 
 
-def get_config_from_statement(pdf: PDF, file_path: str, logs: pl.DataFrame, config_path: Path | None = None) -> Account:
+def get_config_from_statement(pdf: PDF, file_path: str, logs: pl.DataFrame, project_path: Path | None = None) -> Account:
     """
     Identify company and account from PDF (backward-compatible function).
 
@@ -555,7 +575,7 @@ def get_config_from_statement(pdf: PDF, file_path: str, logs: pl.DataFrame, conf
         pdf: The opened PDF object.
         file_path: Path to the PDF file being processed.
         logs: Polars DataFrame for logging operations.
-        config_path: Optional custom config directory path.
+        project_path: Optional project root directory path.
 
     Returns:
         The identified Account object.
@@ -563,20 +583,20 @@ def get_config_from_statement(pdf: PDF, file_path: str, logs: pl.DataFrame, conf
     Raises:
         StatementError: If neither company nor account can be identified.
     """
-    config = ConfigManager(config_path) if config_path else _get_default_config()
+    config = ConfigManager(project_path) if project_path else _get_default_config()
     return config.get_config_from_statement(pdf, file_path, logs)
 
 
-def config_company_accounts(company_key: str, config_path: Path | None = None) -> list[Account]:
+def config_company_accounts(company_key: str, project_path: Path | None = None) -> list[Account]:
     """
     Get all accounts for a company (backward-compatible function).
 
     Args:
         company_key: The company identifier to filter by.
-        config_path: Optional custom config directory path.
+        project_path: Optional project root directory path.
 
     Returns:
         List of Account objects for the specified company.
     """
-    config = ConfigManager(config_path) if config_path else _get_default_config()
+    config = ConfigManager(project_path) if project_path else _get_default_config()
     return config.get_accounts_for_company(company_key)

@@ -26,6 +26,7 @@ export_csv / export_excel functions.  Access them via the namespace:
 import bank_statement_parser.modules.reports_db as db
 import bank_statement_parser.modules.reports_parquet as parquet
 from bank_statement_parser.modules.config import copy_default_config
+from bank_statement_parser.modules.paths import copy_project_folders
 from bank_statement_parser.modules.errors import StatementError
 from bank_statement_parser.modules.pdf_functions import get_table_from_region, page_crop, page_text, pdf_open, region_search
 from bank_statement_parser.modules.statements import Statement, StatementBatch, delete_temp_files, process_pdf_statement, update_parquet
@@ -39,6 +40,7 @@ __all__ = [
     "update_parquet",
     # Config helpers
     "copy_default_config",
+    "copy_project_folders",
     # Errors
     "StatementError",
     # Low-level PDF helpers

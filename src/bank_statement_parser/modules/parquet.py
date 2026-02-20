@@ -5,7 +5,7 @@ from pathlib import Path
 
 import polars as pl
 
-import bank_statement_parser.modules.paths as pt
+from bank_statement_parser.modules.paths import ProjectPaths, get_paths
 
 
 class Parquet:
@@ -56,8 +56,29 @@ class Parquet:
             self.file.unlink()
 
 
+def _resolve_parquet_file(
+    paths: ProjectPaths,
+    default: Path,
+    filename: str | None,
+) -> Path:
+    """
+    Return the full Path for a parquet file, validating the parquet directory.
+
+    If *filename* is provided (bare stem, no extension, no directory), the
+    full path is ``paths.parquet / f"{filename}.parquet"``.  Otherwise the
+    *default* path is used.
+
+    A :exc:`ProjectSubFolderNotFound` is raised if the parquet directory does
+    not exist.
+    """
+    paths.require_subdir_for_read(paths.parquet)
+    if filename is not None:
+        return paths.parquet / f"{filename}.parquet"
+    return default
+
+
 class ChecksAndBalances(Parquet):
-    __slots__ = ("id", "source_file", "destination_file")
+    __slots__ = ("id", "source_filename", "destination_filename", "project_path")
 
     def __init__(
         self,
@@ -65,12 +86,15 @@ class ChecksAndBalances(Parquet):
         id_batch: str | None = None,
         checks_and_balances: pl.DataFrame | None = None,
         id: int = -1,
-        source_file: Path | None = None,
-        destination_file: Path | None = None,
+        source_filename: str | None = None,
+        destination_filename: str | None = None,
+        project_path: Path | None = None,
     ) -> None:
         self.id = id
-        self.source_file = source_file
-        self.destination_file = destination_file
+        self.source_filename = source_filename
+        self.destination_filename = destination_filename
+        self.project_path = project_path
+        paths = get_paths(project_path)
         self.schema = pl.DataFrame(
             orient="row",
             schema={
@@ -96,8 +120,13 @@ class ChecksAndBalances(Parquet):
         )
         self.key = "ID_CAB"
         self.records: pl.DataFrame | None = None
-        if self.source_file:
-            self.records = pl.read_parquet(self.source_file).drop("index")
+
+        # Determine the source file (temp file written by process_pdf_statement)
+        source_default = paths.cab_temp(self.id) if self.id > -1 else paths.cab
+        source_file = _resolve_parquet_file(paths, source_default, source_filename)
+
+        if source_filename is not None:
+            self.records = pl.read_parquet(source_file).drop("index")
         elif checks_and_balances is not None and id_statement is not None and id_batch is not None:
             self.records = self.schema.clone().extend(
                 checks_and_balances.select(
@@ -121,23 +150,16 @@ class ChecksAndBalances(Parquet):
                     CHECK_CLOSING="BAL_CLOSING",
                 )
             )
-        if not self.destination_file:
-            self.destination_file = pt.CAB_TEMP(self.id) if self.id > -1 else pt.CAB
-        super().__init__(self.destination_file, self.schema, self.records, self.key)
 
-    def delete_source_file(self):
-        if self.source_file:
-            self.source_file.unlink()
-            return True
+        # Determine the destination file
+        dest_default = paths.cab_temp(self.id) if self.id > -1 else paths.cab
+        destination_file = _resolve_parquet_file(paths, dest_default, destination_filename)
 
-    def delete_destination_file(self):
-        if self.destination_file:
-            self.destination_file.unlink()
-            return True
+        super().__init__(destination_file, self.schema, self.records, self.key)
 
 
 class StatementHeads(Parquet):
-    __slots__ = ("id", "source_file", "destination_file")
+    __slots__ = ("id", "source_filename", "destination_filename", "project_path")
 
     def __init__(
         self,
@@ -149,12 +171,15 @@ class StatementHeads(Parquet):
         account: str | None = None,
         header_results: pl.LazyFrame | None = None,
         id: int = -1,
-        source_file: Path | None = None,
-        destination_file: Path | None = None,
+        source_filename: str | None = None,
+        destination_filename: str | None = None,
+        project_path: Path | None = None,
     ) -> None:
         self.id = id
-        self.source_file = source_file
-        self.destination_file = destination_file
+        self.source_filename = source_filename
+        self.destination_filename = destination_filename
+        self.project_path = project_path
+        paths = get_paths(project_path)
         self.schema = pl.DataFrame(
             orient="row",
             schema={
@@ -176,8 +201,12 @@ class StatementHeads(Parquet):
         )
         self.key = "ID_STATEMENT"
         self.records: pl.DataFrame | None = None
-        if self.source_file:
-            self.records = pl.read_parquet(self.source_file).drop("index")
+
+        source_default = paths.statement_heads_temp(self.id) if self.id > -1 else paths.statement_heads
+        source_file = _resolve_parquet_file(paths, source_default, source_filename)
+
+        if source_filename is not None:
+            self.records = pl.read_parquet(source_file).drop("index")
         elif header_results is not None and id_statement is not None:
             self.records = self.schema.clone().extend(
                 pl.DataFrame(
@@ -204,36 +233,29 @@ class StatementHeads(Parquet):
                 )
             )
 
-        if not self.destination_file:
-            self.destination_file = pt.STATEMENT_HEADS_TEMP(self.id) if self.id > -1 else pt.STATEMENT_HEADS
+        dest_default = paths.statement_heads_temp(self.id) if self.id > -1 else paths.statement_heads
+        destination_file = _resolve_parquet_file(paths, dest_default, destination_filename)
 
-        super().__init__(self.destination_file, self.schema, self.records, self.key)
-
-    def delete_source_file(self):
-        if self.source_file:
-            self.source_file.unlink()
-            return True
-
-    def delete_destination_file(self):
-        if self.destination_file:
-            self.destination_file.unlink()
-            return True
+        super().__init__(destination_file, self.schema, self.records, self.key)
 
 
 class StatementLines(Parquet):
-    __slots__ = ("id", "source_file", "destination_file")
+    __slots__ = ("id", "source_filename", "destination_filename", "project_path")
 
     def __init__(
         self,
         id_statement: str | None = None,
         lines_results: pl.LazyFrame | None = None,
         id: int = -1,
-        source_file: Path | None = None,
-        destination_file: Path | None = None,
+        source_filename: str | None = None,
+        destination_filename: str | None = None,
+        project_path: Path | None = None,
     ) -> None:
         self.id = id
-        self.source_file = source_file
-        self.destination_file = destination_file
+        self.source_filename = source_filename
+        self.destination_filename = destination_filename
+        self.project_path = project_path
+        paths = get_paths(project_path)
         self.schema = pl.DataFrame(
             orient="row",
             schema={
@@ -254,8 +276,12 @@ class StatementLines(Parquet):
         )
         self.key = "ID_TRANSACTION"
         self.records: pl.DataFrame | None = None
-        if self.source_file:
-            self.records = pl.read_parquet(self.source_file).drop("index")
+
+        source_default = paths.statement_lines_temp(self.id) if self.id > -1 else paths.statement_lines
+        source_file = _resolve_parquet_file(paths, source_default, source_filename)
+
+        if source_filename is not None:
+            self.records = pl.read_parquet(source_file).drop("index")
         elif lines_results is not None and id_statement is not None:
             self.records = self.schema.clone().extend(
                 lines_results.collect().select(
@@ -274,23 +300,15 @@ class StatementLines(Parquet):
                     STD_CLOSING_BALANCE="STD_RUNNING_BALANCE",
                 )
             )
-        if not self.destination_file:
-            self.destination_file = pt.STATEMENT_LINES_TEMP(self.id) if self.id > -1 else pt.STATEMENT_LINES
-        super().__init__(self.destination_file, self.schema, self.records, self.key)
 
-    def delete_source_file(self):
-        if self.source_file:
-            self.source_file.unlink()
-            return True
+        dest_default = paths.statement_lines_temp(self.id) if self.id > -1 else paths.statement_lines
+        destination_file = _resolve_parquet_file(paths, dest_default, destination_filename)
 
-    def delete_destination_file(self):
-        if self.destination_file:
-            self.destination_file.unlink()
-            return True
+        super().__init__(destination_file, self.schema, self.records, self.key)
 
 
 class BatchHeads(Parquet):
-    __slots__ = ("destination_file",)
+    __slots__ = ("destination_filename", "project_path")
 
     def __init__(
         self,
@@ -302,9 +320,12 @@ class BatchHeads(Parquet):
         errors: int | None = None,
         duration_secs: float | None = None,
         process_time: datetime | None = None,
-        destination_file: Path | None = None,
+        destination_filename: str | None = None,
+        project_path: Path | None = None,
     ) -> None:
-        self.destination_file = destination_file
+        self.destination_filename = destination_filename
+        self.project_path = project_path
+        paths = get_paths(project_path)
         self.schema = pl.DataFrame(
             orient="row",
             schema={
@@ -336,19 +357,27 @@ class BatchHeads(Parquet):
                 )
             )
         self.key = "ID_BATCH"
-        super().__init__(self.destination_file if self.destination_file else pt.BATCH_HEADS, self.schema, self.records, self.key)
+        destination_file = _resolve_parquet_file(paths, paths.batch_heads, destination_filename)
+        super().__init__(destination_file, self.schema, self.records, self.key)
 
 
 class BatchLines(Parquet):
-    __slots__ = ("batch_lines", "id", "source_file", "destination_file")
+    __slots__ = ("batch_lines", "id", "source_filename", "destination_filename", "project_path")
 
     def __init__(
-        self, batch_lines: list[dict] | None = None, id: int = -1, source_file: Path | None = None, destination_file: Path | None = None
+        self,
+        batch_lines: list[dict] | None = None,
+        id: int = -1,
+        source_filename: str | None = None,
+        destination_filename: str | None = None,
+        project_path: Path | None = None,
     ) -> None:
         self.batch_lines = batch_lines
         self.id = id
-        self.source_file = source_file
-        self.destination_file = destination_file
+        self.source_filename = source_filename
+        self.destination_filename = destination_filename
+        self.project_path = project_path
+        paths = get_paths(project_path)
         self.schema = pl.DataFrame(
             orient="row",
             schema={
@@ -368,25 +397,19 @@ class BatchLines(Parquet):
         )
         self.key = "ID_BATCHLINE"
         self.records: pl.DataFrame | None = None
-        if self.source_file:
-            self.records = pl.read_parquet(self.source_file).drop("index")
+
+        source_default = paths.batch_lines_temp(self.id) if self.id > -1 else paths.batch_lines
+        source_file = _resolve_parquet_file(paths, source_default, source_filename)
+
+        if source_filename is not None:
+            self.records = pl.read_parquet(source_file).drop("index")
         elif self.batch_lines:
             self.records = self.schema.clone().extend(pl.DataFrame(self.batch_lines))
 
-        if not self.destination_file:
-            self.destination_file = pt.BATCH_LINES_TEMP(self.id) if self.id > -1 else pt.BATCH_LINES
+        dest_default = paths.batch_lines_temp(self.id) if self.id > -1 else paths.batch_lines
+        destination_file = _resolve_parquet_file(paths, dest_default, destination_filename)
 
-        super().__init__(self.destination_file, self.schema, self.records, self.key)
-
-    def delete_source_file(self):
-        if self.source_file:
-            self.source_file.unlink()
-            return True
-
-    def delete_destination_file(self):
-        if self.destination_file:
-            self.destination_file.unlink()
-            return True
+        super().__init__(destination_file, self.schema, self.records, self.key)
 
 
 def main():

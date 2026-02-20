@@ -172,4 +172,4 @@ def create_indexes(db_path: Path):
 
 
 if __name__ == "__main__":
-    main(db_path=Path(__file__).parent.joinpath("project.db"), with_fk=True)
+    main(db_path=Path(__file__).parent.parent.joinpath("project", "database", "project.db"), with_fk=True)

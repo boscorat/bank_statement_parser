@@ -263,5 +263,8 @@ def generate_mock_data(db_path: Path, num_batches: int = 10, statements_per_batc
 
 if __name__ == "__main__":
     generate_mock_data(
-        db_path=Path(__file__).parent.joinpath("project.db"), num_batches=10, statements_per_batch=20, transactions_per_statement=50
+        db_path=Path(__file__).parent.parent.joinpath("project", "database", "project.db"),
+        num_batches=10,
+        statements_per_batch=20,
+        transactions_per_statement=50,
     )

@@ -33,6 +33,7 @@ from bank_statement_parser.modules.config import (
 )
 from bank_statement_parser.modules.data import Account, StandardFields
 from bank_statement_parser.modules.database import update_db
+from bank_statement_parser.modules.paths import get_paths, validate_or_initialise_project
 from bank_statement_parser.modules.pdf_functions import pdf_close, pdf_open
 from bank_statement_parser.modules.statement_functions import get_results, get_standard_fields
 
@@ -66,7 +67,7 @@ class Statement:
         header_results: Extracted header data as LazyFrame.
         lines_results: Extracted transaction lines as LazyFrame.
         success: Whether statement processing passed all validation checks.
-        config_path: Optional custom path to configuration files.
+        project_path: Optional custom project root directory.
         logs: DataFrame storing execution logs for debugging and performance tracking.
     """
 
@@ -89,7 +90,8 @@ class Statement:
         "header_results",
         "lines_results",
         "success",
-        "config_path",
+        "project_path",
+        "skip_project_validation",
         "logs",
     )
 
@@ -100,7 +102,8 @@ class Statement:
         account_key: str | None = None,
         ID_BATCH: str | None = None,
         smart_rename: bool = False,
-        config_path: Path | None = None,
+        project_path: Path | None = None,
+        skip_project_validation: bool = False,
     ):
         """
         Initialize a Statement object by parsing the PDF and extracting data.
@@ -111,12 +114,21 @@ class Statement:
             account_key: Optional account identifier for configuration lookup.
             ID_BATCH: Optional batch identifier to associate this statement with.
             smart_rename: If True, rename file based on extracted account and date.
-            config_path: Optional custom path to configuration files directory.
+            project_path: Optional custom project root directory.  When ``None``
+                (the default), the bundled ``project/`` directory inside the
+                package is used and will be initialised automatically if its
+                database is absent.
+            skip_project_validation: If True, skip the project validation / initialisation
+                step.  Pass ``True`` when constructing a ``Statement`` from inside a
+                ``StatementBatch``, which already ran validation once during its own
+                ``__init__``.
 
         The constructor opens the PDF, loads the appropriate extraction config,
         extracts header and line data, performs validation checks, and determines
         if the statement was successfully processed.
         """
+        if not skip_project_validation:
+            validate_or_initialise_project(get_paths(project_path).root)
         self.logs: pl.DataFrame = pl.DataFrame(
             schema={
                 "file_path": pl.Utf8,
@@ -137,7 +149,8 @@ class Statement:
         self.pdf = pdf_open(str(file.absolute()), logs=self.logs)
         self.ID_STATEMENT = self.build_id()
         self.ID_ACCOUNT: str | None = None
-        self.config_path = config_path
+        self.project_path = project_path
+        self.skip_project_validation = skip_project_validation
         if self.pdf:
             self.config = self.get_config()
             if self.config:
@@ -318,11 +331,11 @@ class Statement:
         if self.statement_type:
             # Resolve config_standard_fields at call time via the module reference so that:
             #   a) the lazy __getattr__ singleton is not frozen at import time, and
-            #   b) a custom config_path on this Statement is respected.
-            if self.config_path:
+            #   b) a custom project_path on this Statement is respected.
+            if self.project_path:
                 from bank_statement_parser.modules.config import ConfigManager
 
-                std_fields: dict[str, StandardFields] = ConfigManager(self.config_path).standard_fields
+                std_fields: dict[str, StandardFields] = ConfigManager(self.project_path).standard_fields
             else:
                 std_fields = _config_module.config_standard_fields  # type: ignore[assignment]
             # Apply standard field transformations based on statement type
@@ -352,13 +365,13 @@ class Statement:
             return None
         if self.account_key:
             # Use explicit account key if provided
-            config = get_config_from_account(self.account_key, self.logs, str(self.file.absolute()), self.config_path)
+            config = get_config_from_account(self.account_key, self.logs, str(self.file.absolute()), self.project_path)
         elif self.company_key:
             # Use explicit company key if provided
-            config = get_config_from_company(self.company_key, self.pdf, self.logs, str(self.file.absolute()), self.config_path)
+            config = get_config_from_company(self.company_key, self.pdf, self.logs, str(self.file.absolute()), self.project_path)
         else:
             # Attempt auto-detection from statement content
-            config = get_config_from_statement(self.pdf, str(self.file.absolute()), self.logs, self.config_path)
+            config = get_config_from_statement(self.pdf, str(self.file.absolute()), self.logs, self.project_path)
         return deepcopy(config) if config else None  # we return a deepcopy in case we need to make statement-specific modifications
 
     def cleanup(self):
@@ -383,16 +396,17 @@ def process_pdf_statement(
     batch_id: str,
     company_key: str | None,
     account_key: str | None,
-    config_path: Path | None,
+    project_path: Path | None,
     smart_rename: bool,
-) -> tuple[Path | None, Path | None, Path | None, Path | None, bool, bool]:
+    skip_project_validation: bool = False,
+) -> tuple[str | None, str | None, str | None, str | None, bool, bool]:
     """
     Process a single bank statement PDF and save results to parquet files.
 
     This standalone function handles the complete processing workflow for one PDF:
     1. Creates a Statement object to parse the PDF
     2. Extracts header and line data
-    3. Saves results to parquet files
+    3. Saves results to parquet files (temp files keyed by *idx*)
     4. Optionally renames the file based on extracted data
     5. Cleans up resources
 
@@ -402,22 +416,26 @@ def process_pdf_statement(
         batch_id: Unique identifier for the batch this PDF belongs to.
         company_key: Optional company identifier for config lookup.
         account_key: Optional account identifier for config lookup.
-        config_path: Optional custom path to configuration files directory.
+        project_path: Optional project root directory.
         smart_rename: If True, rename the file based on extracted account and date.
+        skip_project_validation: If True, skip the project validation / initialisation
+            step inside ``Statement.__init__``.  Pass ``True`` when this function is
+            called from ``StatementBatch``, which already validated the project once.
 
     Returns:
         tuple: A 6-element tuple containing:
-            - batch_lines_file (Path | None): Path to the batch lines parquet file.
-            - statement_heads_file (Path | None): Path to the statement heads parquet file.
-            - statement_lines_file (Path | None): Path to the statement lines parquet file.
-            - cab_file (Path | None): Path to the checks & balances parquet file.
+            - batch_lines_stem (str | None): Filename stem of the batch lines parquet file.
+            - statement_heads_stem (str | None): Filename stem of the statement heads parquet file.
+            - statement_lines_stem (str | None): Filename stem of the statement lines parquet file.
+            - cab_stem (str | None): Filename stem of the checks & balances parquet file.
             - error_cab (bool): True if a checks & balances validation failure occurred.
             - error_config (bool): True if a configuration or parsing failure occurred.
     """
-    batch_lines_file: Path | None = None
-    statement_heads_file: Path | None = None
-    statement_lines_file: Path | None = None
-    cab_file: Path | None = None
+    paths = get_paths(project_path)
+    batch_lines_stem: str | None = None
+    statement_heads_stem: str | None = None
+    statement_lines_stem: str | None = None
+    cab_stem: str | None = None
     error_cab: bool = False
     error_config: bool = False
     line_start = time()
@@ -442,7 +460,8 @@ def process_pdf_statement(
             account_key=account_key,
             ID_BATCH=batch_id,
             smart_rename=smart_rename,
-            config_path=config_path,
+            project_path=project_path,
+            skip_project_validation=skip_project_validation,
         )
         batch_line["ID_STATEMENT"] = stmt.ID_STATEMENT
         batch_line["STD_ACCOUNT"] = stmt.account
@@ -463,9 +482,10 @@ def process_pdf_statement(
                 account=stmt.account,
                 header_results=stmt.header_results,
                 id=idx,
+                project_path=project_path,
             )
             pq_statement_heads.create()
-            statement_heads_file = pq_statement_heads.file
+            statement_heads_stem = paths.statement_heads_temp_stem(idx)
             pq_statement_heads.cleanup()
             pq_statement_heads = None
 
@@ -474,9 +494,10 @@ def process_pdf_statement(
                 id_statement=stmt.ID_STATEMENT,
                 lines_results=stmt.lines_results,
                 id=idx,
+                project_path=project_path,
             )
             pq_statement_lines.create()
-            statement_lines_file = pq_statement_lines.file
+            statement_lines_stem = paths.statement_lines_temp_stem(idx)
             pq_statement_lines.cleanup()
             pq_statement_lines = None
 
@@ -486,9 +507,10 @@ def process_pdf_statement(
             id_batch=stmt.ID_BATCH,
             checks_and_balances=stmt.checks_and_balances,
             id=idx,
+            project_path=project_path,
         )
         pq_cab.create()
-        cab_file = pq_cab.file
+        cab_stem = paths.cab_temp_stem(idx)
         pq_cab.cleanup()
         pq_cab = None
 
@@ -515,16 +537,19 @@ def process_pdf_statement(
     batch_line["STD_UPDATETIME"] = datetime.now()
 
     # Save batch line data
-    pq_batch_lines = pq.BatchLines(batch_lines=[batch_line], id=idx)
+    pq_batch_lines = pq.BatchLines(batch_lines=[batch_line], id=idx, project_path=project_path)
     pq_batch_lines.create()
-    batch_lines_file = pq_batch_lines.file
+    batch_lines_stem = paths.batch_lines_temp_stem(idx)
     pq_batch_lines.cleanup()
     pq_batch_lines = None
 
-    return (batch_lines_file, statement_heads_file, statement_lines_file, cab_file, error_cab, error_config)
+    return (batch_lines_stem, statement_heads_stem, statement_lines_stem, cab_stem, error_cab, error_config)
 
 
-def delete_temp_files(processed_pdfs: list[BaseException | tuple]) -> None:
+def delete_temp_files(
+    processed_pdfs: list[BaseException | tuple],
+    project_path: Path | None = None,
+) -> None:
     """
     Delete temporary parquet files created during batch processing.
 
@@ -536,22 +561,22 @@ def delete_temp_files(processed_pdfs: list[BaseException | tuple]) -> None:
         processed_pdfs: List of processed PDF results as returned by
             process_pdf_statement — each entry is either a BaseException
             (indicating a fatal worker error) or a 4-element tuple of
-            (batch_lines_file, statement_heads_file, statement_lines_file,
-            cab_file) Path values that may be None.
+            (batch_lines_stem, statement_heads_stem, statement_lines_stem,
+            cab_stem) filename stems that may be None.
+        project_path: Optional project root directory used to resolve stems
+            to full paths.
     """
+    paths = get_paths(project_path)
     for pdf in processed_pdfs:
         if type(pdf) is BaseException:
             return None
         elif type(pdf) is tuple:
-            batch, head, lines, cab = pdf
-            if batch and batch.exists():
-                batch.unlink()
-            if head and head.exists():
-                head.unlink()
-            if lines and lines.exists():
-                lines.unlink()
-            if cab and cab.exists():
-                cab.unlink()
+            batch_stem, head_stem, lines_stem, cab_stem = pdf
+            for stem in (batch_stem, head_stem, lines_stem, cab_stem):
+                if stem is not None:
+                    full_path = paths.parquet / f"{stem}.parquet"
+                    if full_path.exists():
+                        full_path.unlink()
 
 
 def update_parquet(
@@ -564,7 +589,7 @@ def update_parquet(
     errors: int,
     duration_secs: float,
     process_time: datetime,
-    folder: Path | None = None,
+    project_path: Path | None = None,
 ) -> float:
     """
     Update parquet files with processed results from all PDFs in a batch.
@@ -577,8 +602,8 @@ def update_parquet(
     Args:
         processed_pdfs: List of processed PDF results — each entry is either a
             BaseException (fatal worker error) or a 4-element tuple of
-            (batch_lines_file, statement_heads_file, statement_lines_file,
-            cab_file) Path values that may be None.
+            (batch_lines_stem, statement_heads_stem, statement_lines_stem,
+            cab_stem) filename stems that may be None.
         batch_id: Unique identifier for this batch.
         path: String representation of parent directories of the processed PDFs.
         company_key: Optional company identifier used for this batch.
@@ -587,50 +612,36 @@ def update_parquet(
         errors: Count of failed statement processings.
         duration_secs: Total processing time accumulated so far (seconds).
         process_time: Timestamp when batch processing started.
-        folder: Optional custom folder path for parquet output.
-            If not provided, uses the default exports/parquet folder.
+        project_path: Optional project root directory for parquet output.
+            If not provided, uses the default project folder.
 
     Returns:
         float: Time spent updating parquet files (seconds).
     """
-    custom_batch_lines = None
-    custom_statement_heads = None
-    custom_statement_lines = None
-    custom_cab = None
-    custom_batch_heads = None
-
-    if folder:
-        folder.mkdir(parents=True, exist_ok=True)
-        custom_batch_lines = folder.joinpath("batch_lines.parquet")
-        custom_statement_heads = folder.joinpath("statement_heads.parquet")
-        custom_statement_lines = folder.joinpath("statement_lines.parquet")
-        custom_cab = folder.joinpath("checks_and_balances.parquet")
-        custom_batch_heads = folder.joinpath("batch_heads.parquet")
-
     update_start = time()
     for pdf in processed_pdfs:
         # Skip any exceptions that occurred during processing
         if type(pdf) is BaseException:
             return 0.0
         elif type(pdf) is tuple:
-            batch, head, lines, cab = pdf
-            if batch:
-                bl = pq.BatchLines(source_file=batch, destination_file=custom_batch_lines)
+            batch_stem, head_stem, lines_stem, cab_stem = pdf
+            if batch_stem:
+                bl = pq.BatchLines(source_filename=batch_stem, project_path=project_path)
                 bl.update()
                 bl.cleanup()
                 bl = None
-            if head:
-                sh = pq.StatementHeads(source_file=head, destination_file=custom_statement_heads)
+            if head_stem:
+                sh = pq.StatementHeads(source_filename=head_stem, project_path=project_path)
                 sh.update()
                 sh.cleanup()
                 sh = None
-            if lines:
-                sl = pq.StatementLines(source_file=lines, destination_file=custom_statement_lines)
+            if lines_stem:
+                sl = pq.StatementLines(source_filename=lines_stem, project_path=project_path)
                 sl.update()
                 sl.cleanup()
                 sl = None
-            if cab:
-                cb = pq.ChecksAndBalances(source_file=cab, destination_file=custom_cab)
+            if cab_stem:
+                cb = pq.ChecksAndBalances(source_filename=cab_stem, project_path=project_path)
                 cb.update()
                 cb.cleanup()
                 cb = None
@@ -647,7 +658,7 @@ def update_parquet(
         errors=errors,
         duration_secs=duration_secs + parquet_secs,
         process_time=process_time,
-        destination_file=custom_batch_heads,
+        project_path=project_path,
     )
     pq_heads.create()
     pq_heads.cleanup()
@@ -683,7 +694,7 @@ class StatementBatch:
         statements: List of processed Statement objects.
         turbo: Whether to use parallel processing.
         smart_rename: Whether to rename files based on extracted data.
-        config_path: Optional custom path to configuration files.
+        project_path: Optional custom project root directory.
         processed_pdfs: List of processed PDF results (tuples or exceptions).
     """
 
@@ -708,7 +719,8 @@ class StatementBatch:
         "statements",
         "turbo",
         "smart_rename",
-        "config_path",
+        "project_path",
+        "skip_project_validation",
         "processed_pdfs",
     )
 
@@ -720,7 +732,8 @@ class StatementBatch:
         print_log: bool = True,
         turbo: bool = False,
         smart_rename: bool = True,
-        config_path: Path | None = None,
+        project_path: Path | None = None,
+        skip_project_validation: bool = False,
     ):
         """
         Initialize and process a batch of bank statements.
@@ -732,12 +745,20 @@ class StatementBatch:
             print_log: Whether to print progress messages to console.
             turbo: If True, use parallel processing with multiprocessing.
             smart_rename: If True, rename processed files based on extracted data.
-            config_path: Optional custom path to configuration files directory.
+            project_path: Optional custom project root directory.  When ``None``
+                (the default), the bundled ``project/`` directory inside the
+                package is used and will be initialised automatically if its
+                database is absent.
+            skip_project_validation: If True, skip the project validation /
+                initialisation step.  Rarely needed externally; exists for
+                symmetry with :class:`Statement`.
 
         The constructor automatically begins processing upon initialization.
         Processing time is tracked in process_secs, and parquet update time
         is tracked separately (call update_parquet() to complete the process).
         """
+        if not skip_project_validation:
+            validate_or_initialise_project(get_paths(project_path).root)
         print("processing...")
         self.process_time: datetime = datetime.now()
         self.timer_start = time()
@@ -747,7 +768,8 @@ class StatementBatch:
         self.print_log = print_log
         self.turbo = turbo
         self.smart_rename = smart_rename
-        self.config_path = config_path
+        self.project_path = project_path
+        self.skip_project_validation = skip_project_validation
         self.pdfs = pdfs
         # Build path string from unique parent directories of all PDFs
         self.path: str = ", ".join(map(str, set([p.parent for p in self.pdfs])))
@@ -827,7 +849,7 @@ class StatementBatch:
 
         return processed_pdfs
 
-    def process_single_pdf(self, idx: int, pdf: Path) -> tuple[Path | None, Path | None, Path | None, Path | None]:
+    def process_single_pdf(self, idx: int, pdf: Path) -> tuple[str | None, str | None, str | None, str | None]:
         """
         Process a single PDF file and save results to parquet files.
 
@@ -840,23 +862,24 @@ class StatementBatch:
             pdf: Path to the PDF file to process.
 
         Returns:
-            tuple: A tuple containing file paths for batch lines, statement heads,
+            tuple: A tuple containing filename stems for batch lines, statement heads,
                    statement lines, and checks & balances parquet files.
         """
-        batch_lines_file, statement_heads_file, statement_lines_file, cab_file, error_cab, error_config = process_pdf_statement(
+        batch_lines_stem, statement_heads_stem, statement_lines_stem, cab_stem, error_cab, error_config = process_pdf_statement(
             idx=idx,
             pdf=pdf,
             batch_id=self.ID_BATCH,
             company_key=self.company_key,
             account_key=self.account_key,
-            config_path=self.config_path,
+            project_path=self.project_path,
             smart_rename=self.smart_rename,
+            skip_project_validation=True,
         )
         if error_cab or error_config:
             self.errors += 1
-        return (batch_lines_file, statement_heads_file, statement_lines_file, cab_file)
+        return (batch_lines_stem, statement_heads_stem, statement_lines_stem, cab_stem)
 
-    def update_parquet(self, folder: Path | None = None) -> None:
+    def update_parquet(self, project_path: Path | None = None) -> None:
         """
         Update parquet files with processed results from all PDFs.
 
@@ -868,8 +891,9 @@ class StatementBatch:
         and write the batch header information.
 
         Args:
-            folder: Optional custom folder path for parquet output.
-                    If not provided, uses the default exports/parquet folder.
+            project_path: Optional project root directory for parquet output.
+                If not provided, uses the project_path set on this batch, or
+                the default project folder.
         """
         self.parquet_secs = update_parquet(
             processed_pdfs=self.processed_pdfs,
@@ -881,7 +905,7 @@ class StatementBatch:
             errors=self.errors,
             duration_secs=self.duration_secs,
             process_time=self.process_time,
-            folder=folder,
+            project_path=project_path if project_path is not None else self.project_path,
         )
         self.duration_secs += self.parquet_secs
 
@@ -897,9 +921,9 @@ class StatementBatch:
         update_parquet() and update_db() to persist the data in multiple
         formats.
         """
-        delete_temp_files(self.processed_pdfs)
+        delete_temp_files(self.processed_pdfs, self.project_path)
 
-    def update_db(self, db_path: Path | None = None):
+    def update_db(self, project_path: Path | None = None):
         """
         Update database tables with processed results from all PDFs.
 
@@ -911,8 +935,9 @@ class StatementBatch:
         and write the batch header information to the database.
 
         Args:
-            db_path: Optional custom path to the database file.
-                    If not provided, uses the default project database.
+            project_path: Optional project root directory.
+                If not provided, uses the project_path set on this batch, or
+                the default project directory.
         """
         self.db_secs = update_db(
             processed_pdfs=self.processed_pdfs,
@@ -924,7 +949,7 @@ class StatementBatch:
             errors=self.errors,
             duration_secs=self.duration_secs,
             process_time=self.process_time,
-            db_path=db_path,
+            project_path=project_path if project_path is not None else self.project_path,
         )
         self.duration_secs += self.db_secs
 

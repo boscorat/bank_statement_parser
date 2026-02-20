@@ -24,22 +24,28 @@ class Housekeeping:
     # All table names and column names that are permitted in dynamically-constructed SQL.
     # Any identifier not in this set will raise ValueError, preventing SQL injection.
     _ALLOWED_TABLES: frozenset[str] = frozenset(
-        [rel[0] for rel in [
-            ("checks_and_balances", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
-            ("checks_and_balances", "ID_BATCH", "batch_heads", "ID_BATCH"),
-            ("statement_heads", "ID_BATCH", "batch_heads", "ID_BATCH"),
-            ("statement_lines", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
-            ("batch_lines", "ID_BATCH", "batch_heads", "ID_BATCH"),
-            ("batch_lines", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
-        ]]
-        + [rel[2] for rel in [
-            ("checks_and_balances", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
-            ("checks_and_balances", "ID_BATCH", "batch_heads", "ID_BATCH"),
-            ("statement_heads", "ID_BATCH", "batch_heads", "ID_BATCH"),
-            ("statement_lines", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
-            ("batch_lines", "ID_BATCH", "batch_heads", "ID_BATCH"),
-            ("batch_lines", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
-        ]]
+        [
+            rel[0]
+            for rel in [
+                ("checks_and_balances", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
+                ("checks_and_balances", "ID_BATCH", "batch_heads", "ID_BATCH"),
+                ("statement_heads", "ID_BATCH", "batch_heads", "ID_BATCH"),
+                ("statement_lines", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
+                ("batch_lines", "ID_BATCH", "batch_heads", "ID_BATCH"),
+                ("batch_lines", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
+            ]
+        ]
+        + [
+            rel[2]
+            for rel in [
+                ("checks_and_balances", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
+                ("checks_and_balances", "ID_BATCH", "batch_heads", "ID_BATCH"),
+                ("statement_heads", "ID_BATCH", "batch_heads", "ID_BATCH"),
+                ("statement_lines", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
+                ("batch_lines", "ID_BATCH", "batch_heads", "ID_BATCH"),
+                ("batch_lines", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
+            ]
+        ]
     )
     _ALLOWED_COLUMNS: frozenset[str] = frozenset(["ID_STATEMENT", "ID_BATCH"])
 
@@ -183,7 +189,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--db",
         type=Path,
-        default=Path(__file__).parent.joinpath("project.db"),
+        default=Path(__file__).parent.parent.joinpath("project", "database", "project.db"),
         help="Path to database file",
     )
     args = parser.parse_args()

@@ -565,7 +565,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--db",
         type=Path,
-        default=Path(__file__).parent / "project.db",
+        default=Path(__file__).parent.parent / "project" / "database" / "project.db",
         help="Path to the SQLite database (default: project.db)",
     )
     parser.add_argument(
