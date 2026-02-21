@@ -6,7 +6,11 @@ from bank_statement_parser.modules import statements
 def main():
     # laptop
     batch = statements.StatementBatch(
-        pdfs=[file for file in Path("/home/boscorat/Downloads/2024").iterdir() if file.is_file() and file.suffix == ".pdf"],
+        pdfs=[
+            file
+            for file in Path("/home/boscorat/repos/bank_statement_parser/tests/pdfs").iterdir()
+            if file.is_file() and file.suffix == ".pdf"
+        ],
         turbo=True,
         smart_rename=False,
         # project_path=Path("/home/boscorat/Projects/Telford"),

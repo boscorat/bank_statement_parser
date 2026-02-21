@@ -91,6 +91,11 @@ from bank_statement_parser.modules.config import copy_default_config
 from bank_statement_parser.modules.paths import copy_project_folders, validate_or_initialise_project
 
 # ---------------------------------------------------------------------------
+# PDF anonymisation utility
+# ---------------------------------------------------------------------------
+from bank_statement_parser.modules.anonymise import anonymise_folder, anonymise_pdf
+
+# ---------------------------------------------------------------------------
 # Low-level PDF helpers
 # ---------------------------------------------------------------------------
 from bank_statement_parser.modules.pdf_functions import (
@@ -137,4 +142,7 @@ __all__ = [
     "build_datamart",
     "create_db",
     "Housekeeping",
+    # PDF anonymisation
+    "anonymise_pdf",
+    "anonymise_folder",
 ]

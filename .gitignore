@@ -16,10 +16,14 @@ wheels/
 #performance profiling tools
 *profile.*
 
-#any database, parquet or log files
+#any database, pdf, parquet or log files
 *.db*
 *.parquet
 *.log
+*.pdf
+
+# anonymise.toml contains real PII — never commit it
+src/bank_statement_parser/project/config/anonymise.toml
 
 # ai agent files
 AGENTS.md

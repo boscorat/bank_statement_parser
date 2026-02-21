@@ -1,0 +1,87 @@
+# anonymise_example.toml — template for PDF anonymisation config.
+#
+# HOW TO USE
+# ----------
+# 1. Copy this file to anonymise.toml in the same directory.
+# 2. Replace every LEFT-HAND value with the real text as it appears in your
+#    PDF (copy-paste from the PDF to be exact).
+# 3. Replace every RIGHT-HAND value with the dummy text you want rendered
+#    in its place.
+# 4. Keep anonymise.toml out of source control — it is git-ignored.
+#
+# ORDERING RULES
+# --------------
+# Within each section, entries are applied top-to-bottom.
+# Always place LONGER / MORE SPECIFIC strings BEFORE shorter fragments.
+# Example: list "John William Surname" before "Surname" to avoid the
+# fragment match firing first and corrupting the full-name replacement.
+#
+# SECTIONS
+# --------
+# [global_replacements]  — applied on every page, entire page area.
+#   Use for names, name fragments, account numbers, card numbers, IBAN,
+#   and any value that is unique enough not to collide with merchant text.
+#
+# [address_replacements] — applied on PAGE 1 ONLY, within the personal
+#   address block in the top-left of the page.
+#   Use for address lines, city names, and postcodes that also appear
+#   as merchant/location names inside transaction descriptions.
+
+[global_replacements]
+
+# Full joint-account name (long form — account table row, CC page-2 header)
+"Firstname Middlename1 Middlename2 Surname1 &  Partner Firstname Middlename3 Surname2" = "John Test Mark Testname &  Jane Alice Testuser"
+"Firstname Middlename1 Middlename2 Surname1" = "John Test Mark Testname"
+"Firstname Middlename1 Middlename2" = "John Test Mark"
+"Partner Firstname Middlename3 Surname2" = "Jane Alice Testuser"
+"Partner Firstname Surname2" = "Jane Testuser"
+"Partner Firstname & Firstname" = "Jane & John"
+
+# Surname fragments that appear in transaction descriptions
+"SURNAME1-SURNAME2" = "TESTNAME-TEST"     # e.g. standing-order reference
+"Surname1" = "Testname"
+"Surname2" = "Testuser"
+"Firstname" = "John"
+"Partner Firstname" = "Jane"
+
+# Salutation line that appears at the top of each page (current/savings)
+"Mr A B C Surname1" = "Mr A B C Testname"
+
+# Sort code (hyphenated — account detail table)
+"11-22-33" = "00-11-22"          # sort code NN-NN-NN
+
+# IBAN numbers — MUST come before bare account numbers.
+# IBANs embed the account number digits; if bare account numbers are replaced
+# first, the IBAN strings will be corrupted before this entry can match them.
+"GB12HBUK11223312345678" = "GB00TEST001122000000000"
+"GB12HBUK11223387654321" = "GB00TEST001122011111111"
+
+# Account numbers (8-digit)
+"12345678" = "00000000"          # 8-digit account number
+"87654321" = "11111111"          # second account number
+
+# Sort-code + account-number concatenations in TFR transaction descriptions
+# (no hyphens, space-separated, as printed by the bank)
+"111222 12345678" = "001122 00000000"
+"111222 87654321" = "001122 11111111"
+
+# Credit/debit card number (space-separated groups of 4)
+"1234 5678 9012 3456" = "0000 1111 2222 3333"
+
+# Partial card number (first 6 digits — sometimes printed on summary pages)
+"123456" = "000011"
+
+
+[address_replacements]
+
+# Full name as printed on the CC statement address block (no salutation prefix)
+"Mr Firstname Middlename1 Middlename2 Surname1" = "Mr John Test Mark Testname"
+
+# Address lines
+"123 Example Street" = "1 Test Street"
+"Example Road" = "Test Lane"
+"Exampletown" = "Testville"
+
+# Postcode — standard UK format and the PDF internal reference variant
+"EX1 2PL" = "AB1 2CD"
+"/(EX1 2PL2BM )/" = "/(AB1 2CD2BM )/"
