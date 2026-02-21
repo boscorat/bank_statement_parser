@@ -9,16 +9,17 @@ wheels/
 # Virtual environments
 .venv
 
-# project folder — exclude everything except the shipped config TOMLs
-src/bank_statement_parser/project/**
-!src/bank_statement_parser/project/config/
-!src/bank_statement_parser/project/config/*.toml
+# project folder — exclude all files except the shipped config TOMLs
+# src/bank_statement_parser/project/**/*.*
+# !src/bank_statement_parser/project/config/*.toml
 
 #performance profiling tools
 *profile.*
 
-#any database files
+#any database, parquet or log files
 *.db*
+*.parquet
+*.log
 
 # ai agent files
 AGENTS.md
