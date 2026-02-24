@@ -51,7 +51,8 @@ class Statement:
     Attributes:
         company_key: Optional company identifier for config lookup.
         file: Path to the PDF file.
-        file_renamed: New filename after smart rename (if enabled).
+        file_renamed: Canonical filename ``{id_account}_{YYYYMMDD}.pdf`` computed on
+            successful processing; ``None`` if processing failed or no config matched.
         account_key: Optional account identifier for config lookup.
         ID_BATCH: Batch identifier this statement belongs to.
         ID_ACCOUNT: Unique account identifier based on company, account type, and account number.
@@ -101,7 +102,6 @@ class Statement:
         company_key: str | None = None,
         account_key: str | None = None,
         ID_BATCH: str | None = None,
-        smart_rename: bool = False,
         project_path: Path | None = None,
         skip_project_validation: bool = False,
     ):
@@ -113,7 +113,6 @@ class Statement:
             company_key: Optional company identifier for configuration lookup.
             account_key: Optional account identifier for configuration lookup.
             ID_BATCH: Optional batch identifier to associate this statement with.
-            smart_rename: If True, rename file based on extracted account and date.
             project_path: Optional custom project root directory.  When ``None``
                 (the default), the bundled ``project/`` directory inside the
                 package is used and will be initialised automatically if its
@@ -125,7 +124,9 @@ class Statement:
 
         The constructor opens the PDF, loads the appropriate extraction config,
         extracts header and line data, performs validation checks, and determines
-        if the statement was successfully processed.
+        if the statement was successfully processed.  When successful, ``file_renamed``
+        is always populated with the canonical ``{id_account}_{YYYYMMDD}.pdf`` name
+        regardless of whether the caller intends to copy the file anywhere.
         """
         if not skip_project_validation:
             validate_or_initialise_project(get_paths(project_path).root)
@@ -220,10 +221,9 @@ class Statement:
                 # Build unique account ID from company key, account type, and account number
                 acct_number = str(self.header_results.select("STD_ACCOUNT_NUMBER").collect().head(1).item()).replace(" ", "")
                 self.ID_ACCOUNT = f"{self.config.company_key}_{self.config.account_type_key}_{acct_number}"
-                if smart_rename:
-                    # Generate descriptive filename: {account_id}_{date}.pdf
-                    stmt_date = str(self.header_results.select("STD_STATEMENT_DATE").collect().head(1).item()).replace("-", "")
-                    self.file_renamed = f"{self.ID_ACCOUNT}_{str(stmt_date)}.pdf"
+                # Always populate the canonical rename target for use by copy_statements_to_project
+                stmt_date = str(self.header_results.select("STD_STATEMENT_DATE").collect().head(1).item()).replace("-", "")
+                self.file_renamed = f"{self.ID_ACCOUNT}_{str(stmt_date)}.pdf"
 
     def build_id(self):
         """
@@ -397,9 +397,8 @@ def process_pdf_statement(
     company_key: str | None,
     account_key: str | None,
     project_path: Path | None,
-    smart_rename: bool,
     skip_project_validation: bool = False,
-) -> tuple[str | None, str | None, str | None, str | None, bool, bool]:
+) -> tuple[str | None, str | None, str | None, str | None, str | None, str | None, bool, bool]:
     """
     Process a single bank statement PDF and save results to parquet files.
 
@@ -407,8 +406,11 @@ def process_pdf_statement(
     1. Creates a Statement object to parse the PDF
     2. Extracts header and line data
     3. Saves results to parquet files (temp files keyed by *idx*)
-    4. Optionally renames the file based on extracted data
-    5. Cleans up resources
+    4. Cleans up resources
+
+    File copying to the project ``statements/`` directory is handled separately
+    via :func:`copy_statements_to_project`, which operates on the full list of
+    processed results after all PDFs have been hashed and processed.
 
     Args:
         idx: Index position of this PDF in the batch.
@@ -417,17 +419,19 @@ def process_pdf_statement(
         company_key: Optional company identifier for config lookup.
         account_key: Optional account identifier for config lookup.
         project_path: Optional project root directory.
-        smart_rename: If True, rename the file based on extracted account and date.
         skip_project_validation: If True, skip the project validation / initialisation
             step inside ``Statement.__init__``.  Pass ``True`` when this function is
             called from ``StatementBatch``, which already validated the project once.
 
     Returns:
-        tuple: A 6-element tuple containing:
+        tuple: An 8-element tuple containing:
             - batch_lines_stem (str | None): Filename stem of the batch lines parquet file.
             - statement_heads_stem (str | None): Filename stem of the statement heads parquet file.
             - statement_lines_stem (str | None): Filename stem of the statement lines parquet file.
             - cab_stem (str | None): Filename stem of the checks & balances parquet file.
+            - file_src (str | None): Absolute path of the original PDF file.
+            - file_dst (str | None): Target filename (basename only) for the project copy,
+              or ``None`` if the statement did not produce a rename target.
             - error_cab (bool): True if a checks & balances validation failure occurred.
             - error_config (bool): True if a configuration or parsing failure occurred.
     """
@@ -436,6 +440,8 @@ def process_pdf_statement(
     statement_heads_stem: str | None = None
     statement_lines_stem: str | None = None
     cab_stem: str | None = None
+    file_src: str | None = None
+    file_dst: str | None = None
     error_cab: bool = False
     error_config: bool = False
     line_start = time()
@@ -459,7 +465,6 @@ def process_pdf_statement(
             company_key=company_key,
             account_key=account_key,
             ID_BATCH=batch_id,
-            smart_rename=smart_rename,
             project_path=project_path,
             skip_project_validation=skip_project_validation,
         )
@@ -514,13 +519,11 @@ def process_pdf_statement(
         pq_cab.cleanup()
         pq_cab = None
 
-        # Handle file renaming if enabled
-        file_old = deepcopy(stmt.file)
-        file_new = stmt.file_renamed if stmt.file_renamed else str(file_old)
+        # Capture source path and rename target before destroying the statement object
+        file_src = str(stmt.file.absolute())
+        file_dst = stmt.file_renamed  # bare filename string, or None
         stmt.cleanup()
         stmt = None
-        if smart_rename:
-            file_old.rename(file_old.with_name(file_new))
     except Exception as e:
         # Record the error details in the batch line so it is persisted to parquet,
         # then log to stderr. We do NOT re-raise — a single bad PDF must not abort
@@ -543,7 +546,7 @@ def process_pdf_statement(
     pq_batch_lines.cleanup()
     pq_batch_lines = None
 
-    return (batch_lines_stem, statement_heads_stem, statement_lines_stem, cab_stem, error_cab, error_config)
+    return (batch_lines_stem, statement_heads_stem, statement_lines_stem, cab_stem, file_src, file_dst, error_cab, error_config)
 
 
 def delete_temp_files(
@@ -560,9 +563,9 @@ def delete_temp_files(
     Args:
         processed_pdfs: List of processed PDF results as returned by
             process_pdf_statement — each entry is either a BaseException
-            (indicating a fatal worker error) or a 4-element tuple of
-            (batch_lines_stem, statement_heads_stem, statement_lines_stem,
-            cab_stem) filename stems that may be None.
+            (indicating a fatal worker error) or a tuple whose first four
+            elements are (batch_lines_stem, statement_heads_stem,
+            statement_lines_stem, cab_stem) filename stems that may be None.
         project_path: Optional project root directory used to resolve stems
             to full paths.
     """
@@ -571,7 +574,7 @@ def delete_temp_files(
         if type(pdf) is BaseException:
             return None
         elif type(pdf) is tuple:
-            batch_stem, head_stem, lines_stem, cab_stem = pdf
+            batch_stem, head_stem, lines_stem, cab_stem = pdf[:4]
             for stem in (batch_stem, head_stem, lines_stem, cab_stem):
                 if stem is not None:
                     full_path = paths.parquet / f"{stem}.parquet"
@@ -601,9 +604,9 @@ def update_parquet(
 
     Args:
         processed_pdfs: List of processed PDF results — each entry is either a
-            BaseException (fatal worker error) or a 4-element tuple of
-            (batch_lines_stem, statement_heads_stem, statement_lines_stem,
-            cab_stem) filename stems that may be None.
+            BaseException (fatal worker error) or a tuple whose first four
+            elements are (batch_lines_stem, statement_heads_stem,
+            statement_lines_stem, cab_stem) filename stems that may be None.
         batch_id: Unique identifier for this batch.
         path: String representation of parent directories of the processed PDFs.
         company_key: Optional company identifier used for this batch.
@@ -624,7 +627,7 @@ def update_parquet(
         if type(pdf) is BaseException:
             return 0.0
         elif type(pdf) is tuple:
-            batch_stem, head_stem, lines_stem, cab_stem = pdf
+            batch_stem, head_stem, lines_stem, cab_stem = pdf[:4]
             if batch_stem:
                 bl = pq.BatchLines(source_filename=batch_stem, project_path=project_path)
                 bl.update()
@@ -665,6 +668,63 @@ def update_parquet(
     pq_heads = None
 
     return parquet_secs
+
+
+def copy_statements_to_project(
+    processed_pdfs: list[BaseException | tuple],
+    project_path: Path | None = None,
+) -> list[Path]:
+    """
+    Copy processed statement PDFs into the project ``statements/`` directory.
+
+    Each PDF is copied (not moved) to::
+
+        <project>/statements/<year>/<id_account>/<filename>
+
+    where *year* is derived from the last eight characters of the target filename
+    stem (``YYYYMMDD``) and *id_account* is everything before the trailing
+    ``_YYYYMMDD`` suffix.
+
+    If two statements in the same batch resolve to the same destination path the
+    later copy overwrites the earlier one, which is consistent with the
+    ``INSERT OR REPLACE`` semantics used by :func:`update_db` and the merge
+    behaviour of :func:`update_parquet`.
+
+    Entries in *processed_pdfs* that are a :class:`BaseException` (a fatal
+    worker error) or that carry no rename target (``file_dst`` is ``None``) are
+    silently skipped.
+
+    Args:
+        processed_pdfs: List of processed PDF results as returned by
+            :func:`process_pdf_statement` — each entry is either a
+            :class:`BaseException` or a 6-element tuple of
+            ``(batch_lines_stem, statement_heads_stem, statement_lines_stem,
+            cab_stem, file_src, file_dst)``.
+        project_path: Optional project root directory.  When ``None`` the
+            default bundled ``project/`` directory is used.
+
+    Returns:
+        List of :class:`~pathlib.Path` objects for every file that was copied.
+    """
+    paths = get_paths(project_path)
+    copied: list[Path] = []
+    for entry in processed_pdfs:
+        if not isinstance(entry, tuple) or len(entry) < 6:
+            continue
+        _batch_stem, _head_stem, _lines_stem, _cab_stem, file_src, file_dst = entry[:6]
+        if file_src is None or file_dst is None:
+            continue
+        # Derive year from the last 8 characters of the stem (YYYYMMDD)
+        stem = Path(file_dst).stem  # e.g. "HSBC_UK_SAV_41462695_20210328"
+        year = stem[-8:-4]  # characters 0-3 of the date portion → "2021"
+        # id_account is everything before the trailing "_YYYYMMDD"
+        id_account = stem[: -(len("_YYYYMMDD"))]  # strip "_" + 8 date chars
+        dest_dir = paths.statements_dir(year, id_account)
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        dest_path = dest_dir / file_dst
+        Path(file_src).copy(dest_path)
+        copied.append(dest_path)
+    return copied
 
 
 class StatementBatch:
@@ -718,7 +778,6 @@ class StatementBatch:
         "timer_start",
         "statements",
         "turbo",
-        "smart_rename",
         "project_path",
         "skip_project_validation",
         "processed_pdfs",
@@ -731,7 +790,6 @@ class StatementBatch:
         account_key: str | None = None,
         print_log: bool = True,
         turbo: bool = False,
-        smart_rename: bool = True,
         project_path: Path | None = None,
         skip_project_validation: bool = False,
     ):
@@ -744,7 +802,6 @@ class StatementBatch:
             account_key: Optional account identifier for config lookup.
             print_log: Whether to print progress messages to console.
             turbo: If True, use parallel processing with multiprocessing.
-            smart_rename: If True, rename processed files based on extracted data.
             project_path: Optional custom project root directory.  When ``None``
                 (the default), the bundled ``project/`` directory inside the
                 package is used and will be initialised automatically if its
@@ -756,6 +813,8 @@ class StatementBatch:
         The constructor automatically begins processing upon initialization.
         Processing time is tracked in process_secs, and parquet update time
         is tracked separately (call update_parquet() to complete the process).
+        To copy processed PDFs into the project statements directory call
+        copy_statements_to_project() after processing.
         """
         if not skip_project_validation:
             validate_or_initialise_project(get_paths(project_path).root)
@@ -767,7 +826,6 @@ class StatementBatch:
         self.account_key = account_key
         self.print_log = print_log
         self.turbo = turbo
-        self.smart_rename = smart_rename
         self.project_path = project_path
         self.skip_project_validation = skip_project_validation
         self.pdfs = pdfs
@@ -849,7 +907,7 @@ class StatementBatch:
 
         return processed_pdfs
 
-    def process_single_pdf(self, idx: int, pdf: Path) -> tuple[str | None, str | None, str | None, str | None]:
+    def process_single_pdf(self, idx: int, pdf: Path) -> tuple[str | None, str | None, str | None, str | None, str | None, str | None]:
         """
         Process a single PDF file and save results to parquet files.
 
@@ -862,22 +920,24 @@ class StatementBatch:
             pdf: Path to the PDF file to process.
 
         Returns:
-            tuple: A tuple containing filename stems for batch lines, statement heads,
-                   statement lines, and checks & balances parquet files.
+            tuple: A 6-element tuple containing filename stems for batch lines,
+                   statement heads, statement lines, and checks & balances parquet
+                   files, plus the source path and rename target for the statement copy.
         """
-        batch_lines_stem, statement_heads_stem, statement_lines_stem, cab_stem, error_cab, error_config = process_pdf_statement(
-            idx=idx,
-            pdf=pdf,
-            batch_id=self.ID_BATCH,
-            company_key=self.company_key,
-            account_key=self.account_key,
-            project_path=self.project_path,
-            smart_rename=self.smart_rename,
-            skip_project_validation=True,
+        batch_lines_stem, statement_heads_stem, statement_lines_stem, cab_stem, file_src, file_dst, error_cab, error_config = (
+            process_pdf_statement(
+                idx=idx,
+                pdf=pdf,
+                batch_id=self.ID_BATCH,
+                company_key=self.company_key,
+                account_key=self.account_key,
+                project_path=self.project_path,
+                skip_project_validation=True,
+            )
         )
         if error_cab or error_config:
             self.errors += 1
-        return (batch_lines_stem, statement_heads_stem, statement_lines_stem, cab_stem)
+        return (batch_lines_stem, statement_heads_stem, statement_lines_stem, cab_stem, file_src, file_dst)
 
     def update_parquet(self, project_path: Path | None = None) -> None:
         """
@@ -908,6 +968,34 @@ class StatementBatch:
             project_path=project_path if project_path is not None else self.project_path,
         )
         self.duration_secs += self.parquet_secs
+
+    def copy_statements_to_project(self, project_path: Path | None = None) -> list[Path]:
+        """
+        Copy processed statement PDFs into the project ``statements/`` directory.
+
+        Delegates to the module-level :func:`copy_statements_to_project` function.
+        Each PDF is copied (not moved) to::
+
+            <project>/statements/<year>/<id_account>/<filename>
+
+        This method must be called after the batch has finished processing.
+        It is safe to call even when two statements in the batch resolve to the
+        same destination — the later copy overwrites the earlier one, matching
+        the ``INSERT OR REPLACE`` semantics used by :meth:`update_db` and the
+        merge behaviour of :meth:`update_parquet`.
+
+        Args:
+            project_path: Optional project root directory.  If not provided,
+                uses the project_path set on this batch, or the default
+                project folder.
+
+        Returns:
+            List of :class:`~pathlib.Path` objects for every file that was copied.
+        """
+        return copy_statements_to_project(
+            processed_pdfs=self.processed_pdfs,
+            project_path=project_path if project_path is not None else self.project_path,
+        )
 
     def delete_temp_files(self) -> None:
         """

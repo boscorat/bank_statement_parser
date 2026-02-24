@@ -95,6 +95,15 @@ class ProjectPaths:
         return self.exports / "json"
 
     @property
+    def statements(self) -> Path:
+        """Root directory for statement copies organised by year and account."""
+        return self.root / "statements"
+
+    def statements_dir(self, year: str, id_account: str) -> Path:
+        """Directory for statement copies for a given year and account."""
+        return self.statements / year / id_account
+
+    @property
     def logs(self) -> Path:
         return self.root / "log"
 

@@ -15,6 +15,7 @@ Quick start
     batch = bsp.StatementBatch(pdfs=[Path("statement.pdf")])
     batch.update_parquet()
     batch.update_db()
+    batch.copy_statements_to_project()  # copy PDFs to project/statements/{year}/{account}/
     batch.delete_temp_files()
 
     # Read reports from the DB backend
@@ -70,6 +71,7 @@ import bank_statement_parser.modules.reports_parquet as parquet
 from bank_statement_parser.modules.statements import (
     Statement,
     StatementBatch,
+    copy_statements_to_project,
     delete_temp_files,
     process_pdf_statement,
     update_parquet,
@@ -122,6 +124,7 @@ __all__ = [
     "Statement",
     "StatementBatch",
     "process_pdf_statement",
+    "copy_statements_to_project",
     "delete_temp_files",
     "update_parquet",
     # Errors

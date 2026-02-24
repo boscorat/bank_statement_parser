@@ -105,7 +105,7 @@ def update_db(
             conn.close()
             return 0.0
         elif type(pdf) is tuple:
-            batch_stem, head_stem, lines_stem, cab_stem = pdf
+            batch_stem, head_stem, lines_stem, cab_stem = pdf[:4]
             if batch_stem:
                 batch = paths.parquet / f"{batch_stem}.parquet"
                 if batch.exists():
