@@ -246,6 +246,32 @@ def _load_redactions(config_path: Path) -> list[_Redaction]:
     return redactions
 
 
+def _anonymise_filename(stem: str, redactions: list[_Redaction]) -> str:
+    """Apply global redaction search/replace pairs to a filename stem.
+
+    Only :class:`_Redaction` entries without a ``clip`` restriction are
+    considered — address-scoped replacements are page-1/bounding-box specific
+    and are unlikely to appear verbatim in a filename.  Replacements are
+    applied in declaration order so that longer, more-specific entries (which
+    are listed first in the TOML) take precedence over shorter fragments.
+
+    Args:
+        stem: The filename stem (i.e. the filename without its extension or
+            directory component) to sanitise.
+        redactions: Ordered list of :class:`_Redaction` objects as returned by
+            :func:`_load_redactions`.
+
+    Returns:
+        The stem with all matching sensitive substrings replaced by their
+        configured substitutes.
+    """
+    result = stem
+    for redaction in redactions:
+        if redaction.clip is None:  # global replacements only
+            result = result.replace(redaction.search, redaction.replacement)
+    return result
+
+
 # ---------------------------------------------------------------------------
 # Core redaction engine
 # ---------------------------------------------------------------------------
@@ -730,8 +756,11 @@ def anonymise_pdf(
     Args:
         input_path: Path to the source PDF to anonymise.
         output_path: Destination path for the anonymised PDF.  When ``None``,
-            the output is written to ``anonymised_<input_stem>.pdf`` in the
-            same directory as *input_path*.
+            the output filename is derived from *input_path*: each
+            ``global_replacements`` entry from the TOML config is applied to
+            the stem to remove sensitive substrings, and the result is prefixed
+            with ``anonymised_`` and written in the same directory as
+            *input_path*.
         config_path: Path to the TOML config file.  When ``None``, uses the
             default project config at
             ``src/bank_statement_parser/project/config/anonymise.toml``.
@@ -753,7 +782,8 @@ def anonymise_pdf(
     redactions = _load_redactions(resolved_config)
 
     if output_path is None:
-        output_path = input_path.with_stem(f"{_ANONYMISED_PREFIX}{input_path.stem}")
+        clean_stem = _anonymise_filename(input_path.stem, redactions)
+        output_path = input_path.with_stem(f"{_ANONYMISED_PREFIX}{clean_stem}")
     else:
         output_path = Path(output_path)
 
@@ -794,8 +824,10 @@ def anonymise_folder(
         pattern: Glob pattern used to find PDFs within *folder_path*.
             Defaults to ``"*.pdf"``.
         output_dir: Directory to write anonymised PDFs into.  When ``None``,
-            each output file is written alongside its source (same directory,
-            ``anonymised_<stem>.pdf``).
+            each output file is written alongside its source.  In both cases
+            the output filename is derived by applying all ``global_replacements``
+            from the TOML config to the source stem to remove sensitive
+            substrings, then prepending ``anonymised_``.
         config_path: Path to the TOML config file.  When ``None``, uses the
             default project config.
         scramble_descriptions: When ``True``, scramble transaction description
@@ -815,7 +847,7 @@ def anonymise_folder(
 
     resolved_config = Path(config_path) if config_path is not None else _DEFAULT_CONFIG_PATH
     # Validate config exists once before iterating, so we fail fast.
-    _load_redactions(resolved_config)
+    redactions = _load_redactions(resolved_config)
 
     pdfs = sorted(p for p in folder_path.glob(pattern) if not p.stem.startswith(_ANONYMISED_PREFIX))
 
@@ -826,7 +858,8 @@ def anonymise_folder(
     outputs: list[Path] = []
     for pdf in pdfs:
         if output_dir is not None:
-            out = Path(output_dir) / f"{_ANONYMISED_PREFIX}{pdf.stem}{pdf.suffix}"
+            clean_stem = _anonymise_filename(pdf.stem, redactions)
+            out: Path | None = Path(output_dir) / f"{_ANONYMISED_PREFIX}{clean_stem}{pdf.suffix}"
         else:
             out = None  # anonymise_pdf will default to alongside the source
         outputs.append(anonymise_pdf(pdf, output_path=out, config_path=resolved_config, scramble_descriptions=scramble_descriptions))
