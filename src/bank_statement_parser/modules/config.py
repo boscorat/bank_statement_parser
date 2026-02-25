@@ -464,7 +464,7 @@ class ConfigManager:
                 )
                 return account
 
-        raise StatementError(f"Unable to identify the account from the statement provided: {file_path}")
+        raise StatementError(f"Unable to identify the company from the statement provided: {file_path}")
 
 
 # Module-level singleton for default configuration

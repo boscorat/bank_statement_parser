@@ -151,9 +151,10 @@ def update_db(
     conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
     conn.close()
 
-    try:
-        build_datamart(db_path=db_path)
-    except Exception as e:
-        print(f"[update_db] ** Datamart Rebuild Failed **: {type(e).__name__}: {e}")
+    if pdf_count > errors:  # if all pdf statements have failed no point in re-building the datamart
+        try:
+            build_datamart(db_path=db_path)
+        except Exception as e:
+            print(f"[update_db] ** Datamart Rebuild Failed **: {type(e).__name__}: {e}")
 
     return db_secs

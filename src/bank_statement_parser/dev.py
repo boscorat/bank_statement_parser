@@ -11,7 +11,7 @@ def main():
             for file in Path("/home/boscorat/repos/bank_statement_parser/tests/pdfs/bad").iterdir()
             if file.is_file() and file.suffix == ".pdf"
         ],
-        turbo=False,
+        turbo=True,
         # project_path=Path("/home/boscorat/Projects/Telford"),
     )
     print(f"total: {batch.duration_secs}, process: {batch.process_secs}, parquet: {batch.parquet_secs}, db: {batch.db_secs}")

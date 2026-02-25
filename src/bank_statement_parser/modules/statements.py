@@ -75,6 +75,7 @@ class Statement:
     __slots__ = (
         "company_key",
         "file",
+        "file_absolute",
         "file_renamed",
         "account_key",
         "ID_BATCH",
@@ -149,6 +150,7 @@ class Statement:
             }
         )
         self.file = file
+        self.file_absolute: str = str(file.absolute())
         self.file_renamed = None
         self.company_key = company_key
         self.account_key = account_key
@@ -175,7 +177,7 @@ class Statement:
         self.success: bool = False
 
         try:
-            self.pdf = pdf_open(str(file.absolute()), logs=self.logs)
+            self.pdf = pdf_open(self.file_absolute, logs=self.logs)
             self.ID_STATEMENT = self.build_id()
             if self.pdf:
                 self.config = self.get_config()
@@ -334,7 +336,7 @@ class Statement:
                             config,
                             scope="success",
                             logs=self.logs,
-                            file_path=str(self.file.absolute()),
+                            file_path=self.file_absolute,
                             exclude_last_n_pages=self.config.exclude_last_n_pages,
                         ),
                         in_place=True,
@@ -353,7 +355,7 @@ class Statement:
                             config,
                             scope="success",
                             logs=self.logs,
-                            file_path=str(self.file.absolute()),
+                            file_path=self.file_absolute,
                             exclude_last_n_pages=self.config.exclude_last_n_pages,
                         ),
                         in_place=True,
@@ -396,13 +398,13 @@ class Statement:
             return None
         if self.account_key:
             # Use explicit account key if provided
-            config = get_config_from_account(self.account_key, self.logs, str(self.file.absolute()), self.project_path)
+            config = get_config_from_account(self.account_key, self.logs, self.file_absolute, self.project_path)
         elif self.company_key:
             # Use explicit company key if provided
-            config = get_config_from_company(self.company_key, self.pdf, self.logs, str(self.file.absolute()), self.project_path)
+            config = get_config_from_company(self.company_key, self.pdf, self.logs, self.file_absolute, self.project_path)
         else:
             # Attempt auto-detection from statement content
-            config = get_config_from_statement(self.pdf, str(self.file.absolute()), self.logs, self.project_path)
+            config = get_config_from_statement(self.pdf, self.file_absolute, self.logs, self.project_path)
         return deepcopy(config) if config else None  # we return a deepcopy in case we need to make statement-specific modifications
 
     def cleanup(self):
@@ -412,13 +414,53 @@ class Statement:
         Closes the PDF document and clears large data structures to free memory.
         """
         if self.pdf is not None:
-            pdf_close(self.pdf, logs=self.logs, file_path=str(self.file.absolute()))
+            pdf_close(self.pdf, logs=self.logs, file_path=self.file_absolute)
         self.config = None
         self.config_header = None
         self.config_lines = None
         self.lines_results = pl.LazyFrame()
         self.header_results = pl.LazyFrame()
         self.checks_and_balances: pl.DataFrame = pl.DataFrame()
+
+
+def _cab_detail(cab: pl.DataFrame) -> str:
+    """
+    Build a human-readable indented detail block for a checks & balances failure.
+
+    Inspects the four boolean check columns in *cab* and, for each that is
+    ``False``, appends an indented line showing the relevant stated vs.
+    extracted figures and their delta.
+
+    Args:
+        cab: The ``checks_and_balances`` DataFrame from a :class:`Statement`.
+
+    Returns:
+        A string that starts with ``"\\n"`` followed by one indented line per
+        failing check, or ``""`` if *cab* is empty or all checks pass.
+    """
+    if cab.is_empty():
+        return ""
+    row = cab.row(0, named=True)
+    lines: list[str] = []
+    if not row["BAL_PAYMENTS_IN"]:
+        stated = row["STD_PAYMENTS_IN"]
+        extracted = row["STD_PAYMENT_IN"]
+        lines.append(f"  BAL_PAYMENTS_IN   stated={stated}  extracted={extracted}  delta={round(stated - extracted, 2)}")
+    if not row["BAL_PAYMENTS_OUT"]:
+        stated = row["STD_PAYMENTS_OUT"]
+        extracted = row["STD_PAYMENT_OUT"]
+        lines.append(f"  BAL_PAYMENTS_OUT  stated={stated}  extracted={extracted}  delta={round(stated - extracted, 2)}")
+    if not row["BAL_MOVEMENT"]:
+        lines.append(
+            f"  BAL_MOVEMENT      statement_movement={row['STD_STATEMENT_MOVEMENT']}"
+            f"  extracted_movement={row['STD_MOVEMENT']}"
+            f"  balance_of_payments={row['STD_BALANCE_OF_PAYMENTS']}"
+        )
+    if not row["BAL_CLOSING"]:
+        stated = row["STD_CLOSING_BALANCE"]
+        calculated = row["STD_RUNNING_BALANCE"]
+        lines.append(f"  BAL_CLOSING       stated={stated}  calculated={calculated}  delta={round(stated - calculated, 2)}")
+    return ("\n" + "\n".join(lines)) if lines else ""
 
 
 def process_pdf_statement(
@@ -509,8 +551,10 @@ def process_pdf_statement(
             # Statement parsed but failed checks & balances validation
             error_cab = True
             batch_line["ERROR_CAB"] = True
-            batch_line["STD_ERROR_MESSAGE"] += "** Checks & Balances Failure **"
-            print(f"[line {batch_line['STD_BATCH_LINE']}] {pdf.name}: ** Checks & Balances Failure **")
+            detail = _cab_detail(stmt.checks_and_balances)
+            cab_message = f"** Checks & Balances Failure **{detail}"
+            batch_line["STD_ERROR_MESSAGE"] += cab_message
+            print(f"[line {batch_line['STD_BATCH_LINE']}] {pdf.name}: {cab_message}")
         else:
             # Statement parsed and validated successfully — persist to parquet.
             # A write failure is appended to the error message and marks the
