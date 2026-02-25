@@ -1,9 +1,9 @@
 from pathlib import Path
 
 
-class StatementError(BaseException):
+class StatementError(Exception):
     def __init__(self, message):
-        BaseException.__init__(self, message)
+        Exception.__init__(self, message)
 
 
 class ConfigError(StatementError):

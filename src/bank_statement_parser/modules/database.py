@@ -13,6 +13,7 @@ from time import time
 import polars as pl
 
 from bank_statement_parser.data.build_datamart import build_datamart
+from bank_statement_parser.modules.data import PdfResult
 from bank_statement_parser.modules.errors import ProjectDatabaseMissing
 from bank_statement_parser.modules.paths import get_paths
 
@@ -31,7 +32,7 @@ def _require_db(db_path: Path) -> None:
 
 
 def update_db(
-    processed_pdfs: list[BaseException | tuple],
+    processed_pdfs: list[BaseException | PdfResult],
     batch_id: str,
     path: str,
     company_key: str | None,
@@ -51,10 +52,10 @@ def update_db(
     processed and before deleting temporary files.
 
     Args:
-        processed_pdfs: List of processed PDF results — each entry is either a
-            BaseException (fatal worker error) or a 4-element tuple of
-            (batch_lines_stem, statement_heads_stem, statement_lines_stem,
-            cab_stem) filename stems that may be None.
+        processed_pdfs: List of :class:`~bank_statement_parser.modules.data.PdfResult`
+            entries as returned by
+            :func:`~bank_statement_parser.modules.statements.process_pdf_statement`,
+            or :class:`BaseException` for any entry that raised an unhandled worker error.
         batch_id: Unique identifier for this batch.
         path: String representation of parent directories of the processed PDFs.
         company_key: Optional company identifier used for this batch.
@@ -101,31 +102,30 @@ def update_db(
 
     update_start = time()
     for pdf in processed_pdfs:
-        if type(pdf) is BaseException:
+        if isinstance(pdf, BaseException):
             conn.close()
             return 0.0
-        elif type(pdf) is tuple:
-            batch_stem, head_stem, lines_stem, cab_stem = pdf[:4]
-            if batch_stem:
-                batch = paths.parquet / f"{batch_stem}.parquet"
+        elif isinstance(pdf, PdfResult):
+            if pdf.batch_lines_stem:
+                batch = paths.parquet / f"{pdf.batch_lines_stem}.parquet"
                 if batch.exists():
                     df = pl.read_parquet(batch)
                     _insert_df(df, "batch_lines")
                     batch.unlink()
-            if head_stem:
-                head = paths.parquet / f"{head_stem}.parquet"
+            if pdf.statement_heads_stem:
+                head = paths.parquet / f"{pdf.statement_heads_stem}.parquet"
                 if head.exists():
                     df = pl.read_parquet(head)
                     _insert_df(df, "statement_heads")
                     head.unlink()
-            if lines_stem:
-                lines = paths.parquet / f"{lines_stem}.parquet"
+            if pdf.statement_lines_stem:
+                lines = paths.parquet / f"{pdf.statement_lines_stem}.parquet"
                 if lines.exists():
                     df = pl.read_parquet(lines)
                     _insert_df(df, "statement_lines")
                     lines.unlink()
-            if cab_stem:
-                cab = paths.parquet / f"{cab_stem}.parquet"
+            if pdf.cab_stem:
+                cab = paths.parquet / f"{pdf.cab_stem}.parquet"
                 if cab.exists():
                     df = pl.read_parquet(cab)
                     _insert_df(df, "checks_and_balances")
@@ -151,6 +151,9 @@ def update_db(
     conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
     conn.close()
 
-    build_datamart(db_path=db_path)
+    try:
+        build_datamart(db_path=db_path)
+    except Exception as e:
+        print(f"[update_db] ** Datamart Rebuild Failed **: {type(e).__name__}: {e}")
 
     return db_secs

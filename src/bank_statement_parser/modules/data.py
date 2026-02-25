@@ -1,5 +1,44 @@
+from collections import namedtuple
 from dataclasses import dataclass
 from typing import Optional
+
+
+PdfResult = namedtuple(
+    "PdfResult",
+    [
+        "batch_lines_stem",  # str | None — temp parquet stem for batch_lines
+        "statement_heads_stem",  # str | None — temp parquet stem for statement_heads
+        "statement_lines_stem",  # str | None — temp parquet stem for statement_lines
+        "cab_stem",  # str | None — temp parquet stem for checks_and_balances
+        "file_src",  # str | None — absolute path of the source PDF
+        "file_dst",  # str | None — canonical rename target basename
+        "error_cab",  # bool — True if checks & balances validation failed
+        "error_config",  # bool — True if configuration or parsing failed
+    ],
+)
+"""Named tuple returned by :func:`~bank_statement_parser.modules.statements.process_pdf_statement`
+for each processed PDF.
+
+Fields
+------
+batch_lines_stem:
+    Filename stem of the temporary batch-lines parquet file, or ``None`` on failure.
+statement_heads_stem:
+    Filename stem of the temporary statement-heads parquet file, or ``None`` on failure.
+statement_lines_stem:
+    Filename stem of the temporary statement-lines parquet file, or ``None`` on failure.
+cab_stem:
+    Filename stem of the temporary checks-and-balances parquet file, or ``None`` on failure.
+file_src:
+    Absolute path string of the original PDF, or ``None`` on failure.
+file_dst:
+    Target basename (``{id_account}_{YYYYMMDD}.pdf``) for the project copy, or ``None`` if
+    the statement did not produce a rename target.
+error_cab:
+    ``True`` if checks & balances validation failed.
+error_config:
+    ``True`` if a configuration or parsing failure occurred.
+"""
 
 
 @dataclass(frozen=True, slots=True)
