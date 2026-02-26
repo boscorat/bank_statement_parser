@@ -78,6 +78,11 @@ from bank_statement_parser.modules.statements import (
 )
 
 # ---------------------------------------------------------------------------
+# Debug / diagnostics
+# ---------------------------------------------------------------------------
+from bank_statement_parser.modules.debug import debug_pdf_statement, debug_statements
+
+# ---------------------------------------------------------------------------
 # Errors
 # ---------------------------------------------------------------------------
 from bank_statement_parser.modules.errors import (
@@ -127,6 +132,9 @@ __all__ = [
     "copy_statements_to_project",
     "delete_temp_files",
     "update_parquet",
+    # Debug / diagnostics
+    "debug_pdf_statement",
+    "debug_statements",
     # Errors
     "StatementError",
     "ProjectDatabaseMissing",

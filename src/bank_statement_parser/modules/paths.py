@@ -111,6 +111,10 @@ class ProjectPaths:
     def log_debug(self) -> Path:
         return self.logs / "debug"
 
+    def log_debug_dir(self, filename: str) -> Path:
+        """Returns the per-statement debug output directory inside log/debug/."""
+        return self.log_debug / filename
+
     # ------------------------------------------------------------------
     # Database file
     # ------------------------------------------------------------------

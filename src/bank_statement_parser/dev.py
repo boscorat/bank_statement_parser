@@ -5,7 +5,7 @@ from bank_statement_parser.modules import statements
 
 def main():
     # laptop
-    folder = Path("/home/boscorat/Downloads")
+    folder = Path("/home/boscorat/repos/bank_statement_parser/tests/pdfs/bad")
     include_subdirs = True  # set True to also include one level of subdirectories
 
     pdfs = [f for f in folder.iterdir() if f.is_file() and f.suffix == ".pdf"]
@@ -26,6 +26,9 @@ def main():
     batch.copy_statements_to_project()
     batch.delete_temp_files()
     print(f"total: {batch.duration_secs}, process: {batch.process_secs}, parquet: {batch.parquet_secs}, db: {batch.db_secs}")
+    if batch.errors:
+        written = batch.debug()
+        print(f"debug: {written} file(s) written to project/log/debug/")
 
     # #windows
     # statements.StatementBatch(Path("C:\\Users\\Admin\\repos\\bsp\\stmts"), turbo=True, smart_rename=False)

@@ -1152,6 +1152,47 @@ class StatementBatch:
         )
         self.duration_secs += self.db_secs
 
+    def debug(self, project_path: Path | None = None) -> int:
+        """
+        Re-process failing statements to collect diagnostic information.
+
+        For each statement that failed in the batch (either ``ERROR_CONFIG`` or
+        ``ERROR_CAB``), re-opens and re-processes the PDF to capture:
+
+        - Raw page text for every page.
+        - Full extraction results including failing rows (``scope="all"``).
+        - The checks & balances DataFrame with per-check failure detail.
+        - The error message and error type.
+
+        Writes a single ``debug.json`` file per failing statement to::
+
+            <project>/log/debug/<parent_dir>_<filename>/debug.json
+
+        Any prior file at that path is overwritten.  No parquet or database
+        writes are performed.  The debug run is always sequential regardless
+        of whether the original batch used turbo mode.
+
+        Args:
+            project_path: Optional project root directory.  If not provided,
+                uses the project_path set on this batch, or the default project
+                folder.
+
+        Returns:
+            int: Number of debug JSON files written.
+        """
+        # Local import to break the circular dependency:
+        # statements.py → debug.py → statements.py
+        from bank_statement_parser.modules.debug import debug_statements
+
+        return debug_statements(
+            processed_pdfs=self.processed_pdfs,
+            pdfs=self.pdfs,
+            batch_id=self.ID_BATCH,
+            company_key=self.company_key,
+            account_key=self.account_key,
+            project_path=project_path if project_path is not None else self.project_path,
+        )
+
     def __del__(self):
         """Destructor to ensure temporary files are cleaned up."""
         self.delete_temp_files()
