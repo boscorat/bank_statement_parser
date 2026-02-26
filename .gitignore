@@ -31,3 +31,7 @@ src/bank_statement_parser/project/config/anonymise.toml
 
 # ai agent files
 AGENTS.md
+
+# test project directories (created and deleted by integration tests)
+tests/test_project/
+tests/test_project_bad/

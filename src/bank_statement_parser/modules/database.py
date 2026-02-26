@@ -6,11 +6,17 @@ to a SQLite database.
 """
 
 import sqlite3
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from time import time
 
 import polars as pl
+
+# Python 3.12+ deprecates the built-in date/datetime adapters for sqlite3.
+# Register explicit ISO-format adapters so that datetime.date and
+# datetime.datetime values are stored as TEXT without triggering warnings.
+sqlite3.register_adapter(date, lambda d: d.isoformat())
+sqlite3.register_adapter(datetime, lambda dt: dt.isoformat())
 
 from bank_statement_parser.data.build_datamart import build_datamart
 from bank_statement_parser.modules.data import PdfResult

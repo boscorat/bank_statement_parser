@@ -28,7 +28,7 @@ def _read_view(db_path: Path, view_name: str, id_batch: str | None = None) -> pl
     if id_batch and view_name in ("DimStatement", "FactTransaction", "FlatTransaction"):
         query += f" WHERE id_batch = '{id_batch}'"
     with sqlite3.connect(db_path) as conn:
-        return pl.read_database(query, connection=conn).lazy()
+        return pl.read_database(query, connection=conn, infer_schema_length=None).lazy()
 
 
 def export_csv(
