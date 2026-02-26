@@ -563,7 +563,7 @@ def process_pdf_statement(
                 # Save extracted header data
                 pq_statement_heads = pq.StatementHeads(
                     id_statement=stmt.ID_STATEMENT,
-                    id_batch=stmt.ID_BATCH,
+                    id_batchline=batch_line["ID_BATCHLINE"],
                     id_account=stmt.ID_ACCOUNT,
                     company=stmt.company,
                     statement_type=stmt.statement_type,

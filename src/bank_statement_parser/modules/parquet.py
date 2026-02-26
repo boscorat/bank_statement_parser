@@ -18,7 +18,13 @@ class Parquet:
         self.key = key
         self.db_records: pl.DataFrame = schema
         try:
-            self.db_records = pl.read_parquet(file).drop("index")
+            existing = pl.read_parquet(file)
+            # Auto-delete stale parquet files whose column layout no longer matches
+            # the current schema (e.g. ID_BATCH → ID_BATCHLINE migration).
+            if set(existing.drop("index").columns) != set(schema.columns):
+                file.unlink()
+            else:
+                self.db_records = existing.drop("index")
         except FileNotFoundError:
             pass
 
@@ -164,7 +170,7 @@ class StatementHeads(Parquet):
     def __init__(
         self,
         id_statement: str | None = None,
-        id_batch: str | None = None,
+        id_batchline: str | None = None,
         id_account: str | None = None,
         company: str | None = None,
         statement_type: str | None = None,
@@ -184,7 +190,7 @@ class StatementHeads(Parquet):
             orient="row",
             schema={
                 "ID_STATEMENT": pl.Utf8,
-                "ID_BATCH": pl.Utf8,
+                "ID_BATCHLINE": pl.Utf8,
                 "ID_ACCOUNT": pl.Utf8,
                 "STD_COMPANY": pl.Utf8,
                 "STD_STATEMENT_TYPE": pl.Utf8,
@@ -212,7 +218,7 @@ class StatementHeads(Parquet):
                 pl.DataFrame(
                     data={
                         "ID_STATEMENT": id_statement,
-                        "ID_BATCH": id_batch,
+                        "ID_BATCHLINE": id_batchline,
                         "ID_ACCOUNT": id_account,
                         "STD_COMPANY": company,
                         "STD_STATEMENT_TYPE": statement_type,

@@ -7,7 +7,7 @@ class Housekeeping:
     FK_RELATIONSHIPS = [
         ("checks_and_balances", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
         ("checks_and_balances", "ID_BATCH", "batch_heads", "ID_BATCH"),
-        ("statement_heads", "ID_BATCH", "batch_heads", "ID_BATCH"),
+        ("statement_heads", "ID_BATCHLINE", "batch_lines", "ID_BATCHLINE"),
         ("statement_lines", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
         ("batch_lines", "ID_BATCH", "batch_heads", "ID_BATCH"),
         ("batch_lines", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
@@ -29,7 +29,7 @@ class Housekeeping:
             for rel in [
                 ("checks_and_balances", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
                 ("checks_and_balances", "ID_BATCH", "batch_heads", "ID_BATCH"),
-                ("statement_heads", "ID_BATCH", "batch_heads", "ID_BATCH"),
+                ("statement_heads", "ID_BATCHLINE", "batch_lines", "ID_BATCHLINE"),
                 ("statement_lines", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
                 ("batch_lines", "ID_BATCH", "batch_heads", "ID_BATCH"),
                 ("batch_lines", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
@@ -40,14 +40,14 @@ class Housekeeping:
             for rel in [
                 ("checks_and_balances", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
                 ("checks_and_balances", "ID_BATCH", "batch_heads", "ID_BATCH"),
-                ("statement_heads", "ID_BATCH", "batch_heads", "ID_BATCH"),
+                ("statement_heads", "ID_BATCHLINE", "batch_lines", "ID_BATCHLINE"),
                 ("statement_lines", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
                 ("batch_lines", "ID_BATCH", "batch_heads", "ID_BATCH"),
                 ("batch_lines", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
             ]
         ]
     )
-    _ALLOWED_COLUMNS: frozenset[str] = frozenset(["ID_STATEMENT", "ID_BATCH"])
+    _ALLOWED_COLUMNS: frozenset[str] = frozenset(["ID_STATEMENT", "ID_BATCH", "ID_BATCHLINE"])
 
     def __init__(self, db_path: Path):
         self.db_path = db_path

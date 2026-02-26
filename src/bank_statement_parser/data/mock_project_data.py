@@ -76,6 +76,7 @@ def generate_mock_data(db_path: Path, num_batches: int = 10, statements_per_batc
 
     total_statements = num_batches * statements_per_batch
     statement_ids = [str(uuid.uuid4()) for _ in range(total_statements)]
+    batchline_ids = [str(uuid.uuid4()) for _ in range(total_statements)]
     batch_assignment = [i // statements_per_batch for i in range(total_statements)]
 
     statement_dates = []
@@ -104,7 +105,7 @@ def generate_mock_data(db_path: Path, num_batches: int = 10, statements_per_batc
         statement_heads_data.append(
             (
                 statement_id,
-                id_batch,
+                batchline_ids[i],
                 id_account,
                 company,
                 "Bank Statement",
@@ -121,7 +122,7 @@ def generate_mock_data(db_path: Path, num_batches: int = 10, statements_per_batc
         )
 
     cursor.executemany(
-        "INSERT INTO statement_heads (ID_STATEMENT, ID_BATCH, ID_ACCOUNT, STD_COMPANY, STD_STATEMENT_TYPE, STD_ACCOUNT, STD_SORTCODE, STD_ACCOUNT_NUMBER, STD_ACCOUNT_HOLDER, STD_STATEMENT_DATE, STD_OPENING_BALANCE, STD_PAYMENTS_IN, STD_PAYMENTS_OUT, STD_CLOSING_BALANCE) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO statement_heads (ID_STATEMENT, ID_BATCHLINE, ID_ACCOUNT, STD_COMPANY, STD_STATEMENT_TYPE, STD_ACCOUNT, STD_SORTCODE, STD_ACCOUNT_NUMBER, STD_ACCOUNT_HOLDER, STD_STATEMENT_DATE, STD_OPENING_BALANCE, STD_PAYMENTS_IN, STD_PAYMENTS_OUT, STD_CLOSING_BALANCE) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         statement_heads_data,
     )
     print(f"Inserted {len(statement_heads_data)} statement_heads")
@@ -132,7 +133,7 @@ def generate_mock_data(db_path: Path, num_batches: int = 10, statements_per_batc
         batch_lines_data.append(
             (
                 batch_ids[batch_idx],
-                str(uuid.uuid4()),
+                batchline_ids[i],
                 statement_id,
                 i + 1,
                 f"statement_{i + 1}.pdf",

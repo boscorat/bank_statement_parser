@@ -26,7 +26,7 @@ SCHEMAS = {
     },
     "statement_heads": {
         "ID_STATEMENT": "TEXT",
-        "ID_BATCH": "TEXT",
+        "ID_BATCHLINE": "TEXT",
         "ID_ACCOUNT": "TEXT",
         "STD_COMPANY": "TEXT",
         "STD_STATEMENT_TYPE": "TEXT",
@@ -87,7 +87,7 @@ FOREIGN_KEYS = {
         "FOREIGN KEY (ID_BATCH) REFERENCES batch_heads(ID_BATCH) ON UPDATE CASCADE ON DELETE CASCADE",
     ],
     "statement_heads": [
-        "FOREIGN KEY (ID_BATCH) REFERENCES batch_heads(ID_BATCH) ON UPDATE CASCADE ON DELETE CASCADE",
+        "FOREIGN KEY (ID_BATCHLINE) REFERENCES batch_lines(ID_BATCHLINE) ON UPDATE CASCADE ON DELETE CASCADE",
     ],
     "statement_lines": [
         "FOREIGN KEY (ID_STATEMENT) REFERENCES statement_heads(ID_STATEMENT) ON UPDATE CASCADE ON DELETE CASCADE",
@@ -153,7 +153,7 @@ def create_indexes(db_path: Path):
 
     indexes = [
         "CREATE INDEX IF NOT EXISTS idx_statement_heads_id_account ON statement_heads(ID_ACCOUNT)",
-        "CREATE INDEX IF NOT EXISTS idx_statement_heads_id_batch ON statement_heads(ID_BATCH)",
+        "CREATE INDEX IF NOT EXISTS idx_statement_heads_id_batchline ON statement_heads(ID_BATCHLINE)",
         "CREATE INDEX IF NOT EXISTS idx_statement_lines_id_statement ON statement_lines(ID_STATEMENT)",
         "CREATE INDEX IF NOT EXISTS idx_statement_lines_date ON statement_lines(STD_TRANSACTION_DATE)",
         "CREATE INDEX IF NOT EXISTS idx_statement_lines_account_date ON statement_lines(ID_STATEMENT, STD_TRANSACTION_DATE, STD_TRANSACTION_NUMBER)",

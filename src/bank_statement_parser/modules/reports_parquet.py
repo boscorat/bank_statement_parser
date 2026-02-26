@@ -137,7 +137,16 @@ class FactBalance:
         paths = get_paths(project_path)
         paths.require_subdir_for_read(paths.parquet)
         self.__heads: pl.LazyFrame = (
-            pl.read_parquet(paths.statement_heads).filter((pl.lit(ID_BATCH).is_null()) | (pl.col("ID_BATCH") == pl.lit(ID_BATCH))).lazy()
+            pl.read_parquet(paths.statement_heads)
+            .lazy()
+            .join(
+                pl.read_parquet(paths.batch_lines)
+                .lazy()
+                .filter((pl.lit(ID_BATCH).is_null()) | (pl.col("ID_BATCH") == pl.lit(ID_BATCH)))
+                .select("ID_BATCHLINE"),
+                on="ID_BATCHLINE",
+                how="semi",
+            )
         )
         self._cartesian_date_account: pl.LazyFrame = (
             DimTime(ID_BATCH=ID_BATCH, project_path=project_path)
@@ -203,8 +212,18 @@ class DimTime:
     def __init__(self, ID_BATCH: str | None = None, project_path: Path | None = None) -> None:
         paths = get_paths(project_path)
         paths.require_subdir_for_read(paths.parquet)
-        self.__heads: pl.DataFrame = pl.read_parquet(paths.statement_heads).filter(
-            (pl.lit(ID_BATCH).is_null()) | (pl.col("ID_BATCH") == pl.lit(ID_BATCH))
+        self.__heads: pl.DataFrame = (
+            pl.read_parquet(paths.statement_heads)
+            .lazy()
+            .join(
+                pl.read_parquet(paths.batch_lines)
+                .lazy()
+                .filter((pl.lit(ID_BATCH).is_null()) | (pl.col("ID_BATCH") == pl.lit(ID_BATCH)))
+                .select("ID_BATCHLINE"),
+                on="ID_BATCHLINE",
+                how="semi",
+            )
+            .collect()
         )
         self.end_date: str = self.__heads.select("STD_STATEMENT_DATE").max().item()
         self.start_date: str = (
@@ -258,10 +277,19 @@ class DimStatement:
         paths = get_paths(project_path)
         paths.require_subdir_for_read(paths.parquet)
         self.__heads: pl.LazyFrame = (
-            pl.read_parquet(paths.statement_heads).filter((pl.lit(ID_BATCH).is_null()) | (pl.col("ID_BATCH") == pl.lit(ID_BATCH))).lazy()
+            pl.read_parquet(paths.statement_heads)
+            .lazy()
+            .join(
+                pl.read_parquet(paths.batch_lines)
+                .lazy()
+                .filter((pl.lit(ID_BATCH).is_null()) | (pl.col("ID_BATCH") == pl.lit(ID_BATCH)))
+                .select("ID_BATCHLINE"),
+                on="ID_BATCHLINE",
+                how="semi",
+            )
         )
         self.raw: pl.LazyFrame = self.__heads.join(
-            other=pl.read_parquet(paths.batch_lines).lazy(), on=["ID_STATEMENT", "ID_BATCH"], how="inner", validate="1:1", coalesce=True
+            other=pl.read_parquet(paths.batch_lines).lazy(), on="ID_BATCHLINE", how="inner", validate="1:1", coalesce=True
         )
         self.all: pl.LazyFrame = self.raw.select(
             id_statement="ID_STATEMENT",
@@ -277,10 +305,19 @@ class DimAccount:
         paths = get_paths(project_path)
         paths.require_subdir_for_read(paths.parquet)
         self.__heads: pl.LazyFrame = (
-            pl.read_parquet(paths.statement_heads).filter((pl.lit(ID_BATCH).is_null()) | (pl.col("ID_BATCH") == pl.lit(ID_BATCH))).lazy()
+            pl.read_parquet(paths.statement_heads)
+            .lazy()
+            .join(
+                pl.read_parquet(paths.batch_lines)
+                .lazy()
+                .filter((pl.lit(ID_BATCH).is_null()) | (pl.col("ID_BATCH") == pl.lit(ID_BATCH)))
+                .select("ID_BATCHLINE"),
+                on="ID_BATCHLINE",
+                how="semi",
+            )
         )
         self.raw: pl.LazyFrame = self.__heads.join(
-            other=pl.read_parquet(paths.batch_lines).lazy(), on=["ID_STATEMENT", "ID_BATCH"], how="inner", validate="1:1", coalesce=True
+            other=pl.read_parquet(paths.batch_lines).lazy(), on="ID_BATCHLINE", how="inner", validate="1:1", coalesce=True
         )
         self.all: pl.LazyFrame = (
             self.raw.select(
@@ -301,7 +338,16 @@ class FactTransaction:
         paths = get_paths(project_path)
         paths.require_subdir_for_read(paths.parquet)
         self.__heads: pl.LazyFrame = (
-            pl.read_parquet(paths.statement_heads).filter((pl.lit(ID_BATCH).is_null()) | (pl.col("ID_BATCH") == pl.lit(ID_BATCH))).lazy()
+            pl.read_parquet(paths.statement_heads)
+            .lazy()
+            .join(
+                pl.read_parquet(paths.batch_lines)
+                .lazy()
+                .filter((pl.lit(ID_BATCH).is_null()) | (pl.col("ID_BATCH") == pl.lit(ID_BATCH)))
+                .select("ID_BATCHLINE"),
+                on="ID_BATCHLINE",
+                how="semi",
+            )
         )
         self.raw: pl.LazyFrame = self.__heads.join(
             other=pl.read_parquet(paths.statement_lines).lazy(), on="ID_STATEMENT", how="inner", validate="1:m", coalesce=True

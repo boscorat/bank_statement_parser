@@ -287,7 +287,7 @@ def _build_dim_statement(conn: sqlite3.Connection, verbose: bool) -> float:
             ROW_NUMBER() OVER (ORDER BY sh.ID_STATEMENT) AS statement_id,
             sh.ID_STATEMENT,
             da.account_id,
-            sh.ID_BATCH,
+            bl.ID_BATCH,
             sh.STD_COMPANY,
             sh.STD_ACCOUNT,
             sh.STD_ACCOUNT_NUMBER,
@@ -302,9 +302,7 @@ def _build_dim_statement(conn: sqlite3.Connection, verbose: bool) -> float:
             bl.STD_FILENAME,
             bl.STD_UPDATETIME
         FROM statement_heads sh
-        INNER JOIN batch_lines bl
-               ON sh.ID_STATEMENT = bl.ID_STATEMENT
-              AND sh.ID_BATCH      = bl.ID_BATCH
+        INNER JOIN batch_lines bl ON sh.ID_BATCHLINE = bl.ID_BATCHLINE
         INNER JOIN DimAccount da ON sh.ID_ACCOUNT = da.id_account
     """)
     conn.execute("CREATE INDEX idx_ds_id_statement ON DimStatement (id_statement)")

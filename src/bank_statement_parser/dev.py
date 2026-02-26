@@ -5,12 +5,17 @@ from bank_statement_parser.modules import statements
 
 def main():
     # laptop
+    folder = Path("/home/boscorat/Downloads")
+    include_subdirs = True  # set True to also include one level of subdirectories
+
+    pdfs = [f for f in folder.iterdir() if f.is_file() and f.suffix == ".pdf"]
+    if include_subdirs:
+        for subdir in folder.iterdir():
+            if subdir.is_dir():
+                pdfs.extend(f for f in subdir.iterdir() if f.is_file() and f.suffix == ".pdf")
+
     batch = statements.StatementBatch(
-        pdfs=[
-            file
-            for file in Path("/home/boscorat/repos/bank_statement_parser/tests/pdfs/bad").iterdir()
-            if file.is_file() and file.suffix == ".pdf"
-        ],
+        pdfs=pdfs,
         turbo=True,
         # project_path=Path("/home/boscorat/Projects/Telford"),
     )
