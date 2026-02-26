@@ -35,6 +35,7 @@ table_columns = 4
 table_rows = 2
 locations = [
     {page_number = 1, top_left = [37, 390], bottom_right = [575, 430], try_shift_down = 15, vertical_lines = [52, 355, 414, 493, 557]},
+    {page_number = 1, top_left = [37, 408], bottom_right = [575, 445], vertical_lines = [52, 355, 414, 493, 557]},
 ]
 fields = [
     {field = 'account_name', cell = {row = 1, col = 0}, vital=true, type = "string", string_pattern ='^[A-Z]+[a-z]*\s[A-Z]+[a-z]*.*$'},

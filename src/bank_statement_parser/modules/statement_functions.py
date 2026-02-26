@@ -314,6 +314,8 @@ def extract_fields(
                 for field in statement_table.fields:
                     if field.cell is None:
                         continue
+                    if field.cell.row >= table_collected.height:
+                        continue
                     result = pl.LazyFrame(
                         data=[
                             pl.Series("field", [field.field], dtype=pl.String),
