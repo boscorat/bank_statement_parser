@@ -21,6 +21,10 @@ wheels/
 *.parquet
 *.log
 *.pdf
+*.csv
+*.xlsx
+*.json
+*.xls
 
 # anonymise.toml contains real PII — never commit it
 src/bank_statement_parser/project/config/anonymise.toml
