@@ -35,3 +35,6 @@ AGENTS.md
 # test project directories (created and deleted by integration tests)
 tests/test_project/
 tests/test_project_bad/
+
+# apple files
+.DS_Store
