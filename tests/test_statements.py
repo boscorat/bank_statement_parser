@@ -1,7 +1,7 @@
 """
 test_statements.py — integration tests for bank_statement_parser.
 
-Tests are grouped into five classes:
+Tests are grouped into six classes:
 
 TestGoodStatements
     Verifies that all PDFs in ``tests/pdfs/good/`` process without error
@@ -18,6 +18,11 @@ TestDbReports
 TestCrossBackend
     Verifies that numeric totals and row counts agree between the Parquet
     and DB backends, and that both match the raw statement_lines source.
+
+TestExports
+    Verifies CSV and Excel export functions for both the database and
+    parquet backends, including full and simple presets and the
+    ``filetype="both"`` convenience mode on ``StatementBatch.export()``.
 
 TestBadStatements
     Verifies that each PDF in ``tests/pdfs/bad/`` is flagged as an error.
@@ -302,6 +307,125 @@ class TestCrossBackend:
         with sqlite3.connect(paths.project_db) as conn:
             db_count = conn.execute("SELECT COUNT(*) FROM statement_lines").fetchone()[0]
         assert pq_count == db_count
+
+
+# ---------------------------------------------------------------------------
+# TestExports
+# ---------------------------------------------------------------------------
+
+# CSV file names produced by ``type="full"`` exports.
+_FULL_CSV_FILES = [
+    "statement.csv",
+    "account.csv",
+    "calendar.csv",
+    "transactions.csv",
+    "balances.csv",
+    "gaps.csv",
+]
+
+
+class TestExports:
+    """Verify CSV and Excel exports for both backends and presets."""
+
+    # ------------------------------------------------------------------
+    # DB backend — CSV
+    # ------------------------------------------------------------------
+
+    def test_db_export_csv_full(self, good_project):
+        """DB export_csv(type='full') writes all six CSV files."""
+        db.export_csv(type="full", project_path=good_project.project_path)
+        paths = get_paths(good_project.project_path)
+        for name in _FULL_CSV_FILES:
+            f = paths.csv / name
+            assert f.exists(), f"Missing CSV: {name}"
+            assert f.stat().st_size > 0, f"Empty CSV: {name}"
+
+    def test_db_export_csv_simple(self, good_project):
+        """DB export_csv(type='simple') writes the flat transactions CSV."""
+        db.export_csv(type="simple", project_path=good_project.project_path)
+        paths = get_paths(good_project.project_path)
+        f = paths.csv / "transactions_table.csv"
+        assert f.exists(), "Missing transactions_table.csv (db/simple)"
+        assert f.stat().st_size > 0, "Empty transactions_table.csv (db/simple)"
+
+    # ------------------------------------------------------------------
+    # DB backend — Excel
+    # ------------------------------------------------------------------
+
+    def test_db_export_excel_full(self, good_project):
+        """DB export_excel(type='full') writes a non-empty workbook."""
+        db.export_excel(type="full", project_path=good_project.project_path)
+        paths = get_paths(good_project.project_path)
+        f = paths.excel / "transactions.xlsx"
+        assert f.exists(), "Missing transactions.xlsx (db/full)"
+        assert f.stat().st_size > 0, "Empty transactions.xlsx (db/full)"
+
+    def test_db_export_excel_simple(self, good_project):
+        """DB export_excel(type='simple') writes a non-empty workbook."""
+        db.export_excel(type="simple", project_path=good_project.project_path)
+        paths = get_paths(good_project.project_path)
+        f = paths.excel / "transactions.xlsx"
+        assert f.exists(), "Missing transactions.xlsx (db/simple)"
+        assert f.stat().st_size > 0, "Empty transactions.xlsx (db/simple)"
+
+    # ------------------------------------------------------------------
+    # Parquet backend — CSV
+    # ------------------------------------------------------------------
+
+    def test_parquet_export_csv_full(self, good_project):
+        """Parquet export_csv(type='full') writes all six CSV files."""
+        parquet.export_csv(type="full", project_path=good_project.project_path)
+        paths = get_paths(good_project.project_path)
+        for name in _FULL_CSV_FILES:
+            f = paths.csv / name
+            assert f.exists(), f"Missing CSV: {name}"
+            assert f.stat().st_size > 0, f"Empty CSV: {name}"
+
+    def test_parquet_export_csv_simple(self, good_project):
+        """Parquet export_csv(type='simple') writes the flat transactions CSV."""
+        parquet.export_csv(type="simple", project_path=good_project.project_path)
+        paths = get_paths(good_project.project_path)
+        f = paths.csv / "transactions_table.csv"
+        assert f.exists(), "Missing transactions_table.csv (parquet/simple)"
+        assert f.stat().st_size > 0, "Empty transactions_table.csv (parquet/simple)"
+
+    # ------------------------------------------------------------------
+    # Parquet backend — Excel
+    # ------------------------------------------------------------------
+
+    def test_parquet_export_excel_full(self, good_project):
+        """Parquet export_excel(type='full') writes a non-empty workbook."""
+        parquet.export_excel(type="full", project_path=good_project.project_path)
+        paths = get_paths(good_project.project_path)
+        f = paths.excel / "transactions.xlsx"
+        assert f.exists(), "Missing transactions.xlsx (parquet/full)"
+        assert f.stat().st_size > 0, "Empty transactions.xlsx (parquet/full)"
+
+    def test_parquet_export_excel_simple(self, good_project):
+        """Parquet export_excel(type='simple') writes a non-empty workbook."""
+        parquet.export_excel(type="simple", project_path=good_project.project_path)
+        paths = get_paths(good_project.project_path)
+        f = paths.excel / "transactions.xlsx"
+        assert f.exists(), "Missing transactions.xlsx (parquet/simple)"
+        assert f.stat().st_size > 0, "Empty transactions.xlsx (parquet/simple)"
+
+    # ------------------------------------------------------------------
+    # StatementBatch.export() — filetype="both"
+    # ------------------------------------------------------------------
+
+    def test_batch_export_both(self, good_project):
+        """StatementBatch.export(filetype='both') writes both Excel and CSV."""
+        good_project.batch.export(datasource="database", filetype="both", type="full")
+        paths = get_paths(good_project.project_path)
+        # Excel file must exist
+        xlsx = paths.excel / "transactions.xlsx"
+        assert xlsx.exists(), "Missing transactions.xlsx after filetype='both'"
+        assert xlsx.stat().st_size > 0, "Empty transactions.xlsx after filetype='both'"
+        # CSV files must exist
+        for name in _FULL_CSV_FILES:
+            f = paths.csv / name
+            assert f.exists(), f"Missing CSV after filetype='both': {name}"
+            assert f.stat().st_size > 0, f"Empty CSV after filetype='both': {name}"
 
 
 # ---------------------------------------------------------------------------

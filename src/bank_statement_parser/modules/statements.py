@@ -27,7 +27,6 @@ import polars as pl
 
 import bank_statement_parser.modules.config as _config_module
 import bank_statement_parser.modules.parquet as pq
-from bank_statement_parser.modules.parquet import update_parquet
 from bank_statement_parser.modules.config import (
     get_config_from_account,
     get_config_from_company,
@@ -35,6 +34,7 @@ from bank_statement_parser.modules.config import (
 )
 from bank_statement_parser.modules.data import Account, PdfResult, StandardFields
 from bank_statement_parser.modules.database import update_db
+from bank_statement_parser.modules.parquet import update_parquet
 from bank_statement_parser.modules.paths import get_paths, validate_or_initialise_project
 from bank_statement_parser.modules.pdf_functions import pdf_close, pdf_open
 from bank_statement_parser.modules.statement_functions import get_results, get_standard_fields
@@ -1062,10 +1062,10 @@ class StatementBatch:
 
     def export(
         self,
-        datasource: Literal["parquet", "database"] = "parquet",
-        filetype: Literal["excel", "csv"] = "excel",
+        datasource: Literal["parquet", "database"] = "database",
+        filetype: Literal["excel", "csv", "both"] = "excel",
         folder: Path | None = None,
-        type: str = "full",
+        type: str = "simple",
         project_path: Path | None = None,
     ) -> None:
         """
@@ -1081,35 +1081,41 @@ class StatementBatch:
                 permanent Parquet files; ``"database"`` reads from the SQLite
                 star-schema views.  Defaults to ``"parquet"``.
             filetype: Output format.  ``"excel"`` writes a single ``.xlsx``
-                workbook; ``"csv"`` writes one CSV file per report table.
+                workbook; ``"csv"`` writes one CSV file per report table;
+                ``"both"`` writes Excel and CSV in sequence.
                 Defaults to ``"excel"``.
             folder: For ``filetype="csv"``: directory to write CSV files into,
                 or the workbook path for ``filetype="excel"``.  When ``None``
                 the default export sub-directory for the resolved project is
                 used.
             type: Export preset passed through to the underlying function.
-                ``"full"`` exports all report tables; ``"simple"`` exports the
-                flat transactions table only.  Defaults to ``"full"``.
+                ``"simple"`` exports the flat transactions table only;
+                ``"full"`` exports separate star-schema tables for loading
+                into a database.  Defaults to ``"simple"``.
             project_path: Optional project root directory.  If not provided,
                 uses the project_path set on this batch, or the default project
                 folder.
         """
+        if filetype == "both":
+            self.export(datasource=datasource, filetype="excel", folder=folder, type=type, project_path=project_path)
+            self.export(datasource=datasource, filetype="csv", folder=folder, type=type, project_path=project_path)
+            return
         resolved_project_path = project_path if project_path is not None else self.project_path
 
         if datasource == "parquet":
             import bank_statement_parser.modules.reports_parquet as _rp
 
             if filetype == "excel":
-                _rp.export_excel(path=folder, type=type, ID_BATCH=self.ID_BATCH, project_path=resolved_project_path)
+                _rp.export_excel(path=folder, type=type, project_path=resolved_project_path)
             else:
-                _rp.export_csv(folder=folder, type=type, ID_BATCH=self.ID_BATCH, project_path=resolved_project_path)
+                _rp.export_csv(folder=folder, type=type, project_path=resolved_project_path)
         else:
             import bank_statement_parser.modules.reports_db as _rd
 
             if filetype == "excel":
-                _rd.export_excel(path=folder, type=type, id_batch=self.ID_BATCH, project_path=resolved_project_path)
+                _rd.export_excel(path=folder, type=type, project_path=resolved_project_path)
             else:
-                _rd.export_csv(folder=folder, type=type, id_batch=self.ID_BATCH, project_path=resolved_project_path)
+                _rd.export_csv(folder=folder, type=type, project_path=resolved_project_path)
 
     def debug(self, project_path: Path | None = None) -> int:
         """
