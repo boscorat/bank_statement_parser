@@ -1,12 +1,26 @@
 [project]
 name = "bank-statement-parser"
 version = "0.1.0"
-description = "Add your description here"
+description = "Parse bank statement PDFs, extract transactions, and persist to Parquet and SQLite."
 readme = "README.md"
+license = "MIT"
 authors = [
     { name = "Jason Farrar", email = "farrar.jason1@gmail.com" }
 ]
 requires-python = ">=3.14"
+keywords = ["bank-statement", "pdf", "parser", "transactions", "polars", "sqlite", "parquet"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Financial and Insurance Industry",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Office/Business :: Financial",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
 dependencies = [
     "dacite>=1.9.2",
     "pdfplumber>=0.11.9",
@@ -18,6 +32,11 @@ dependencies = [
 [project.scripts]
 bsp = "bank_statement_parser.cli:main"
 bsp-dev = "bank_statement_parser:dev.main"
+
+[project.urls]
+Homepage = "https://github.com/boscorat/bank_statement_parser"
+Repository = "https://github.com/boscorat/bank_statement_parser"
+Issues = "https://github.com/boscorat/bank_statement_parser/issues"
 
 [build-system]
 requires = ["uv_build>=0.9.8,<0.11.0"]
