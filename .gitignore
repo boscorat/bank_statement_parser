@@ -21,6 +21,8 @@ wheels/
 *.parquet
 *.log
 *.pdf
+# allow anonymised test fixtures in tests/pdfs/ subdirectories
+!tests/pdfs/**/anonymised_*.pdf
 *.csv
 *.xlsx
 *.json
