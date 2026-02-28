@@ -40,17 +40,17 @@ create an isolated virtualenv and put `bsp` on your `$PATH`.
 
 ```bash
 # Using pipx
-pipx install bank-statement-parser
+pipx install uk-bank-statement-parser
 
 # Using uv (faster)
-uv tool install bank-statement-parser
+uv tool install uk-bank-statement-parser
 ```
 
 To upgrade later:
 
 ```bash
-pipx upgrade bank-statement-parser   # or
-uv tool upgrade bank-statement-parser
+pipx upgrade uk-bank-statement-parser   # or
+uv tool upgrade uk-bank-statement-parser
 ```
 
 ### Debian / Ubuntu (.deb)
@@ -60,12 +60,12 @@ Download the `.deb` from the
 then install:
 
 ```bash
-sudo dpkg -i bank-statement-parser_0.1.0_all.deb
+sudo dpkg -i uk-bank-statement-parser_0.2.0a1_all.deb
 ```
 
-This installs a self-contained virtualenv to `/opt/bank-statement-parser/`
+This installs a self-contained virtualenv to `/opt/uk-bank-statement-parser/`
 and a `bsp` wrapper to `/usr/bin/bsp`. Uninstall with
-`sudo dpkg -r bank-statement-parser`.
+`sudo dpkg -r uk-bank-statement-parser`.
 
 ### Fedora / RHEL (.rpm)
 
@@ -74,10 +74,10 @@ Download the `.rpm` from the
 then install:
 
 ```bash
-sudo rpm -i bank-statement-parser-0.1.0-1.noarch.rpm
+sudo rpm -i uk-bank-statement-parser-0.2.0a1-1.noarch.rpm
 ```
 
-Uninstall with `sudo rpm -e bank-statement-parser`.
+Uninstall with `sudo rpm -e uk-bank-statement-parser`.
 
 ### From source
 

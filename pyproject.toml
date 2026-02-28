@@ -1,5 +1,5 @@
 [project]
-name = "bank-statement-parser"
+name = "uk-bank-statement-parser"
 version = "0.2.0a1"
 description = "Parse bank statement PDFs, extract transactions, and persist to Parquet and SQLite."
 readme = "README.md"
@@ -41,6 +41,9 @@ Issues = "https://github.com/boscorat/bank_statement_parser/issues"
 [build-system]
 requires = ["uv_build>=0.9.8,<0.11.0"]
 build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "bank_statement_parser"
 
 [dependency-groups]
 dev = [
