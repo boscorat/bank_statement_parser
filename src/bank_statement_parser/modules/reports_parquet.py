@@ -21,8 +21,7 @@ from bank_statement_parser.modules.paths import get_paths
 
 def export_csv(
     folder: Path | None = None,
-    type: str = "full",
-    ID_BATCH: str | None = None,
+    type: str = "simple",
     project_path: Path | None = None,
 ):
     """
@@ -32,9 +31,9 @@ def export_csv(
         folder: Directory to write CSV files into.  When ``None`` the project's
             ``export/csv/`` directory (resolved via *project_path*) is used and
             created automatically if absent.
-        type: Export preset — ``"full"`` (all report tables) or ``"simple"``
-            (flat transactions only).
-        ID_BATCH: Optional batch filter applied to batch-aware reports.
+        type: Export preset — ``"simple"`` (flat transactions table) or
+            ``"full"`` (separate star-schema tables for loading into a
+            database).  Defaults to ``"simple"``.
         project_path: Optional project root used to resolve the default export
             folder and data sources.  Falls back to the bundled default project
             when ``None``.
@@ -44,37 +43,33 @@ def export_csv(
         paths.ensure_subdir_for_write(paths.csv)
         folder = paths.csv
     if type == "full":
-        DimStatement(ID_BATCH, project_path).all.collect().write_csv(
+        DimStatement(project_path).all.collect().write_csv(
             file=folder.joinpath("statement.csv"), separator=",", include_header=True, quote_style="non_numeric", float_precision=2
         )
-        DimAccount(ID_BATCH, project_path).all.collect().write_csv(
+        DimAccount(project_path).all.collect().write_csv(
             file=folder.joinpath("account.csv"), separator=",", include_header=True, quote_style="non_numeric", float_precision=2
         )
-        DimTime(ID_BATCH, project_path).all.collect().write_csv(
+        DimTime(project_path).all.collect().write_csv(
             file=folder.joinpath("calendar.csv"), separator=",", include_header=True, quote_style="non_numeric", float_precision=2
         )
-        FactTransaction(ID_BATCH, project_path).all.collect().write_csv(
+        FactTransaction(project_path).all.collect().write_csv(
             file=folder.joinpath("transactions.csv"), separator=",", include_header=True, quote_style="non_numeric", float_precision=2
         )
-        FactBalance(ID_BATCH, project_path).all.collect().write_csv(
+        FactBalance(project_path).all.collect().write_csv(
             file=folder.joinpath("balances.csv"), separator=",", include_header=True, quote_style="non_numeric", float_precision=2
         )
         GapReport(project_path).all.collect().write_csv(
             file=folder.joinpath("gaps.csv"), separator=",", include_header=True, quote_style="non_numeric", float_precision=2
         )
-        FlatTransaction(ID_BATCH, project_path).all.collect().write_csv(
-            file=folder.joinpath("flat.csv"), separator=",", include_header=True, quote_style="non_numeric", float_precision=2
-        )
     elif type == "simple":
-        FlatTransaction(ID_BATCH, project_path).all.collect().write_csv(
+        FlatTransaction(project_path).all.collect().write_csv(
             file=folder.joinpath("transactions_table.csv"), separator=",", include_header=True, quote_style="non_numeric", float_precision=2
         )
 
 
 def export_excel(
     path: Path | None = None,
-    type: str = "full",
-    ID_BATCH: str | None = None,
+    type: str = "simple",
     project_path: Path | None = None,
 ):
     """
@@ -84,9 +79,9 @@ def export_excel(
         path: Full file path for the output ``.xlsx`` workbook.  When ``None``
             the file is written to ``export/excel/transactions.xlsx`` inside the
             project directory resolved via *project_path*.
-        type: Export preset — ``"full"`` (all report sheets) or ``"simple"``
-            (flat transactions only).
-        ID_BATCH: Optional batch filter applied to batch-aware reports.
+        type: Export preset — ``"simple"`` (flat transactions table) or
+            ``"full"`` (separate star-schema sheets for loading into a
+            database).  Defaults to ``"simple"``.
         project_path: Optional project root used to resolve the default export
             folder and data sources.  Falls back to the bundled default project
             when ``None``.
@@ -97,28 +92,28 @@ def export_excel(
         path = paths.excel / "transactions.xlsx"
     with Workbook(str(path)) as wb:
         if type == "full":
-            DimStatement(ID_BATCH, project_path).all.collect().write_excel(
+            DimStatement(project_path).all.collect().write_excel(
                 workbook=wb,
                 worksheet="statement",
                 autofit=False,
                 table_name="statement",
                 table_style="Table Style Medium 4",
             )
-            DimAccount(ID_BATCH, project_path).all.collect().write_excel(
+            DimAccount(project_path).all.collect().write_excel(
                 workbook=wb,
                 worksheet="account",
                 autofit=False,
                 table_name="account",
                 table_style="Table Style Medium 4",
             )
-            DimTime(ID_BATCH, project_path).all.collect().write_excel(
+            DimTime(project_path).all.collect().write_excel(
                 workbook=wb,
                 worksheet="calendar",
                 autofit=False,
                 table_name="calendar",
                 table_style="Table Style Medium 4",
             )
-            FactTransaction(ID_BATCH, project_path).all.collect().write_excel(
+            FactTransaction(project_path).all.collect().write_excel(
                 workbook=wb,
                 worksheet="transactions",
                 autofit=False,
@@ -126,7 +121,7 @@ def export_excel(
                 table_style="Table Style Medium 4",
                 float_precision=2,
             )
-            FactBalance(ID_BATCH, project_path).all.collect().write_excel(
+            FactBalance(project_path).all.collect().write_excel(
                 workbook=wb,
                 worksheet="balances",
                 autofit=False,
@@ -141,15 +136,8 @@ def export_excel(
                 table_name="gaps",
                 table_style="Table Style Medium 4",
             )
-            FlatTransaction(ID_BATCH, project_path).all.collect().write_excel(
-                workbook=wb,
-                worksheet="flat",
-                autofit=False,
-                table_name="flat",
-                table_style="Table Style Medium 4",
-            )
         elif type == "simple":
-            FlatTransaction(ID_BATCH, project_path).all.collect().write_excel(
+            FlatTransaction(project_path).all.collect().write_excel(
                 workbook=wb,
                 worksheet="transactions_table",
                 autofit=False,
@@ -160,16 +148,16 @@ def export_excel(
 
 def main():
     paths = get_paths()
-    export_excel(paths.excel.joinpath("test.xlsx"), type="simple", ID_BATCH="d74e768f-94a8-4c54-9265-870e3b3c392c")
+    export_excel(paths.excel.joinpath("test.xlsx"), type="simple")
 
 
 class FlatTransaction:
-    def __init__(self, ID_BATCH: str | None = None, project_path: Path | None = None) -> None:
+    def __init__(self, project_path: Path | None = None) -> None:
         self.base: pl.LazyFrame = (
-            FactTransaction(ID_BATCH, project_path)
-            .all.join(DimTime(ID_BATCH, project_path).all, on="id_date", how="inner")
-            .join(DimAccount(ID_BATCH, project_path).all, on="id_account", how="inner")
-            .join(DimStatement(ID_BATCH, project_path).all, on="id_statement", how="inner")
+            FactTransaction(project_path)
+            .all.join(DimTime(project_path).all, on="id_date", how="inner")
+            .join(DimAccount(project_path).all, on="id_account", how="inner")
+            .join(DimStatement(project_path).all, on="id_statement", how="inner")
         )
         self.all: pl.LazyFrame = self.base.select(
             pl.col("id_date").alias("transaction_date"),
@@ -192,23 +180,20 @@ class FlatTransaction:
 
 
 class FactBalance:
-    def __init__(self, ID_BATCH: str | None = None, project_path: Path | None = None) -> None:
+    def __init__(self, project_path: Path | None = None) -> None:
         paths = get_paths(project_path)
         paths.require_subdir_for_read(paths.parquet)
         self.__heads: pl.LazyFrame = (
             pl.read_parquet(paths.statement_heads)
             .lazy()
             .join(
-                pl.read_parquet(paths.batch_lines)
-                .lazy()
-                .filter((pl.lit(ID_BATCH).is_null()) | (pl.col("ID_BATCH") == pl.lit(ID_BATCH)))
-                .select("ID_BATCHLINE"),
+                pl.read_parquet(paths.batch_lines).lazy().select("ID_BATCHLINE"),
                 on="ID_BATCHLINE",
                 how="semi",
             )
         )
         self._cartesian_date_account: pl.LazyFrame = (
-            DimTime(ID_BATCH=ID_BATCH, project_path=project_path)
+            DimTime(project_path=project_path)
             .all.select("id_date")
             .join(self.__heads.select(id_account="ID_ACCOUNT").unique().lazy(), how="cross")
         )
@@ -268,17 +253,14 @@ class FactBalance:
 
 
 class DimTime:
-    def __init__(self, ID_BATCH: str | None = None, project_path: Path | None = None) -> None:
+    def __init__(self, project_path: Path | None = None) -> None:
         paths = get_paths(project_path)
         paths.require_subdir_for_read(paths.parquet)
         self.__heads: pl.DataFrame = (
             pl.read_parquet(paths.statement_heads)
             .lazy()
             .join(
-                pl.read_parquet(paths.batch_lines)
-                .lazy()
-                .filter((pl.lit(ID_BATCH).is_null()) | (pl.col("ID_BATCH") == pl.lit(ID_BATCH)))
-                .select("ID_BATCHLINE"),
+                pl.read_parquet(paths.batch_lines).lazy().select("ID_BATCHLINE"),
                 on="ID_BATCHLINE",
                 how="semi",
             )
@@ -332,17 +314,14 @@ class DimTime:
 
 
 class DimStatement:
-    def __init__(self, ID_BATCH: str | None = None, project_path: Path | None = None) -> None:
+    def __init__(self, project_path: Path | None = None) -> None:
         paths = get_paths(project_path)
         paths.require_subdir_for_read(paths.parquet)
         self.__heads: pl.LazyFrame = (
             pl.read_parquet(paths.statement_heads)
             .lazy()
             .join(
-                pl.read_parquet(paths.batch_lines)
-                .lazy()
-                .filter((pl.lit(ID_BATCH).is_null()) | (pl.col("ID_BATCH") == pl.lit(ID_BATCH)))
-                .select("ID_BATCHLINE"),
+                pl.read_parquet(paths.batch_lines).lazy().select("ID_BATCHLINE"),
                 on="ID_BATCHLINE",
                 how="semi",
             )
@@ -360,17 +339,14 @@ class DimStatement:
 
 
 class DimAccount:
-    def __init__(self, ID_BATCH: str | None = None, project_path: Path | None = None) -> None:
+    def __init__(self, project_path: Path | None = None) -> None:
         paths = get_paths(project_path)
         paths.require_subdir_for_read(paths.parquet)
         self.__heads: pl.LazyFrame = (
             pl.read_parquet(paths.statement_heads)
             .lazy()
             .join(
-                pl.read_parquet(paths.batch_lines)
-                .lazy()
-                .filter((pl.lit(ID_BATCH).is_null()) | (pl.col("ID_BATCH") == pl.lit(ID_BATCH)))
-                .select("ID_BATCHLINE"),
+                pl.read_parquet(paths.batch_lines).lazy().select("ID_BATCHLINE"),
                 on="ID_BATCHLINE",
                 how="semi",
             )
@@ -393,17 +369,14 @@ class DimAccount:
 
 
 class FactTransaction:
-    def __init__(self, ID_BATCH: str | None = None, project_path: Path | None = None) -> None:
+    def __init__(self, project_path: Path | None = None) -> None:
         paths = get_paths(project_path)
         paths.require_subdir_for_read(paths.parquet)
         self.__heads: pl.LazyFrame = (
             pl.read_parquet(paths.statement_heads)
             .lazy()
             .join(
-                pl.read_parquet(paths.batch_lines)
-                .lazy()
-                .filter((pl.lit(ID_BATCH).is_null()) | (pl.col("ID_BATCH") == pl.lit(ID_BATCH)))
-                .select("ID_BATCHLINE"),
+                pl.read_parquet(paths.batch_lines).lazy().select("ID_BATCHLINE"),
                 on="ID_BATCHLINE",
                 how="semi",
             )
