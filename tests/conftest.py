@@ -59,8 +59,7 @@ def good_project() -> Generator[ProjectContext, None, None]:  # type: ignore[mis
             turbo=True,
             project_path=project_path,
         )
-        batch.update_parquet()
-        batch.update_db()
+        batch.update_data()
         batch.delete_temp_files()
 
         yield ProjectContext(project_path=project_path, batch=batch, pdfs=pdfs)

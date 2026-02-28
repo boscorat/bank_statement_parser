@@ -95,7 +95,6 @@ def generate_mock_data(db_path: Path, num_batches: int = 10, statements_per_batc
         sortcode = sortcodes[batch_idx % len(sortcodes)]
         account_type = account_types[batch_idx % len(account_types)]
         id_account = f"{sortcode.replace('-', '')}{account_number}"
-        id_batch = batch_ids[batch_idx]
 
         opening_balance = random.uniform(1000, 5000)
         payments_in = random.uniform(2000, 8000)

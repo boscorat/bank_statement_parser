@@ -1,0 +1,194 @@
+# release.yml — build and publish on version tag push.
+#
+# Triggered by pushing a tag like "v0.1.0".  Three jobs run in sequence:
+#
+#   1. pypi-publish    — build wheel + sdist, publish to PyPI via OIDC.
+#   2. system-packages — build .deb and .rpm via fpm.
+#   3. github-release  — create a GitHub Release with all assets attached.
+#
+# One-time setup required:
+#   - Create a "pypi" environment in GitHub repo Settings > Environments.
+#   - Register a Trusted Publisher on PyPI (account > Publishing):
+#       Owner: boscorat
+#       Repository: bank_statement_parser
+#       Workflow: release.yml
+#       Environment: pypi
+
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  # ── Build wheel + sdist and publish to PyPI ─────────────────────────
+  pypi-publish:
+    name: Build & publish to PyPI
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install Python
+        run: uv python install 3.14
+
+      - name: Validate tag matches pyproject.toml version
+        id: version
+        run: |
+          VERSION=$(uv run python -c "
+          import tomllib
+          with open('pyproject.toml', 'rb') as f:
+              print(tomllib.load(f)['project']['version'])
+          ")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          if [ "$TAG_VERSION" != "$VERSION" ]; then
+            echo "::error::Tag version ($TAG_VERSION) does not match pyproject.toml version ($VERSION)"
+            exit 1
+          fi
+
+      - name: Build sdist and wheel
+        run: uv build
+
+      - name: Smoke-test wheel import
+        run: |
+          uv run --isolated --no-project --with dist/*.whl -- \
+            python -c "import bank_statement_parser; print(bank_statement_parser.__version__)"
+
+      - name: Publish to PyPI
+        run: uv publish
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-dists
+          path: dist/
+
+  # ── Build .deb and .rpm via fpm ─────────────────────────────────────
+  system-packages:
+    name: Build .deb and .rpm
+    runs-on: ubuntu-24.04
+    needs: pypi-publish
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install Python 3.14
+        run: uv python install 3.14
+
+      - name: Extract version
+        id: version
+        run: |
+          VERSION=$(uv run python -c "
+          import tomllib
+          with open('pyproject.toml', 'rb') as f:
+              print(tomllib.load(f)['project']['version'])
+          ")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Create application virtualenv
+        run: |
+          uv venv /tmp/bsp-venv --python 3.14
+          uv pip install --python /tmp/bsp-venv/bin/python .
+
+      - name: Install fpm
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ruby ruby-dev gcc make rpm
+          sudo gem install fpm --no-document
+
+      - name: Create bsp wrapper script
+        run: |
+          mkdir -p /tmp/bsp-pkg/usr/bin
+          cat > /tmp/bsp-pkg/usr/bin/bsp << 'WRAPPER'
+          #!/bin/sh
+          exec /opt/bank-statement-parser/bin/bsp "$@"
+          WRAPPER
+          chmod 755 /tmp/bsp-pkg/usr/bin/bsp
+
+      - name: Build .deb
+        run: |
+          fpm \
+            -s dir \
+            -t deb \
+            -n bank-statement-parser \
+            -v "${{ steps.version.outputs.version }}" \
+            --description "Parse bank statement PDFs, extract transactions, persist to Parquet and SQLite." \
+            --license "MIT" \
+            --maintainer "Jason Farrar <farrar.jason1@gmail.com>" \
+            --url "https://github.com/boscorat/bank_statement_parser" \
+            --vendor "boscorat" \
+            --category "utils" \
+            --architecture all \
+            --depends "python3 >= 3.14" \
+            --deb-no-default-config-files \
+            -p "bank-statement-parser_${{ steps.version.outputs.version }}_all.deb" \
+            /tmp/bsp-venv/=/opt/bank-statement-parser/ \
+            /tmp/bsp-pkg/usr/bin/bsp=/usr/bin/bsp
+
+      - name: Build .rpm
+        run: |
+          fpm \
+            -s dir \
+            -t rpm \
+            -n bank-statement-parser \
+            -v "${{ steps.version.outputs.version }}" \
+            --description "Parse bank statement PDFs, extract transactions, persist to Parquet and SQLite." \
+            --license "MIT" \
+            --maintainer "Jason Farrar <farrar.jason1@gmail.com>" \
+            --url "https://github.com/boscorat/bank_statement_parser" \
+            --vendor "boscorat" \
+            --category "Utilities" \
+            --architecture all \
+            --depends "python3 >= 3.14" \
+            --rpm-os linux \
+            -p "bank-statement-parser-${{ steps.version.outputs.version }}-1.noarch.rpm" \
+            /tmp/bsp-venv/=/opt/bank-statement-parser/ \
+            /tmp/bsp-pkg/usr/bin/bsp=/usr/bin/bsp
+
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: system-packages
+          path: |
+            *.deb
+            *.rpm
+
+  # ── Create GitHub Release with all assets ───────────────────────────
+  github-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [pypi-publish, system-packages]
+    permissions:
+      contents: write
+    steps:
+      - name: Download Python dists
+        uses: actions/download-artifact@v4
+        with:
+          name: python-dists
+          path: dist/
+
+      - name: Download system packages
+        uses: actions/download-artifact@v4
+        with:
+          name: system-packages
+          path: packages/
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            dist/*
+            packages/*

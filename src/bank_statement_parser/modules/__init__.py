@@ -6,7 +6,6 @@ Flat exports (imported directly):
     process_pdf_statement               -- process a single PDF (module-level)
     PdfResult                           -- namedtuple returned by process_pdf_statement
     delete_temp_files                   -- clean up temp parquet files
-    update_parquet                      -- merge temp parquets into permanent files
     StatementError                      -- root of the exception hierarchy
     pdf_open, page_crop, page_text,
     region_search, get_table_from_region -- low-level pdfplumber helpers
@@ -36,7 +35,6 @@ from bank_statement_parser.modules.statements import (
     StatementBatch,
     delete_temp_files,
     process_pdf_statement,
-    update_parquet,
 )
 
 __all__ = [
@@ -46,7 +44,6 @@ __all__ = [
     "process_pdf_statement",
     "PdfResult",
     "delete_temp_files",
-    "update_parquet",
     # Config helpers
     "copy_default_config",
     "copy_project_folders",
