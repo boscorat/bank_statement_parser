@@ -28,10 +28,8 @@ Run with:
 
 import sqlite3
 from datetime import timedelta
-from pathlib import Path
 
 import polars as pl
-import pytest
 
 from bank_statement_parser.modules import reports_db as db
 from bank_statement_parser.modules import reports_parquet as parquet

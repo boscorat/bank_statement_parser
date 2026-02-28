@@ -34,4 +34,4 @@ dev = [
 [tool.ruff]
 line-length = 140
 target-version = "py310"
-unfixable = ["F401"]
+lint.unfixable = ["F401"]
