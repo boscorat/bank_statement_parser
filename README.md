@@ -24,7 +24,8 @@ workbooks or CSV files.
 - **Export** — single flat transactions table (default) or separate star-schema
   tables, as Excel and/or CSV.
 - **PDF anonymisation** — redact personally identifiable information from
-  statement PDFs.
+  statement PDFs using a user-supplied mapping file. Transaction descriptions
+  are scrambled so merchant names cannot be recovered.
 - **Parallel processing** — async + multiprocess batch mode for large PDF sets.
 - **Cross-platform** — pure Python with no OS-specific dependencies.
 
@@ -139,7 +140,66 @@ bsp process --pdfs ~/statements --export-type full
 ### `bsp anonymise`
 
 Replace personally identifiable information in bank statement PDFs with dummy
-values.
+values. The anonymiser physically rewrites the PDF content stream — sensitive
+text is removed from the file, not merely covered with a rectangle. Transaction
+descriptions are also scrambled (each letter replaced with a random different
+letter) so that merchant names and references cannot be recovered.
+
+#### Setting up your anonymise config
+
+Anonymisation is driven by a TOML config file (`anonymise.toml`) that maps
+your real personal details to dummy replacements. **This file is never included
+in the default project** because it contains PII and is excluded from source
+control via `.gitignore`.
+
+When you create a project (via `bsp process` or `validate_or_initialise_project()`),
+an example template is copied into the project config directory:
+
+```
+bsp_project/config/anonymise_example.toml
+```
+
+To set up anonymisation:
+
+1. **Copy** `anonymise_example.toml` to `anonymise.toml` in the same directory
+   (or any location you prefer).
+2. **Edit** `anonymise.toml` — replace the left-hand (search) values with the
+   real text as it appears in your PDFs, and the right-hand (replacement) values
+   with the dummy text you want rendered instead.
+3. **Pass the path** to your `anonymise.toml` via the `--config` flag, since the
+   default project directory will never contain one.
+
+The config has two sections:
+
+- **`[global_replacements]`** — applied on every page across the full page area.
+  Use for names, account numbers, sort codes, IBANs, and card numbers.
+- **`[address_replacements]`** — applied on **page 1 only**, within the personal
+  address block at the top-left corner. Use for address lines, city names, and
+  postcodes that might also appear as merchant/location names in transaction
+  descriptions (where you would *not* want them replaced).
+
+**Ordering matters:** within each section, entries are applied top-to-bottom.
+Always place longer, more specific strings *before* shorter fragments. For
+example, list `"John William Surname"` before `"Surname"` — otherwise the
+fragment match fires first and corrupts the full-name replacement.
+
+#### Checking your output
+
+Anonymised PDFs should always be **reviewed carefully before sharing**. The
+anonymiser cannot guarantee perfect results in every case — font encoding
+differences, unusual character spacing, or layout variations may cause some
+replacements to render incorrectly or miss certain occurrences. Open each
+output file and verify that:
+
+- All personal details (names, addresses, account numbers) have been replaced.
+- Replacement text renders correctly and is the expected length.
+- No sensitive information remains in headers, footers, or transaction
+  descriptions.
+
+You may need to make manual edits to the PDF or adjust your `anonymise.toml`
+mappings and re-run.
+
+#### Command reference
 
 ```
 bsp anonymise PATH [OPTIONS]
@@ -157,14 +217,14 @@ bsp anonymise PATH [OPTIONS]
 **Examples:**
 
 ```bash
-# Anonymise a single PDF
-bsp anonymise statement.pdf
+# Anonymise a single PDF using a config in your home directory
+bsp anonymise statement.pdf --config ~/anonymise.toml
 
 # Anonymise all PDFs in a folder
-bsp anonymise ~/statements --folder
+bsp anonymise ~/statements --folder --config ~/anonymise.toml
 
 # Anonymise to a specific output directory
-bsp anonymise ~/statements --folder --output-dir ~/anonymised
+bsp anonymise ~/statements --folder --output-dir ~/anonymised --config ~/anonymise.toml
 ```
 
 ## Python API Reference
@@ -260,9 +320,23 @@ When `folder` / `path` is omitted, files are written to the project's
 ### PDF Anonymisation
 
 ```python
-bsp.anonymise_pdf(input_path, output_path=None, config_path=None)
-bsp.anonymise_folder(folder_path, pattern="*.pdf", output_dir=None, config_path=None)
+bsp.anonymise_pdf(input_path, output_path=None, config_path=None, scramble_descriptions=True)
+bsp.anonymise_folder(folder_path, pattern="*.pdf", output_dir=None, config_path=None, scramble_descriptions=True)
 ```
+
+Both functions require a path to your `anonymise.toml` via `config_path`.
+There is no default `anonymise.toml` in the project — you must create one from
+the `anonymise_example.toml` template (see
+[Setting up your anonymise config](#setting-up-your-anonymise-config) above).
+If `config_path` is omitted, the function looks in the default project config
+directory and raises `FileNotFoundError` with instructions if the file is
+missing.
+
+Set `scramble_descriptions=False` to disable the random letter substitution
+of transaction descriptions (enabled by default).
+
+Always review the output files before sharing — see
+[Checking your output](#checking-your-output) above.
 
 ## Project Structure
 
@@ -271,6 +345,7 @@ Running `bsp process` creates the following project layout:
 ```
 bsp_project/
 ├── config/              # TOML configuration files
+│   └── anonymise_example.toml  # Template — copy to anonymise.toml and edit
 ├── database/
 │   └── project.db       # SQLite database (raw tables + star-schema mart)
 ├── export/
