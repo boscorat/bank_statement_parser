@@ -20,6 +20,7 @@ from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
 from time import time
+from typing import Literal
 from uuid import uuid4
 
 import polars as pl
@@ -965,35 +966,58 @@ class StatementBatch:
             skip_project_validation=True,
         )
 
-    def update_parquet(self, project_path: Path | None = None) -> None:
+    def update_data(
+        self,
+        datadestination: Literal["parquet", "database", "both"] = "both",
+        project_path: Path | None = None,
+    ) -> None:
         """
-        Update parquet files with processed results from all PDFs.
+        Persist processed batch results to Parquet files, the SQLite database, or both.
 
-        Delegates to the module-level `update_parquet` function, passing only
-        the data required (no reference to this StatementBatch instance).
-        Records timing in parquet_secs and updates total duration.
-
-        This method should be called after processing to finalize the batch
-        and write the batch header information.
+        Delegates to the module-level :func:`update_parquet` and/or
+        :func:`update_db` functions, passing only the data required (no
+        reference to this :class:`StatementBatch` instance).  Records timing
+        in :attr:`parquet_secs` / :attr:`db_secs` and updates
+        :attr:`duration_secs` accordingly.
 
         Args:
-            project_path: Optional project root directory for parquet output.
-                If not provided, uses the project_path set on this batch, or
-                the default project folder.
+            datadestination: Persistence target.  ``"parquet"`` writes only to
+                the permanent Parquet files; ``"database"`` writes only to the
+                SQLite star-schema; ``"both"`` (default) writes to both in
+                sequence — Parquet first, then the database.
+            project_path: Optional project root directory.  If not provided,
+                uses the project_path set on this batch, or the default project
+                folder.
         """
-        self.parquet_secs = update_parquet(
-            processed_pdfs=self.processed_pdfs,
-            batch_id=self.ID_BATCH,
-            path=self.path,
-            company_key=self.company_key,
-            account_key=self.account_key,
-            pdf_count=self.pdf_count,
-            errors=self.errors,
-            duration_secs=self.duration_secs,
-            process_time=self.process_time,
-            project_path=project_path if project_path is not None else self.project_path,
-        )
-        self.duration_secs += self.parquet_secs
+        resolved = project_path if project_path is not None else self.project_path
+        if datadestination in ("parquet", "both"):
+            self.parquet_secs = update_parquet(
+                processed_pdfs=self.processed_pdfs,
+                batch_id=self.ID_BATCH,
+                path=self.path,
+                company_key=self.company_key,
+                account_key=self.account_key,
+                pdf_count=self.pdf_count,
+                errors=self.errors,
+                duration_secs=self.duration_secs,
+                process_time=self.process_time,
+                project_path=resolved,
+            )
+            self.duration_secs += self.parquet_secs
+        if datadestination in ("database", "both"):
+            self.db_secs = update_db(
+                processed_pdfs=self.processed_pdfs,
+                batch_id=self.ID_BATCH,
+                path=self.path,
+                company_key=self.company_key,
+                account_key=self.account_key,
+                pdf_count=self.pdf_count,
+                errors=self.errors,
+                duration_secs=self.duration_secs,
+                process_time=self.process_time,
+                project_path=resolved,
+            )
+            self.duration_secs += self.db_secs
 
     def copy_statements_to_project(self, project_path: Path | None = None) -> list[Path]:
         """
@@ -1031,41 +1055,61 @@ class StatementBatch:
         only the processed PDF results list (no reference to this instance).
 
         This method cleans up the temporary parquet files that were created
-        when processing each PDF. Call this method after calling both
-        update_parquet() and update_db() to persist the data in multiple
-        formats.
+        when processing each PDF. Call this method after calling
+        update_data() to persist the data.
         """
         delete_temp_files(self.processed_pdfs, self.project_path)
 
-    def update_db(self, project_path: Path | None = None):
+    def export(
+        self,
+        datasource: Literal["parquet", "database"] = "parquet",
+        filetype: Literal["excel", "csv"] = "excel",
+        folder: Path | None = None,
+        type: str = "full",
+        project_path: Path | None = None,
+    ) -> None:
         """
-        Update database tables with processed results from all PDFs.
+        Export processed batch data to a file or set of files.
 
-        Delegates to the module-level `update_db` function in database.py,
-        passing only the data required (no reference to this StatementBatch
-        instance). Records timing in db_secs and updates total duration.
-
-        This method should be called after processing to finalize the batch
-        and write the batch header information to the database.
+        Delegates to the appropriate module-level export function based on
+        *datasource* and *filetype*.  When neither *folder* nor *project_path*
+        is supplied the function writes to the project's ``export/csv/`` or
+        ``export/excel/`` sub-directory, creating it if absent.
 
         Args:
-            project_path: Optional project root directory.
-                If not provided, uses the project_path set on this batch, or
-                the default project directory.
+            datasource: Data backend to read from.  ``"parquet"`` reads from the
+                permanent Parquet files; ``"database"`` reads from the SQLite
+                star-schema views.  Defaults to ``"parquet"``.
+            filetype: Output format.  ``"excel"`` writes a single ``.xlsx``
+                workbook; ``"csv"`` writes one CSV file per report table.
+                Defaults to ``"excel"``.
+            folder: For ``filetype="csv"``: directory to write CSV files into,
+                or the workbook path for ``filetype="excel"``.  When ``None``
+                the default export sub-directory for the resolved project is
+                used.
+            type: Export preset passed through to the underlying function.
+                ``"full"`` exports all report tables; ``"simple"`` exports the
+                flat transactions table only.  Defaults to ``"full"``.
+            project_path: Optional project root directory.  If not provided,
+                uses the project_path set on this batch, or the default project
+                folder.
         """
-        self.db_secs = update_db(
-            processed_pdfs=self.processed_pdfs,
-            batch_id=self.ID_BATCH,
-            path=self.path,
-            company_key=self.company_key,
-            account_key=self.account_key,
-            pdf_count=self.pdf_count,
-            errors=self.errors,
-            duration_secs=self.duration_secs,
-            process_time=self.process_time,
-            project_path=project_path if project_path is not None else self.project_path,
-        )
-        self.duration_secs += self.db_secs
+        resolved_project_path = project_path if project_path is not None else self.project_path
+
+        if datasource == "parquet":
+            import bank_statement_parser.modules.reports_parquet as _rp
+
+            if filetype == "excel":
+                _rp.export_excel(path=folder, type=type, ID_BATCH=self.ID_BATCH, project_path=resolved_project_path)
+            else:
+                _rp.export_csv(folder=folder, type=type, ID_BATCH=self.ID_BATCH, project_path=resolved_project_path)
+        else:
+            import bank_statement_parser.modules.reports_db as _rd
+
+            if filetype == "excel":
+                _rd.export_excel(path=folder, type=type, id_batch=self.ID_BATCH, project_path=resolved_project_path)
+            else:
+                _rd.export_csv(folder=folder, type=type, id_batch=self.ID_BATCH, project_path=resolved_project_path)
 
     def debug(self, project_path: Path | None = None) -> int:
         """

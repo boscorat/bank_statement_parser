@@ -13,8 +13,11 @@ Quick start
 
     # Process a batch of PDFs
     batch = bsp.StatementBatch(pdfs=[Path("statement.pdf")])
-    batch.update_parquet()
-    batch.update_db()
+    batch.update_data()                                       # writes to parquet + database
+    batch.update_data(datadestination="parquet")              # parquet only
+    batch.update_data(datadestination="database")             # database only
+    batch.export(datasource="parquet", filetype="excel")  # writes to project export/excel/
+    batch.export(datasource="database", filetype="csv")   # writes to project export/csv/
     batch.copy_statements_to_project()  # copy PDFs to project/statements/{year}/{account}/
     batch.delete_temp_files()
 
@@ -35,6 +38,9 @@ Namespaced report backends
 Both ``bsp.parquet`` and ``bsp.db`` expose the same class names
 (FlatTransaction, FactBalance, DimTime, DimStatement, DimAccount,
 FactTransaction, GapReport) plus ``export_csv`` / ``export_excel`` helpers.
+Both export functions now accept an optional first argument (``folder`` /
+``path``); when omitted they write to the project's ``export/csv/`` or
+``export/excel/`` sub-directory automatically.
 
     bsp.parquet.FlatTransaction(...)
     bsp.db.FlatTransaction(...)
@@ -68,7 +74,6 @@ import bank_statement_parser.modules.reports_parquet as parquet
 # ---------------------------------------------------------------------------
 # Statement processing
 # ---------------------------------------------------------------------------
-from bank_statement_parser.modules.parquet import update_parquet
 from bank_statement_parser.modules.statements import (
     Statement,
     StatementBatch,
@@ -131,7 +136,6 @@ __all__ = [
     "process_pdf_statement",
     "copy_statements_to_project",
     "delete_temp_files",
-    "update_parquet",
     # Debug / diagnostics
     "debug_pdf_statement",
     "debug_statements",
