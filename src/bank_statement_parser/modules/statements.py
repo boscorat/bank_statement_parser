@@ -12,6 +12,7 @@ Classes:
 
 import asyncio
 import hashlib
+import multiprocessing
 import os
 import sys
 import traceback
@@ -923,17 +924,46 @@ class StatementBatch:
         Uses ProcessPoolExecutor to distribute PDF processing across
         multiple CPU cores for improved performance.
 
+        Workers are submitted as calls to the module-level
+        :func:`process_pdf_statement` function rather than bound methods,
+        so no ``StatementBatch`` instance is pickled and sent to the child
+        process.
+
+        An explicit ``forkserver`` multiprocessing context is used on all
+        platforms that support it (Linux / macOS).  This prevents the
+        ``fork``-safety deadlock that occurs when worker processes are forked
+        from a parent that already has asyncio threads running (the default
+        ``fork`` start-method on Python ≤ 3.13 Linux).  Python 3.14 changed
+        the default to ``forkserver`` on Linux (gh-84559), but being explicit
+        here ensures consistent behaviour across Python 3.11–3.14+.
+
         Returns:
             list: List of processed PDF results from all workers.
         """
         self.turbo = True
         loop = asyncio.get_running_loop()
+        mp_context = multiprocessing.get_context("forkserver")
 
-        with ProcessPoolExecutor(max_workers=CPU_WORKERS) as executor:
-            # Submit all PDF processing tasks to the executor
-            tasks = [loop.run_in_executor(executor, self.process_single_pdf, idx, pdf) for idx, pdf in enumerate(self.pdfs)]
+        with ProcessPoolExecutor(max_workers=CPU_WORKERS, mp_context=mp_context) as executor:
+            # Pass the module-level function and individual scalar args directly —
+            # avoids pickling the entire StatementBatch instance (self).
+            tasks = [
+                loop.run_in_executor(
+                    executor,
+                    process_pdf_statement,
+                    idx,
+                    pdf,
+                    self.ID_BATCH,
+                    self.company_key,
+                    self.account_key,
+                    self.project_path,
+                    True,  # skip_project_validation
+                )
+                for idx, pdf in enumerate(self.pdfs)
+            ]
 
-            # Wait for all tasks to complete and collect results
+            # return_exceptions=True so a worker crash is captured as a
+            # BaseException entry rather than aborting the whole gather.
             processed_pdfs = await asyncio.gather(*tasks, return_exceptions=True)
 
         return processed_pdfs
@@ -942,11 +972,15 @@ class StatementBatch:
         """
         Process a single PDF file and save results to parquet files.
 
-        Delegates to the module-level `process_pdf_statement` function, passing
-        only the data required (no reference to this StatementBatch instance).
-        Returns a :class:`PdfResult` so the parent process can count errors
-        after all workers complete (necessary for turbo mode where worker-side
-        mutations to ``self.errors`` are lost across process boundaries).
+        Delegates to the module-level :func:`process_pdf_statement` function,
+        passing only the data required (no reference to this
+        :class:`StatementBatch` instance).
+
+        .. note::
+            This method is used by the sequential (:meth:`process`) path.
+            The turbo path (:meth:`__process_batch_turbo`) calls
+            :func:`process_pdf_statement` directly to avoid pickling ``self``
+            across process boundaries.
 
         Args:
             idx: Index position of this PDF in the batch.
