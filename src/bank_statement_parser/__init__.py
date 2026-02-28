@@ -61,8 +61,10 @@ Errors
     bsp.ProjectConfigMissing    -- config/ absent or empty in an otherwise-valid project
 """
 
+from importlib.metadata import version as _pkg_version
+
 __app_name__ = "bank-statement-parser"
-__version__ = "0.1.0"
+__version__ = _pkg_version(__app_name__)
 
 # ---------------------------------------------------------------------------
 # Namespaced report backends — import the sub-modules so callers can do
