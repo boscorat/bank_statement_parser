@@ -12,16 +12,16 @@ from time import time
 
 import polars as pl
 
+from bank_statement_parser.data.build_datamart import build_datamart
+from bank_statement_parser.modules.data import PdfResult
+from bank_statement_parser.modules.errors import ProjectDatabaseMissing
+from bank_statement_parser.modules.paths import get_paths
+
 # Python 3.12+ deprecates the built-in date/datetime adapters for sqlite3.
 # Register explicit ISO-format adapters so that datetime.date and
 # datetime.datetime values are stored as TEXT without triggering warnings.
 sqlite3.register_adapter(date, lambda d: d.isoformat())
 sqlite3.register_adapter(datetime, lambda dt: dt.isoformat())
-
-from bank_statement_parser.data.build_datamart import build_datamart
-from bank_statement_parser.modules.data import PdfResult
-from bank_statement_parser.modules.errors import ProjectDatabaseMissing
-from bank_statement_parser.modules.paths import get_paths
 
 
 def _require_db(db_path: Path) -> None:

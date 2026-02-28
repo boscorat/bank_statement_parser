@@ -20,9 +20,7 @@ def main():
         # project_path=Path("/home/boscorat/Projects/Telford"),
     )
     print(f"total: {batch.duration_secs}, process: {batch.process_secs}, parquet: {batch.parquet_secs}, db: {batch.db_secs}")
-    batch.update_parquet()
-    # batch.update_db(db_path=Path("/home/boscorat/repos/bank_statement_parser/src/bank_statement_parser/project/database/project.db"))
-    batch.update_db()
+    batch.update_data()
     batch.copy_statements_to_project()
     batch.delete_temp_files()
     print(f"total: {batch.duration_secs}, process: {batch.process_secs}, parquet: {batch.parquet_secs}, db: {batch.db_secs}")

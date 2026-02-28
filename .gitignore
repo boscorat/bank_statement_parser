@@ -21,6 +21,8 @@ wheels/
 *.parquet
 *.log
 *.pdf
+# allow anonymised test fixtures in tests/pdfs/ subdirectories
+!tests/pdfs/**/anonymised_*.pdf
 *.csv
 *.xlsx
 *.json
@@ -28,9 +30,6 @@ wheels/
 
 # anonymise.toml contains real PII — never commit it
 src/bank_statement_parser/project/config/anonymise.toml
-
-# ai agent files
-AGENTS.md
 
 # test project directories (created and deleted by integration tests)
 tests/test_project/

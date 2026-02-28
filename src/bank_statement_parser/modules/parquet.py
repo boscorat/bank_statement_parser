@@ -1,10 +1,28 @@
+"""
+Parquet read/write classes and batch-update helpers.
+
+Classes:
+    Parquet: Base class for parquet file operations (create, update, delete, truncate).
+    ChecksAndBalances: Parquet wrapper for checks-and-balances records.
+    StatementHeads: Parquet wrapper for statement header records.
+    StatementLines: Parquet wrapper for statement transaction-line records.
+    BatchHeads: Parquet wrapper for batch header metadata.
+    BatchLines: Parquet wrapper for per-PDF batch-line records.
+
+Functions:
+    update_parquet: Merge per-PDF temp parquet files into permanent files and write
+        the batch header.
+"""
+
 from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
+from time import time
 
 import polars as pl
 
+from bank_statement_parser.modules.data import PdfResult
 from bank_statement_parser.modules.paths import ProjectPaths, get_paths
 
 
@@ -416,6 +434,93 @@ class BatchLines(Parquet):
         destination_file = _resolve_parquet_file(paths, dest_default, destination_filename)
 
         super().__init__(destination_file, self.schema, self.records, self.key)
+
+
+def update_parquet(
+    processed_pdfs: list[BaseException | PdfResult],
+    batch_id: str,
+    path: str,
+    company_key: str | None,
+    account_key: str | None,
+    pdf_count: int,
+    errors: int,
+    duration_secs: float,
+    process_time: datetime,
+    project_path: Path | None = None,
+) -> float:
+    """
+    Update parquet files with processed results from all PDFs in a batch.
+
+    Iterates through processed PDFs, handles any exceptions, and updates
+    the main parquet files from temporary files created during processing.
+    Also writes batch header metadata. Should be called after all PDFs have
+    been processed to finalise the batch.
+
+    Args:
+        processed_pdfs: List of :class:`~bank_statement_parser.modules.data.PdfResult`
+            entries as returned by
+            :func:`~bank_statement_parser.modules.statements.process_pdf_statement`,
+            or :class:`BaseException` for any entry that raised an unhandled worker error.
+        batch_id: Unique identifier for this batch.
+        path: String representation of parent directories of the processed PDFs.
+        company_key: Optional company identifier used for this batch.
+        account_key: Optional account identifier used for this batch.
+        pdf_count: Total number of PDFs in the batch.
+        errors: Count of failed statement processings.
+        duration_secs: Total processing time accumulated so far (seconds).
+        process_time: Timestamp when batch processing started.
+        project_path: Optional project root directory for parquet output.
+            If not provided, uses the default project folder.
+
+    Returns:
+        float: Time spent updating parquet files (seconds).
+    """
+    update_start = time()
+    for pdf in processed_pdfs:
+        # Skip any exceptions that occurred during processing
+        if isinstance(pdf, BaseException):
+            return 0.0
+        elif isinstance(pdf, PdfResult):
+            if pdf.batch_lines_stem:
+                bl = BatchLines(source_filename=pdf.batch_lines_stem, project_path=project_path)
+                bl.update()
+                bl.cleanup()
+                bl = None
+            if pdf.statement_heads_stem:
+                sh = StatementHeads(source_filename=pdf.statement_heads_stem, project_path=project_path)
+                sh.update()
+                sh.cleanup()
+                sh = None
+            if pdf.statement_lines_stem:
+                sl = StatementLines(source_filename=pdf.statement_lines_stem, project_path=project_path)
+                sl.update()
+                sl.cleanup()
+                sl = None
+            if pdf.cab_stem:
+                cb = ChecksAndBalances(source_filename=pdf.cab_stem, project_path=project_path)
+                cb.update()
+                cb.cleanup()
+                cb = None
+
+    parquet_secs = time() - update_start
+
+    # Write batch header metadata to parquet
+    pq_heads = BatchHeads(
+        batch_id=batch_id,
+        path=path,
+        company_key=company_key,
+        account_key=account_key,
+        pdf_count=pdf_count,
+        errors=errors,
+        duration_secs=duration_secs + parquet_secs,
+        process_time=process_time,
+        project_path=project_path,
+    )
+    pq_heads.create()
+    pq_heads.cleanup()
+    pq_heads = None
+
+    return parquet_secs
 
 
 def main():
