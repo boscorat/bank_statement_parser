@@ -63,7 +63,7 @@ Errors
 
 from importlib.metadata import version as _pkg_version
 
-__app_name__ = "bank-statement-parser"
+__app_name__ = "uk-bank-statement-parser"
 __version__ = _pkg_version(__app_name__)
 
 # ---------------------------------------------------------------------------

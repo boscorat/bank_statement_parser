@@ -113,7 +113,7 @@ jobs:
           mkdir -p /tmp/bsp-pkg/usr/bin
           cat > /tmp/bsp-pkg/usr/bin/bsp << 'WRAPPER'
           #!/bin/sh
-          exec /opt/bank-statement-parser/bin/bsp "$@"
+          exec /opt/uk-bank-statement-parser/bin/bsp "$@"
           WRAPPER
           chmod 755 /tmp/bsp-pkg/usr/bin/bsp
 
@@ -122,7 +122,7 @@ jobs:
           fpm \
             -s dir \
             -t deb \
-            -n bank-statement-parser \
+            -n uk-bank-statement-parser \
             -v "${{ steps.version.outputs.version }}" \
             --description "Parse bank statement PDFs, extract transactions, persist to Parquet and SQLite." \
             --license "MIT" \
@@ -133,8 +133,8 @@ jobs:
             --architecture all \
             --depends "python3 >= 3.14" \
             --deb-no-default-config-files \
-            -p "bank-statement-parser_${{ steps.version.outputs.version }}_all.deb" \
-            /tmp/bsp-venv/=/opt/bank-statement-parser/ \
+            -p "uk-bank-statement-parser_${{ steps.version.outputs.version }}_all.deb" \
+            /tmp/bsp-venv/=/opt/uk-bank-statement-parser/ \
             /tmp/bsp-pkg/usr/bin/bsp=/usr/bin/bsp
 
       - name: Build .rpm
@@ -142,7 +142,7 @@ jobs:
           fpm \
             -s dir \
             -t rpm \
-            -n bank-statement-parser \
+            -n uk-bank-statement-parser \
             -v "${{ steps.version.outputs.version }}" \
             --description "Parse bank statement PDFs, extract transactions, persist to Parquet and SQLite." \
             --license "MIT" \
@@ -153,8 +153,8 @@ jobs:
             --architecture all \
             --depends "python3 >= 3.14" \
             --rpm-os linux \
-            -p "bank-statement-parser-${{ steps.version.outputs.version }}-1.noarch.rpm" \
-            /tmp/bsp-venv/=/opt/bank-statement-parser/ \
+            -p "uk-bank-statement-parser-${{ steps.version.outputs.version }}-1.noarch.rpm" \
+            /tmp/bsp-venv/=/opt/uk-bank-statement-parser/ \
             /tmp/bsp-pkg/usr/bin/bsp=/usr/bin/bsp
 
       - name: Upload package artifacts
