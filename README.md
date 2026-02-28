@@ -31,11 +31,53 @@ workbooks or CSV files.
 
 ## Installation
 
-### From PyPI (once published)
+Requires **Python 3.14** or later.
+
+### From PyPI
+
+The recommended way to install for most users. Both `pipx` and `uv tool`
+create an isolated virtualenv and put `bsp` on your `$PATH`.
 
 ```bash
-pip install bank-statement-parser
+# Using pipx
+pipx install bank-statement-parser
+
+# Using uv (faster)
+uv tool install bank-statement-parser
 ```
+
+To upgrade later:
+
+```bash
+pipx upgrade bank-statement-parser   # or
+uv tool upgrade bank-statement-parser
+```
+
+### Debian / Ubuntu (.deb)
+
+Download the `.deb` from the
+[latest GitHub Release](https://github.com/boscorat/bank_statement_parser/releases/latest),
+then install:
+
+```bash
+sudo dpkg -i bank-statement-parser_0.1.0_all.deb
+```
+
+This installs a self-contained virtualenv to `/opt/bank-statement-parser/`
+and a `bsp` wrapper to `/usr/bin/bsp`. Uninstall with
+`sudo dpkg -r bank-statement-parser`.
+
+### Fedora / RHEL (.rpm)
+
+Download the `.rpm` from the
+[latest GitHub Release](https://github.com/boscorat/bank_statement_parser/releases/latest),
+then install:
+
+```bash
+sudo rpm -i bank-statement-parser-0.1.0-1.noarch.rpm
+```
+
+Uninstall with `sudo rpm -e bank-statement-parser`.
 
 ### From source
 
@@ -44,8 +86,6 @@ git clone https://github.com/boscorat/bank_statement_parser.git
 cd bank_statement_parser
 uv sync
 ```
-
-Requires **Python 3.14** or later.
 
 ## Quick Start
 
@@ -401,6 +441,20 @@ pytest -v
 ruff check .
 ruff format .
 ```
+
+### Releasing a new version
+
+1. Bump the version in `pyproject.toml` (the single source of truth).
+2. Commit and tag:
+   ```bash
+   git add pyproject.toml uv.lock
+   git commit -m "release: v0.2.0"
+   git tag -a v0.2.0 -m "v0.2.0"
+   git push origin main --tags
+   ```
+3. The `release.yml` workflow runs automatically — builds and publishes to
+   PyPI, builds `.deb` and `.rpm` packages, and creates a GitHub Release with
+   all assets attached.
 
 ## License
 
