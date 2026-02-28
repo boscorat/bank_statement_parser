@@ -68,13 +68,13 @@ import bank_statement_parser.modules.reports_parquet as parquet
 # ---------------------------------------------------------------------------
 # Statement processing
 # ---------------------------------------------------------------------------
+from bank_statement_parser.modules.parquet import update_parquet
 from bank_statement_parser.modules.statements import (
     Statement,
     StatementBatch,
     copy_statements_to_project,
     delete_temp_files,
     process_pdf_statement,
-    update_parquet,
 )
 
 # ---------------------------------------------------------------------------
