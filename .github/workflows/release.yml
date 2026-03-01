@@ -38,7 +38,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
 
       - name: Install Python
-        run: uv python install 3.12.3
+        run: uv python install 3.14.2
 
       - name: Validate tag matches pyproject.toml version
         id: version
@@ -84,8 +84,8 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
-      - name: Install Python 3.12.3
-        run: uv python install 3.12.3
+      - name: Install Python 3.14.2
+        run: uv python install 3.14.2
 
       - name: Extract version
         id: version
@@ -99,8 +99,22 @@ jobs:
 
       - name: Create application virtualenv
         run: |
-          uv venv /tmp/bsp-venv --python 3.12.3
+          uv venv /tmp/bsp-venv --python 3.14.2
           uv pip install --python /tmp/bsp-venv/bin/python .
+
+      - name: Fix venv Python binary and shebangs for install path
+        run: |
+          # Copy the real CPython binary into the venv (uv uses a symlink to its
+          # managed install, which becomes broken after packaging).
+          REAL_PY=$(readlink -f /tmp/bsp-venv/bin/python)
+          cp "$REAL_PY" /tmp/bsp-venv/bin/python
+          # Repoint python3 and python3.14 symlinks to the copied binary.
+          ln -sf python /tmp/bsp-venv/bin/python3
+          ln -sf python /tmp/bsp-venv/bin/python3.14
+          # Rewrite all shebangs in venv scripts from the build-time path to the
+          # post-install path so console scripts work after dpkg/rpm installs.
+          grep -rl '#!/tmp/bsp-venv/' /tmp/bsp-venv/bin/ | \
+            xargs sed -i 's|#!/tmp/bsp-venv/|#!/opt/uk-bank-statement-parser/|g'
 
       - name: Install fpm
         run: |
@@ -131,7 +145,6 @@ jobs:
             --vendor "boscorat" \
             --category "utils" \
             --architecture all \
-            --depends "python3 >= 3.11" \
             --deb-no-default-config-files \
             -p "uk-bank-statement-parser_${{ steps.version.outputs.version }}_all.deb" \
             /tmp/bsp-venv/=/opt/uk-bank-statement-parser/ \
@@ -151,7 +164,6 @@ jobs:
             --vendor "boscorat" \
             --category "Utilities" \
             --architecture all \
-            --depends "python3 >= 3.11" \
             --rpm-os linux \
             -p "uk-bank-statement-parser-${{ steps.version.outputs.version }}-1.noarch.rpm" \
             /tmp/bsp-venv/=/opt/uk-bank-statement-parser/ \
