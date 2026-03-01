@@ -102,25 +102,39 @@ jobs:
           uv venv /tmp/bsp-venv --python 3.14.2
           uv pip install --python /tmp/bsp-venv/bin/python .
 
-      - name: Fix venv Python binary and shebangs for install path
+      - name: Make venv self-contained for packaging
         run: |
-          # Copy the real CPython binary into the venv (uv may use a hardlink to
-          # its managed install; --remove-destination unlinks first so cp always
-          # produces an independent copy that survives packaging).
-          REAL_PY=$(readlink -f /tmp/bsp-venv/bin/python)
-          cp --remove-destination "$REAL_PY" /tmp/bsp-venv/bin/python
-          # Repoint python3 and python3.14 symlinks to the copied binary.
+          # Resolve the base Python installation that uv used for this venv.
+          BASE_DIR=$(dirname "$(dirname "$(readlink -f /tmp/bsp-venv/bin/python)")")
+
+          # 1. Copy the real CPython binary into the venv (uv hardlinks it from
+          #    its managed install; --remove-destination breaks the link so the
+          #    binary survives packaging as an independent copy).
+          cp --remove-destination "$BASE_DIR/bin/python3.14" /tmp/bsp-venv/bin/python
           ln -sf python /tmp/bsp-venv/bin/python3
           ln -sf python /tmp/bsp-venv/bin/python3.14
-          # Rewrite all shebangs in venv scripts from the build-time path to the
-          # post-install path so console scripts work after dpkg/rpm installs.
+
+          # 2. Copy the stdlib into the venv.  A virtualenv only contains
+          #    site-packages; the stdlib lives in the base install.  We merge it
+          #    in so the package is fully self-contained.
+          cp -rn "$BASE_DIR/lib/python3.14/"* /tmp/bsp-venv/lib/python3.14/
+
+          # 3. Remove pyvenv.cfg so the interpreter sees this tree as a regular
+          #    prefix install (bin/ + lib/python3.14/) rather than a virtualenv
+          #    with a dangling 'home' reference to the build machine.
+          rm /tmp/bsp-venv/pyvenv.cfg
+
+          # 4. Rewrite shebangs from the build-time path to the install path.
           grep -rl '#!/tmp/bsp-venv/' /tmp/bsp-venv/bin/ | \
             xargs sed -i 's|#!/tmp/bsp-venv/|#!/opt/uk-bank-statement-parser/|g'
-          # Rewrite pyvenv.cfg: Python uses the 'home' key to locate its stdlib.
-          # It is set to the build-machine uv-managed Python path at venv creation
-          # time and must point to the post-install bin/ directory instead.
-          sed -i 's|^home = .*|home = /opt/uk-bank-statement-parser/bin|' \
-            /tmp/bsp-venv/pyvenv.cfg
+
+          # 5. Smoke-test: the patched interpreter must be able to import the
+          #    stdlib and the installed package from its new prefix.
+          /tmp/bsp-venv/bin/python -c "
+          import sys, encodings
+          from bank_statement_parser import __version__
+          print(f'OK  python {sys.version}  bsp {__version__}  prefix={sys.prefix}')
+          "
 
       - name: Install fpm
         run: |
