@@ -116,6 +116,11 @@ jobs:
           # post-install path so console scripts work after dpkg/rpm installs.
           grep -rl '#!/tmp/bsp-venv/' /tmp/bsp-venv/bin/ | \
             xargs sed -i 's|#!/tmp/bsp-venv/|#!/opt/uk-bank-statement-parser/|g'
+          # Rewrite pyvenv.cfg: Python uses the 'home' key to locate its stdlib.
+          # It is set to the build-machine uv-managed Python path at venv creation
+          # time and must point to the post-install bin/ directory instead.
+          sed -i 's|^home = .*|home = /opt/uk-bank-statement-parser/bin|' \
+            /tmp/bsp-venv/pyvenv.cfg
 
       - name: Install fpm
         run: |
