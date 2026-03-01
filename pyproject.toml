@@ -1,13 +1,13 @@
 [project]
 name = "uk-bank-statement-parser"
-version = "0.2.0a3"
+version = "0.2.0a4"
 description = "Parse bank statement PDFs, extract transactions, and persist to Parquet and SQLite."
 readme = "README.md"
 license = "MIT"
 authors = [
     { name = "Jason Farrar", email = "farrar.jason1@gmail.com" }
 ]
-requires-python = ">=3.11"
+requires-python = ">=3.14"
 keywords = ["bank-statement", "pdf", "parser", "transactions", "polars", "sqlite", "parquet"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -16,9 +16,7 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Office/Business :: Financial",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Typing :: Typed",
@@ -57,5 +55,5 @@ dev = [
 
 [tool.ruff]
 line-length = 140
-target-version = "py311"
+target-version = "py314"
 lint.unfixable = ["F401"]

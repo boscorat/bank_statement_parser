@@ -14,7 +14,6 @@ import asyncio
 import hashlib
 import multiprocessing
 import os
-import shutil
 import sys
 import traceback
 from concurrent.futures import ProcessPoolExecutor
@@ -745,7 +744,7 @@ def copy_statements_to_project(
         dest_dir = paths.statements_dir(year, id_account)
         dest_dir.mkdir(parents=True, exist_ok=True)
         dest_path = dest_dir / entry.file_dst
-        shutil.copy2(src=entry.file_src, dst=dest_path)
+        Path(entry.file_src).copy(dest_path)
         copied.append(dest_path)
     return copied
 
