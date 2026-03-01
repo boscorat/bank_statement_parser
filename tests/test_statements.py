@@ -1,7 +1,7 @@
 """
 test_statements.py — integration tests for bank_statement_parser.
 
-Tests are grouped into six classes:
+Tests are grouped into seven classes:
 
 TestGoodStatements
     Verifies that all PDFs in ``tests/pdfs/good/`` process without error
@@ -24,6 +24,12 @@ TestExports
     parquet backends, including full and simple presets and the
     ``filetype="both"`` convenience mode on ``StatementBatch.export()``.
 
+TestCopyStatements
+    Verifies that ``copy_statements_to_project()`` copies PDFs into the
+    correct ``statements/<year>/<id_account>/`` directory structure, that
+    all returned paths exist and are non-empty, that the operation is
+    idempotent, and that error/missing entries are silently skipped.
+
 TestBadStatements
     Verifies that each PDF in ``tests/pdfs/bad/`` is flagged as an error.
 
@@ -33,12 +39,15 @@ Run with:
 
 import sqlite3
 from datetime import timedelta
+from pathlib import Path
 
 import polars as pl
 
 from bank_statement_parser.modules import reports_db as db
 from bank_statement_parser.modules import reports_parquet as parquet
+from bank_statement_parser.modules.data import PdfResult
 from bank_statement_parser.modules.paths import get_paths
+from bank_statement_parser.modules.statements import copy_statements_to_project
 
 FLOAT_TOL = 0.005  # monetary comparison tolerance (matches test_datamart.py)
 
@@ -426,6 +435,90 @@ class TestExports:
             f = paths.csv / name
             assert f.exists(), f"Missing CSV after filetype='both': {name}"
             assert f.stat().st_size > 0, f"Empty CSV after filetype='both': {name}"
+
+
+# ---------------------------------------------------------------------------
+# TestCopyStatements
+# ---------------------------------------------------------------------------
+
+
+class TestCopyStatements:
+    """Verify copy_statements_to_project() directory layout and behaviour."""
+
+    def test_returns_nonempty_list(self, good_project):
+        """copy_statements_to_project() returns at least one copied path."""
+        copied = good_project.batch.copy_statements_to_project()
+        assert len(copied) > 0, "No files were copied"
+
+    def test_returned_paths_exist(self, good_project):
+        """Every path returned by copy_statements_to_project() exists on disk."""
+        copied = good_project.batch.copy_statements_to_project()
+        missing = [p for p in copied if not p.exists()]
+        assert missing == [], f"Missing copied files: {missing}"
+
+    def test_returned_paths_nonempty(self, good_project):
+        """Every copied file contains at least one byte."""
+        copied = good_project.batch.copy_statements_to_project()
+        empty = [p for p in copied if p.stat().st_size == 0]
+        assert empty == [], f"Zero-byte copied files: {empty}"
+
+    def test_directory_structure(self, good_project):
+        """Copied files land under statements/<year>/<id_account>/<filename>."""
+        paths = get_paths(good_project.project_path)
+        copied = good_project.batch.copy_statements_to_project()
+        for dest in copied:
+            # dest must be inside <project>/statements/
+            assert dest.is_relative_to(paths.statements), f"{dest} is not under {paths.statements}"
+            # Relative path must have exactly three parts: year/id_account/filename
+            rel = dest.relative_to(paths.statements)
+            parts = rel.parts
+            assert len(parts) == 3, f"Expected year/id_account/file, got {parts!r} for {dest}"
+            year, id_account, filename = parts
+            # year must be a 4-digit string
+            assert year.isdigit() and len(year) == 4, f"Unexpected year folder {year!r}"
+            # filename stem must end with _YYYYMMDD matching the year folder
+            stem = Path(filename).stem
+            assert stem[-8:-4] == year, f"Year folder {year!r} does not match date in filename stem {stem!r}"
+            # id_account must be the stem minus the trailing _YYYYMMDD
+            expected_id_account = stem[: -(len("_YYYYMMDD"))]
+            assert id_account == expected_id_account, f"id_account folder {id_account!r} != expected {expected_id_account!r}"
+
+    def test_count_matches_successful_pdfs(self, good_project):
+        """Number of copied files equals number of PdfResult entries with file_dst set."""
+        expected = sum(
+            1 for e in good_project.batch.processed_pdfs if isinstance(e, PdfResult) and e.file_src is not None and e.file_dst is not None
+        )
+        copied = good_project.batch.copy_statements_to_project()
+        assert len(copied) == expected, f"Expected {expected} copies, got {len(copied)}"
+
+    def test_idempotent(self, good_project):
+        """Calling copy_statements_to_project() twice does not raise and returns same count."""
+        first = good_project.batch.copy_statements_to_project()
+        second = good_project.batch.copy_statements_to_project()
+        assert len(first) == len(second), f"First call copied {len(first)}, second call copied {len(second)}"
+
+    def test_skips_base_exception_entries(self, good_project):
+        """BaseException entries in processed_pdfs are silently ignored."""
+        sentinel = RuntimeError("synthetic worker crash")
+        mixed: list[BaseException | PdfResult] = [sentinel, *good_project.batch.processed_pdfs]
+        copied = copy_statements_to_project(mixed, project_path=good_project.project_path)
+        # Must still copy the real entries — no crash, no reduction in count
+        expected = sum(
+            1 for e in good_project.batch.processed_pdfs if isinstance(e, PdfResult) and e.file_src is not None and e.file_dst is not None
+        )
+        assert len(copied) == expected
+
+    def test_skips_entries_without_file_dst(self, good_project):
+        """PdfResult entries with file_dst=None are silently skipped."""
+        # Build a list that has one extra entry with no dst
+        real_entries: list[BaseException | PdfResult] = list(good_project.batch.processed_pdfs)
+        # Create a PdfResult-like entry with file_dst=None by using the first real entry
+        first = next(e for e in real_entries if isinstance(e, PdfResult) and e.file_dst is not None)
+        no_dst = PdfResult(*[None if f == "file_dst" else getattr(first, f) for f in PdfResult._fields])
+        mixed: list[BaseException | PdfResult] = [no_dst, *real_entries]
+        copied = copy_statements_to_project(mixed, project_path=good_project.project_path)
+        expected = sum(1 for e in real_entries if isinstance(e, PdfResult) and e.file_src is not None and e.file_dst is not None)
+        assert len(copied) == expected
 
 
 # ---------------------------------------------------------------------------
