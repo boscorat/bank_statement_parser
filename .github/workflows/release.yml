@@ -104,10 +104,11 @@ jobs:
 
       - name: Fix venv Python binary and shebangs for install path
         run: |
-          # Copy the real CPython binary into the venv (uv uses a symlink to its
-          # managed install, which becomes broken after packaging).
+          # Copy the real CPython binary into the venv (uv may use a hardlink to
+          # its managed install; --remove-destination unlinks first so cp always
+          # produces an independent copy that survives packaging).
           REAL_PY=$(readlink -f /tmp/bsp-venv/bin/python)
-          cp "$REAL_PY" /tmp/bsp-venv/bin/python
+          cp --remove-destination "$REAL_PY" /tmp/bsp-venv/bin/python
           # Repoint python3 and python3.14 symlinks to the copied binary.
           ln -sf python /tmp/bsp-venv/bin/python3
           ln -sf python /tmp/bsp-venv/bin/python3.14
