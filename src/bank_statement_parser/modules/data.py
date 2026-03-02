@@ -180,6 +180,7 @@ class StatementTable:
     delete_success_false: Optional[bool]
     delete_cast_success_false: Optional[bool]
     delete_rows_with_missing_vital_fields: Optional[bool]
+    exclude_rows: Optional[list[FieldValidation]]  # drop rows matching any rule before bookend detection
     transaction_spec: Optional[TransactionSpec]
 
 

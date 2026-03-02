@@ -12,6 +12,9 @@ Functions:
 """
 
 import json
+import os
+import sys
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
@@ -20,6 +23,18 @@ import polars as pl
 from bank_statement_parser.modules.data import PdfResult
 from bank_statement_parser.modules.paths import get_paths
 from bank_statement_parser.modules.statement_functions import get_results
+
+
+@contextmanager
+def _suppress_stdout():
+    """Context manager that redirects stdout to /dev/null for its duration."""
+    with open(os.devnull, "w") as devnull:
+        old_stdout = sys.stdout
+        sys.stdout = devnull
+        try:
+            yield
+        finally:
+            sys.stdout = old_stdout
 
 
 def _cab_detail_rows(cab: pl.DataFrame) -> list[dict]:
@@ -128,69 +143,81 @@ def debug_pdf_statement(
     from bank_statement_parser.modules.statements import Statement
 
     try:
-        stmt = Statement(
-            file=pdf,
-            company_key=company_key,
-            account_key=account_key,
-            ID_BATCH=batch_id,
-            project_path=project_path,
-            skip_project_validation=True,
-        )
+        with _suppress_stdout():
+            stmt = Statement(
+                file=pdf,
+                company_key=company_key,
+                account_key=account_key,
+                ID_BATCH=batch_id,
+                project_path=project_path,
+                skip_project_validation=True,
+            )
 
-        # ----------------------------------------------------------------
-        # 1. Raw page text — captured while stmt.pdf is still open
-        # ----------------------------------------------------------------
-        pages: dict[str, str] = {}
-        if stmt.pdf is not None:
-            for i, page in enumerate(stmt.pdf.pages):
-                pages[f"page_{i + 1}"] = "".join(c["text"] for c in page.chars)
+            # ----------------------------------------------------------------
+            # 1. Raw page text — captured while stmt.pdf is still open
+            # ----------------------------------------------------------------
+            pages: dict[str, str] = {}
+            if stmt.pdf is not None:
+                for i, page in enumerate(stmt.pdf.pages):
+                    pages[f"page_{i + 1}"] = "".join(c["text"] for c in page.chars)
 
-        # ----------------------------------------------------------------
-        # 2. Full extraction results (scope="all" — includes failures)
-        # ----------------------------------------------------------------
-        header_rows: list[dict] = []
-        if stmt.config_header and stmt.pdf is not None and stmt.config is not None:
-            for config in stmt.config_header:
-                raw: pl.DataFrame = get_results(
-                    stmt.pdf,
-                    "header",
-                    config,
-                    stmt.logs,
-                    stmt.file_absolute,
-                    scope="all",
-                    exclude_last_n_pages=stmt.config.exclude_last_n_pages,
-                )
-                header_rows.extend(raw.to_dicts())
+            # ----------------------------------------------------------------
+            # 2. Full extraction results (scope="all" — includes failures)
+            #    debug_collector accumulates get_region / get_table_from_region
+            #    call data for each location processed.
+            # ----------------------------------------------------------------
+            header_rows: list[dict] = []
+            header_debug: list[dict] = []
+            if stmt.config_header and stmt.pdf is not None and stmt.config is not None:
+                for config in stmt.config_header:
+                    collector: list[dict] = []
+                    raw: pl.DataFrame = get_results(
+                        stmt.pdf,
+                        "header",
+                        config,
+                        stmt.logs,
+                        stmt.file_absolute,
+                        scope="all",
+                        exclude_last_n_pages=stmt.config.exclude_last_n_pages,
+                        debug_collector=collector,
+                    )
+                    header_rows.extend(raw.to_dicts())
+                    header_debug.extend(collector)
 
-        lines_rows: list[dict] = []
-        if stmt.config_lines and stmt.pdf is not None and stmt.config is not None:
-            for config in stmt.config_lines:
-                raw = get_results(
-                    stmt.pdf,
-                    "lines",
-                    config,
-                    stmt.logs,
-                    stmt.file_absolute,
-                    scope="all",
-                    exclude_last_n_pages=stmt.config.exclude_last_n_pages,
-                )
-                lines_rows.extend(raw.to_dicts())
+            lines_rows: list[dict] = []
+            lines_debug: list[dict] = []
+            if stmt.config_lines and stmt.pdf is not None and stmt.config is not None:
+                for config in stmt.config_lines:
+                    collector = []
+                    raw = get_results(
+                        stmt.pdf,
+                        "lines",
+                        config,
+                        stmt.logs,
+                        stmt.file_absolute,
+                        scope="all",
+                        exclude_last_n_pages=stmt.config.exclude_last_n_pages,
+                        debug_collector=collector,
+                    )
+                    lines_rows.extend(raw.to_dicts())
+                    lines_debug.extend(collector)
 
-        # ----------------------------------------------------------------
-        # 3. Checks & balances — capture before cleanup
-        # ----------------------------------------------------------------
-        cab_rows: list[dict] = stmt.checks_and_balances.to_dicts()
-        cab_failing: list[dict] = _cab_detail_rows(stmt.checks_and_balances)
+            # ----------------------------------------------------------------
+            # 3. Checks & balances — capture before cleanup
+            # ----------------------------------------------------------------
+            cab_rows: list[dict] = stmt.checks_and_balances.to_dicts()
+            cab_failing: list[dict] = _cab_detail_rows(stmt.checks_and_balances)
 
-        # ----------------------------------------------------------------
-        # 4. Error classification
-        # ----------------------------------------------------------------
-        error_type = "ERROR_CONFIG" if stmt.error_message else "ERROR_CAB"
-        error_message = stmt.error_message if stmt.error_message else "** Checks & Balances Failure **"
+            # ----------------------------------------------------------------
+            # 4. Error classification
+            # ----------------------------------------------------------------
+            error_type = "ERROR_CONFIG" if stmt.error_message else "ERROR_CAB"
+            error_message = stmt.error_message if stmt.error_message else "** Checks & Balances Failure **"
+            error_detail: dict | None = stmt.error_detail
 
-        id_statement = stmt.ID_STATEMENT
-        stmt.cleanup()
-        stmt = None  # type: ignore[assignment]
+            id_statement = stmt.ID_STATEMENT
+            stmt.cleanup()
+            stmt = None  # type: ignore[assignment]
 
         # ----------------------------------------------------------------
         # 5. Write debug.json
@@ -211,10 +238,13 @@ def debug_pdf_statement(
                 "error_message": error_message,
                 "debug_timestamp": datetime.now().isoformat(timespec="seconds"),
             },
+            "error_detail": error_detail,
             "checks_and_balances": cab_rows,
             "checks_and_balances_failing": cab_failing,
             "header_extraction": header_rows,
+            "header_debug": header_debug,
             "lines_extraction": lines_rows,
+            "lines_debug": lines_debug,
             "pages": pages,
         }
 
