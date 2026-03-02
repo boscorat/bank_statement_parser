@@ -42,6 +42,68 @@ from bank_statement_parser.modules.statement_functions import get_results, get_s
 
 CPU_WORKERS = os.cpu_count()
 
+_MAX_STRING_LEN = 500  # truncate long strings captured from locals
+
+
+def _build_error_detail(exc: BaseException) -> dict:
+    """
+    Build a structured error detail dict from a live exception.
+
+    Walks every frame in the traceback chain and extracts:
+    - A human-readable traceback as a list of frame dicts.
+    - All string-typed local variables from every frame (truncated to
+      ``_MAX_STRING_LEN`` characters).  Large objects (DataFrames, PDFs, etc.)
+      are skipped because they are not ``str`` instances.
+
+    Args:
+        exc: The caught exception, with its ``__traceback__`` still attached.
+
+    Returns:
+        A dict with keys ``exception_type``, ``message``, ``traceback``, and
+        ``string_locals_by_frame``.
+    """
+    tb = exc.__traceback__
+    tb_frames = []
+    string_locals_by_frame = []
+
+    raw_tb = traceback.extract_tb(tb)
+    for summary in raw_tb:
+        tb_frames.append(
+            {
+                "file": summary.filename,
+                "line": summary.lineno,
+                "function": summary.name,
+                "text": summary.line,
+            }
+        )
+
+    # Walk the live traceback chain to collect frame locals.
+    current_tb = tb
+    while current_tb is not None:
+        frame = current_tb.tb_frame
+        str_vars = {
+            k: (v if len(v) <= _MAX_STRING_LEN else f"{v[:_MAX_STRING_LEN]}…")
+            for k, v in frame.f_locals.items()
+            if isinstance(v, str) and k != "__doc__"
+        }
+        if str_vars:
+            string_locals_by_frame.append(
+                {
+                    "function": frame.f_code.co_name,
+                    "file": frame.f_code.co_filename,
+                    "line": current_tb.tb_lineno,
+                    "string_locals": str_vars,
+                }
+            )
+        current_tb = current_tb.tb_next
+
+    return {
+        "exception_type": type(exc).__name__,
+        "message": str(exc),
+        "traceback": tb_frames,
+        "string_locals_by_frame": string_locals_by_frame,
+    }
+
 
 class Statement:
     """
@@ -99,6 +161,7 @@ class Statement:
         "project_path",
         "skip_project_validation",
         "logs",
+        "error_detail",
     )
 
     def __init__(
@@ -165,6 +228,7 @@ class Statement:
         # try block so that is_successfull() and cleanup() never hit an
         # uninitialised-slot AttributeError regardless of where a failure occurs.
         self.error_message: str = ""
+        self.error_detail: dict | None = None
         self.ID_STATEMENT: str = "<PDF ERROR>"
         self.ID_ACCOUNT: str | None = None
         self.checks_and_balances: pl.DataFrame = pl.DataFrame()
@@ -258,6 +322,7 @@ class Statement:
                     self.file_renamed = f"{self.ID_ACCOUNT}_{str(stmt_date)}.pdf"
         except Exception as e:
             self.error_message = f"** Configuration Failure **: {e}"
+            self.error_detail = _build_error_detail(e)
             self.success = False
             traceback.print_exc(file=sys.stderr)
 

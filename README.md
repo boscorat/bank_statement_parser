@@ -1,4 +1,4 @@
-# bank-statement-parser
+# uk-bank-statement-parser
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.14+](https://img.shields.io/badge/Python-3.14%2B-blue.svg)](https://www.python.org/downloads/)
@@ -31,25 +31,21 @@ workbooks or CSV files.
 
 ## Installation
 
-Requires **Python 3.14** or later.
+### Using uv (recommended)
 
-### From PyPI
-
-The recommended way to install for most users. Both `pipx` and `uv tool`
-create an isolated virtualenv and put `bsp` on your `$PATH`.
+[uv](https://docs.astral.sh/uv/) manages its own Python installations, so no
+system Python 3.14 is required. If uv is not already installed, follow the
+[uv installation guide](https://docs.astral.sh/uv/getting-started/installation/).
 
 ```bash
-# Using pipx
-pipx install uk-bank-statement-parser
-
-# Using uv (faster)
 uv tool install uk-bank-statement-parser
 ```
+
+This creates an isolated environment and puts `bsp` on your `$PATH`.
 
 To upgrade later:
 
 ```bash
-pipx upgrade uk-bank-statement-parser   # or
 uv tool upgrade uk-bank-statement-parser
 ```
 
@@ -60,12 +56,12 @@ Download the `.deb` from the
 then install:
 
 ```bash
-sudo dpkg -i uk-bank-statement-parser_0.2.0a1_all.deb
+sudo dpkg -i uk-bank-statement-parser_*_all.deb
 ```
 
 This installs a self-contained virtualenv to `/opt/uk-bank-statement-parser/`
-and a `bsp` wrapper to `/usr/bin/bsp`. Uninstall with
-`sudo dpkg -r uk-bank-statement-parser`.
+and a `bsp` wrapper to `/usr/bin/bsp`. No system Python is required. Uninstall
+with `sudo dpkg -r uk-bank-statement-parser`.
 
 ### Fedora / RHEL (.rpm)
 
@@ -74,10 +70,11 @@ Download the `.rpm` from the
 then install:
 
 ```bash
-sudo rpm -i uk-bank-statement-parser-0.2.0a1-1.noarch.rpm
+sudo rpm -i uk-bank-statement-parser-*-1.noarch.rpm
 ```
 
-Uninstall with `sudo rpm -e uk-bank-statement-parser`.
+No system Python is required. Uninstall with
+`sudo rpm -e uk-bank-statement-parser`.
 
 ### From source
 
@@ -86,6 +83,10 @@ git clone https://github.com/boscorat/bank_statement_parser.git
 cd bank_statement_parser
 uv sync
 ```
+
+> **Prefer not to use uv?** See
+> [Alternative installation (pipx / venv)](#alternative-installation-pipx--venv)
+> for instructions using pipx or a manually created virtual environment.
 
 ## Quick Start
 
@@ -447,14 +448,79 @@ ruff format .
 1. Bump the version in `pyproject.toml` (the single source of truth).
 2. Commit and tag:
    ```bash
-   git add pyproject.toml uv.lock
+   # Include uv.lock only if dependencies changed since the last commit
+   git add pyproject.toml
+   git add uv.lock  # omit if no dependency changes
    git commit -m "release: v0.2.0"
-   git tag -a v0.2.0 -m "v0.2.0"
-   git push origin main --tags
+   git tag v0.2.0
+   git push origin master --tags
    ```
 3. The `release.yml` workflow runs automatically — builds and publishes to
    PyPI, builds `.deb` and `.rpm` packages, and creates a GitHub Release with
    all assets attached.
+
+## Alternative installation (pipx / venv)
+
+This package requires **Python 3.14 or later**. Python 3.14 is not yet
+bundled by most system package managers, so you will need to install it
+separately before using pipx or a plain virtual environment.
+
+### Installing Python 3.14
+
+The easiest cross-platform option is
+[python-build-standalone](https://github.com/indygreg/python-build-standalone)
+via [pyenv](https://github.com/pyenv/pyenv), or by downloading directly from
+[python.org](https://www.python.org/downloads/).
+
+On Ubuntu/Debian you can use the
+[deadsnakes PPA](https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa):
+
+```bash
+sudo add-apt-repository ppa:deadsnakes/ppa
+sudo apt update
+sudo apt install python3.14 python3.14-venv
+```
+
+On Fedora/RHEL, check whether your version ships 3.14 via `dnf`, otherwise
+build from source or use pyenv.
+
+### Using pipx
+
+Once Python 3.14 is available on your system:
+
+```bash
+pipx install uk-bank-statement-parser --python python3.14
+```
+
+To upgrade later:
+
+```bash
+pipx upgrade uk-bank-statement-parser
+```
+
+### Using a virtual environment manually
+
+```bash
+python3.14 -m venv ~/.venvs/bsp
+~/.venvs/bsp/bin/pip install uk-bank-statement-parser
+```
+
+Then either activate the environment or invoke `bsp` directly:
+
+```bash
+# Activate (adds bsp to PATH for the session)
+source ~/.venvs/bsp/bin/activate
+bsp --help
+
+# Or run without activating
+~/.venvs/bsp/bin/bsp --help
+```
+
+To upgrade:
+
+```bash
+~/.venvs/bsp/bin/pip install --upgrade uk-bank-statement-parser
+```
 
 ## License
 

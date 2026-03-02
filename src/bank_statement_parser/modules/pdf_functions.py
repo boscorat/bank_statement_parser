@@ -141,7 +141,7 @@ def get_table_from_region(
             elif table_columns and len(table[0]) < table_columns:  # if the table doesn't have enough columns
                 vertical_lines[-1] = current_final_line  # we reset the last line
                 table = None  # and ditch the table
-        except (IndexError, KeyError):
+        except IndexError, KeyError:
             pass  # any issues and we just smile, wave, and move on
     if not table:  # if we haven't already got a good looking table through the dynamic vertical lines we get it now
         table = region.extract_table(table_settings=tbl_settings)
