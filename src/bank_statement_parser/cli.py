@@ -6,7 +6,7 @@ Add new subcommands here.
 
 Current subcommands
 -------------------
-anonymise   Anonymise one PDF or all PDFs in a folder.
+anonymise   Anonymise one PDF or all PDFs in a folder (exclusion-based full scrambling).
 process     Parse bank statement PDFs, persist data, and export reports.
 """
 
@@ -145,9 +145,11 @@ def main() -> None:
         "anonymise",
         help="Anonymise one PDF or all PDFs in a folder.",
         description=(
-            "Replace personally identifiable information in HSBC bank statement PDFs "
-            "with dummy values, writing an anonymised copy alongside the original. "
-            "Driven by anonymise.toml in the project config directory."
+            "Start from a completely scrambled PDF (every letter replaced) and "
+            "use anonymise.toml to specify exclusions — text that should remain "
+            "readable (transaction type codes, account descriptions, etc.) and "
+            "numbers that should be scrambled. Driven by anonymise.toml in the "
+            "project config directory."
         ),
     )
     anon.add_argument(
@@ -171,7 +173,7 @@ def main() -> None:
         "--output",
         metavar="OUT_FILE",
         default=None,
-        help="Output path for single-file mode (default: <stem>_anonymised.pdf alongside input).",
+        help="Output path for single-file mode (default: anonymised_<stem>.pdf alongside input).",
     )
     anon.add_argument(
         "--output-dir",
