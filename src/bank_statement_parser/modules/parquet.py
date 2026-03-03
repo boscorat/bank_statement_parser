@@ -101,6 +101,269 @@ def _resolve_parquet_file(
     return default
 
 
+# ---------------------------------------------------------------------------
+# build_*_records() helpers
+# ---------------------------------------------------------------------------
+# Each function reproduces the DataFrame construction that was previously
+# inlined in the corresponding Parquet subclass constructor.  Extracting them
+# makes it possible for the debug path (debug.py) to call the same logic
+# independently — without constructing a full Parquet object — and to wrap
+# the call in diagnostics that capture schema mismatches.
+#
+# For the three per-statement classes (ChecksAndBalances, StatementHeads,
+# StatementLines) a private ``_build_*_data()`` function builds just the
+# data DataFrame *without* calling ``.extend()``.  The public
+# ``build_*_records()`` function calls it and then extends the schema.
+# This split gives the debug path access to the intermediate data so it
+# can compare dtypes column-by-column when ``.extend()`` fails.
+# ---------------------------------------------------------------------------
+
+
+def _build_checks_and_balances_data(
+    id_statement: str,
+    id_batch: str,
+    checks_and_balances: pl.DataFrame,
+) -> pl.DataFrame:
+    """Build the data DataFrame for ChecksAndBalances (without extending the schema).
+
+    Args:
+        id_statement: Unique statement identifier.
+        id_batch: Batch identifier.
+        checks_and_balances: The raw checks & balances DataFrame from
+            :class:`~bank_statement_parser.modules.statements.Statement`.
+
+    Returns:
+        A single-row DataFrame with the ChecksAndBalances columns.
+    """
+    return checks_and_balances.select(
+        ID_CAB=pl.lit(id_statement).add(pl.lit(".").add(pl.lit(id_batch))),
+        ID_STATEMENT=pl.lit(id_statement),
+        ID_BATCH=pl.lit(id_batch),
+        HAS_TRANSACTIONS=~pl.col("ZERO_TRANSACTION_STATEMENT"),
+        STD_OPENING_BALANCE_HEADS="STD_OPENING_BALANCE",
+        STD_PAYMENTS_IN_HEADS="STD_PAYMENTS_IN",
+        STD_PAYMENTS_OUT_HEADS="STD_PAYMENTS_OUT",
+        STD_MOVEMENT_HEADS="STD_STATEMENT_MOVEMENT",
+        STD_CLOSING_BALANCE_HEADS="STD_CLOSING_BALANCE",
+        STD_OPENING_BALANCE_LINES=pl.col("STD_RUNNING_BALANCE").sub(pl.col("STD_MOVEMENT")),
+        STD_PAYMENTS_IN_LINES="STD_PAYMENT_IN",
+        STD_PAYMENTS_OUT_LINES="STD_PAYMENT_OUT",
+        STD_MOVEMENT_LINES="STD_MOVEMENT",
+        STD_CLOSING_BALANCE_LINES="STD_RUNNING_BALANCE",
+        CHECK_PAYMENTS_IN="BAL_PAYMENTS_IN",
+        CHECK_PAYMENTS_OUT="BAL_PAYMENTS_OUT",
+        CHECK_MOVEMENT="BAL_MOVEMENT",
+        CHECK_CLOSING="BAL_CLOSING",
+    )
+
+
+def build_checks_and_balances_records(
+    schema: pl.DataFrame,
+    id_statement: str,
+    id_batch: str,
+    checks_and_balances: pl.DataFrame,
+) -> pl.DataFrame:
+    """Build the records DataFrame for a ChecksAndBalances parquet write.
+
+    Args:
+        schema: Empty DataFrame with the correct column types (from
+            ``ChecksAndBalances.schema``).
+        id_statement: Unique statement identifier.
+        id_batch: Batch identifier.
+        checks_and_balances: The raw checks & balances DataFrame from
+            :class:`~bank_statement_parser.modules.statements.Statement`.
+
+    Returns:
+        A single-row DataFrame matching *schema* ready for ``.extend()``.
+    """
+    return schema.clone().extend(_build_checks_and_balances_data(id_statement, id_batch, checks_and_balances))
+
+
+def _build_statement_heads_data(
+    id_statement: str,
+    id_batchline: str | None,
+    id_account: str | None,
+    company: str | None,
+    statement_type: str | None,
+    account: str | None,
+    header_results: pl.LazyFrame,
+) -> pl.DataFrame:
+    """Build the data DataFrame for StatementHeads (without extending the schema).
+
+    Args:
+        id_statement: Unique statement identifier.
+        id_batchline: Batch-line identifier.
+        id_account: Account identifier.
+        company: Company name.
+        statement_type: Statement type label.
+        account: Account label.
+        header_results: LazyFrame of extracted header fields.
+
+    Returns:
+        A single-row DataFrame with the StatementHeads columns.
+    """
+    return pl.DataFrame(
+        data={
+            "ID_STATEMENT": id_statement,
+            "ID_BATCHLINE": id_batchline,
+            "ID_ACCOUNT": id_account,
+            "STD_COMPANY": company,
+            "STD_STATEMENT_TYPE": statement_type,
+            "STD_ACCOUNT": account,
+        },
+        orient="row",
+    ).hstack(
+        header_results.select(
+            "STD_SORTCODE",
+            "STD_ACCOUNT_NUMBER",
+            "STD_ACCOUNT_HOLDER",
+            "STD_STATEMENT_DATE",
+            "STD_OPENING_BALANCE",
+            "STD_PAYMENTS_IN",
+            "STD_PAYMENTS_OUT",
+            "STD_CLOSING_BALANCE",
+        ).collect()
+    )
+
+
+def build_statement_heads_records(
+    schema: pl.DataFrame,
+    id_statement: str,
+    id_batchline: str | None,
+    id_account: str | None,
+    company: str | None,
+    statement_type: str | None,
+    account: str | None,
+    header_results: pl.LazyFrame,
+) -> pl.DataFrame:
+    """Build the records DataFrame for a StatementHeads parquet write.
+
+    Args:
+        schema: Empty DataFrame with the correct column types.
+        id_statement: Unique statement identifier.
+        id_batchline: Batch-line identifier.
+        id_account: Account identifier.
+        company: Company name.
+        statement_type: Statement type label.
+        account: Account label.
+        header_results: LazyFrame of extracted header fields.
+
+    Returns:
+        A single-row DataFrame matching *schema* ready for ``.extend()``.
+    """
+    return schema.clone().extend(
+        _build_statement_heads_data(id_statement, id_batchline, id_account, company, statement_type, account, header_results)
+    )
+
+
+def _build_statement_lines_data(
+    id_statement: str,
+    lines_results: pl.LazyFrame,
+) -> pl.DataFrame:
+    """Build the data DataFrame for StatementLines (without extending the schema).
+
+    Args:
+        id_statement: Unique statement identifier.
+        lines_results: LazyFrame of extracted transaction lines.
+
+    Returns:
+        A multi-row DataFrame with the StatementLines columns.
+    """
+    return lines_results.collect().select(
+        ID_TRANSACTION=pl.lit(id_statement).add(pl.lit(".").add(pl.col("STD_TRANSACTION_NUMBER").cast(str))),
+        ID_STATEMENT=pl.lit(id_statement),
+        STD_PAGE_NUMBER="STD_PAGE_NUMBER",
+        STD_TRANSACTION_DATE="STD_TRANSACTION_DATE",
+        STD_TRANSACTION_NUMBER="STD_TRANSACTION_NUMBER",
+        STD_CD="STD_CD",
+        STD_TRANSACTION_TYPE="STD_TRANSACTION_TYPE",
+        STD_TRANSACTION_TYPE_CD=pl.col("STD_TRANSACTION_TYPE").add("-").add(pl.col("STD_CD")),
+        STD_TRANSACTION_DESC="STD_TRANSACTION_DESC",
+        STD_OPENING_BALANCE=pl.col("STD_RUNNING_BALANCE").sub(pl.col("STD_MOVEMENT")),
+        STD_PAYMENTS_IN="STD_PAYMENT_IN",
+        STD_PAYMENTS_OUT="STD_PAYMENT_OUT",
+        STD_CLOSING_BALANCE="STD_RUNNING_BALANCE",
+    )
+
+
+def build_statement_lines_records(
+    schema: pl.DataFrame,
+    id_statement: str,
+    lines_results: pl.LazyFrame,
+) -> pl.DataFrame:
+    """Build the records DataFrame for a StatementLines parquet write.
+
+    Args:
+        schema: Empty DataFrame with the correct column types.
+        id_statement: Unique statement identifier.
+        lines_results: LazyFrame of extracted transaction lines.
+
+    Returns:
+        A multi-row DataFrame matching *schema* ready for ``.extend()``.
+    """
+    return schema.clone().extend(_build_statement_lines_data(id_statement, lines_results))
+
+
+def build_batch_heads_records(
+    schema: pl.DataFrame,
+    batch_id: str,
+    path: str | None,
+    company_key: str | None,
+    account_key: str | None,
+    pdf_count: int | None,
+    errors: int | None,
+    duration_secs: float | None,
+    process_time: datetime | None,
+) -> pl.DataFrame:
+    """Build the records DataFrame for a BatchHeads parquet write.
+
+    Args:
+        schema: Empty DataFrame with the correct column types.
+        batch_id: Unique batch identifier.
+        path: String representation of PDF source directories.
+        company_key: Company identifier.
+        account_key: Account identifier.
+        pdf_count: Total number of PDFs in the batch.
+        errors: Count of failed statement processings.
+        duration_secs: Total processing time (seconds).
+        process_time: Timestamp when batch processing started.
+
+    Returns:
+        A single-row DataFrame matching *schema* ready for ``.extend()``.
+    """
+    return schema.clone().extend(
+        pl.DataFrame(
+            data={
+                "ID_BATCH": batch_id,
+                "STD_PATH": str(path),
+                "STD_COMPANY": company_key,
+                "STD_ACCOUNT": account_key,
+                "STD_PDF_COUNT": pdf_count,
+                "STD_ERROR_COUNT": errors,
+                "STD_DURATION_SECS": duration_secs,
+                "STD_UPDATETIME": process_time,
+            },
+            orient="row",
+        )
+    )
+
+
+def build_batch_lines_records(
+    schema: pl.DataFrame,
+    batch_lines: list[dict],
+) -> pl.DataFrame:
+    """Build the records DataFrame for a BatchLines parquet write.
+
+    Args:
+        schema: Empty DataFrame with the correct column types.
+        batch_lines: List of dicts, one per PDF, with batch-line metadata.
+
+    Returns:
+        A DataFrame matching *schema* ready for ``.extend()``.
+    """
+    return schema.clone().extend(pl.DataFrame(batch_lines))
+
+
 class ChecksAndBalances(Parquet):
     __slots__ = ("id", "source_filename", "destination_filename", "project_path")
 
@@ -152,28 +415,7 @@ class ChecksAndBalances(Parquet):
         if source_filename is not None:
             self.records = pl.read_parquet(source_file).drop("index")
         elif checks_and_balances is not None and id_statement is not None and id_batch is not None:
-            self.records = self.schema.clone().extend(
-                checks_and_balances.select(
-                    ID_CAB=pl.lit(id_statement).add(pl.lit(".").add(pl.lit(id_batch))),
-                    ID_STATEMENT=pl.lit(id_statement),
-                    ID_BATCH=pl.lit(id_batch),
-                    HAS_TRANSACTIONS=~pl.col("ZERO_TRANSACTION_STATEMENT"),
-                    STD_OPENING_BALANCE_HEADS="STD_OPENING_BALANCE",
-                    STD_PAYMENTS_IN_HEADS="STD_PAYMENTS_IN",
-                    STD_PAYMENTS_OUT_HEADS="STD_PAYMENTS_OUT",
-                    STD_MOVEMENT_HEADS="STD_STATEMENT_MOVEMENT",
-                    STD_CLOSING_BALANCE_HEADS="STD_CLOSING_BALANCE",
-                    STD_OPENING_BALANCE_LINES=pl.col("STD_RUNNING_BALANCE").sub(pl.col("STD_MOVEMENT")),
-                    STD_PAYMENTS_IN_LINES="STD_PAYMENT_IN",
-                    STD_PAYMENTS_OUT_LINES="STD_PAYMENT_OUT",
-                    STD_MOVEMENT_LINES="STD_MOVEMENT",
-                    STD_CLOSING_BALANCE_LINES="STD_RUNNING_BALANCE",
-                    CHECK_PAYMENTS_IN="BAL_PAYMENTS_IN",
-                    CHECK_PAYMENTS_OUT="BAL_PAYMENTS_OUT",
-                    CHECK_MOVEMENT="BAL_MOVEMENT",
-                    CHECK_CLOSING="BAL_CLOSING",
-                )
-            )
+            self.records = build_checks_and_balances_records(self.schema, id_statement, id_batch, checks_and_balances)
 
         # Determine the destination file
         dest_default = paths.cab_temp(self.id) if self.id > -1 else paths.cab
@@ -232,29 +474,8 @@ class StatementHeads(Parquet):
         if source_filename is not None:
             self.records = pl.read_parquet(source_file).drop("index")
         elif header_results is not None and id_statement is not None:
-            self.records = self.schema.clone().extend(
-                pl.DataFrame(
-                    data={
-                        "ID_STATEMENT": id_statement,
-                        "ID_BATCHLINE": id_batchline,
-                        "ID_ACCOUNT": id_account,
-                        "STD_COMPANY": company,
-                        "STD_STATEMENT_TYPE": statement_type,
-                        "STD_ACCOUNT": account,
-                    },
-                    orient="row",
-                ).hstack(
-                    header_results.select(
-                        "STD_SORTCODE",
-                        "STD_ACCOUNT_NUMBER",
-                        "STD_ACCOUNT_HOLDER",
-                        "STD_STATEMENT_DATE",
-                        "STD_OPENING_BALANCE",
-                        "STD_PAYMENTS_IN",
-                        "STD_PAYMENTS_OUT",
-                        "STD_CLOSING_BALANCE",
-                    ).collect()
-                )
+            self.records = build_statement_heads_records(
+                self.schema, id_statement, id_batchline, id_account, company, statement_type, account, header_results
             )
 
         dest_default = paths.statement_heads_temp(self.id) if self.id > -1 else paths.statement_heads
@@ -307,23 +528,7 @@ class StatementLines(Parquet):
         if source_filename is not None:
             self.records = pl.read_parquet(source_file).drop("index")
         elif lines_results is not None and id_statement is not None:
-            self.records = self.schema.clone().extend(
-                lines_results.collect().select(
-                    ID_TRANSACTION=pl.lit(id_statement).add(pl.lit(".").add(pl.col("STD_TRANSACTION_NUMBER").cast(str))),
-                    ID_STATEMENT=pl.lit(id_statement),
-                    STD_PAGE_NUMBER="STD_PAGE_NUMBER",
-                    STD_TRANSACTION_DATE="STD_TRANSACTION_DATE",
-                    STD_TRANSACTION_NUMBER="STD_TRANSACTION_NUMBER",
-                    STD_CD="STD_CD",
-                    STD_TRANSACTION_TYPE="STD_TRANSACTION_TYPE",
-                    STD_TRANSACTION_TYPE_CD=pl.col("STD_TRANSACTION_TYPE").add("-").add(pl.col("STD_CD")),
-                    STD_TRANSACTION_DESC="STD_TRANSACTION_DESC",
-                    STD_OPENING_BALANCE=pl.col("STD_RUNNING_BALANCE").sub(pl.col("STD_MOVEMENT")),
-                    STD_PAYMENTS_IN="STD_PAYMENT_IN",
-                    STD_PAYMENTS_OUT="STD_PAYMENT_OUT",
-                    STD_CLOSING_BALANCE="STD_RUNNING_BALANCE",
-                )
-            )
+            self.records = build_statement_lines_records(self.schema, id_statement, lines_results)
 
         dest_default = paths.statement_lines_temp(self.id) if self.id > -1 else paths.statement_lines
         destination_file = _resolve_parquet_file(paths, dest_default, destination_filename)
@@ -365,20 +570,8 @@ class BatchHeads(Parquet):
         )
         self.records: pl.DataFrame | None = None
         if batch_id is not None:
-            self.records = self.schema.clone().extend(
-                pl.DataFrame(
-                    data={
-                        "ID_BATCH": batch_id,
-                        "STD_PATH": str(path),
-                        "STD_COMPANY": company_key,
-                        "STD_ACCOUNT": account_key,
-                        "STD_PDF_COUNT": pdf_count,
-                        "STD_ERROR_COUNT": errors,
-                        "STD_DURATION_SECS": duration_secs,
-                        "STD_UPDATETIME": process_time,
-                    },
-                    orient="row",
-                )
+            self.records = build_batch_heads_records(
+                self.schema, batch_id, path, company_key, account_key, pdf_count, errors, duration_secs, process_time
             )
         self.key = "ID_BATCH"
         destination_file = _resolve_parquet_file(paths, paths.batch_heads, destination_filename)
@@ -417,6 +610,7 @@ class BatchLines(Parquet):
                 "STD_ERROR_MESSAGE": pl.Utf8,
                 "ERROR_CAB": pl.Boolean,
                 "ERROR_CONFIG": pl.Boolean,
+                "ERROR_DATA": pl.Boolean,
             },
         )
         self.key = "ID_BATCHLINE"
@@ -428,7 +622,7 @@ class BatchLines(Parquet):
         if source_filename is not None:
             self.records = pl.read_parquet(source_file).drop("index")
         elif self.batch_lines:
-            self.records = self.schema.clone().extend(pl.DataFrame(self.batch_lines))
+            self.records = build_batch_lines_records(self.schema, self.batch_lines)
 
         dest_default = paths.batch_lines_temp(self.id) if self.id > -1 else paths.batch_lines
         destination_file = _resolve_parquet_file(paths, dest_default, destination_filename)

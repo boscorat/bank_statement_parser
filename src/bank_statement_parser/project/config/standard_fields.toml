@@ -6,6 +6,7 @@
         {statement_type="HSBC UK Current Account", field="statement_date", format = "%-d %B %Y"},
         {statement_type="HSBC UK Saving Account", field="statement_date", format = "%-d %B %Y"},
         {statement_type="HSBC UK Credit Card", field="statement_date", format = "%-d %B %Y"},
+        {statement_type="TSB UK Current Account", field="statement_date", format = "%-d %B %Y"},
     ]
 
 [STD_SORTCODE]
@@ -15,6 +16,7 @@
     std_refs = [
         {statement_type="HSBC UK Current Account", field="sortcode"},
         {statement_type="HSBC UK Saving Account", field="sortcode"},
+        {statement_type="TSB UK Current Account", field="sortcode"},
     ]
 
 [STD_ACCOUNT_NUMBER]
@@ -25,12 +27,13 @@
         {statement_type="HSBC UK Current Account", field="account_number"},
         {statement_type="HSBC UK Saving Account", field="account_number"},
         {statement_type="HSBC UK Credit Card", field="card_number"},
+        {statement_type="TSB UK Current Account", field="account_number"},
     ]
 
 [STD_ACCOUNT_HOLDER]
     section = "header"
     type = "string"
-    vital = true
+    vital = false
     std_refs = [
         {statement_type="HSBC UK Current Account", field="account_name"},
         {statement_type="HSBC UK Saving Account", field="account_name"},
@@ -45,6 +48,7 @@
         {statement_type="HSBC UK Current Account", field="opening_balance"},
         {statement_type="HSBC UK Saving Account", field="opening_balance"},
         {statement_type="HSBC UK Credit Card", field="previous_balance", multiplier=-1.0000},
+        {statement_type="TSB UK Current Account", field="opening_balance"},
     ]
 
 [STD_CLOSING_BALANCE]
@@ -55,6 +59,7 @@
         {statement_type="HSBC UK Current Account", field="closing_balance"},
         {statement_type="HSBC UK Saving Account", field="closing_balance"},
         {statement_type="HSBC UK Credit Card", field="new_balance", multiplier=-1.0000},
+        {statement_type="TSB UK Current Account", field="closing_balance"},
     ]
 
 [STD_PAYMENTS_IN]
@@ -65,6 +70,7 @@
         {statement_type="HSBC UK Current Account", field="payments_in"},
         {statement_type="HSBC UK Saving Account", field="payments_in"},
         {statement_type="HSBC UK Credit Card", field="credits"},
+        {statement_type="TSB UK Current Account", field="payments_in"},
     ]
 
 [STD_PAYMENTS_OUT]
@@ -75,6 +81,7 @@
         {statement_type="HSBC UK Current Account", field="payments_out"},
         {statement_type="HSBC UK Saving Account", field="payments_out"},
         {statement_type="HSBC UK Credit Card", field="debits"},
+        {statement_type="TSB UK Current Account", field="payments_out"},
     ]
 
 [STD_TRANSACTION_DATE]
@@ -85,6 +92,7 @@
         {statement_type="HSBC UK Current Account", field="date", format = "%d %b %y"},
         {statement_type="HSBC UK Saving Account", field="date", format = "%d %b %y"},
         {statement_type="HSBC UK Credit Card", field="transaction_date", format = "%d %b %y"},
+        {statement_type="TSB UK Current Account", field="date", format = "%d %b %y"},
     ]
 
 [STD_TRANSACTION_TYPE]
@@ -95,6 +103,7 @@
         {statement_type="HSBC UK Current Account", field="payment_type", format = "%d %b %y"},
         {statement_type="HSBC UK Saving Account", field="payment_type", format = "%d %b %y"},
         {statement_type="HSBC UK Credit Card", default="CC"},
+        {statement_type="TSB UK Current Account", field="payment_type", format = "%d %b %y"},
     ]
 
 
@@ -106,6 +115,7 @@
         {statement_type="HSBC UK Current Account", field="details", terminator=" | BALANCECARRIEDFORWARD"},
         {statement_type="HSBC UK Saving Account", field="details", terminator=" | BALANCECARRIEDFORWARD"},
         {statement_type="HSBC UK Credit Card", field="details"},
+        {statement_type="TSB UK Current Account", field="details"},
     ]
 
 [STD_PAYMENT_IN]
@@ -116,6 +126,7 @@
         {statement_type="HSBC UK Current Account", field="£_paid_in"},
         {statement_type="HSBC UK Saving Account", field="£_paid_in"},
         {statement_type="HSBC UK Credit Card", field="amount", exclude_positive_values=true, multiplier=-1.0000},
+        {statement_type="TSB UK Current Account", field="£_paid_in"},
     ]
 
 [STD_PAYMENT_OUT]
@@ -126,4 +137,5 @@
         {statement_type="HSBC UK Current Account", field="£_paid_out"},
         {statement_type="HSBC UK Saving Account", field="£_paid_out"},
         {statement_type="HSBC UK Credit Card", field="amount", exclude_negative_values=true},
+        {statement_type="TSB UK Current Account", field="£_paid_out"},
     ]

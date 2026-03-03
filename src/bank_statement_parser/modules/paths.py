@@ -383,7 +383,7 @@ def validate_or_initialise_project(project_path: Path) -> None:
 
     paths = ProjectPaths(root=project_path)
 
-    has_toml = paths.config.is_dir() and bool(list(paths.config.glob("*.toml")))
+    has_toml = paths.config.is_dir() and bool(list(paths.config.rglob("*.toml")))
     has_db = paths.project_db.exists()
 
     # Rule 2: neither present → new project, scaffold in full.
@@ -443,9 +443,11 @@ def _scaffold_new_project(paths: ProjectPaths) -> None:
     # 1. Create the full directory tree.
     paths.ensure_dirs()
 
-    # 2. Copy default TOML config files (skip any that already exist).
-    for src in BASE_CONFIG.glob("*.toml"):
-        dst = paths.config / src.name
+    # 2. Copy default TOML config files (including any company subfolders).
+    for src in BASE_CONFIG.rglob("*.toml"):
+        relative = src.relative_to(BASE_CONFIG)
+        dst = paths.config / relative
+        dst.parent.mkdir(parents=True, exist_ok=True)
         if not dst.exists():
             shutil.copy2(src, dst)
 

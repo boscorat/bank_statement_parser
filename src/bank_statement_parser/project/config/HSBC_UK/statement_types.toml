@@ -27,7 +27,7 @@ statement_type = 'HSBC UK Saving Account'
         [[HSBC_UK_SAV.header.configs]]
             config = 'Statement Balances'
             statement_table_key = 'HSBC_UK_CUR_ACCT_SUM'
-            
+
         [[HSBC_UK_SAV.header.configs]]
             config = 'Statement Info'
             locations = [{page_number=1, top_left = [37, 325], bottom_right = [290, 385]}]
