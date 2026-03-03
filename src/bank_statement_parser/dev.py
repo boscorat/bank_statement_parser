@@ -1,6 +1,6 @@
 from pathlib import Path
 
-import bank_statement_parser as bsp
+# import bank_statement_parser as bsp
 from bank_statement_parser.modules import statements
 
 
