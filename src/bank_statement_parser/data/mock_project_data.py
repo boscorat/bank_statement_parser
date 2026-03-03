@@ -143,11 +143,12 @@ def generate_mock_data(db_path: Path, num_batches: int = 10, statements_per_batc
                 None,
                 0,
                 0,
+                0,
             )
         )
 
     cursor.executemany(
-        "INSERT INTO batch_lines (ID_BATCH, ID_BATCHLINE, ID_STATEMENT, STD_BATCH_LINE, STD_FILENAME, STD_ACCOUNT, STD_DURATION_SECS, STD_UPDATETIME, STD_SUCCESS, STD_ERROR_MESSAGE, ERROR_CAB, ERROR_CONFIG) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO batch_lines (ID_BATCH, ID_BATCHLINE, ID_STATEMENT, STD_BATCH_LINE, STD_FILENAME, STD_ACCOUNT, STD_DURATION_SECS, STD_UPDATETIME, STD_SUCCESS, STD_ERROR_MESSAGE, ERROR_CAB, ERROR_CONFIG, ERROR_DATA) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         batch_lines_data,
     )
     print(f"Inserted {len(batch_lines_data)} batch_lines")

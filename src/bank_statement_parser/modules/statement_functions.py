@@ -288,7 +288,7 @@ def extract_fields(
                 "location": location_id,
                 "page": location.page_number,
                 "config": config,
-                "region_text": region.extract_text() if region is not None else None,
+                "region_text": region.extract_text(x_tolerance=1) if region is not None else None,
                 "region_width": float(region.width) if region is not None else None,
                 "region_height": float(region.height) if region is not None else None,
             }
@@ -310,7 +310,7 @@ def extract_fields(
                 data=[
                     pl.Series("field", [config_field.field], dtype=pl.String),
                     pl.Series("vital", [config_field.vital], dtype=pl.Boolean),
-                    pl.Series("value_raw", [region.extract_text()], dtype=pl.String),
+                    pl.Series("value_raw", [region.extract_text(x_tolerance=1)], dtype=pl.String),
                     pl.Series("value_raw_offset", [""], dtype=pl.String),
                 ]
             )
