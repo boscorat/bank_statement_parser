@@ -7,7 +7,14 @@ on:
       - 'docs/**'
       - 'mkdocs.yml'
       - 'scripts/generate_docs.py'
+      - 'src/bank_statement_parser/__init__.py'
+      - 'src/bank_statement_parser/cli.py'
+      - 'src/bank_statement_parser/modules/anonymise.py'
       - 'src/bank_statement_parser/modules/data.py'
+      - 'src/bank_statement_parser/modules/paths.py'
+      - 'src/bank_statement_parser/modules/reports_db.py'
+      - 'src/bank_statement_parser/modules/reports_parquet.py'
+      - 'src/bank_statement_parser/data/__init__.py'
       - 'src/bank_statement_parser/project/config/**'
   workflow_dispatch:
 

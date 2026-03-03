@@ -854,7 +854,6 @@ class StatementBatch:
         batch_lines: List of batch line data for parquet.
         statements: List of processed Statement objects.
         turbo: Whether to use parallel processing.
-        smart_rename: Whether to rename files based on extracted data.
         project_path: Optional custom project root directory.
         processed_pdfs: List of processed PDF results (PdfResult entries or exceptions).
     """
@@ -1192,7 +1191,7 @@ class StatementBatch:
         Args:
             datasource: Data backend to read from.  ``"parquet"`` reads from the
                 permanent Parquet files; ``"database"`` reads from the SQLite
-                star-schema views.  Defaults to ``"parquet"``.
+                star-schema views.  Defaults to ``"database"``.
             filetype: Output format.  ``"excel"`` writes a single ``.xlsx``
                 workbook; ``"csv"`` writes one CSV file per report table;
                 ``"both"`` writes Excel and CSV in sequence.
