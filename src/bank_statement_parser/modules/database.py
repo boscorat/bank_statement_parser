@@ -37,6 +37,32 @@ def _require_db(db_path: Path) -> None:
         raise ProjectDatabaseMissing(db_path)
 
 
+# Columns that may have been added after the initial schema was created.
+# Each entry is (table_name, column_name, column_type, default_value).
+_MIGRATIONS: list[tuple[str, str, str, str]] = [
+    ("batch_lines", "ERROR_DATA", "INTEGER", "0"),
+]
+
+
+def _migrate_db(conn: sqlite3.Connection) -> None:
+    """Apply forward-only schema migrations for missing columns.
+
+    Inspects each table listed in :data:`_MIGRATIONS` via ``PRAGMA
+    table_info`` and issues an ``ALTER TABLE … ADD COLUMN`` for any
+    column not yet present.  This is idempotent — running it against an
+    already-migrated database is a no-op.
+
+    Args:
+        conn: Open SQLite connection with write access.
+    """
+    for table, column, col_type, default in _MIGRATIONS:
+        existing = {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+        if column not in existing:
+            conn.execute(f'ALTER TABLE {table} ADD COLUMN "{column}" {col_type} DEFAULT {default}')
+            print(f"[migrate] added column {column} to {table}")
+    conn.commit()
+
+
 def update_db(
     processed_pdfs: list[BaseException | PdfResult],
     batch_id: str,
@@ -91,6 +117,7 @@ def update_db(
     _require_db(db_path)
 
     conn = sqlite3.connect(db_path)
+    _migrate_db(conn)
 
     def _insert_df(df: pl.DataFrame, table_name: str) -> None:
         if df.is_empty():

@@ -42,6 +42,68 @@ from bank_statement_parser.modules.statement_functions import get_results, get_s
 
 CPU_WORKERS = os.cpu_count()
 
+_MAX_STRING_LEN = 500  # truncate long strings captured from locals
+
+
+def _build_error_detail(exc: BaseException) -> dict:
+    """
+    Build a structured error detail dict from a live exception.
+
+    Walks every frame in the traceback chain and extracts:
+    - A human-readable traceback as a list of frame dicts.
+    - All string-typed local variables from every frame (truncated to
+      ``_MAX_STRING_LEN`` characters).  Large objects (DataFrames, PDFs, etc.)
+      are skipped because they are not ``str`` instances.
+
+    Args:
+        exc: The caught exception, with its ``__traceback__`` still attached.
+
+    Returns:
+        A dict with keys ``exception_type``, ``message``, ``traceback``, and
+        ``string_locals_by_frame``.
+    """
+    tb = exc.__traceback__
+    tb_frames = []
+    string_locals_by_frame = []
+
+    raw_tb = traceback.extract_tb(tb)
+    for summary in raw_tb:
+        tb_frames.append(
+            {
+                "file": summary.filename,
+                "line": summary.lineno,
+                "function": summary.name,
+                "text": summary.line,
+            }
+        )
+
+    # Walk the live traceback chain to collect frame locals.
+    current_tb = tb
+    while current_tb is not None:
+        frame = current_tb.tb_frame
+        str_vars = {
+            k: (v if len(v) <= _MAX_STRING_LEN else f"{v[:_MAX_STRING_LEN]}…")
+            for k, v in frame.f_locals.items()
+            if isinstance(v, str) and k != "__doc__"
+        }
+        if str_vars:
+            string_locals_by_frame.append(
+                {
+                    "function": frame.f_code.co_name,
+                    "file": frame.f_code.co_filename,
+                    "line": current_tb.tb_lineno,
+                    "string_locals": str_vars,
+                }
+            )
+        current_tb = current_tb.tb_next
+
+    return {
+        "exception_type": type(exc).__name__,
+        "message": str(exc),
+        "traceback": tb_frames,
+        "string_locals_by_frame": string_locals_by_frame,
+    }
+
 
 class Statement:
     """
@@ -99,6 +161,7 @@ class Statement:
         "project_path",
         "skip_project_validation",
         "logs",
+        "error_detail",
     )
 
     def __init__(
@@ -165,6 +228,7 @@ class Statement:
         # try block so that is_successfull() and cleanup() never hit an
         # uninitialised-slot AttributeError regardless of where a failure occurs.
         self.error_message: str = ""
+        self.error_detail: dict | None = None
         self.ID_STATEMENT: str = "<PDF ERROR>"
         self.ID_ACCOUNT: str | None = None
         self.checks_and_balances: pl.DataFrame = pl.DataFrame()
@@ -258,6 +322,7 @@ class Statement:
                     self.file_renamed = f"{self.ID_ACCOUNT}_{str(stmt_date)}.pdf"
         except Exception as e:
             self.error_message = f"** Configuration Failure **: {e}"
+            self.error_detail = _build_error_detail(e)
             self.success = False
             traceback.print_exc(file=sys.stderr)
 
@@ -502,8 +567,8 @@ def process_pdf_statement(
     Returns:
         PdfResult: Named tuple with fields ``batch_lines_stem``, ``statement_heads_stem``,
             ``statement_lines_stem``, ``cab_stem``, ``file_src``, ``file_dst``,
-            ``error_cab``, and ``error_config``.  See :data:`PdfResult` for full field
-            descriptions.
+            ``error_cab``, ``error_config``, and ``error_data``.  See :data:`PdfResult`
+            for full field descriptions.
     """
     paths = get_paths(project_path)
     batch_lines_stem: str | None = None
@@ -514,6 +579,7 @@ def process_pdf_statement(
     file_dst: str | None = None
     error_cab: bool = False
     error_config: bool = False
+    error_data: bool = False
     line_start = time()
     batch_line: dict = {}
     batch_line["ID_BATCH"] = batch_id
@@ -528,6 +594,7 @@ def process_pdf_statement(
     batch_line["STD_ERROR_MESSAGE"] = ""
     batch_line["ERROR_CAB"] = False
     batch_line["ERROR_CONFIG"] = False
+    batch_line["ERROR_DATA"] = False
     try:
         # Parse and extract data from the PDF statement.
         # Statement.__init__ never raises — on any internal failure it sets
@@ -560,8 +627,10 @@ def process_pdf_statement(
             print(f"[line {batch_line['STD_BATCH_LINE']}] {pdf.name}: {cab_message}")
         else:
             # Statement parsed and validated successfully — persist to parquet.
-            # A write failure is appended to the error message and marks the
-            # batch line as unsuccessful; it does not prevent the CAB write below.
+            # Each parquet class gets its own try/except so that a failure in one
+            # (e.g. a schema mismatch in StatementHeads) does not prevent the other
+            # classes from being written.  A write failure is flagged as error_data
+            # and does not prevent the CAB write below.
             try:
                 # Save extracted header data
                 pq_statement_heads = pq.StatementHeads(
@@ -579,7 +648,16 @@ def process_pdf_statement(
                 statement_heads_stem = paths.statement_heads_temp_stem(idx)
                 pq_statement_heads.cleanup()
                 pq_statement_heads = None
+            except Exception as e:
+                parquet_error = f"** Data Failure (StatementHeads) **: {e}"
+                batch_line["STD_ERROR_MESSAGE"] += parquet_error
+                batch_line["STD_SUCCESS"] = False
+                error_data = True
+                batch_line["ERROR_DATA"] = True
+                print(f"[line {batch_line['STD_BATCH_LINE']}] {pdf.name}: {parquet_error}")
+                traceback.print_exc(file=sys.stderr)
 
+            try:
                 # Save extracted transaction line data
                 pq_statement_lines = pq.StatementLines(
                     id_statement=stmt.ID_STATEMENT,
@@ -592,11 +670,11 @@ def process_pdf_statement(
                 pq_statement_lines.cleanup()
                 pq_statement_lines = None
             except Exception as e:
-                parquet_error = f"** Parquet Write Failure **: {e}"
+                parquet_error = f"** Data Failure (StatementLines) **: {e}"
                 batch_line["STD_ERROR_MESSAGE"] += parquet_error
                 batch_line["STD_SUCCESS"] = False
-                error_config = True
-                batch_line["ERROR_CONFIG"] = True
+                error_data = True
+                batch_line["ERROR_DATA"] = True
                 print(f"[line {batch_line['STD_BATCH_LINE']}] {pdf.name}: {parquet_error}")
                 traceback.print_exc(file=sys.stderr)
 
@@ -617,11 +695,11 @@ def process_pdf_statement(
                 pq_cab.cleanup()
                 pq_cab = None
             except Exception as e:
-                cab_error = f"** CAB Parquet Write Failure **: {e}"
+                cab_error = f"** Data Failure (ChecksAndBalances) **: {e}"
                 batch_line["STD_ERROR_MESSAGE"] += cab_error
                 batch_line["STD_SUCCESS"] = False
-                error_config = True
-                batch_line["ERROR_CONFIG"] = True
+                error_data = True
+                batch_line["ERROR_DATA"] = True
                 print(f"[line {batch_line['STD_BATCH_LINE']}] {pdf.name}: {cab_error}")
                 traceback.print_exc(file=sys.stderr)
 
@@ -662,6 +740,7 @@ def process_pdf_statement(
         file_dst=file_dst,
         error_cab=error_cab,
         error_config=error_config,
+        error_data=error_data,
     )
 
 
@@ -897,7 +976,7 @@ class StatementBatch:
         for idx, pdf in enumerate(self.pdfs):
             result = self.process_single_pdf(idx, pdf)
             self.processed_pdfs.append(result)
-            if isinstance(result, PdfResult) and (result.error_cab or result.error_config):
+            if isinstance(result, PdfResult) and (result.error_cab or result.error_config or result.error_data):
                 self.errors += 1
 
     async def process_turbo(self):
@@ -913,7 +992,7 @@ class StatementBatch:
         """
         self.processed_pdfs = await self.__process_batch_turbo()
         for result in self.processed_pdfs:
-            if isinstance(result, PdfResult) and (result.error_cab or result.error_config):
+            if isinstance(result, PdfResult) and (result.error_cab or result.error_config or result.error_data):
                 self.errors += 1
         return True
 
@@ -1194,4 +1273,5 @@ class StatementBatch:
 
     def __del__(self):
         """Destructor to ensure temporary files are cleaned up."""
-        self.delete_temp_files()
+        # self.delete_temp_files()
+        pass

@@ -1,3 +1,4 @@
+import traceback
 from copy import deepcopy
 
 # from uuid import uuid4
@@ -16,6 +17,44 @@ from bank_statement_parser.modules.data import (
 )
 from bank_statement_parser.modules.errors import ConfigError
 from bank_statement_parser.modules.pdf_functions import get_region, get_table_from_region
+
+_MAX_STRING_LEN = 500  # mirror of the constant in statements.py
+
+
+def _collect_exception(exc: Exception, function: str, config_field: Field | None, location_id: int, page: int | None, config: str) -> dict:
+    """Build a structured silent-swallow record for the debug_collector."""
+    tb = exc.__traceback__
+    string_locals_by_frame = []
+    current_tb = tb
+    while current_tb is not None:
+        frame = current_tb.tb_frame
+        str_vars = {
+            k: (v if len(v) <= _MAX_STRING_LEN else f"{v[:_MAX_STRING_LEN]}…")
+            for k, v in frame.f_locals.items()
+            if isinstance(v, str) and k != "__doc__"
+        }
+        if str_vars:
+            string_locals_by_frame.append(
+                {
+                    "function": frame.f_code.co_name,
+                    "file": frame.f_code.co_filename,
+                    "line": current_tb.tb_lineno,
+                    "string_locals": str_vars,
+                }
+            )
+        current_tb = current_tb.tb_next
+    return {
+        "event": "silent_exception",
+        "exception_type": type(exc).__name__,
+        "message": str(exc),
+        "function": function,
+        "config_field": config_field.field if config_field else None,
+        "location": location_id,
+        "page": page,
+        "config": config,
+        "traceback": [{"file": s.filename, "line": s.lineno, "function": s.name, "text": s.line} for s in traceback.extract_tb(tb)],
+        "string_locals_by_frame": string_locals_by_frame,
+    }
 
 
 def spawn_locations(
@@ -236,10 +275,24 @@ def extract_fields(
     location_id: int,
     logs: pl.DataFrame,
     file_path: str,
+    debug_collector: list | None = None,
 ) -> pl.DataFrame:
     results: pl.DataFrame = pl.DataFrame()
     result: pl.LazyFrame = pl.LazyFrame()
     region = get_region(location, pdf, logs, file_path)
+    if debug_collector is not None:
+        debug_collector.append(
+            {
+                "event": "get_region",
+                "config_field": config_field.field if config_field else None,
+                "location": location_id,
+                "page": location.page_number,
+                "config": config,
+                "region_text": region.extract_text(x_tolerance=1) if region is not None else None,
+                "region_width": float(region.width) if region is not None else None,
+                "region_height": float(region.height) if region is not None else None,
+            }
+        )
     if not statement_table:
         if region and len(region.chars) == 0 and location.try_shift_down:  # if the region is empty
             try:
@@ -247,14 +300,17 @@ def extract_fields(
                     location.top_left[1] = location.top_left[1] + location.try_shift_down
                     location.bottom_right[1] = location.bottom_right[1] + location.try_shift_down
                     region = get_region(location, pdf, logs, file_path)
-            except IndexError:
-                pass
+            except IndexError as _exc:
+                if debug_collector is not None:
+                    debug_collector.append(
+                        _collect_exception(_exc, "extract_fields", config_field, location_id, location.page_number, config)
+                    )
         if region and config_field:
             result = pl.LazyFrame(
                 data=[
                     pl.Series("field", [config_field.field], dtype=pl.String),
                     pl.Series("vital", [config_field.vital], dtype=pl.Boolean),
-                    pl.Series("value_raw", [region.extract_text()], dtype=pl.String),
+                    pl.Series("value_raw", [region.extract_text(x_tolerance=1)], dtype=pl.String),
                     pl.Series("value_raw_offset", [""], dtype=pl.String),
                 ]
             )
@@ -282,7 +338,11 @@ def extract_fields(
             )
             try:
                 results.vstack(result.collect(), in_place=True)
-            except pl.exceptions.ColumnNotFoundError:
+            except pl.exceptions.ColumnNotFoundError as _exc:
+                if debug_collector is not None:
+                    debug_collector.append(
+                        _collect_exception(_exc, "extract_fields", config_field, location_id, location.page_number, config)
+                    )
                 return results
 
     else:  # if there is a statement table
@@ -306,6 +366,17 @@ def extract_fields(
             if region
             else None
         )
+        if debug_collector is not None:
+            debug_collector.append(
+                {
+                    "event": "get_table_from_region",
+                    "config_field": config_field.field if config_field else None,
+                    "location": location_id,
+                    "page": location.page_number,
+                    "config": config,
+                    "table": table.collect().to_dicts() if table is not None else None,
+                }
+            )
         # table = table.collect().lazy()
         if table is not None:
             if not statement_table.transaction_spec:
@@ -348,7 +419,11 @@ def extract_fields(
                     )
                     try:
                         results.vstack(result.collect(), in_place=True)
-                    except pl.exceptions.ColumnNotFoundError:
+                    except pl.exceptions.ColumnNotFoundError as _exc:
+                        if debug_collector is not None:
+                            debug_collector.append(
+                                _collect_exception(_exc, "extract_fields", field, location_id, location.page_number, config)
+                            )
                         continue
 
             else:  # transaction records will be multi-line and have no row specification, but will have a column specification
@@ -408,8 +483,21 @@ def extract_fields(
                                 result = result_vo
                     try:
                         results.vstack(result.drop("value_raw_offset").collect(), in_place=True)
-                    except pl.exceptions.ColumnNotFoundError:
+                    except pl.exceptions.ColumnNotFoundError as _exc:
+                        if debug_collector is not None:
+                            debug_collector.append(
+                                _collect_exception(_exc, "extract_fields", field, location_id, location.page_number, config)
+                            )
                         continue
+                # Pre-bookend row exclusion
+                if statement_table.transaction_spec.exclude_rows:
+                    excluded_row_ids = pl.DataFrame(schema={"row": pl.UInt32})
+                    for rule in statement_table.transaction_spec.exclude_rows:
+                        matched = (
+                            results.filter(pl.col("field") == rule.field).filter(pl.col("value").str.contains(rule.pattern)).select("row")
+                        )
+                        excluded_row_ids.extend(matched)
+                    results = results.join(excluded_row_ids, on="row", how="anti")
                 # Transaction bookends
                 start_rows_all = pl.DataFrame(schema={"row": pl.UInt32, "transaction_start": pl.Boolean})
                 end_rows_all = pl.DataFrame(schema={"row": pl.UInt32, "transaction_end": pl.Boolean})
@@ -485,7 +573,14 @@ def process_transactions(data: pl.DataFrame, transaction_spec: TransactionSpec, 
 
 
 def get_results(
-    pdf: PDF, section: str, config: Config, logs: pl.DataFrame, file_path: str, scope: str = "success", exclude_last_n_pages: int = 0
+    pdf: PDF,
+    section: str,
+    config: Config,
+    logs: pl.DataFrame,
+    file_path: str,
+    scope: str = "success",
+    exclude_last_n_pages: int = 0,
+    debug_collector: list | None = None,
 ) -> pl.DataFrame:  # scope can be all, success, fail, or hard_fail
     result: pl.DataFrame = pl.DataFrame()
     results: pl.DataFrame = pl.DataFrame()
@@ -503,6 +598,7 @@ def get_results(
                 location_id=i,
                 logs=logs,
                 file_path=file_path,
+                debug_collector=debug_collector,
             )
             if result.height > 0:
                 results.vstack(result, in_place=True)

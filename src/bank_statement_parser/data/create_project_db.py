@@ -78,6 +78,7 @@ SCHEMAS = {
         "STD_ERROR_MESSAGE": "TEXT",
         "ERROR_CAB": "INTEGER",
         "ERROR_CONFIG": "INTEGER",
+        "ERROR_DATA": "INTEGER",
     },
 }
 

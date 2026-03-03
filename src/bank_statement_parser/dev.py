@@ -1,12 +1,16 @@
 from pathlib import Path
 
+# import bank_statement_parser as bsp
 from bank_statement_parser.modules import statements
 
 
 def main():
+
+    # bsp.anonymise_pdf(Path("/home/boscorat/Projects/tsb_spend_and_save_example_1.pdf"))
     # laptop
-    folder = Path("/home/boscorat/repos/bank_statement_parser/tests/pdfs/bad")
-    include_subdirs = True  # set True to also include one level of subdirectories
+    folder = Path("/home/boscorat/Projects")
+    # folder = Path("/home/boscorat/repos/bank_statement_parser/tests/pdfs/bad")
+    include_subdirs = False  # set True to also include one level of subdirectories
 
     pdfs = [f for f in folder.iterdir() if f.is_file() and f.suffix == ".pdf"]
     if include_subdirs:
@@ -16,17 +20,19 @@ def main():
 
     batch = statements.StatementBatch(
         pdfs=pdfs,
-        turbo=True,
-        # project_path=Path("/home/boscorat/Projects/Telford"),
+        turbo=False,
+        project_path=Path("/home/boscorat/Projects/bsp_project"),
     )
     print(f"total: {batch.duration_secs}, process: {batch.process_secs}, parquet: {batch.parquet_secs}, db: {batch.db_secs}")
-    batch.update_data()
-    batch.copy_statements_to_project()
-    batch.delete_temp_files()
-    print(f"total: {batch.duration_secs}, process: {batch.process_secs}, parquet: {batch.parquet_secs}, db: {batch.db_secs}")
-    if batch.errors:
-        written = batch.debug()
-        print(f"debug: {written} file(s) written to project/log/debug/")
+    batch.debug()
+
+    # batch.update_data()
+    # batch.copy_statements_to_project()
+    # batch.delete_temp_files()
+    # print(f"total: {batch.duration_secs}, process: {batch.process_secs}, parquet: {batch.parquet_secs}, db: {batch.db_secs}")
+    # if batch.errors:
+    #     written = batch.debug()
+    #     print(f"debug: {written} file(s) written to project/log/debug/")
 
     # #windows
     # statements.StatementBatch(Path("C:\\Users\\Admin\\repos\\bsp\\stmts"), turbo=True, smart_rename=False)
@@ -60,4 +66,5 @@ def main():
 # print(rp.GapReport().all)
 
 
-# main()
+if __name__ == "__main__":
+    main()

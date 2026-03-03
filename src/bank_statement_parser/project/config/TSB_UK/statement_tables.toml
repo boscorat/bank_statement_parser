@@ -1,0 +1,56 @@
+[TSB_UK_CUR_ACCT_SUM]
+type = "summary"
+statement_table = 'Account Summary'
+table_columns = 2
+table_rows = 5
+row_spacing = 7
+locations = [
+    {page_number=1, top_left = [30, 405], bottom_right = [300, 470], vertical_lines = [40, 200, 200, 280], dynamic_last_vertical_line = {image_id = 0, image_location_tag = "x1"}, allow_text_failover = true},
+]
+fields = [
+    {field = 'opening_balance', cell = {row = 1, col = 1}, vital=true, type = 'numeric', numeric_currency ="GBP", numeric_modifier = {suffix = "D", multiplier = -1}},
+    {field = 'payments_in', cell = {row = 2, col = 1}, vital=true, type = 'numeric', numeric_currency ="GBP"},
+    {field = 'payments_out', cell = {row = 3, col = 1}, vital=true, type = 'numeric', numeric_currency ="GBP"},
+    {field = 'closing_balance', cell = {row = 4, col = 1}, vital=true, type = 'numeric', numeric_currency ="GBP", numeric_modifier = {suffix = "D", multiplier = -1}},
+]
+
+[TSB_UK_CUR_ACCT_DET]
+type = "detail"
+statement_table = 'Account Details'
+table_columns = 2
+table_rows = 2
+row_spacing = 7
+locations = [
+    {page_number = 1, top_left = [340, 235], bottom_right = [565, 260], vertical_lines = [350, 427, 427, 545], allow_text_failover = true},
+]
+fields = [
+    {field = 'sortcode', cell = {row = 0, col = 1}, vital=true, type = "string", string_pattern ='^[0-9]{2}-[0-9]{2}-[0-9]{2}$'},
+    {field = 'account_number', cell = {row = 1, col = 1}, vital=true, type = "string", string_pattern ='^[0-9]{8}$'},
+]
+
+[TSB_UK_CUR_TRANSACTIONS]
+type = "transaction"
+statement_table = 'Transactions'
+table_columns = 6
+locations = [
+    {vertical_lines = [40, 100, 100, 186, 186, 349, 349, 420, 420, 485, 485, 555]},
+]
+fields = [
+    {field = 'date', column = 0, vital=false, type = "string", string_pattern ='^[0-3][0-9]\s?[A-Z][a-z]{2}\s?[0-3][0-9]$'},
+    {field = 'payment_type', column = 1, vital=false, type = "string", string_pattern ='^(.+)?$'},
+    {field = 'details', column = 2, vital=true, type = "string", string_pattern ='.+', string_max_length = 100},
+    {field = '£_paid_out', column = 3, vital=false, type = "numeric", numeric_currency = "GBP"},
+    {field = '£_paid_in', column = 4, vital=false, type = "numeric", numeric_currency = "GBP"},
+    {field = '£_balance', column = 5, vital=false, type = "numeric", numeric_currency = "GBP", numeric_modifier = {suffix = "D", multiplier = -1.0000}}
+]
+delete_success_false = true
+delete_cast_success_false = true
+delete_rows_with_missing_vital_fields = true
+
+[TSB_UK_CUR_TRANSACTIONS.transaction_spec]
+exclude_rows = [{field = 'details', pattern = '^STATEMENT[\S]?CLOSING[\S]?BALANCE$'}]
+transaction_bookends = [
+    {start_fields = ['date','£_balance','details'], min_non_empty_start = 3, end_fields = ['£_paid_out','£_paid_in'], min_non_empty_end = 1}
+]
+fill_forward_fields = ['date','payment_type', '£_paid_out']
+merge_fields = {fields=['details'], separator=' | '}

@@ -1,0 +1,10 @@
+[TSB_UK_SPEND_SAVE]
+account = "Spend & Save"
+company_key = 'TSB_UK'
+account_type_key = 'CUR'
+statement_type_key = 'TSB_UK_CUR'
+exclude_last_n_pages = 1
+    [TSB_UK_SPEND_SAVE.config]
+    config = 'Account Info'
+    locations = [{page_number = 1, top_left = [30, 310], bottom_right = [180, 350]}]
+    field = {field = 'account', vital=true, type = "string", string_pattern = '^Spend[\s]*&[\s]*Save'}
