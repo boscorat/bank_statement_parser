@@ -8,7 +8,7 @@ statement_type = 'TSB UK Current Account'
         [[TSB_UK_CUR.header.configs]]
             config = 'Statement Info'
             locations = [{page_number=1, top_left = [103,368], bottom_right = [230, 380]}]
-            field = {field = 'statement_date', vital=true, type = "string", string_pattern ='^[1-3]?[0-9]\s?[A-Z][a-z]{2,8}\s?(\d{4}\s?)?to\s?[1-3]?[0-9]\s?[A-Z][a-z]{2,8}\s?[0-9]{4}$'}
+            field = {field = 'statement_date', vital=true, type = "string", string_pattern ='^[1-3]?[0-9]\s[A-Z][a-z]{2,8}\s(\d{4}\s)?to\s[1-3]?[0-9]\s[A-Z][a-z]{2,8}\s[0-9]{4}$'}
 
         [[TSB_UK_CUR.header.configs]]
             config = 'Account Info'

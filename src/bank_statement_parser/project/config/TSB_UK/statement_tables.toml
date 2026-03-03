@@ -52,5 +52,5 @@ exclude_rows = [{field = 'details', pattern = '^STATEMENT[\S]?CLOSING[\S]?BALANC
 transaction_bookends = [
     {start_fields = ['date','£_balance','details'], min_non_empty_start = 3, end_fields = ['£_paid_out','£_paid_in'], min_non_empty_end = 1}
 ]
-fill_forward_fields = ['date','payment_type', '£_paid_out', '£_paid_in', '£_balance']
+fill_forward_fields = ['date','payment_type', '£_paid_out']
 merge_fields = {fields=['details'], separator=' | '}

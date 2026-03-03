@@ -21,6 +21,11 @@ from pathlib import Path
 import polars as pl
 
 from bank_statement_parser.modules.data import PdfResult
+from bank_statement_parser.modules.parquet import (
+    _build_checks_and_balances_data,
+    _build_statement_heads_data,
+    _build_statement_lines_data,
+)
 from bank_statement_parser.modules.paths import get_paths
 from bank_statement_parser.modules.statement_functions import get_results
 
@@ -100,6 +105,223 @@ def _cab_detail_rows(cab: pl.DataFrame) -> list[dict]:
     return failing
 
 
+def _diagnose_parquet_schemas(
+    stmt: object,
+) -> list[dict]:
+    """
+    Attempt each parquet data-build step and capture diagnostics on failure.
+
+    This is the *expensive* diagnostic step that only runs inside the debug
+    path.  For each of the three per-statement parquet classes
+    (ChecksAndBalances, StatementHeads, StatementLines) the corresponding
+    ``_build_*_data()`` helper is called to produce the intermediate data
+    DataFrame, then ``.extend()`` is attempted against the expected schema.
+    If the call raises a :class:`polars.exceptions.SchemaError` (or any other
+    exception), a diagnostic dict is captured containing:
+
+    - ``parquet_class``: Which parquet class failed.
+    - ``error``: The exception message.
+    - ``expected_schema``: Column-name -> dtype mapping from the empty schema.
+    - ``actual_dtypes``: Column-name -> dtype mapping of the data that was
+      produced *before* the ``.extend()`` call.  ``None`` if the data could
+      not be built at all.
+    - ``mismatched_columns``: List of ``{"column", "expected", "actual"}``
+      dicts for every column whose dtype differs.
+    - ``data_sample``: First 5 rows of the actual data as a list of dicts,
+      or ``None``.
+
+    Only classes whose data-build or ``.extend()`` call fails are included.
+    An empty list means all three classes would succeed (i.e. the original
+    failure was transient or environment-specific).
+
+    Args:
+        stmt: A :class:`~bank_statement_parser.modules.statements.Statement`
+            instance that has already been fully constructed (header_results,
+            lines_results, and checks_and_balances populated).  Typed as
+            ``object`` to avoid a circular import.
+
+    Returns:
+        A list of diagnostic dicts, one per failing parquet class.
+    """
+    # Schemas are defined inline to match the class constructors exactly,
+    # avoiding Parquet I/O or project-path resolution.
+    diagnostics: list[dict] = []
+
+    # --- ChecksAndBalances ---
+    cab_schema = pl.DataFrame(
+        orient="row",
+        schema={
+            "ID_CAB": pl.Utf8,
+            "ID_STATEMENT": pl.Utf8,
+            "ID_BATCH": pl.Utf8,
+            "HAS_TRANSACTIONS": pl.Boolean,
+            "STD_OPENING_BALANCE_HEADS": pl.Decimal(16, 4),
+            "STD_PAYMENTS_IN_HEADS": pl.Decimal(16, 4),
+            "STD_PAYMENTS_OUT_HEADS": pl.Decimal(16, 4),
+            "STD_MOVEMENT_HEADS": pl.Decimal(16, 4),
+            "STD_CLOSING_BALANCE_HEADS": pl.Decimal(16, 4),
+            "STD_OPENING_BALANCE_LINES": pl.Decimal(16, 4),
+            "STD_PAYMENTS_IN_LINES": pl.Decimal(16, 4),
+            "STD_PAYMENTS_OUT_LINES": pl.Decimal(16, 4),
+            "STD_MOVEMENT_LINES": pl.Decimal(16, 4),
+            "STD_CLOSING_BALANCE_LINES": pl.Decimal(16, 4),
+            "CHECK_PAYMENTS_IN": pl.Boolean,
+            "CHECK_PAYMENTS_OUT": pl.Boolean,
+            "CHECK_MOVEMENT": pl.Boolean,
+            "CHECK_CLOSING": pl.Boolean,
+        },
+    )
+    _run_build_diagnostic(
+        diagnostics,
+        "ChecksAndBalances",
+        cab_schema,
+        _build_checks_and_balances_data,
+        stmt.ID_STATEMENT,  # type: ignore[attr-defined]
+        stmt.ID_BATCH or "",  # type: ignore[attr-defined]
+        stmt.checks_and_balances,  # type: ignore[attr-defined]
+    )
+
+    # --- StatementHeads ---
+    heads_schema = pl.DataFrame(
+        orient="row",
+        schema={
+            "ID_STATEMENT": pl.Utf8,
+            "ID_BATCHLINE": pl.Utf8,
+            "ID_ACCOUNT": pl.Utf8,
+            "STD_COMPANY": pl.Utf8,
+            "STD_STATEMENT_TYPE": pl.Utf8,
+            "STD_ACCOUNT": pl.Utf8,
+            "STD_SORTCODE": pl.Utf8,
+            "STD_ACCOUNT_NUMBER": pl.Utf8,
+            "STD_ACCOUNT_HOLDER": pl.Utf8,
+            "STD_STATEMENT_DATE": pl.Date,
+            "STD_OPENING_BALANCE": pl.Decimal(16, 4),
+            "STD_PAYMENTS_IN": pl.Decimal(16, 4),
+            "STD_PAYMENTS_OUT": pl.Decimal(16, 4),
+            "STD_CLOSING_BALANCE": pl.Decimal(16, 4),
+        },
+    )
+    _run_build_diagnostic(
+        diagnostics,
+        "StatementHeads",
+        heads_schema,
+        _build_statement_heads_data,
+        stmt.ID_STATEMENT,  # type: ignore[attr-defined]
+        "DEBUG",  # id_batchline placeholder — not available on Statement
+        stmt.ID_ACCOUNT,  # type: ignore[attr-defined]
+        stmt.company,  # type: ignore[attr-defined]
+        stmt.statement_type,  # type: ignore[attr-defined]
+        stmt.account,  # type: ignore[attr-defined]
+        stmt.header_results,  # type: ignore[attr-defined]
+    )
+
+    # --- StatementLines ---
+    lines_schema = pl.DataFrame(
+        orient="row",
+        schema={
+            "ID_TRANSACTION": pl.Utf8,
+            "ID_STATEMENT": pl.Utf8,
+            "STD_PAGE_NUMBER": pl.Int32,
+            "STD_TRANSACTION_DATE": pl.Date,
+            "STD_TRANSACTION_NUMBER": pl.UInt32,
+            "STD_CD": pl.Utf8,
+            "STD_TRANSACTION_TYPE": pl.Utf8,
+            "STD_TRANSACTION_TYPE_CD": pl.Utf8,
+            "STD_TRANSACTION_DESC": pl.Utf8,
+            "STD_OPENING_BALANCE": pl.Decimal(16, 4),
+            "STD_PAYMENTS_IN": pl.Decimal(16, 4),
+            "STD_PAYMENTS_OUT": pl.Decimal(16, 4),
+            "STD_CLOSING_BALANCE": pl.Decimal(16, 4),
+        },
+    )
+    _run_build_diagnostic(
+        diagnostics,
+        "StatementLines",
+        lines_schema,
+        _build_statement_lines_data,
+        stmt.ID_STATEMENT,  # type: ignore[attr-defined]
+        stmt.lines_results,  # type: ignore[attr-defined]
+    )
+
+    return diagnostics
+
+
+def _run_build_diagnostic(
+    diagnostics: list[dict],
+    class_name: str,
+    schema: pl.DataFrame,
+    data_fn: object,
+    *args: object,
+) -> None:
+    """
+    Build intermediate data via *data_fn*, attempt ``.extend()``, and capture diagnostics on failure.
+
+    Two-phase approach:
+
+    1. Call *data_fn* with *args* to produce the raw data DataFrame (this is
+       the step *before* ``.extend()``).  If this step itself fails, we still
+       capture the exception but ``actual_dtypes`` and ``data_sample`` will
+       be ``None``.
+    2. Attempt ``schema.clone().extend(data)`` to reproduce the exact failure
+       that occurs in the batch path.  If this succeeds, the class is healthy
+       and nothing is appended.
+
+    Args:
+        diagnostics: The accumulator list to append to on failure.
+        class_name: Human-readable class name for the diagnostic entry.
+        schema: The expected schema DataFrame (used to report expected dtypes).
+        data_fn: One of the ``_build_*_data()`` functions from
+            :mod:`~bank_statement_parser.modules.parquet`.
+        *args: Positional arguments forwarded to *data_fn*.
+    """
+    expected = {col: str(dtype) for col, dtype in schema.schema.items()}
+    actual_dtypes: dict[str, str] | None = None
+    data_sample: list[dict] | None = None
+    data: pl.DataFrame | None = None
+
+    # Phase 1: build the intermediate data DataFrame
+    try:
+        data = data_fn(*args)  # type: ignore[operator]
+        actual_dtypes = {col: str(dtype) for col, dtype in data.schema.items()}
+        data_sample = data.head(5).to_dicts()
+    except Exception as exc:
+        # Data construction itself failed — record and return
+        diagnostics.append(
+            {
+                "parquet_class": class_name,
+                "error": f"data construction failed: {exc}",
+                "error_type": type(exc).__qualname__,
+                "expected_schema": expected,
+                "actual_dtypes": None,
+                "mismatched_columns": [],
+                "data_sample": None,
+            }
+        )
+        return
+
+    # Phase 2: attempt .extend() to reproduce the schema mismatch
+    try:
+        schema.clone().extend(data)
+    except Exception as exc:
+        mismatched: list[dict] = []
+        for col, exp_dtype in expected.items():
+            act_dtype = actual_dtypes.get(col)
+            if act_dtype is not None and act_dtype != exp_dtype:
+                mismatched.append({"column": col, "expected": exp_dtype, "actual": act_dtype})
+
+        diagnostics.append(
+            {
+                "parquet_class": class_name,
+                "error": str(exc),
+                "error_type": type(exc).__qualname__,
+                "expected_schema": expected,
+                "actual_dtypes": actual_dtypes,
+                "mismatched_columns": mismatched,
+                "data_sample": data_sample,
+            }
+        )
+
+
 def debug_pdf_statement(
     pdf: Path,
     batch_id: str,
@@ -119,6 +341,8 @@ def debug_pdf_statement(
     - The checks & balances DataFrame (may be empty if processing failed before
       the validation step ran).
     - The error message and error type.
+    - Parquet schema diagnostics — each ``build_*_records()`` call is replayed
+      and any schema mismatches are captured with expected vs actual dtypes.
 
     The output is written to::
 
@@ -211,16 +435,31 @@ def debug_pdf_statement(
             # ----------------------------------------------------------------
             # 4. Error classification
             # ----------------------------------------------------------------
-            error_type = "ERROR_CONFIG" if stmt.error_message else "ERROR_CAB"
-            error_message = stmt.error_message if stmt.error_message else "** Checks & Balances Failure **"
+            if stmt.error_message:
+                error_type = "ERROR_CONFIG"
+                error_message = stmt.error_message
+            elif not stmt.success:
+                error_type = "ERROR_CAB"
+                error_message = "** Checks & Balances Failure **"
+            else:
+                # Statement re-processed successfully — the original failure
+                # must have occurred during the parquet write step (schema /
+                # data-type mismatch).
+                error_type = "ERROR_DATA"
+                error_message = "** Data Failure ** (statement re-processed successfully; original failure was during parquet write)"
             error_detail: dict | None = stmt.error_detail
+
+            # ----------------------------------------------------------------
+            # 5. Parquet schema diagnostics — expensive, debug-path only
+            # ----------------------------------------------------------------
+            parquet_diagnostics: list[dict] = _diagnose_parquet_schemas(stmt)
 
             id_statement = stmt.ID_STATEMENT
             stmt.cleanup()
             stmt = None  # type: ignore[assignment]
 
         # ----------------------------------------------------------------
-        # 5. Write debug.json
+        # 6. Write debug.json
         # ----------------------------------------------------------------
         paths = get_paths(project_path)
         folder_name = f"{pdf.parent.name}_{pdf.name}"
@@ -239,6 +478,7 @@ def debug_pdf_statement(
                 "debug_timestamp": datetime.now().isoformat(timespec="seconds"),
             },
             "error_detail": error_detail,
+            "parquet_diagnostics": parquet_diagnostics,
             "checks_and_balances": cab_rows,
             "checks_and_balances_failing": cab_failing,
             "header_extraction": header_rows,
@@ -297,7 +537,7 @@ def debug_statements(
     for entry in processed_pdfs:
         if not isinstance(entry, PdfResult):
             continue
-        if not (entry.error_cab or entry.error_config):
+        if not (entry.error_cab or entry.error_config or entry.error_data):
             continue
         if entry.file_src is None:
             continue

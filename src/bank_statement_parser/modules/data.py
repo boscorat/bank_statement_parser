@@ -30,6 +30,7 @@ PdfResult = namedtuple(
         "file_dst",  # str | None — canonical rename target basename
         "error_cab",  # bool — True if checks & balances validation failed
         "error_config",  # bool — True if configuration or parsing failed
+        "error_data",  # bool — True if parquet schema/data failure occurred
     ],
 )
 """Named tuple returned by :func:`~bank_statement_parser.modules.statements.process_pdf_statement`
@@ -54,6 +55,9 @@ error_cab:
     ``True`` if checks & balances validation failed.
 error_config:
     ``True`` if a configuration or parsing failure occurred.
+error_data:
+    ``True`` if a parquet schema or data-type mismatch failure occurred during
+    the ``.extend()`` step (e.g. a ``String`` value where a ``Date`` was expected).
 """
 
 
