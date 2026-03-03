@@ -1,5 +1,3 @@
-# specify the method by which a type of bank account is identified
-
 [HSBC_UK_CRD_RCC]
 account = "Rewards Credit Card"
 company_key = 'HSBC_UK'
