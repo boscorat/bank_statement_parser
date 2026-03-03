@@ -37,3 +37,6 @@ tests/test_project_bad/
 
 # apple files
 .DS_Store
+
+# MkDocs build output
+site/

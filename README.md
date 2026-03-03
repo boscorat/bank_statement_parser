@@ -428,6 +428,15 @@ database system.
   `balances.csv`, `gaps.csv`
 - **Excel:** one sheet per table in `transactions.xlsx`
 
+## Documentation
+
+Full documentation is available at
+[boscorat.github.io/bank_statement_parser](https://boscorat.github.io/bank_statement_parser/).
+
+- [Adding a New Bank](https://boscorat.github.io/bank_statement_parser/guides/new-bank-config/) —
+  step-by-step guide to creating configuration files for parsing statements from
+  a new bank.
+
 ## Contributing
 
 Developer guidelines, architecture notes, code style rules, and test commands

@@ -1,0 +1,47 @@
+site_name: Bank Statement Parser
+site_description: Documentation for the bank_statement_parser Python library — parse bank statement PDFs, extract structured transaction data, and persist to Parquet and SQLite.
+site_url: https://boscorat.github.io/bank_statement_parser/
+repo_url: https://github.com/boscorat/bank_statement_parser
+repo_name: boscorat/bank_statement_parser
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - toc.follow
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Guides:
+      - Adding a New Bank: guides/new-bank-config.md
