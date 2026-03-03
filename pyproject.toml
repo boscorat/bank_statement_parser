@@ -48,6 +48,7 @@ module-name = "bank_statement_parser"
 [dependency-groups]
 dev = [
     "memory-profiler>=0.61.0",
+    "zensical>=0.0.24",
     "pytest>=9.0.2",
     "ruff>=0.14.9",
     "scalene>=2.0.1",
