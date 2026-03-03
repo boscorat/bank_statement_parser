@@ -1,26 +1,30 @@
 from pathlib import Path
 
+import bank_statement_parser as bsp
 from bank_statement_parser.modules import statements
 
 
 def main():
-    # laptop
-    folder = Path("/home/boscorat/Projects")
-    include_subdirs = False  # set True to also include one level of subdirectories
 
-    pdfs = [f for f in folder.iterdir() if f.is_file() and f.suffix == ".pdf"]
-    if include_subdirs:
-        for subdir in folder.iterdir():
-            if subdir.is_dir():
-                pdfs.extend(f for f in subdir.iterdir() if f.is_file() and f.suffix == ".pdf")
+    bsp.anonymise_pdf(Path("/home/boscorat/Projects/tsb_spend_and_save_example_1.pdf"))
+    # # laptop
+    # folder = Path("/home/boscorat/Projects")
+    # include_subdirs = False  # set True to also include one level of subdirectories
 
-    batch = statements.StatementBatch(
-        pdfs=pdfs,
-        turbo=True,
-        project_path=Path("/home/boscorat/Projects/bsp_project"),
-    )
-    print(f"total: {batch.duration_secs}, process: {batch.process_secs}, parquet: {batch.parquet_secs}, db: {batch.db_secs}")
-    batch.debug()
+    # pdfs = [f for f in folder.iterdir() if f.is_file() and f.suffix == ".pdf"]
+    # if include_subdirs:
+    #     for subdir in folder.iterdir():
+    #         if subdir.is_dir():
+    #             pdfs.extend(f for f in subdir.iterdir() if f.is_file() and f.suffix == ".pdf")
+
+    # batch = statements.StatementBatch(
+    #     pdfs=pdfs,
+    #     turbo=True,
+    #     project_path=Path("/home/boscorat/Projects/bsp_project"),
+    # )
+    # print(f"total: {batch.duration_secs}, process: {batch.process_secs}, parquet: {batch.parquet_secs}, db: {batch.db_secs}")
+    # batch.debug()
+
     # batch.update_data()
     # batch.copy_statements_to_project()
     # batch.delete_temp_files()

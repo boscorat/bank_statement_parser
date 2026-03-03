@@ -198,21 +198,30 @@ class ConfigManager:
         :func:`~bank_statement_parser.modules.paths.validate_or_initialise_project`
         called from ``Statement`` or ``StatementBatch``).
 
+        Scans both the root config directory and any immediate company
+        subdirectories for ``.toml`` files.
+
         Raises:
             ProjectConfigMissing: If ``config/`` is absent or contains no
-                ``.toml`` files.
+                ``.toml`` files at any level.
         """
         config_dir = self.config_dir
-        if not config_dir.is_dir() or not list(config_dir.glob("*.toml")):
+        if not config_dir.is_dir() or not list(config_dir.rglob("*.toml")):
             raise ProjectConfigMissing(config_dir)
 
     def _load_config(self) -> None:
         """
         Load and parse all TOML configuration files.
 
-        Attempts to load from BASE_CONFIG.
-        Converts raw TOML data to dataclasses and links references between
-        statement tables and account objects.
+        For each config section, loads the root-level file (e.g.
+        ``config/account_types.toml``) if present, then discovers and merges
+        all matching files from immediate company subdirectories (e.g.
+        ``config/HSBC_UK/accounts.toml``, ``config/TSB_UK/accounts.toml``).
+        All top-level TOML keys must be unique across files; no key may appear
+        in more than one file for the same section.
+
+        Converts raw TOML data to dataclasses and links cross-section
+        references between statement tables and account objects.
         """
         if self._project_path is not None:
             self._require_config_dir()
@@ -227,8 +236,13 @@ class ConfigManager:
         }
 
         for key in config_dict:
-            file_path = f"{key}.toml"
-            self._load_toml_file(config_dict, key, self.config_dir / file_path)
+            file_name = f"{key}.toml"
+            # Load root-level file first (e.g. account_types.toml, standard_fields.toml)
+            self._merge_toml_file(config_dict, key, self.config_dir / file_name)
+            # Load matching files from each immediate company subdirectory
+            for subdir in sorted(self.config_dir.iterdir()):
+                if subdir.is_dir():
+                    self._merge_toml_file(config_dict, key, subdir / file_name)
 
         for v in config_dict.values():
             for k in v["config"]:
@@ -239,9 +253,14 @@ class ConfigManager:
 
         self._config_dict = config_dict
 
-    def _load_toml_file(self, config_dict: dict[str, _ConfigEntry], key: str, file_path: Path) -> None:
+    def _merge_toml_file(self, config_dict: dict[str, _ConfigEntry], key: str, file_path: Path) -> None:
         """
-        Load a single TOML file into the config dictionary.
+        Load a single TOML file and merge its entries into the config dictionary.
+
+        Each top-level key in the TOML file is added to the section's config
+        dict.  If the file does not exist it is silently skipped.  Duplicate
+        top-level keys across files for the same section will overwrite earlier
+        values; config authors should ensure all keys are unique.
 
         Args:
             config_dict: The configuration dictionary to populate.
@@ -250,7 +269,7 @@ class ConfigManager:
         """
         try:
             with open(file_path, "rb") as toml:
-                config_dict[key]["config"] = deepcopy(load(toml))
+                config_dict[key]["config"].update(deepcopy(load(toml)))
         except FileNotFoundError:
             pass
 

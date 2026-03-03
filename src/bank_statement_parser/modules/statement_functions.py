@@ -489,6 +489,15 @@ def extract_fields(
                                 _collect_exception(_exc, "extract_fields", field, location_id, location.page_number, config)
                             )
                         continue
+                # Pre-bookend row exclusion
+                if statement_table.transaction_spec.exclude_rows:
+                    excluded_row_ids = pl.DataFrame(schema={"row": pl.UInt32})
+                    for rule in statement_table.transaction_spec.exclude_rows:
+                        matched = (
+                            results.filter(pl.col("field") == rule.field).filter(pl.col("value").str.contains(rule.pattern)).select("row")
+                        )
+                        excluded_row_ids.extend(matched)
+                    results = results.join(excluded_row_ids, on="row", how="anti")
                 # Transaction bookends
                 start_rows_all = pl.DataFrame(schema={"row": pl.UInt32, "transaction_start": pl.Boolean})
                 end_rows_all = pl.DataFrame(schema={"row": pl.UInt32, "transaction_end": pl.Boolean})
