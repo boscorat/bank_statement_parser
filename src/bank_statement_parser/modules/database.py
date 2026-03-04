@@ -12,7 +12,7 @@ from time import time
 
 import polars as pl
 
-from bank_statement_parser.data.build_datamart import build_datamart
+from bank_statement_parser.data.build_datamart import build_datamart, _ensure_mart_structure
 from bank_statement_parser.modules.data import PdfResult
 from bank_statement_parser.modules.errors import ProjectDatabaseMissing
 from bank_statement_parser.modules.paths import get_paths
@@ -45,14 +45,253 @@ _MIGRATIONS: list[tuple[str, str, str, str]] = [
     ("batch_heads", "ID_USER", "TEXT", "''"),
 ]
 
+# Views that may be absent from databases created before they were introduced.
+# Each entry is (view_name, create_sql).  Only created when missing — never
+# dropped — so any user-customised views are preserved.
+_VIEW_MIGRATIONS: list[tuple[str, str]] = [
+    (
+        "GapReport",
+        """
+        CREATE VIEW GapReport AS
+        WITH ordered_statements AS (
+            SELECT
+                STD_ACCOUNT          AS account_type,
+                STD_ACCOUNT_NUMBER   AS account_number,
+                STD_ACCOUNT_HOLDER   AS account_holder,
+                STD_STATEMENT_DATE   AS statement_date,
+                CAST(STD_OPENING_BALANCE AS REAL) AS opening_balance,
+                CAST(STD_CLOSING_BALANCE AS REAL) AS closing_balance,
+                ROW_NUMBER() OVER (
+                    PARTITION BY STD_ACCOUNT, STD_ACCOUNT_NUMBER
+                    ORDER BY STD_ACCOUNT, STD_ACCOUNT_NUMBER, STD_STATEMENT_DATE
+                ) AS row_num
+            FROM statement_heads
+        ),
+        with_prev AS (
+            SELECT
+                account_type,
+                account_number,
+                account_holder,
+                statement_date,
+                opening_balance,
+                closing_balance,
+                LAG(closing_balance) OVER (
+                    PARTITION BY account_type, account_number
+                    ORDER BY statement_date
+                ) AS prev_closing_balance,
+                CASE
+                    WHEN account_type || account_number =
+                         LAG(account_type || account_number) OVER (
+                             PARTITION BY account_type, account_number
+                             ORDER BY statement_date
+                         )
+                    THEN 0 ELSE 1
+                END AS account_change
+            FROM ordered_statements
+        )
+        SELECT
+            account_type,
+            account_number,
+            account_holder,
+            statement_date,
+            opening_balance,
+            closing_balance,
+            CASE
+                WHEN account_change = 1                          THEN ''
+                WHEN opening_balance = prev_closing_balance      THEN ''
+                ELSE 'GAP'
+            END AS gap_flag
+        FROM with_prev
+        """,
+    ),
+    (
+        "FlatTransaction",
+        """
+        CREATE VIEW FlatTransaction AS
+        SELECT
+            ft.id_date          AS transaction_date,
+            ds.statement_date,
+            ds.filename,
+            da.company,
+            da.account_type,
+            da.account_number,
+            da.sortcode,
+            da.account_holder,
+            ft.transaction_number,
+            ft.transaction_credit_or_debit  AS CD,
+            ft.transaction_type             AS type,
+            ft.transaction_desc,
+            SUBSTR(ft.transaction_desc, 1, 25) AS short_desc,
+            ft.value_in,
+            ft.value_out,
+            ft.value
+        FROM FactTransaction ft
+        INNER JOIN DimStatement ds ON ft.statement_id = ds.statement_id
+        INNER JOIN DimAccount   da ON ft.account_id   = da.account_id
+        """,
+    ),
+    (
+        "DimStatementBatch",
+        """
+        CREATE VIEW DimStatementBatch AS
+        SELECT DISTINCT
+            bl.ID_BATCH          AS batch_id,
+            ds.statement_id,
+            ds.id_statement,
+            ds.account_id,
+            ds.company,
+            ds.account_type,
+            ds.account_number,
+            ds.sortcode,
+            ds.account_holder,
+            ds.statement_date,
+            ds.opening_balance,
+            ds.payments_in,
+            ds.payments_out,
+            ds.closing_balance,
+            ds.statement_type,
+            ds.filename,
+            ds.batch_time
+        FROM DimStatement ds
+        INNER JOIN batch_lines bl ON ds.id_statement = bl.ID_STATEMENT
+        """,
+    ),
+    (
+        "FactTransactionBatch",
+        """
+        CREATE VIEW FactTransactionBatch AS
+        SELECT
+            dsb.batch_id,
+            ft.transaction_id,
+            ft.id_transaction,
+            ft.statement_id,
+            ft.account_id,
+            ft.time_id,
+            ft.id_date,
+            ft.id_account,
+            ft.id_statement,
+            ft.transaction_number,
+            ft.transaction_credit_or_debit,
+            ft.transaction_type,
+            ft.transaction_type_cd,
+            ft.transaction_desc,
+            ft.opening_balance,
+            ft.value_in,
+            ft.value_out,
+            ft.value
+        FROM FactTransaction ft
+        INNER JOIN DimStatementBatch dsb ON ft.statement_id = dsb.statement_id
+        """,
+    ),
+    (
+        "DimAccountBatch",
+        """
+        CREATE VIEW DimAccountBatch AS
+        SELECT DISTINCT
+            dsb.batch_id,
+            da.account_id,
+            da.id_account,
+            da.company,
+            da.account_type,
+            da.account_number,
+            da.sortcode,
+            da.account_holder
+        FROM DimAccount da
+        INNER JOIN DimStatementBatch dsb ON da.account_id = dsb.account_id
+        """,
+    ),
+    (
+        "DimTimeBatch",
+        """
+        CREATE VIEW DimTimeBatch AS
+        SELECT
+            dt.*,
+            r.batch_id
+        FROM DimTime dt
+        INNER JOIN (
+            SELECT
+                ftb.batch_id,
+                MIN(ftb.id_date)        AS min_date,
+                MAX(dsb.statement_date) AS max_date
+            FROM FactTransactionBatch ftb
+            INNER JOIN DimStatementBatch dsb
+                   ON ftb.statement_id = dsb.statement_id
+                  AND ftb.batch_id     = dsb.batch_id
+            GROUP BY ftb.batch_id
+        ) r ON dt.id_date BETWEEN r.min_date AND r.max_date
+        """,
+    ),
+    (
+        "FactBalanceBatch",
+        """
+        CREATE VIEW FactBalanceBatch AS
+        SELECT
+            dab.batch_id,
+            fb.time_id,
+            fb.account_id,
+            fb.id_date,
+            fb.id_account,
+            fb.opening_balance,
+            fb.closing_balance,
+            fb.movement,
+            fb.outside_date
+        FROM FactBalance fb
+        INNER JOIN DimAccountBatch dab ON fb.account_id = dab.account_id
+        INNER JOIN DimTimeBatch    dtb ON fb.time_id    = dtb.time_id
+                                     AND dab.batch_id   = dtb.batch_id
+        """,
+    ),
+    (
+        "FlatTransactionBatch",
+        """
+        CREATE VIEW FlatTransactionBatch AS
+        SELECT
+            ftb.batch_id,
+            ftb.id_date             AS transaction_date,
+            dsb.statement_date,
+            dsb.filename,
+            dab.company,
+            dab.account_type,
+            dab.account_number,
+            dab.sortcode,
+            dab.account_holder,
+            ftb.transaction_number,
+            ftb.transaction_credit_or_debit  AS CD,
+            ftb.transaction_type             AS type,
+            ftb.transaction_desc,
+            SUBSTR(ftb.transaction_desc, 1, 25) AS short_desc,
+            ftb.value_in,
+            ftb.value_out,
+            ftb.value
+        FROM FactTransactionBatch ftb
+        INNER JOIN DimStatementBatch dsb ON ftb.statement_id = dsb.statement_id
+                                        AND ftb.batch_id     = dsb.batch_id
+        INNER JOIN DimAccountBatch   dab ON ftb.account_id   = dab.account_id
+                                        AND ftb.batch_id     = dab.batch_id
+        """,
+    ),
+]
+
 
 def _migrate_db(conn: sqlite3.Connection) -> None:
-    """Apply forward-only schema migrations for missing columns.
+    """Apply forward-only schema migrations for missing columns, mart tables, and views.
 
-    Inspects each table listed in :data:`_MIGRATIONS` via ``PRAGMA
-    table_info`` and issues an ``ALTER TABLE … ADD COLUMN`` for any
-    column not yet present.  This is idempotent — running it against an
-    already-migrated database is a no-op.
+    Three classes of migration are applied in order:
+
+    1. **Column migrations** — ``ALTER TABLE … ADD COLUMN`` for any column in
+       :data:`_MIGRATIONS` not yet present in its table.
+    2. **Mart table bootstrap** — creates the five mart tables (``DimTime``,
+       ``DimAccount``, ``DimStatement``, ``FactTransaction``, ``FactBalance``)
+       and their indexes if absent, via :func:`~bank_statement_parser.data.build_datamart._ensure_mart_structure`.
+       Tables are created empty; :func:`~bank_statement_parser.data.build_datamart.build_datamart`
+       populates them on every ``update_db`` call using the drop-and-recreate
+       strategy, which preserves bulk-insert performance.
+    3. **View migrations** — ``CREATE VIEW`` for any view in :data:`_VIEW_MIGRATIONS`
+       not yet present.  Existing views (including any user-customised ones) are
+       never dropped.
+
+    This function is idempotent — running it against an already-migrated
+    database is a no-op.
 
     Args:
         conn: Open SQLite connection with write access.
@@ -62,6 +301,15 @@ def _migrate_db(conn: sqlite3.Connection) -> None:
         if column not in existing:
             conn.execute(f'ALTER TABLE {table} ADD COLUMN "{column}" {col_type} DEFAULT {default}')
             print(f"[migrate] added column {column} to {table}")
+
+    _ensure_mart_structure(conn)
+
+    existing_views = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'view'").fetchall()}
+    for view_name, create_sql in _VIEW_MIGRATIONS:
+        if view_name not in existing_views:
+            conn.execute(create_sql)
+            print(f"[migrate] created view {view_name}")
+
     conn.commit()
 
 

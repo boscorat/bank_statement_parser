@@ -110,6 +110,126 @@ _DDL_FACT_BALANCE = """
 
 
 # ---------------------------------------------------------------------------
+# Ensure-DDL: CREATE TABLE IF NOT EXISTS variants used by _ensure_mart_structure.
+# These are separate from the _DDL_* constants above, which are used by the
+# drop-and-recreate build steps and intentionally omit IF NOT EXISTS.
+# ---------------------------------------------------------------------------
+
+_DDL_DIM_TIME_ENSURE = """
+    CREATE TABLE IF NOT EXISTS DimTime (
+        time_id              INTEGER NOT NULL PRIMARY KEY,
+        id_date              TEXT    NOT NULL UNIQUE,
+        date_local_format    TEXT,
+        date_integer         INTEGER,
+        year                 INTEGER,
+        year_short           INTEGER,
+        quarter              INTEGER,
+        quarter_name         TEXT,
+        month_number         INTEGER,
+        month_number_padded  TEXT,
+        month_name           TEXT,
+        month_abbrv          TEXT,
+        period               INTEGER,
+        week                 INTEGER,
+        year_week            INTEGER,
+        day_of_month         INTEGER,
+        day_of_year          INTEGER,
+        day_of_week          INTEGER,
+        weekday              TEXT,
+        weekday_abbrv        TEXT,
+        weekday_initial      TEXT,
+        is_last_day_of_month    INTEGER NOT NULL DEFAULT 0,
+        is_last_day_of_quarter  INTEGER NOT NULL DEFAULT 0,
+        is_last_day_of_year     INTEGER NOT NULL DEFAULT 0,
+        is_weekday              INTEGER NOT NULL DEFAULT 0
+    )
+"""
+
+_DDL_DIM_ACCOUNT_ENSURE = """
+    CREATE TABLE IF NOT EXISTS DimAccount (
+        account_id      INTEGER NOT NULL PRIMARY KEY,
+        id_account      TEXT    NOT NULL UNIQUE,
+        company         TEXT,
+        account_type    TEXT,
+        account_number  TEXT,
+        sortcode        TEXT,
+        account_holder  TEXT
+    )
+"""
+
+_DDL_DIM_STATEMENT_ENSURE = """
+    CREATE TABLE IF NOT EXISTS DimStatement (
+        statement_id    INTEGER NOT NULL PRIMARY KEY,
+        id_statement    TEXT    NOT NULL UNIQUE,
+        account_id      INTEGER NOT NULL REFERENCES DimAccount(account_id),
+        id_batch        TEXT,
+        company         TEXT,
+        account_type    TEXT,
+        account_number  TEXT,
+        sortcode        TEXT,
+        account_holder  TEXT,
+        statement_date  TEXT,
+        opening_balance REAL,
+        payments_in     REAL,
+        payments_out    REAL,
+        closing_balance REAL,
+        statement_type  TEXT,
+        filename        TEXT,
+        batch_time      TEXT
+    )
+"""
+
+_DDL_FACT_TRANSACTION_ENSURE = """
+    CREATE TABLE IF NOT EXISTS FactTransaction (
+        transaction_id          INTEGER NOT NULL PRIMARY KEY,
+        id_transaction          TEXT    NOT NULL UNIQUE,
+        statement_id            INTEGER NOT NULL REFERENCES DimStatement(statement_id),
+        account_id              INTEGER NOT NULL REFERENCES DimAccount(account_id),
+        time_id                 INTEGER NOT NULL REFERENCES DimTime(time_id),
+        id_date                 TEXT    NOT NULL,
+        id_account              TEXT    NOT NULL,
+        id_statement            TEXT    NOT NULL,
+        transaction_number      INTEGER,
+        transaction_credit_or_debit TEXT,
+        transaction_type        TEXT,
+        transaction_type_cd     TEXT,
+        transaction_desc        TEXT,
+        opening_balance         REAL,
+        value_in                REAL,
+        value_out               REAL,
+        value                   REAL
+    )
+"""
+
+_DDL_FACT_BALANCE_ENSURE = """
+    CREATE TABLE IF NOT EXISTS FactBalance (
+        time_id          INTEGER NOT NULL REFERENCES DimTime(time_id),
+        account_id       INTEGER NOT NULL REFERENCES DimAccount(account_id),
+        id_date          TEXT    NOT NULL,
+        id_account       TEXT    NOT NULL,
+        opening_balance  REAL,
+        closing_balance  REAL,
+        movement         REAL    NOT NULL DEFAULT 0,
+        outside_date     INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (time_id, account_id)
+    )
+"""
+
+# Indexes that belong to the mart tables.  All use IF NOT EXISTS so running
+# _ensure_mart_structure() on an already-populated database is a no-op.
+_MART_INDEXES: list[str] = [
+    "CREATE INDEX IF NOT EXISTS idx_dt_id_date     ON DimTime (id_date)",
+    "CREATE INDEX IF NOT EXISTS idx_ds_id_statement ON DimStatement (id_statement)",
+    "CREATE INDEX IF NOT EXISTS idx_ds_account_id   ON DimStatement (account_id)",
+    "CREATE INDEX IF NOT EXISTS idx_ft_account_date ON FactTransaction (account_id, time_id)",
+    "CREATE INDEX IF NOT EXISTS idx_ft_time_id      ON FactTransaction (time_id)",
+    "CREATE INDEX IF NOT EXISTS idx_ft_statement_id ON FactTransaction (statement_id)",
+    "CREATE INDEX IF NOT EXISTS idx_fb_account_date ON FactBalance (account_id, time_id)",
+    "CREATE INDEX IF NOT EXISTS idx_fb_time_id      ON FactBalance (time_id)",
+]
+
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
@@ -121,6 +241,35 @@ def _drop_mart_objects(conn: sqlite3.Connection) -> None:
         if row is not None:
             kw = "VIEW" if row[0] == "view" else "TABLE"
             conn.execute(f"DROP {kw} IF EXISTS {name}")
+
+
+def _ensure_mart_structure(conn: sqlite3.Connection) -> None:
+    """Create mart tables and indexes if they do not already exist.
+
+    This is a structural bootstrap used by the migration path.  It creates
+    empty tables so that the rest of the codebase can safely reference them
+    (returning empty results) before the first :func:`build_datamart` run.
+
+    The function is idempotent — running it against a database that already
+    has all mart tables populated is a no-op (every statement uses
+    ``IF NOT EXISTS``).
+
+    The build steps in :func:`build_datamart` still use drop-then-recreate
+    for performance; this function is *not* called from there.
+
+    Args:
+        conn: Open SQLite connection with write access.
+    """
+    for ddl in (
+        _DDL_DIM_TIME_ENSURE,
+        _DDL_DIM_ACCOUNT_ENSURE,
+        _DDL_DIM_STATEMENT_ENSURE,
+        _DDL_FACT_TRANSACTION_ENSURE,
+        _DDL_FACT_BALANCE_ENSURE,
+    ):
+        conn.execute(ddl)
+    for idx_sql in _MART_INDEXES:
+        conn.execute(idx_sql)
 
 
 # ---------------------------------------------------------------------------
