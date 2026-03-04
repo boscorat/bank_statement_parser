@@ -57,6 +57,8 @@ SCHEMAS = {
     },
     "batch_heads": {
         "ID_BATCH": "TEXT",
+        "ID_SESSION": "TEXT",
+        "ID_USER": "TEXT",
         "STD_PATH": "TEXT",
         "STD_COMPANY": "TEXT",
         "STD_ACCOUNT": "TEXT",
