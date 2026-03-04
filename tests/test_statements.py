@@ -316,6 +316,102 @@ class TestCopyStatements:
 
 
 # ---------------------------------------------------------------------------
+# TestBatchReports
+# ---------------------------------------------------------------------------
+
+
+class TestBatchReports:
+    """Verify batch_id filtering on all report classes that support it."""
+
+    def _get_batch_id(self, good_project) -> str:
+        """Return the first batch ID from the database."""
+        paths = get_paths(good_project.project_path)
+        with sqlite3.connect(paths.project_db) as conn:
+            row = conn.execute("SELECT ID_BATCH FROM batch_heads ORDER BY STD_UPDATETIME LIMIT 1").fetchone()
+        assert row is not None, "No batch_heads rows found — cannot test batch filtering"
+        return row[0]
+
+    def test_dim_statement_batch_returns_rows(self, good_project):
+        """DimStatement(batch_id=...) returns at least one row."""
+        batch_id = self._get_batch_id(good_project)
+        df = db.DimStatement(project_path=good_project.project_path, batch_id=batch_id).all.collect()
+        assert df.height > 0, f"DimStatement(batch_id={batch_id!r}) returned no rows"
+
+    def test_dim_statement_batch_subset_of_full(self, good_project):
+        """DimStatement(batch_id=...) row count ≤ full DimStatement row count."""
+        batch_id = self._get_batch_id(good_project)
+        full = db.DimStatement(project_path=good_project.project_path).all.collect()
+        filtered = db.DimStatement(project_path=good_project.project_path, batch_id=batch_id).all.collect()
+        assert filtered.height <= full.height
+
+    def test_dim_account_batch_returns_rows(self, good_project):
+        """DimAccount(batch_id=...) returns at least one row."""
+        batch_id = self._get_batch_id(good_project)
+        df = db.DimAccount(project_path=good_project.project_path, batch_id=batch_id).all.collect()
+        assert df.height > 0, f"DimAccount(batch_id={batch_id!r}) returned no rows"
+
+    def test_dim_time_batch_returns_rows(self, good_project):
+        """DimTime(batch_id=...) returns at least one row."""
+        batch_id = self._get_batch_id(good_project)
+        df = db.DimTime(project_path=good_project.project_path, batch_id=batch_id).all.collect()
+        assert df.height > 0, f"DimTime(batch_id={batch_id!r}) returned no rows"
+
+    def test_dim_time_batch_subset_of_full(self, good_project):
+        """DimTime(batch_id=...) row count ≤ full DimTime row count."""
+        batch_id = self._get_batch_id(good_project)
+        full = db.DimTime(project_path=good_project.project_path).all.collect()
+        filtered = db.DimTime(project_path=good_project.project_path, batch_id=batch_id).all.collect()
+        assert filtered.height <= full.height
+
+    def test_fact_transaction_batch_returns_rows(self, good_project):
+        """FactTransaction(batch_id=...) returns at least one row."""
+        batch_id = self._get_batch_id(good_project)
+        df = db.FactTransaction(project_path=good_project.project_path, batch_id=batch_id).all.collect()
+        assert df.height > 0, f"FactTransaction(batch_id={batch_id!r}) returned no rows"
+
+    def test_fact_transaction_batch_subset_of_full(self, good_project):
+        """FactTransaction(batch_id=...) row count ≤ full FactTransaction row count."""
+        batch_id = self._get_batch_id(good_project)
+        full = db.FactTransaction(project_path=good_project.project_path).all.collect()
+        filtered = db.FactTransaction(project_path=good_project.project_path, batch_id=batch_id).all.collect()
+        assert filtered.height <= full.height
+
+    def test_fact_balance_batch_returns_rows(self, good_project):
+        """FactBalance(batch_id=...) returns at least one row."""
+        batch_id = self._get_batch_id(good_project)
+        df = db.FactBalance(project_path=good_project.project_path, batch_id=batch_id).all.collect()
+        assert df.height > 0, f"FactBalance(batch_id={batch_id!r}) returned no rows"
+
+    def test_fact_balance_batch_subset_of_full(self, good_project):
+        """FactBalance(batch_id=...) row count ≤ full FactBalance row count."""
+        batch_id = self._get_batch_id(good_project)
+        full = db.FactBalance(project_path=good_project.project_path).all.collect()
+        filtered = db.FactBalance(project_path=good_project.project_path, batch_id=batch_id).all.collect()
+        assert filtered.height <= full.height
+
+    def test_flat_transaction_batch_returns_rows(self, good_project):
+        """FlatTransaction(batch_id=...) returns at least one row."""
+        batch_id = self._get_batch_id(good_project)
+        df = db.FlatTransaction(project_path=good_project.project_path, batch_id=batch_id).all.collect()
+        assert df.height > 0, f"FlatTransaction(batch_id={batch_id!r}) returned no rows"
+
+    def test_flat_transaction_batch_count_matches_fact_transaction_batch(self, good_project):
+        """FlatTransaction(batch_id=...) row count equals FactTransaction(batch_id=...) row count."""
+        batch_id = self._get_batch_id(good_project)
+        db_path = good_project.project_path
+        ft_count = db.FactTransaction(project_path=db_path, batch_id=batch_id).all.collect().height
+        flat_count = db.FlatTransaction(project_path=db_path, batch_id=batch_id).all.collect().height
+        assert flat_count == ft_count
+
+    def test_no_batch_id_unchanged(self, good_project):
+        """Passing batch_id=None returns the same result as the no-argument constructor."""
+        db_path = good_project.project_path
+        df_default = db.FactTransaction(project_path=db_path).all.collect()
+        df_none = db.FactTransaction(project_path=db_path, batch_id=None).all.collect()
+        assert df_default.height == df_none.height
+
+
+# ---------------------------------------------------------------------------
 # TestBadStatements
 # ---------------------------------------------------------------------------
 

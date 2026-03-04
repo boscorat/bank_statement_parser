@@ -51,6 +51,31 @@ def _read_data(db_path: Path, table_name: str) -> pl.LazyFrame:
         return pl.read_database(query, connection=conn, infer_schema_length=None).lazy()
 
 
+def _read_data_filtered(db_path: Path, table_name: str, batch_table: str, batch_id: str | None) -> pl.LazyFrame:
+    """Read rows from a SQLite table/view, optionally filtered to a single batch.
+
+    When *batch_id* is ``None`` the full *table_name* is returned unchanged.
+    When *batch_id* is provided, *batch_table* is queried and filtered to rows
+    matching that ``batch_id``.
+
+    Args:
+        db_path: Path to the SQLite database file.
+        table_name: Name of the unfiltered table or view to read when *batch_id*
+            is ``None``.
+        batch_table: Name of the batch-scoped view to query when *batch_id* is
+            provided.
+        batch_id: Optional batch identifier to filter by.
+
+    Returns:
+        A :class:`pl.LazyFrame` containing the matching rows.
+    """
+    if batch_id is None:
+        return _read_data(db_path, table_name)
+    query = f"SELECT * FROM {batch_table} WHERE batch_id = ?"
+    with sqlite3.connect(db_path) as conn:
+        return pl.read_database(query, connection=conn, execute_options={"parameters": [batch_id]}, infer_schema_length=None).lazy()
+
+
 def export_csv(
     folder: Path | None = None,
     type: str = "simple",
@@ -181,55 +206,55 @@ def export_excel(
 class FlatTransaction:
     __slots__ = ("all",)
 
-    def __init__(self, project_path: Path | None = None) -> None:
+    def __init__(self, project_path: Path | None = None, batch_id: str | None = None) -> None:
         paths = get_paths(project_path)
         _require_db(paths)
-        self.all = _read_data(paths.project_db, "FlatTransaction")
+        self.all = _read_data_filtered(paths.project_db, "FlatTransaction", "FlatTransactionBatch", batch_id)
 
 
 class FactBalance:
     __slots__ = ("all",)
 
-    def __init__(self, project_path: Path | None = None) -> None:
+    def __init__(self, project_path: Path | None = None, batch_id: str | None = None) -> None:
         paths = get_paths(project_path)
         _require_db(paths)
-        self.all = _read_data(paths.project_db, "FactBalance")
+        self.all = _read_data_filtered(paths.project_db, "FactBalance", "FactBalanceBatch", batch_id)
 
 
 class DimTime:
     __slots__ = ("all",)
 
-    def __init__(self, project_path: Path | None = None) -> None:
+    def __init__(self, project_path: Path | None = None, batch_id: str | None = None) -> None:
         paths = get_paths(project_path)
         _require_db(paths)
-        self.all = _read_data(paths.project_db, "DimTime")
+        self.all = _read_data_filtered(paths.project_db, "DimTime", "DimTimeBatch", batch_id)
 
 
 class DimStatement:
     __slots__ = ("all",)
 
-    def __init__(self, project_path: Path | None = None) -> None:
+    def __init__(self, project_path: Path | None = None, batch_id: str | None = None) -> None:
         paths = get_paths(project_path)
         _require_db(paths)
-        self.all = _read_data(paths.project_db, "DimStatement")
+        self.all = _read_data_filtered(paths.project_db, "DimStatement", "DimStatementBatch", batch_id)
 
 
 class DimAccount:
     __slots__ = ("all",)
 
-    def __init__(self, project_path: Path | None = None) -> None:
+    def __init__(self, project_path: Path | None = None, batch_id: str | None = None) -> None:
         paths = get_paths(project_path)
         _require_db(paths)
-        self.all = _read_data(paths.project_db, "DimAccount")
+        self.all = _read_data_filtered(paths.project_db, "DimAccount", "DimAccountBatch", batch_id)
 
 
 class FactTransaction:
     __slots__ = ("all",)
 
-    def __init__(self, project_path: Path | None = None) -> None:
+    def __init__(self, project_path: Path | None = None, batch_id: str | None = None) -> None:
         paths = get_paths(project_path)
         _require_db(paths)
-        self.all = _read_data(paths.project_db, "FactTransaction")
+        self.all = _read_data_filtered(paths.project_db, "FactTransaction", "FactTransactionBatch", batch_id)
 
 
 class GapReport:
