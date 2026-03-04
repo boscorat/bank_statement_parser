@@ -56,6 +56,7 @@ def generate_mock_data(db_path: Path, num_batches: int = 10, statements_per_batc
     ]
 
     batch_ids = [str(uuid.uuid4()) for _ in range(num_batches)]
+    session_ids = [str(uuid.uuid4()) for _ in range(num_batches)]
     start_date = datetime(2024, 1, 1)
     batch_dates = [(start_date + timedelta(days=i * 30)).strftime("%Y-%m-%d %H:%M:%S") for i in range(num_batches)]
 
@@ -64,6 +65,8 @@ def generate_mock_data(db_path: Path, num_batches: int = 10, statements_per_batc
         batch_heads_data.append(
             (
                 batch_id,
+                session_ids[i],
+                "mock_user",
                 f"/path/to/batch_{i + 1}",
                 companies[i % len(companies)],
                 account_types[i % len(account_types)],
@@ -250,7 +253,7 @@ def generate_mock_data(db_path: Path, num_batches: int = 10, statements_per_batc
     print(f"Inserted {len(checks_and_balances_data)} checks_and_balances")
 
     cursor.executemany(
-        "INSERT INTO batch_heads (ID_BATCH, STD_PATH, STD_COMPANY, STD_ACCOUNT, STD_PDF_COUNT, STD_ERROR_COUNT, STD_DURATION_SECS, STD_UPDATETIME) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO batch_heads (ID_BATCH, ID_SESSION, ID_USER, STD_PATH, STD_COMPANY, STD_ACCOUNT, STD_PDF_COUNT, STD_ERROR_COUNT, STD_DURATION_SECS, STD_UPDATETIME) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         batch_heads_data,
     )
     print(f"Inserted {len(batch_heads_data)} batch_heads (written last as in production)")
