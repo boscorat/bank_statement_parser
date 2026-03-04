@@ -59,6 +59,26 @@ Copy processed statement PDFs into the project ``statements/`` directory.
 
 Delete temporary parquet files created during batch processing.
 
+## Low-level persistence helpers
+
+### `bsp.update_parquet()`
+
+*function* — `bank_statement_parser.modules.parquet`
+
+Update parquet files with processed results from all PDFs in a batch.
+
+### `bsp.update_db()`
+
+*function* — `bank_statement_parser.modules.database`
+
+Insert processed batch results into the SQLite database.
+
+## Data structures
+
+### `bsp.PdfResult()`
+
+*function* — `bank_statement_parser.modules.data`
+
 ## Debug / diagnostics
 
 ### `bsp.debug_pdf_statement()`
