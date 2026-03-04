@@ -1195,7 +1195,6 @@ class StatementBatch:
 
     def export(
         self,
-        datasource: Literal["parquet", "database"] = "database",
         filetype: Literal["excel", "csv", "both"] = "excel",
         folder: Path | None = None,
         type: str = "simple",
@@ -1204,15 +1203,12 @@ class StatementBatch:
         """
         Export processed batch data to a file or set of files.
 
-        Delegates to the appropriate module-level export function based on
-        *datasource* and *filetype*.  When neither *folder* nor *project_path*
-        is supplied the function writes to the project's ``export/csv/`` or
-        ``export/excel/`` sub-directory, creating it if absent.
+        Delegates to the DB-backed module-level export function based on
+        *filetype*.  When neither *folder* nor *project_path* is supplied the
+        function writes to the project's ``export/csv/`` or ``export/excel/``
+        sub-directory, creating it if absent.
 
         Args:
-            datasource: Data backend to read from.  ``"parquet"`` reads from the
-                permanent Parquet files; ``"database"`` reads from the SQLite
-                star-schema views.  Defaults to ``"database"``.
             filetype: Output format.  ``"excel"`` writes a single ``.xlsx``
                 workbook; ``"csv"`` writes one CSV file per report table;
                 ``"both"`` writes Excel and CSV in sequence.
@@ -1230,25 +1226,17 @@ class StatementBatch:
                 folder.
         """
         if filetype == "both":
-            self.export(datasource=datasource, filetype="excel", folder=folder, type=type, project_path=project_path)
-            self.export(datasource=datasource, filetype="csv", folder=folder, type=type, project_path=project_path)
+            self.export(filetype="excel", folder=folder, type=type, project_path=project_path)
+            self.export(filetype="csv", folder=folder, type=type, project_path=project_path)
             return
         resolved_project_path = project_path if project_path is not None else self.project_path
 
-        if datasource == "parquet":
-            import bank_statement_parser.modules.reports_parquet as _rp
+        import bank_statement_parser.modules.reports_db as _rd
 
-            if filetype == "excel":
-                _rp.export_excel(path=folder, type=type, project_path=resolved_project_path)
-            else:
-                _rp.export_csv(folder=folder, type=type, project_path=resolved_project_path)
+        if filetype == "excel":
+            _rd.export_excel(path=folder, type=type, project_path=resolved_project_path)
         else:
-            import bank_statement_parser.modules.reports_db as _rd
-
-            if filetype == "excel":
-                _rd.export_excel(path=folder, type=type, project_path=resolved_project_path)
-            else:
-                _rd.export_csv(folder=folder, type=type, project_path=resolved_project_path)
+            _rd.export_csv(folder=folder, type=type, project_path=resolved_project_path)
 
     def debug(self, project_path: Path | None = None) -> int:
         """

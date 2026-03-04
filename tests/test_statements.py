@@ -1,28 +1,20 @@
 """
 test_statements.py — integration tests for bank_statement_parser.
 
-Tests are grouped into seven classes:
+Tests are grouped into five classes:
 
 TestGoodStatements
     Verifies that all PDFs in ``tests/pdfs/good/`` process without error
     and that the expected output files are created.
 
-TestParquetReports
-    Verifies the Parquet-backed report classes (reports_parquet) against
-    the processed good-PDF data.
-
 TestDbReports
     Verifies the SQLite-backed report classes (reports_db) against the
     processed good-PDF data.
 
-TestCrossBackend
-    Verifies that numeric totals and row counts agree between the Parquet
-    and DB backends, and that both match the raw statement_lines source.
-
 TestExports
-    Verifies CSV and Excel export functions for both the database and
-    parquet backends, including full and simple presets and the
-    ``filetype="both"`` convenience mode on ``StatementBatch.export()``.
+    Verifies CSV and Excel export functions for the database backend,
+    including full and simple presets and the ``filetype="both"``
+    convenience mode on ``StatementBatch.export()``.
 
 TestCopyStatements
     Verifies that ``copy_statements_to_project()`` copies PDFs into the
@@ -44,7 +36,6 @@ from pathlib import Path
 import polars as pl
 
 from bank_statement_parser.modules import reports_db as db
-from bank_statement_parser.modules import reports_parquet as parquet
 from bank_statement_parser.modules.data import PdfResult
 from bank_statement_parser.modules.paths import get_paths
 from bank_statement_parser.modules.statements import copy_statements_to_project
@@ -84,71 +75,6 @@ class TestGoodStatements:
         paths = get_paths(good_project.project_path)
         temp_files = list(paths.parquet.glob("*_temp_*.parquet"))
         assert temp_files == [], f"Temp files still present: {temp_files}"
-
-
-# ---------------------------------------------------------------------------
-# TestParquetReports
-# ---------------------------------------------------------------------------
-
-
-class TestParquetReports:
-    def test_dim_statement_row_count(self, good_project):
-        """DimStatement has exactly one row per processed good PDF."""
-        df = parquet.DimStatement(project_path=good_project.project_path).all.collect()
-        assert df.height == len(good_project.pdfs)
-
-    def test_dim_account_uniqueness(self, good_project):
-        """DimAccount id_account values are unique."""
-        df = parquet.DimAccount(project_path=good_project.project_path).all.collect()
-        assert df.height == df["id_account"].n_unique()
-
-    def test_dim_account_count_matches_raw(self, good_project):
-        """DimAccount row count matches the number of distinct ID_ACCOUNT values in raw parquet."""
-        paths = get_paths(good_project.project_path)
-        raw_accounts = pl.read_parquet(paths.statement_heads)["ID_ACCOUNT"].n_unique()
-        df = parquet.DimAccount(project_path=good_project.project_path).all.collect()
-        assert df.height == raw_accounts
-
-    def test_dim_time_contiguous(self, good_project):
-        """DimTime date spine contains no gaps."""
-        df = parquet.DimTime(project_path=good_project.project_path).all.collect()
-        dates = df["id_date"].sort()
-        # Consecutive date differences must all be exactly 1 day
-        diffs = dates.diff().drop_nulls()
-        assert (diffs == timedelta(days=1)).all(), "Date spine has gaps in DimTime (parquet)"
-
-    def test_fact_transaction_row_count(self, good_project):
-        """FactTransaction row count matches statement_lines.parquet row count."""
-        paths = get_paths(good_project.project_path)
-        raw_count = pl.read_parquet(paths.statement_lines).height
-        ft = parquet.FactTransaction(project_path=good_project.project_path).all.collect()
-        assert ft.height == raw_count
-
-    def test_fact_transaction_has_credits_and_debits(self, good_project):
-        """At least one credit (value_in > 0) and one debit (value_out > 0) exist."""
-        ft = parquet.FactTransaction(project_path=good_project.project_path).all.collect()
-        assert ft.filter(pl.col("value_in") > 0).height > 0, "No credits found in FactTransaction (parquet)"
-        assert ft.filter(pl.col("value_out") > 0).height > 0, "No debits found in FactTransaction (parquet)"
-
-    def test_fact_balance_coverage(self, good_project):
-        """FactBalance has exactly n_accounts × n_days rows."""
-        pq_path = good_project.project_path
-        n_accounts = parquet.DimAccount(project_path=pq_path).all.collect().height
-        n_days = parquet.DimTime(project_path=pq_path).all.collect().height
-        fb = parquet.FactBalance(project_path=pq_path).all.collect()
-        assert fb.height == n_accounts * n_days
-
-    def test_gap_report_runs_without_error(self, good_project):
-        """GapReport.all.collect() completes without raising an exception."""
-        df = parquet.GapReport(project_path=good_project.project_path).all.collect()
-        assert df.height >= 0  # any non-raising result is acceptable
-
-    def test_flat_transaction_count_matches_fact_transaction(self, good_project):
-        """FlatTransaction row count equals FactTransaction row count."""
-        pq_path = good_project.project_path
-        ft_count = parquet.FactTransaction(project_path=pq_path).all.collect().height
-        flat_count = parquet.FlatTransaction(project_path=pq_path).all.collect().height
-        assert flat_count == ft_count
 
 
 # ---------------------------------------------------------------------------
@@ -202,97 +128,6 @@ class TestDbReports:
         flat_count = db.FlatTransaction(project_path=db_path).all.collect().height
         assert flat_count == ft_count
 
-
-# ---------------------------------------------------------------------------
-# TestCrossBackend
-# ---------------------------------------------------------------------------
-
-
-class TestCrossBackend:
-    # ------------------------------------------------------------------
-    # Row count parity: parquet vs DB
-    # ------------------------------------------------------------------
-
-    def test_fact_transaction_row_counts_agree(self, good_project):
-        """Parquet and DB FactTransaction have the same row count."""
-        pq_count = parquet.FactTransaction(project_path=good_project.project_path).all.collect().height
-        db_count = db.FactTransaction(project_path=good_project.project_path).all.collect().height
-        assert pq_count == db_count
-
-    def test_fact_balance_row_counts_agree(self, good_project):
-        """Parquet and DB FactBalance have the same row count."""
-        pq_count = parquet.FactBalance(project_path=good_project.project_path).all.collect().height
-        db_count = db.FactBalance(project_path=good_project.project_path).all.collect().height
-        assert pq_count == db_count
-
-    def test_dim_time_row_counts_agree(self, good_project):
-        """Parquet and DB DimTime have the same row count."""
-        pq_count = parquet.DimTime(project_path=good_project.project_path).all.collect().height
-        db_count = db.DimTime(project_path=good_project.project_path).all.collect().height
-        assert pq_count == db_count
-
-    def test_dim_account_row_counts_agree(self, good_project):
-        """Parquet and DB DimAccount have the same row count."""
-        pq_count = parquet.DimAccount(project_path=good_project.project_path).all.collect().height
-        db_count = db.DimAccount(project_path=good_project.project_path).all.collect().height
-        assert pq_count == db_count
-
-    def test_dim_statement_row_counts_agree(self, good_project):
-        """Parquet and DB DimStatement have the same row count."""
-        pq_count = parquet.DimStatement(project_path=good_project.project_path).all.collect().height
-        db_count = db.DimStatement(project_path=good_project.project_path).all.collect().height
-        assert pq_count == db_count
-
-    def test_flat_transaction_row_counts_agree(self, good_project):
-        """Parquet and DB FlatTransaction have the same row count."""
-        pq_count = parquet.FlatTransaction(project_path=good_project.project_path).all.collect().height
-        db_count = db.FlatTransaction(project_path=good_project.project_path).all.collect().height
-        assert pq_count == db_count
-
-    # ------------------------------------------------------------------
-    # Numeric totals: parquet vs DB
-    # ------------------------------------------------------------------
-
-    def test_fact_transaction_total_value_in_agrees(self, good_project):
-        """Parquet and DB FactTransaction total value_in agree within tolerance."""
-        pq_sum = parquet.FactTransaction(project_path=good_project.project_path).all.collect()["value_in"].sum()
-        db_sum = db.FactTransaction(project_path=good_project.project_path).all.collect()["value_in"].sum()
-        assert abs(pq_sum - db_sum) < FLOAT_TOL, f"value_in mismatch: parquet={pq_sum}, db={db_sum}"
-
-    def test_fact_transaction_total_value_out_agrees(self, good_project):
-        """Parquet and DB FactTransaction total value_out agree within tolerance."""
-        pq_sum = parquet.FactTransaction(project_path=good_project.project_path).all.collect()["value_out"].sum()
-        db_sum = db.FactTransaction(project_path=good_project.project_path).all.collect()["value_out"].sum()
-        assert abs(pq_sum - db_sum) < FLOAT_TOL, f"value_out mismatch: parquet={pq_sum}, db={db_sum}"
-
-    def test_fact_transaction_total_net_value_agrees(self, good_project):
-        """Parquet and DB FactTransaction total net value agree within tolerance."""
-        pq_sum = parquet.FactTransaction(project_path=good_project.project_path).all.collect()["value"].sum()
-        db_sum = db.FactTransaction(project_path=good_project.project_path).all.collect()["value"].sum()
-        assert abs(pq_sum - db_sum) < FLOAT_TOL, f"net value mismatch: parquet={pq_sum}, db={db_sum}"
-
-    # ------------------------------------------------------------------
-    # Raw statement_lines vs FactTransaction (parquet backend)
-    # ------------------------------------------------------------------
-
-    def test_statement_lines_parquet_value_in_matches_fact_transaction_parquet(self, good_project):
-        """SUM(STD_PAYMENTS_IN) from raw parquet equals FactTransaction(pq) value_in sum."""
-        paths = get_paths(good_project.project_path)
-        raw_sum = pl.read_parquet(paths.statement_lines)["STD_PAYMENTS_IN"].cast(float).sum()
-        ft_sum = parquet.FactTransaction(project_path=good_project.project_path).all.collect()["value_in"].sum()
-        assert abs(raw_sum - ft_sum) < FLOAT_TOL, f"value_in mismatch: raw={raw_sum}, parquet FactTransaction={ft_sum}"
-
-    def test_statement_lines_parquet_value_out_matches_fact_transaction_parquet(self, good_project):
-        """SUM(STD_PAYMENTS_OUT) from raw parquet equals FactTransaction(pq) value_out sum."""
-        paths = get_paths(good_project.project_path)
-        raw_sum = pl.read_parquet(paths.statement_lines)["STD_PAYMENTS_OUT"].cast(float).sum()
-        ft_sum = parquet.FactTransaction(project_path=good_project.project_path).all.collect()["value_out"].sum()
-        assert abs(raw_sum - ft_sum) < FLOAT_TOL, f"value_out mismatch: raw={raw_sum}, parquet FactTransaction={ft_sum}"
-
-    # ------------------------------------------------------------------
-    # Raw statement_lines vs FactTransaction (DB backend)
-    # ------------------------------------------------------------------
-
     def test_statement_lines_db_value_in_matches_fact_transaction_db(self, good_project):
         """SUM(STD_PAYMENTS_IN) from SQLite statement_lines equals DB FactTransaction value_in sum."""
         paths = get_paths(good_project.project_path)
@@ -309,7 +144,7 @@ class TestCrossBackend:
         ft_sum = db.FactTransaction(project_path=good_project.project_path).all.collect()["value_out"].sum()
         assert abs(raw_sum - ft_sum) < FLOAT_TOL, f"value_out mismatch: raw db={raw_sum}, db FactTransaction={ft_sum}"
 
-    def test_statement_lines_row_count_parquet_matches_db(self, good_project):
+    def test_statement_lines_row_count_matches_db(self, good_project):
         """Raw statement_lines row count agrees between parquet file and SQLite table."""
         paths = get_paths(good_project.project_path)
         pq_count = pl.read_parquet(paths.statement_lines).height
@@ -378,53 +213,12 @@ class TestExports:
         assert f.stat().st_size > 0, "Empty transactions.xlsx (db/simple)"
 
     # ------------------------------------------------------------------
-    # Parquet backend — CSV
-    # ------------------------------------------------------------------
-
-    def test_parquet_export_csv_full(self, good_project):
-        """Parquet export_csv(type='full') writes all six CSV files."""
-        parquet.export_csv(type="full", project_path=good_project.project_path)
-        paths = get_paths(good_project.project_path)
-        for name in _FULL_CSV_FILES:
-            f = paths.csv / name
-            assert f.exists(), f"Missing CSV: {name}"
-            assert f.stat().st_size > 0, f"Empty CSV: {name}"
-
-    def test_parquet_export_csv_simple(self, good_project):
-        """Parquet export_csv(type='simple') writes the flat transactions CSV."""
-        parquet.export_csv(type="simple", project_path=good_project.project_path)
-        paths = get_paths(good_project.project_path)
-        f = paths.csv / "transactions_table.csv"
-        assert f.exists(), "Missing transactions_table.csv (parquet/simple)"
-        assert f.stat().st_size > 0, "Empty transactions_table.csv (parquet/simple)"
-
-    # ------------------------------------------------------------------
-    # Parquet backend — Excel
-    # ------------------------------------------------------------------
-
-    def test_parquet_export_excel_full(self, good_project):
-        """Parquet export_excel(type='full') writes a non-empty workbook."""
-        parquet.export_excel(type="full", project_path=good_project.project_path)
-        paths = get_paths(good_project.project_path)
-        f = paths.excel / "transactions.xlsx"
-        assert f.exists(), "Missing transactions.xlsx (parquet/full)"
-        assert f.stat().st_size > 0, "Empty transactions.xlsx (parquet/full)"
-
-    def test_parquet_export_excel_simple(self, good_project):
-        """Parquet export_excel(type='simple') writes a non-empty workbook."""
-        parquet.export_excel(type="simple", project_path=good_project.project_path)
-        paths = get_paths(good_project.project_path)
-        f = paths.excel / "transactions.xlsx"
-        assert f.exists(), "Missing transactions.xlsx (parquet/simple)"
-        assert f.stat().st_size > 0, "Empty transactions.xlsx (parquet/simple)"
-
-    # ------------------------------------------------------------------
     # StatementBatch.export() — filetype="both"
     # ------------------------------------------------------------------
 
     def test_batch_export_both(self, good_project):
         """StatementBatch.export(filetype='both') writes both Excel and CSV."""
-        good_project.batch.export(datasource="database", filetype="both", type="full")
+        good_project.batch.export(filetype="both", type="full")
         paths = get_paths(good_project.project_path)
         # Excel file must exist
         xlsx = paths.excel / "transactions.xlsx"

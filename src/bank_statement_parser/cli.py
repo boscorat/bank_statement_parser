@@ -108,7 +108,6 @@ def _cmd_process(args: argparse.Namespace) -> int:
     # -- export reports ------------------------------------------------------
     if not args.no_export:
         batch.export(
-            datasource=args.export_data,
             filetype=args.export_format,
             type=args.export_type,
         )
@@ -244,13 +243,6 @@ def main() -> None:
         choices=["parquet", "database", "both"],
         default="both",
         help="Persistence target for update_data() (default: 'both').",
-    )
-    proc.add_argument(
-        "--export-data",
-        choices=["parquet", "database"],
-        default="database",
-        dest="export_data",
-        help="Data source for export (default: 'database').",
     )
     proc.add_argument(
         "--export-format",
