@@ -14,25 +14,14 @@ by `bsp process` or can be triggered manually via the Python API.
 | `simple` (default) | A single flat transactions table joining all dimensions. Best for spreadsheet analysis. |
 | `full` | Separate star-schema tables (accounts, calendar, statements, transactions, balances, gaps) for loading into an external database or BI tool. |
 
-## Data Backends
-
-Exports can be sourced from either backend:
-
-| Backend | Module | Storage | Best For |
-| --- | --- | --- | --- |
-| SQLite | `bsp.db` | `database/project.db` | Querying, long-term storage, star-schema mart |
-| Parquet | `bsp.parquet` | `parquet/*.parquet` | Fast columnar reads, large datasets |
-
-Both backends expose identical class names and export functions.
-
 ## CLI Usage
 
 ```bash
 # Default: export simple preset in both CSV and Excel from database
 bsp process --pdfs ~/statements
 
-# Export full star-schema tables as CSV only, from parquet
-bsp process --pdfs ~/statements --export-type full --export-format csv --export-data parquet
+# Export full star-schema tables as CSV only
+bsp process --pdfs ~/statements --export-type full --export-format csv
 
 # Skip export entirely
 bsp process --pdfs ~/statements --no-export
@@ -42,14 +31,13 @@ bsp process --pdfs ~/statements --no-export
 | --- | --- | --- | --- |
 | `--export-type` | `simple`, `full` | `simple` | Export preset |
 | `--export-format` | `excel`, `csv`, `both` | `both` | Output file format |
-| `--export-data` | `parquet`, `database` | `database` | Data source for export |
 | `--no-export` | — | off | Skip the export step entirely |
 
 ## Python API
 
 ### Export functions
 
-Both `bsp.db` and `bsp.parquet` provide `export_csv()` and `export_excel()`:
+`bsp.db` provides `export_csv()` and `export_excel()`:
 
 #### `export_csv()`
 
@@ -101,8 +89,8 @@ import bank_statement_parser as bsp
 # Export simple CSV from database backend (default project)
 bsp.db.export_csv()
 
-# Export full star-schema tables to Excel from parquet backend
-bsp.parquet.export_excel(type='full')
+# Export full star-schema tables to Excel
+bsp.db.export_excel(type='full')
 
 # Export to a custom directory
 from pathlib import Path
@@ -118,9 +106,8 @@ Call `.collect()` to materialise the data.
 ```python
 import bank_statement_parser as bsp
 
-# Read from either backend
+# Read from the DB backend
 df = bsp.db.FlatTransaction().all.collect()
-df = bsp.parquet.FlatTransaction().all.collect()
 ```
 
 ### Available classes

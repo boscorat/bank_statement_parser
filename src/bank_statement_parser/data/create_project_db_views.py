@@ -97,6 +97,175 @@ def create_views(db_path: Path):
     """)
     print("Created view: FlatTransaction")
 
+    # ------------------------------------------------------------------
+    # DimStatementBatch
+    # DimStatement with id_batch replaced by batch_id from batch_lines,
+    # so a statement appears once per distinct batch it was processed in.
+    # ------------------------------------------------------------------
+    cursor.execute("DROP VIEW IF EXISTS DimStatementBatch")
+    cursor.execute("""
+        CREATE VIEW DimStatementBatch AS
+        SELECT DISTINCT
+            bl.ID_BATCH          AS batch_id,
+            ds.statement_id,
+            ds.id_statement,
+            ds.account_id,
+            ds.company,
+            ds.account_type,
+            ds.account_number,
+            ds.sortcode,
+            ds.account_holder,
+            ds.statement_date,
+            ds.opening_balance,
+            ds.payments_in,
+            ds.payments_out,
+            ds.closing_balance,
+            ds.statement_type,
+            ds.filename,
+            ds.batch_time
+        FROM DimStatement ds
+        INNER JOIN batch_lines bl ON ds.id_statement = bl.ID_STATEMENT
+    """)
+    print("Created view: DimStatementBatch")
+
+    # ------------------------------------------------------------------
+    # FactTransactionBatch
+    # FactTransaction rows annotated with the batch_id they belong to.
+    # A transaction fans out if its statement appears in multiple batches.
+    # ------------------------------------------------------------------
+    cursor.execute("DROP VIEW IF EXISTS FactTransactionBatch")
+    cursor.execute("""
+        CREATE VIEW FactTransactionBatch AS
+        SELECT
+            dsb.batch_id,
+            ft.transaction_id,
+            ft.id_transaction,
+            ft.statement_id,
+            ft.account_id,
+            ft.time_id,
+            ft.id_date,
+            ft.id_account,
+            ft.id_statement,
+            ft.transaction_number,
+            ft.transaction_credit_or_debit,
+            ft.transaction_type,
+            ft.transaction_type_cd,
+            ft.transaction_desc,
+            ft.opening_balance,
+            ft.value_in,
+            ft.value_out,
+            ft.value
+        FROM FactTransaction ft
+        INNER JOIN DimStatementBatch dsb ON ft.statement_id = dsb.statement_id
+    """)
+    print("Created view: FactTransactionBatch")
+
+    # ------------------------------------------------------------------
+    # DimAccountBatch
+    # Distinct accounts contained within each batch.
+    # ------------------------------------------------------------------
+    cursor.execute("DROP VIEW IF EXISTS DimAccountBatch")
+    cursor.execute("""
+        CREATE VIEW DimAccountBatch AS
+        SELECT DISTINCT
+            dsb.batch_id,
+            da.account_id,
+            da.id_account,
+            da.company,
+            da.account_type,
+            da.account_number,
+            da.sortcode,
+            da.account_holder
+        FROM DimAccount da
+        INNER JOIN DimStatementBatch dsb ON da.account_id = dsb.account_id
+    """)
+    print("Created view: DimAccountBatch")
+
+    # ------------------------------------------------------------------
+    # DimTimeBatch
+    # Calendar rows scoped to each batch's date range
+    # (min transaction date → max statement date per batch_id).
+    # ------------------------------------------------------------------
+    cursor.execute("DROP VIEW IF EXISTS DimTimeBatch")
+    cursor.execute("""
+        CREATE VIEW DimTimeBatch AS
+        SELECT
+            dt.*,
+            r.batch_id
+        FROM DimTime dt
+        INNER JOIN (
+            SELECT
+                ftb.batch_id,
+                MIN(ftb.id_date)  AS min_date,
+                MAX(dsb.statement_date) AS max_date
+            FROM FactTransactionBatch ftb
+            INNER JOIN DimStatementBatch dsb
+                   ON ftb.statement_id = dsb.statement_id
+                  AND ftb.batch_id     = dsb.batch_id
+            GROUP BY ftb.batch_id
+        ) r ON dt.id_date BETWEEN r.min_date AND r.max_date
+    """)
+    print("Created view: DimTimeBatch")
+
+    # ------------------------------------------------------------------
+    # FactBalanceBatch
+    # FactBalance rows restricted to the accounts and date range of each
+    # batch.  Joins FactBalance to DimAccountBatch (accounts in batch) and
+    # DimTimeBatch (dates in batch), then adds batch_id.
+    # ------------------------------------------------------------------
+    cursor.execute("DROP VIEW IF EXISTS FactBalanceBatch")
+    cursor.execute("""
+        CREATE VIEW FactBalanceBatch AS
+        SELECT
+            dab.batch_id,
+            fb.time_id,
+            fb.account_id,
+            fb.id_date,
+            fb.id_account,
+            fb.opening_balance,
+            fb.closing_balance,
+            fb.movement,
+            fb.outside_date
+        FROM FactBalance fb
+        INNER JOIN DimAccountBatch dab ON fb.account_id = dab.account_id
+        INNER JOIN DimTimeBatch    dtb ON fb.time_id    = dtb.time_id
+                                     AND dab.batch_id   = dtb.batch_id
+    """)
+    print("Created view: FactBalanceBatch")
+
+    # ------------------------------------------------------------------
+    # FlatTransactionBatch
+    # Denormalised batch-scoped equivalent of FlatTransaction.
+    # ------------------------------------------------------------------
+    cursor.execute("DROP VIEW IF EXISTS FlatTransactionBatch")
+    cursor.execute("""
+        CREATE VIEW FlatTransactionBatch AS
+        SELECT
+            ftb.batch_id,
+            ftb.id_date             AS transaction_date,
+            dsb.statement_date,
+            dsb.filename,
+            dab.company,
+            dab.account_type,
+            dab.account_number,
+            dab.sortcode,
+            dab.account_holder,
+            ftb.transaction_number,
+            ftb.transaction_credit_or_debit  AS CD,
+            ftb.transaction_type             AS type,
+            ftb.transaction_desc,
+            SUBSTR(ftb.transaction_desc, 1, 25) AS short_desc,
+            ftb.value_in,
+            ftb.value_out,
+            ftb.value
+        FROM FactTransactionBatch ftb
+        INNER JOIN DimStatementBatch dsb ON ftb.statement_id = dsb.statement_id
+                                        AND ftb.batch_id     = dsb.batch_id
+        INNER JOIN DimAccountBatch   dab ON ftb.account_id   = dab.account_id
+                                        AND ftb.batch_id     = dab.batch_id
+    """)
+    print("Created view: FlatTransactionBatch")
+
     conn.commit()
     conn.close()
     print(f"\nAll views created successfully in {db_path}")

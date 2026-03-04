@@ -19,13 +19,7 @@ import bank_statement_parser as bsp
 
 *constant*
 
-## Namespaced report backends
-
-### `bsp.parquet`
-
-*module* — `bank_statement_parser.modules.reports_parquet`
-
-Parquet-backed report classes and export helpers.
+## Namespaced report backend
 
 ### `bsp.db`
 
@@ -175,26 +169,20 @@ Anonymise a single PDF using exclusion-based full-page letter scrambling.
 
 Anonymise all PDFs matching *pattern* in *folder_path* using exclusion-based scrambling.
 
-## Namespaced Report Backends
+## DB Report Backend
 
-Both `bsp.db` and `bsp.parquet` expose identical class and function names,
-backed by SQLite and Parquet files respectively.
+`bsp.db` exposes report classes and export functions backed by the SQLite star-schema.
 
 ```python
 # SQLite backend
 flat = bsp.db.FlatTransaction().all.collect()
 bsp.db.export_csv()
 bsp.db.export_excel()
-
-# Parquet backend
-flat = bsp.parquet.FlatTransaction().all.collect()
-bsp.parquet.export_csv()
-bsp.parquet.export_excel()
 ```
 
 ### Report classes
 
-Available in both `bsp.db` and `bsp.parquet`:
+Available in `bsp.db`:
 
 | Class | Description |
 | --- | --- |
@@ -208,7 +196,7 @@ Available in both `bsp.db` and `bsp.parquet`:
 
 ### Export helpers
 
-Available in both `bsp.db` and `bsp.parquet`:
+Available in `bsp.db`:
 
 #### `export_csv()`
 
