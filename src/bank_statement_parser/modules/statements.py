@@ -163,6 +163,13 @@ class Statement:
         "skip_project_validation",
         "logs",
         "error_detail",
+        # Lightweight summary scalars — populated on success; None otherwise.
+        # Avoids a second .collect() call in process_pdf_statement().
+        "std_statement_date",
+        "std_payments_in",
+        "std_payments_out",
+        "std_opening_balance",
+        "std_closing_balance",
     )
 
     def __init__(
@@ -243,6 +250,12 @@ class Statement:
         self.header_results: pl.LazyFrame = pl.LazyFrame()
         self.lines_results: pl.LazyFrame = pl.LazyFrame()
         self.success: bool = False
+        # Scalar summary fields — None until populated on a successful parse.
+        self.std_statement_date = None
+        self.std_payments_in = None
+        self.std_payments_out = None
+        self.std_opening_balance = None
+        self.std_closing_balance = None
 
         try:
             self.pdf = pdf_open(self.file_absolute, logs=self.logs)
@@ -315,12 +328,26 @@ class Statement:
             self.success = self.is_successfull()
             if self.success:
                 if self.config:
-                    # Build unique account ID from company key, account type, and account number
-                    acct_number = str(self.header_results.select("STD_ACCOUNT_NUMBER").collect().head(1).item()).replace(" ", "")
+                    # Collect header once; use it for ID, rename target, and summary scalars.
+                    _hdr = self.header_results.select(
+                        "STD_ACCOUNT_NUMBER",
+                        "STD_STATEMENT_DATE",
+                        "STD_OPENING_BALANCE",
+                        "STD_CLOSING_BALANCE",
+                    ).collect()
+                    acct_number = str(_hdr["STD_ACCOUNT_NUMBER"][0]).replace(" ", "")
                     self.ID_ACCOUNT = f"{self.config.company_key}_{self.config.account_type_key}_{acct_number}"
                     # Always populate the canonical rename target for use by copy_statements_to_project
-                    stmt_date = str(self.header_results.select("STD_STATEMENT_DATE").collect().head(1).item()).replace("-", "")
-                    self.file_renamed = f"{self.ID_ACCOUNT}_{str(stmt_date)}.pdf"
+                    stmt_date_raw = _hdr["STD_STATEMENT_DATE"][0]
+                    self.file_renamed = f"{self.ID_ACCOUNT}_{str(stmt_date_raw).replace('-', '')}.pdf"
+                    # Populate scalar summary fields for PdfResult
+                    self.std_statement_date = stmt_date_raw
+                    self.std_opening_balance = _hdr["STD_OPENING_BALANCE"][0]
+                    self.std_closing_balance = _hdr["STD_CLOSING_BALANCE"][0]
+                    # Payments in/out come from checks_and_balances (already a DataFrame)
+                    if not self.checks_and_balances.is_empty():
+                        self.std_payments_in = self.checks_and_balances["STD_PAYMENTS_IN"][0]
+                        self.std_payments_out = self.checks_and_balances["STD_PAYMENTS_OUT"][0]
         except Exception as e:
             self.error_message = f"** Configuration Failure **: {e}"
             self.error_detail = _build_error_detail(e)
@@ -572,9 +599,8 @@ def process_pdf_statement(
             called from ``StatementBatch``, which already validated the project once.
 
     Returns:
-        PdfResult: Named tuple with fields ``batch_lines_stem``, ``statement_heads_stem``,
-            ``statement_lines_stem``, ``cab_stem``, ``file_src``, ``file_dst``,
-            ``error_cab``, ``error_config``, and ``error_data``.  See :data:`PdfResult`
+        PdfResult: Named tuple with all processing results including temp parquet stems,
+            error flags, and lightweight financial summary scalars.  See :data:`PdfResult`
             for full field descriptions.
     """
     paths = get_paths(project_path)
@@ -587,6 +613,15 @@ def process_pdf_statement(
     error_cab: bool = False
     error_config: bool = False
     error_data: bool = False
+    # Summary scalars — populated inside the try block before stmt.cleanup().
+    summary_id_statement: str | None = None
+    summary_id_account: str | None = None
+    summary_account: str | None = None
+    summary_statement_date = None
+    summary_payments_in = None
+    summary_payments_out = None
+    summary_opening_balance = None
+    summary_closing_balance = None
     line_start = time()
     batch_line: dict = {}
     batch_line["ID_BATCH"] = batch_id
@@ -710,9 +745,18 @@ def process_pdf_statement(
                 print(f"[line {batch_line['STD_BATCH_LINE']}] {pdf.name}: {cab_error}")
                 traceback.print_exc(file=sys.stderr)
 
-        # Capture source path and rename target before destroying the statement object
+        # Capture source path, rename target, and lightweight summary scalars
+        # before destroying the statement object.
         file_src = str(stmt.file.absolute())
         file_dst = stmt.file_renamed  # bare filename string, or None
+        summary_id_statement = stmt.ID_STATEMENT
+        summary_id_account = stmt.ID_ACCOUNT
+        summary_account = stmt.account or None
+        summary_statement_date = stmt.std_statement_date
+        summary_payments_in = stmt.std_payments_in
+        summary_payments_out = stmt.std_payments_out
+        summary_opening_balance = stmt.std_opening_balance
+        summary_closing_balance = stmt.std_closing_balance
         stmt.cleanup()
         stmt = None
     except Exception as e:
@@ -748,6 +792,15 @@ def process_pdf_statement(
         error_cab=error_cab,
         error_config=error_config,
         error_data=error_data,
+        id_statement=summary_id_statement,
+        id_account=summary_id_account,
+        account=summary_account,
+        statement_date=summary_statement_date,
+        payments_in=summary_payments_in,
+        payments_out=summary_payments_out,
+        opening_balance=summary_opening_balance,
+        closing_balance=summary_closing_balance,
+        error_message=batch_line["STD_ERROR_MESSAGE"] or None,
     )
 
 
