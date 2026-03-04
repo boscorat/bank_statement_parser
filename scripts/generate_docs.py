@@ -11,7 +11,7 @@ Pages generated
 3. ``docs/reference/python-api.md``     — Python API Reference (from __init__.py __all__ + docstrings)
 4. ``docs/guides/anonymisation.md``     — Anonymisation Guide (from anonymise.py module docstring + function docstrings)
 5. ``docs/guides/project-structure.md`` — Project Structure (from paths.py docstrings)
-6. ``docs/guides/exports.md``           — Export Options (from reports_db.py / reports_parquet.py)
+6. ``docs/guides/exports.md``           — Export Options (from reports_db.py)
 
 Run from the repository root::
 
@@ -39,7 +39,6 @@ _INIT_PY = _SRC / "__init__.py"
 _ANONYMISE_PY = _MODULES / "anonymise.py"
 _PATHS_PY = _MODULES / "paths.py"
 _REPORTS_DB_PY = _MODULES / "reports_db.py"
-_REPORTS_PARQUET_PY = _MODULES / "reports_parquet.py"
 _CONFIG_DIR = _SRC / "project" / "config"
 _HSBC_DIR = _CONFIG_DIR / "HSBC_UK"
 
@@ -1235,7 +1234,7 @@ def generate_python_api() -> str:
             continue
 
         # Module-level imports (import ... as name) are modules, not functions
-        if sym.name in ("parquet", "db"):
+        if sym.name in ("db",):
             sym.kind = "module"
             module_source = source_cache.get(sym.import_source, "")
             if module_source:
@@ -1387,22 +1386,16 @@ def generate_python_api() -> str:
             w(sym.docstring)
         w()
 
-    # Add namespaced backends detail section
-    w("## Namespaced Report Backends")
+    # Add DB backend detail section
+    w("## DB Report Backend")
     w()
-    w("Both `bsp.db` and `bsp.parquet` expose identical class and function names,")
-    w("backed by SQLite and Parquet files respectively.")
+    w("`bsp.db` exposes report classes and export functions backed by the SQLite star-schema.")
     w()
     w("```python")
     w("# SQLite backend")
     w("flat = bsp.db.FlatTransaction().all.collect()")
     w("bsp.db.export_csv()")
     w("bsp.db.export_excel()")
-    w()
-    w("# Parquet backend")
-    w("flat = bsp.parquet.FlatTransaction().all.collect()")
-    w("bsp.parquet.export_csv()")
-    w("bsp.parquet.export_excel()")
     w("```")
     w()
 
@@ -1418,7 +1411,7 @@ def generate_python_api() -> str:
     ]
     w("### Report classes")
     w()
-    w("Available in both `bsp.db` and `bsp.parquet`:")
+    w("Available in `bsp.db`:")
     w()
     w("| Class | Description |")
     w("| --- | --- |")
@@ -1447,7 +1440,7 @@ def generate_python_api() -> str:
     # Export helpers
     w("### Export helpers")
     w()
-    w("Available in both `bsp.db` and `bsp.parquet`:")
+    w("Available in `bsp.db`:")
     w()
 
     export_funcs = _extract_function_docs(db_source, ["export_csv", "export_excel"])
@@ -1808,26 +1801,14 @@ def generate_exports_guide() -> str:
         "| `full` | Separate star-schema tables (accounts, calendar, statements, transactions, balances, gaps) for loading into an external database or BI tool. |"
     )
     w()
-    w("## Data Backends")
-    w()
-    w("Exports can be sourced from either backend:")
-    w()
-    w("| Backend | Module | Storage | Best For |")
-    w("| --- | --- | --- | --- |")
-    w("| SQLite | `bsp.db` | `database/project.db` | Querying, long-term storage, star-schema mart |")
-    w("| Parquet | `bsp.parquet` | `parquet/*.parquet` | Fast columnar reads, large datasets |")
-    w()
-    w("Both backends expose identical class names and export functions.")
-    w()
-
     w("## CLI Usage")
     w()
     w("```bash")
     w("# Default: export simple preset in both CSV and Excel from database")
     w("bsp process --pdfs ~/statements")
     w()
-    w("# Export full star-schema tables as CSV only, from parquet")
-    w("bsp process --pdfs ~/statements --export-type full --export-format csv --export-data parquet")
+    w("# Export full star-schema tables as CSV only")
+    w("bsp process --pdfs ~/statements --export-type full --export-format csv")
     w()
     w("# Skip export entirely")
     w("bsp process --pdfs ~/statements --no-export")
@@ -1837,7 +1818,6 @@ def generate_exports_guide() -> str:
     w("| --- | --- | --- | --- |")
     w("| `--export-type` | `simple`, `full` | `simple` | Export preset |")
     w("| `--export-format` | `excel`, `csv`, `both` | `both` | Output file format |")
-    w("| `--export-data` | `parquet`, `database` | `database` | Data source for export |")
     w("| `--no-export` | — | off | Skip the export step entirely |")
     w()
 
@@ -1845,7 +1825,7 @@ def generate_exports_guide() -> str:
     w()
     w("### Export functions")
     w()
-    w("Both `bsp.db` and `bsp.parquet` provide `export_csv()` and `export_excel()`:")
+    w("`bsp.db` provides `export_csv()` and `export_excel()`:")
     w()
 
     for func in db_funcs:
@@ -1867,8 +1847,8 @@ def generate_exports_guide() -> str:
     w("# Export simple CSV from database backend (default project)")
     w("bsp.db.export_csv()")
     w()
-    w("# Export full star-schema tables to Excel from parquet backend")
-    w("bsp.parquet.export_excel(type='full')")
+    w("# Export full star-schema tables to Excel")
+    w("bsp.db.export_excel(type='full')")
     w()
     w("# Export to a custom directory")
     w("from pathlib import Path")
@@ -1885,9 +1865,8 @@ def generate_exports_guide() -> str:
     w("```python")
     w("import bank_statement_parser as bsp")
     w()
-    w("# Read from either backend")
+    w("# Read from the DB backend")
     w("df = bsp.db.FlatTransaction().all.collect()")
-    w("df = bsp.parquet.FlatTransaction().all.collect()")
     w("```")
     w()
     w("### Available classes")

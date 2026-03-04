@@ -115,7 +115,6 @@ class TestProcessOptions:
         "--company",
         "--account",
         "--data",
-        "--export-data",
         "--export-format",
         "--export-type",
         "--no-export",
@@ -143,16 +142,6 @@ class TestProcessOptions:
         """--data must default to 'both'."""
         action = _find_action("process", "--data")
         assert action.default == "both"
-
-    def test_export_data_choices(self) -> None:
-        """--export-data must accept parquet, database."""
-        action = _find_action("process", "--export-data")
-        assert set(action.choices) == {"parquet", "database"}
-
-    def test_export_data_default(self) -> None:
-        """--export-data must default to 'database'."""
-        action = _find_action("process", "--export-data")
-        assert action.default == "database"
 
     def test_export_format_choices(self) -> None:
         """--export-format must accept excel, csv, both."""

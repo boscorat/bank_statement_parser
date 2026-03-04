@@ -24,15 +24,15 @@ def main():
         project_path=Path("/home/boscorat/Projects/bsp_project"),
     )
     print(f"total: {batch.duration_secs}, process: {batch.process_secs}, parquet: {batch.parquet_secs}, db: {batch.db_secs}")
-    batch.debug()
+    # batch.debug()
 
-    # batch.update_data()
-    # batch.copy_statements_to_project()
-    # batch.delete_temp_files()
-    # print(f"total: {batch.duration_secs}, process: {batch.process_secs}, parquet: {batch.parquet_secs}, db: {batch.db_secs}")
-    # if batch.errors:
-    #     written = batch.debug()
-    #     print(f"debug: {written} file(s) written to project/log/debug/")
+    batch.update_data()
+    batch.copy_statements_to_project()
+    batch.delete_temp_files()
+    print(f"total: {batch.duration_secs}, process: {batch.process_secs}, parquet: {batch.parquet_secs}, db: {batch.db_secs}")
+    if batch.errors:
+        written = batch.debug()
+        print(f"debug: {written} file(s) written to project/log/debug/")
 
     # #windows
     # statements.StatementBatch(Path("C:\\Users\\Admin\\repos\\bsp\\stmts"), turbo=True, smart_rename=False)

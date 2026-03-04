@@ -10,21 +10,18 @@ Flat exports (imported directly):
     pdf_open, page_crop, page_text,
     region_search, get_table_from_region -- low-level pdfplumber helpers
 
-Namespaced report sub-modules (use to avoid name collisions):
-    parquet   -- bank_statement_parser.modules.reports_parquet
+Namespaced report sub-module (use to avoid name collisions):
     db        -- bank_statement_parser.modules.reports_db
 
-Both sub-modules expose the same class names (FlatTransaction, FactBalance,
-DimTime, DimStatement, DimAccount, FactTransaction, GapReport) plus
-export_csv / export_excel functions.  Access them via the namespace:
+The sub-module exposes FlatTransaction, FactBalance, DimTime, DimStatement,
+DimAccount, FactTransaction, GapReport plus export_csv / export_excel
+functions.  Access them via the namespace:
 
     import bank_statement_parser as bsp
-    bsp.parquet.FlatTransaction(...)
     bsp.db.FlatTransaction(...)
 """
 
 import bank_statement_parser.modules.reports_db as db
-import bank_statement_parser.modules.reports_parquet as parquet
 from bank_statement_parser.modules.config import copy_default_config
 from bank_statement_parser.modules.paths import copy_project_folders
 from bank_statement_parser.modules.data import PdfResult
@@ -55,7 +52,6 @@ __all__ = [
     "page_text",
     "region_search",
     "get_table_from_region",
-    # Namespaced report backends
-    "parquet",
+    # Namespaced report backend
     "db",
 ]

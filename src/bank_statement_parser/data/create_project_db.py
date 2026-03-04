@@ -57,6 +57,8 @@ SCHEMAS = {
     },
     "batch_heads": {
         "ID_BATCH": "TEXT",
+        "ID_SESSION": "TEXT",
+        "ID_USER": "TEXT",
         "STD_PATH": "TEXT",
         "STD_COMPANY": "TEXT",
         "STD_ACCOUNT": "TEXT",
@@ -161,6 +163,7 @@ def create_indexes(db_path: Path):
         "CREATE INDEX IF NOT EXISTS idx_batch_lines_id_batch ON batch_lines(ID_BATCH)",
         "CREATE INDEX IF NOT EXISTS idx_batch_lines_id_statement ON batch_lines(ID_STATEMENT)",
         "CREATE INDEX IF NOT EXISTS idx_sh_stmt_acct ON statement_heads(ID_STATEMENT, ID_ACCOUNT)",
+        "CREATE INDEX IF NOT EXISTS idx_batch_lines_stmt_batch ON batch_lines(ID_STATEMENT, ID_BATCH)",
     ]
 
     for idx_sql in indexes:
