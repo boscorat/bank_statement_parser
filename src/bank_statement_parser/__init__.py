@@ -16,16 +16,13 @@ Quick start
     batch.update_data()                                       # writes to parquet + database
     batch.update_data(datadestination="parquet")              # parquet only
     batch.update_data(datadestination="database")             # database only
-    batch.export(datasource="parquet", filetype="excel")  # writes to project export/excel/
-    batch.export(datasource="database", filetype="csv")   # writes to project export/csv/
+    batch.export(filetype="excel")  # writes to project export/excel/
+    batch.export(filetype="csv")    # writes to project export/csv/
     batch.copy_statements_to_project()  # copy PDFs to project/statements/{year}/{account}/
     batch.delete_temp_files()
 
     # Read reports from the DB backend
     flat = bsp.db.FlatTransaction().all.collect()
-
-    # Read reports from the Parquet backend
-    flat = bsp.parquet.FlatTransaction().all.collect()
 
     # Rebuild the star-schema mart after loading
     bsp.build_datamart(db_path=Path("project.db"))
@@ -33,16 +30,14 @@ Quick start
     # Copy project folder structure to a new location (no files, dirs only)
     bsp.copy_project_folders(Path("~/my_project").expanduser())
 
-Namespaced report backends
---------------------------
-Both ``bsp.parquet`` and ``bsp.db`` expose the same class names
-(FlatTransaction, FactBalance, DimTime, DimStatement, DimAccount,
-FactTransaction, GapReport) plus ``export_csv`` / ``export_excel`` helpers.
-Both export functions now accept an optional first argument (``folder`` /
-``path``); when omitted they write to the project's ``export/csv/`` or
-``export/excel/`` sub-directory automatically.
+DB report backend
+-----------------
+``bsp.db`` exposes FlatTransaction, FactBalance, DimTime, DimStatement,
+DimAccount, FactTransaction, GapReport plus ``export_csv`` / ``export_excel``
+helpers.  Export functions accept an optional ``folder`` / ``path`` argument;
+when omitted they write to the project's ``export/csv/`` or ``export/excel/``
+sub-directory automatically.
 
-    bsp.parquet.FlatTransaction(...)
     bsp.db.FlatTransaction(...)
 
 Database utilities
@@ -67,11 +62,10 @@ __app_name__ = "uk-bank-statement-parser"
 __version__ = _pkg_version(__app_name__)
 
 # ---------------------------------------------------------------------------
-# Namespaced report backends — import the sub-modules so callers can do
-#   bsp.parquet.FlatTransaction(...)  /  bsp.db.FlatTransaction(...)
+# Namespaced report backend — import the sub-module so callers can do
+#   bsp.db.FlatTransaction(...)
 # ---------------------------------------------------------------------------
 import bank_statement_parser.modules.reports_db as db
-import bank_statement_parser.modules.reports_parquet as parquet
 
 # ---------------------------------------------------------------------------
 # Statement processing
@@ -129,8 +123,7 @@ __all__ = [
     # Meta
     "__app_name__",
     "__version__",
-    # Namespaced report backends
-    "parquet",
+    # Namespaced report backend
     "db",
     # Statement processing
     "Statement",
