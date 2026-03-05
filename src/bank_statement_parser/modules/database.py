@@ -15,7 +15,7 @@ import polars as pl
 from bank_statement_parser.data.build_datamart import build_datamart, _ensure_mart_structure
 from bank_statement_parser.modules.data import PdfResult
 from bank_statement_parser.modules.errors import ProjectDatabaseMissing
-from bank_statement_parser.modules.paths import get_paths
+from bank_statement_parser.modules.paths import ProjectPaths
 
 # Python 3.12+ deprecates the built-in date/datetime adapters for sqlite3.
 # Register explicit ISO-format adapters so that datetime.date and
@@ -366,7 +366,7 @@ def update_db(
         ProjectDatabaseMissing: If ``database/project.db`` does not exist under
             the resolved project root.
     """
-    paths = get_paths(project_path)
+    paths = ProjectPaths.resolve(project_path)
     db_path = paths.project_db
 
     _require_db(db_path)

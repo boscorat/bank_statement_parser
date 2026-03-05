@@ -45,35 +45,6 @@ initialised via `validate_or_initialise_project()`. The decision table is:
 
 ## Python API
 
-### `get_paths()`
-
-```python
-get_paths(project_path: Path | None = None) -> ProjectPaths
-```
-
-Return a :class:`ProjectPaths` for the given project root.
-
-When *project_path* is ``None``, the default project folder bundled with
-the package is used (``src/bank_statement_parser/project/``).
-
-This is a pure path-computation factory. It does **not** validate that the
-project directory exists or is correctly structured — use
-:func:`validate_or_initialise_project` for that (called automatically by
-:class:`~bank_statement_parser.modules.statements.Statement` and
-:class:`~bank_statement_parser.modules.statements.StatementBatch`).
-
-
-**Args:**
-
-- `project_path` — Root of the project directory tree.  Must follow the
-  standard sub-directory layout (``config/``, ``parquet/``,
-  ``database/``, etc.).
-
-
-**Returns:**
-
-- `A` — class:`ProjectPaths` instance with all derived path attributes.
-
 ### `copy_project_folders()`
 
 ```python

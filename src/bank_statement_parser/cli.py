@@ -67,7 +67,7 @@ def _cmd_process(args: argparse.Namespace) -> int:
     Returns:
         Exit code (0 = success, 1 = error).
     """
-    from bank_statement_parser.modules.paths import get_paths
+    from bank_statement_parser.modules.paths import ProjectPaths
     from bank_statement_parser.modules.statements import StatementBatch
 
     # -- resolve PDF directory and discover files ----------------------------
@@ -116,7 +116,7 @@ def _cmd_process(args: argparse.Namespace) -> int:
     batch.delete_temp_files()
 
     # -- summary -------------------------------------------------------------
-    paths = get_paths(project_path)
+    paths = ProjectPaths.resolve(project_path)
     print("")
     print(f"Done — processed {batch.pdf_count} PDF(s) ({batch.errors} error(s)) in {batch.duration_secs:.1f}s.")
     print("")

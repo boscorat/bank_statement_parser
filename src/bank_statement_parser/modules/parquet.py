@@ -23,7 +23,7 @@ from time import time
 import polars as pl
 
 from bank_statement_parser.modules.data import PdfResult
-from bank_statement_parser.modules.paths import ProjectPaths, get_paths
+from bank_statement_parser.modules.paths import ProjectPaths
 
 
 class Parquet:
@@ -80,43 +80,300 @@ class Parquet:
             self.file.unlink()
 
 
-def _resolve_parquet_file(
-    paths: ProjectPaths,
-    default: Path,
-    filename: str | None,
-) -> Path:
+def _load_source(source: Path) -> pl.DataFrame:
+    """Read a parquet file and drop the ``index`` column.
+
+    Args:
+        source: Path to the parquet file to read.
+
+    Returns:
+        DataFrame with the ``index`` column removed.
     """
-    Return the full Path for a parquet file, validating the parquet directory.
+    return pl.read_parquet(source).drop("index")
 
-    If *filename* is provided (bare stem, no extension, no directory), the
-    full path is ``paths.parquet / f"{filename}.parquet"``.  Otherwise the
-    *default* path is used.
 
-    A :exc:`ProjectSubFolderNotFound` is raised if the parquet directory does
-    not exist.
+class ChecksAndBalances(Parquet):
+    """Parquet wrapper for checks-and-balances records.
+
+    Args:
+        file: Destination parquet file path.
+        source: Optional separate source path to read initial records from.
+            When provided, records are loaded from *source* rather than built
+            from the data arguments.  When omitted, *file* is used as the
+            source when reading existing data (via the base class).
+        id_statement: Unique statement identifier (required when building
+            records from raw data).
+        id_batch: Batch identifier (required when building records from raw
+            data).
+        checks_and_balances: Raw checks-and-balances DataFrame from
+            :class:`~bank_statement_parser.modules.statements.Statement`
+            (required when building records from raw data).
     """
-    paths.require_subdir_for_read(paths.parquet)
-    if filename is not None:
-        return paths.parquet / f"{filename}.parquet"
-    return default
+
+    __slots__ = ()
+
+    def __init__(
+        self,
+        file: Path,
+        source: Path | None = None,
+        id_statement: str | None = None,
+        id_batch: str | None = None,
+        checks_and_balances: pl.DataFrame | None = None,
+    ) -> None:
+        self.schema = pl.DataFrame(
+            orient="row",
+            schema={
+                "ID_CAB": pl.Utf8,
+                "ID_STATEMENT": pl.Utf8,
+                "ID_BATCH": pl.Utf8,
+                "HAS_TRANSACTIONS": pl.Boolean,
+                "STD_OPENING_BALANCE_HEADS": pl.Decimal(16, 4),
+                "STD_PAYMENTS_IN_HEADS": pl.Decimal(16, 4),
+                "STD_PAYMENTS_OUT_HEADS": pl.Decimal(16, 4),
+                "STD_MOVEMENT_HEADS": pl.Decimal(16, 4),
+                "STD_CLOSING_BALANCE_HEADS": pl.Decimal(16, 4),
+                "STD_OPENING_BALANCE_LINES": pl.Decimal(16, 4),
+                "STD_PAYMENTS_IN_LINES": pl.Decimal(16, 4),
+                "STD_PAYMENTS_OUT_LINES": pl.Decimal(16, 4),
+                "STD_MOVEMENT_LINES": pl.Decimal(16, 4),
+                "STD_CLOSING_BALANCE_LINES": pl.Decimal(16, 4),
+                "CHECK_PAYMENTS_IN": pl.Boolean,
+                "CHECK_PAYMENTS_OUT": pl.Boolean,
+                "CHECK_MOVEMENT": pl.Boolean,
+                "CHECK_CLOSING": pl.Boolean,
+            },
+        )
+        self.key = "ID_CAB"
+        self.records: pl.DataFrame | None = None
+
+        if source is not None:
+            self.records = _load_source(source)
+        elif checks_and_balances is not None and id_statement is not None and id_batch is not None:
+            self.records = build_checks_and_balances_records(self.schema, id_statement, id_batch, checks_and_balances)
+
+        super().__init__(file, self.schema, self.records, self.key)
 
 
-# ---------------------------------------------------------------------------
-# build_*_records() helpers
-# ---------------------------------------------------------------------------
-# Each function reproduces the DataFrame construction that was previously
-# inlined in the corresponding Parquet subclass constructor.  Extracting them
-# makes it possible for the debug path (debug.py) to call the same logic
-# independently — without constructing a full Parquet object — and to wrap
-# the call in diagnostics that capture schema mismatches.
-#
-# For the three per-statement classes (ChecksAndBalances, StatementHeads,
-# StatementLines) a private ``_build_*_data()`` function builds just the
-# data DataFrame *without* calling ``.extend()``.  The public
-# ``build_*_records()`` function calls it and then extends the schema.
-# This split gives the debug path access to the intermediate data so it
-# can compare dtypes column-by-column when ``.extend()`` fails.
-# ---------------------------------------------------------------------------
+class StatementHeads(Parquet):
+    """Parquet wrapper for statement header records.
+
+    Args:
+        file: Destination parquet file path.
+        source: Optional separate source path to read initial records from.
+        id_statement: Unique statement identifier.
+        id_batchline: Batch-line identifier.
+        id_account: Account identifier.
+        company: Company name.
+        statement_type: Statement type label.
+        account: Account label.
+        header_results: LazyFrame of extracted header fields.
+    """
+
+    __slots__ = ()
+
+    def __init__(
+        self,
+        file: Path,
+        source: Path | None = None,
+        id_statement: str | None = None,
+        id_batchline: str | None = None,
+        id_account: str | None = None,
+        company: str | None = None,
+        statement_type: str | None = None,
+        account: str | None = None,
+        header_results: pl.LazyFrame | None = None,
+    ) -> None:
+        self.schema = pl.DataFrame(
+            orient="row",
+            schema={
+                "ID_STATEMENT": pl.Utf8,
+                "ID_BATCHLINE": pl.Utf8,
+                "ID_ACCOUNT": pl.Utf8,
+                "STD_COMPANY": pl.Utf8,
+                "STD_STATEMENT_TYPE": pl.Utf8,
+                "STD_ACCOUNT": pl.Utf8,
+                "STD_SORTCODE": pl.Utf8,
+                "STD_ACCOUNT_NUMBER": pl.Utf8,
+                "STD_ACCOUNT_HOLDER": pl.Utf8,
+                "STD_STATEMENT_DATE": pl.Date,
+                "STD_OPENING_BALANCE": pl.Decimal(16, 4),
+                "STD_PAYMENTS_IN": pl.Decimal(16, 4),
+                "STD_PAYMENTS_OUT": pl.Decimal(16, 4),
+                "STD_CLOSING_BALANCE": pl.Decimal(16, 4),
+            },
+        )
+        self.key = "ID_STATEMENT"
+        self.records: pl.DataFrame | None = None
+
+        if source is not None:
+            self.records = _load_source(source)
+        elif header_results is not None and id_statement is not None:
+            self.records = build_statement_heads_records(
+                self.schema, id_statement, id_batchline, id_account, company, statement_type, account, header_results
+            )
+
+        super().__init__(file, self.schema, self.records, self.key)
+
+
+class StatementLines(Parquet):
+    """Parquet wrapper for statement transaction-line records.
+
+    Args:
+        file: Destination parquet file path.
+        source: Optional separate source path to read initial records from.
+        id_statement: Unique statement identifier.
+        lines_results: LazyFrame of extracted transaction lines.
+    """
+
+    __slots__ = ()
+
+    def __init__(
+        self,
+        file: Path,
+        source: Path | None = None,
+        id_statement: str | None = None,
+        lines_results: pl.LazyFrame | None = None,
+    ) -> None:
+        self.schema = pl.DataFrame(
+            orient="row",
+            schema={
+                "ID_TRANSACTION": pl.Utf8,
+                "ID_STATEMENT": pl.Utf8,
+                "STD_PAGE_NUMBER": pl.Int32,
+                "STD_TRANSACTION_DATE": pl.Date,
+                "STD_TRANSACTION_NUMBER": pl.UInt32,
+                "STD_CD": pl.Utf8,
+                "STD_TRANSACTION_TYPE": pl.Utf8,
+                "STD_TRANSACTION_TYPE_CD": pl.Utf8,
+                "STD_TRANSACTION_DESC": pl.Utf8,
+                "STD_OPENING_BALANCE": pl.Decimal(16, 4),
+                "STD_PAYMENTS_IN": pl.Decimal(16, 4),
+                "STD_PAYMENTS_OUT": pl.Decimal(16, 4),
+                "STD_CLOSING_BALANCE": pl.Decimal(16, 4),
+            },
+        )
+        self.key = "ID_TRANSACTION"
+        self.records: pl.DataFrame | None = None
+
+        if source is not None:
+            self.records = _load_source(source)
+        elif lines_results is not None and id_statement is not None:
+            self.records = build_statement_lines_records(self.schema, id_statement, lines_results)
+
+        super().__init__(file, self.schema, self.records, self.key)
+
+
+class BatchHeads(Parquet):
+    """Parquet wrapper for batch header metadata.
+
+    Args:
+        file: Destination parquet file path.
+        batch_id: Unique batch identifier.
+        session_id: UUID4 session identifier.
+        user_id: OS username of the user who initiated the batch.
+        path: String representation of PDF source directories.
+        company_key: Company identifier.
+        account_key: Account identifier.
+        pdf_count: Total number of PDFs in the batch.
+        errors: Count of failed statement processings.
+        duration_secs: Total processing time (seconds).
+        process_time: Timestamp when batch processing started.
+    """
+
+    __slots__ = ()
+
+    def __init__(
+        self,
+        file: Path,
+        batch_id: str | None = None,
+        session_id: str | None = None,
+        user_id: str | None = None,
+        path: str | None = None,
+        company_key: str | None = None,
+        account_key: str | None = None,
+        pdf_count: int | None = None,
+        errors: int | None = None,
+        duration_secs: float | None = None,
+        process_time: datetime | None = None,
+    ) -> None:
+        self.schema = pl.DataFrame(
+            orient="row",
+            schema={
+                "ID_BATCH": pl.Utf8,
+                "ID_SESSION": pl.Utf8,
+                "ID_USER": pl.Utf8,
+                "STD_PATH": pl.Utf8,
+                "STD_COMPANY": pl.Utf8,
+                "STD_ACCOUNT": pl.Utf8,
+                "STD_PDF_COUNT": pl.Int64,
+                "STD_ERROR_COUNT": pl.Int64,
+                "STD_DURATION_SECS": pl.Float64,
+                "STD_UPDATETIME": pl.Datetime,
+            },
+        )
+        self.records: pl.DataFrame | None = None
+        if batch_id is not None:
+            self.records = build_batch_heads_records(
+                self.schema,
+                batch_id,
+                session_id or "",
+                user_id or "",
+                path,
+                company_key,
+                account_key,
+                pdf_count,
+                errors,
+                duration_secs,
+                process_time,
+            )
+        self.key = "ID_BATCH"
+        super().__init__(file, self.schema, self.records, self.key)
+
+
+class BatchLines(Parquet):
+    """Parquet wrapper for per-PDF batch-line records.
+
+    Args:
+        file: Destination parquet file path.
+        source: Optional separate source path to read initial records from.
+        batch_lines: List of dicts, one per PDF, with batch-line metadata.
+    """
+
+    __slots__ = ()
+
+    def __init__(
+        self,
+        file: Path,
+        source: Path | None = None,
+        batch_lines: list[dict] | None = None,
+    ) -> None:
+        self.schema = pl.DataFrame(
+            orient="row",
+            schema={
+                "ID_BATCH": pl.Utf8,
+                "ID_BATCHLINE": pl.Utf8,
+                "ID_STATEMENT": pl.Utf8,
+                "STD_BATCH_LINE": pl.Int64,
+                "STD_FILENAME": pl.Utf8,
+                "STD_ACCOUNT": pl.Utf8,
+                "STD_DURATION_SECS": pl.Float64,
+                "STD_UPDATETIME": pl.Datetime,
+                "STD_SUCCESS": pl.Boolean,
+                "STD_ERROR_MESSAGE": pl.Utf8,
+                "ERROR_CAB": pl.Boolean,
+                "ERROR_CONFIG": pl.Boolean,
+                "ERROR_DATA": pl.Boolean,
+            },
+        )
+        self.key = "ID_BATCHLINE"
+        self.records: pl.DataFrame | None = None
+
+        if source is not None:
+            self.records = _load_source(source)
+        elif batch_lines:
+            self.records = build_batch_lines_records(self.schema, batch_lines)
+
+        super().__init__(file, self.schema, self.records, self.key)
 
 
 def _build_checks_and_balances_data(
@@ -371,286 +628,6 @@ def build_batch_lines_records(
     return schema.clone().extend(pl.DataFrame(batch_lines))
 
 
-class ChecksAndBalances(Parquet):
-    __slots__ = ("id", "source_filename", "destination_filename", "project_path")
-
-    def __init__(
-        self,
-        id_statement: str | None = None,
-        id_batch: str | None = None,
-        checks_and_balances: pl.DataFrame | None = None,
-        id: int = -1,
-        source_filename: str | None = None,
-        destination_filename: str | None = None,
-        project_path: Path | None = None,
-    ) -> None:
-        self.id = id
-        self.source_filename = source_filename
-        self.destination_filename = destination_filename
-        self.project_path = project_path
-        paths = get_paths(project_path)
-        self.schema = pl.DataFrame(
-            orient="row",
-            schema={
-                "ID_CAB": pl.Utf8,
-                "ID_STATEMENT": pl.Utf8,
-                "ID_BATCH": pl.Utf8,
-                "HAS_TRANSACTIONS": pl.Boolean,
-                "STD_OPENING_BALANCE_HEADS": pl.Decimal(16, 4),
-                "STD_PAYMENTS_IN_HEADS": pl.Decimal(16, 4),
-                "STD_PAYMENTS_OUT_HEADS": pl.Decimal(16, 4),
-                "STD_MOVEMENT_HEADS": pl.Decimal(16, 4),
-                "STD_CLOSING_BALANCE_HEADS": pl.Decimal(16, 4),
-                "STD_OPENING_BALANCE_LINES": pl.Decimal(16, 4),
-                "STD_PAYMENTS_IN_LINES": pl.Decimal(16, 4),
-                "STD_PAYMENTS_OUT_LINES": pl.Decimal(16, 4),
-                "STD_MOVEMENT_LINES": pl.Decimal(16, 4),
-                "STD_CLOSING_BALANCE_LINES": pl.Decimal(16, 4),
-                "CHECK_PAYMENTS_IN": pl.Boolean,
-                "CHECK_PAYMENTS_OUT": pl.Boolean,
-                "CHECK_MOVEMENT": pl.Boolean,
-                "CHECK_CLOSING": pl.Boolean,
-            },
-        )
-        self.key = "ID_CAB"
-        self.records: pl.DataFrame | None = None
-
-        # Determine the source file (temp file written by process_pdf_statement)
-        source_default = paths.cab_temp(self.id) if self.id > -1 else paths.cab
-        source_file = _resolve_parquet_file(paths, source_default, source_filename)
-
-        if source_filename is not None:
-            self.records = pl.read_parquet(source_file).drop("index")
-        elif checks_and_balances is not None and id_statement is not None and id_batch is not None:
-            self.records = build_checks_and_balances_records(self.schema, id_statement, id_batch, checks_and_balances)
-
-        # Determine the destination file
-        dest_default = paths.cab_temp(self.id) if self.id > -1 else paths.cab
-        destination_file = _resolve_parquet_file(paths, dest_default, destination_filename)
-
-        super().__init__(destination_file, self.schema, self.records, self.key)
-
-
-class StatementHeads(Parquet):
-    __slots__ = ("id", "source_filename", "destination_filename", "project_path")
-
-    def __init__(
-        self,
-        id_statement: str | None = None,
-        id_batchline: str | None = None,
-        id_account: str | None = None,
-        company: str | None = None,
-        statement_type: str | None = None,
-        account: str | None = None,
-        header_results: pl.LazyFrame | None = None,
-        id: int = -1,
-        source_filename: str | None = None,
-        destination_filename: str | None = None,
-        project_path: Path | None = None,
-    ) -> None:
-        self.id = id
-        self.source_filename = source_filename
-        self.destination_filename = destination_filename
-        self.project_path = project_path
-        paths = get_paths(project_path)
-        self.schema = pl.DataFrame(
-            orient="row",
-            schema={
-                "ID_STATEMENT": pl.Utf8,
-                "ID_BATCHLINE": pl.Utf8,
-                "ID_ACCOUNT": pl.Utf8,
-                "STD_COMPANY": pl.Utf8,
-                "STD_STATEMENT_TYPE": pl.Utf8,
-                "STD_ACCOUNT": pl.Utf8,
-                "STD_SORTCODE": pl.Utf8,
-                "STD_ACCOUNT_NUMBER": pl.Utf8,
-                "STD_ACCOUNT_HOLDER": pl.Utf8,
-                "STD_STATEMENT_DATE": pl.Date,
-                "STD_OPENING_BALANCE": pl.Decimal(16, 4),
-                "STD_PAYMENTS_IN": pl.Decimal(16, 4),
-                "STD_PAYMENTS_OUT": pl.Decimal(16, 4),
-                "STD_CLOSING_BALANCE": pl.Decimal(16, 4),
-            },
-        )
-        self.key = "ID_STATEMENT"
-        self.records: pl.DataFrame | None = None
-
-        source_default = paths.statement_heads_temp(self.id) if self.id > -1 else paths.statement_heads
-        source_file = _resolve_parquet_file(paths, source_default, source_filename)
-
-        if source_filename is not None:
-            self.records = pl.read_parquet(source_file).drop("index")
-        elif header_results is not None and id_statement is not None:
-            self.records = build_statement_heads_records(
-                self.schema, id_statement, id_batchline, id_account, company, statement_type, account, header_results
-            )
-
-        dest_default = paths.statement_heads_temp(self.id) if self.id > -1 else paths.statement_heads
-        destination_file = _resolve_parquet_file(paths, dest_default, destination_filename)
-
-        super().__init__(destination_file, self.schema, self.records, self.key)
-
-
-class StatementLines(Parquet):
-    __slots__ = ("id", "source_filename", "destination_filename", "project_path")
-
-    def __init__(
-        self,
-        id_statement: str | None = None,
-        lines_results: pl.LazyFrame | None = None,
-        id: int = -1,
-        source_filename: str | None = None,
-        destination_filename: str | None = None,
-        project_path: Path | None = None,
-    ) -> None:
-        self.id = id
-        self.source_filename = source_filename
-        self.destination_filename = destination_filename
-        self.project_path = project_path
-        paths = get_paths(project_path)
-        self.schema = pl.DataFrame(
-            orient="row",
-            schema={
-                "ID_TRANSACTION": pl.Utf8,
-                "ID_STATEMENT": pl.Utf8,
-                "STD_PAGE_NUMBER": pl.Int32,
-                "STD_TRANSACTION_DATE": pl.Date,
-                "STD_TRANSACTION_NUMBER": pl.UInt32,
-                "STD_CD": pl.Utf8,
-                "STD_TRANSACTION_TYPE": pl.Utf8,
-                "STD_TRANSACTION_TYPE_CD": pl.Utf8,
-                "STD_TRANSACTION_DESC": pl.Utf8,
-                "STD_OPENING_BALANCE": pl.Decimal(16, 4),
-                "STD_PAYMENTS_IN": pl.Decimal(16, 4),
-                "STD_PAYMENTS_OUT": pl.Decimal(16, 4),
-                "STD_CLOSING_BALANCE": pl.Decimal(16, 4),
-            },
-        )
-        self.key = "ID_TRANSACTION"
-        self.records: pl.DataFrame | None = None
-
-        source_default = paths.statement_lines_temp(self.id) if self.id > -1 else paths.statement_lines
-        source_file = _resolve_parquet_file(paths, source_default, source_filename)
-
-        if source_filename is not None:
-            self.records = pl.read_parquet(source_file).drop("index")
-        elif lines_results is not None and id_statement is not None:
-            self.records = build_statement_lines_records(self.schema, id_statement, lines_results)
-
-        dest_default = paths.statement_lines_temp(self.id) if self.id > -1 else paths.statement_lines
-        destination_file = _resolve_parquet_file(paths, dest_default, destination_filename)
-
-        super().__init__(destination_file, self.schema, self.records, self.key)
-
-
-class BatchHeads(Parquet):
-    __slots__ = ("destination_filename", "project_path")
-
-    def __init__(
-        self,
-        batch_id: str | None = None,
-        session_id: str | None = None,
-        user_id: str | None = None,
-        path: str | None = None,
-        company_key: str | None = None,
-        account_key: str | None = None,
-        pdf_count: int | None = None,
-        errors: int | None = None,
-        duration_secs: float | None = None,
-        process_time: datetime | None = None,
-        destination_filename: str | None = None,
-        project_path: Path | None = None,
-    ) -> None:
-        self.destination_filename = destination_filename
-        self.project_path = project_path
-        paths = get_paths(project_path)
-        self.schema = pl.DataFrame(
-            orient="row",
-            schema={
-                "ID_BATCH": pl.Utf8,
-                "ID_SESSION": pl.Utf8,
-                "ID_USER": pl.Utf8,
-                "STD_PATH": pl.Utf8,
-                "STD_COMPANY": pl.Utf8,
-                "STD_ACCOUNT": pl.Utf8,
-                "STD_PDF_COUNT": pl.Int64,
-                "STD_ERROR_COUNT": pl.Int64,
-                "STD_DURATION_SECS": pl.Float64,
-                "STD_UPDATETIME": pl.Datetime,
-            },
-        )
-        self.records: pl.DataFrame | None = None
-        if batch_id is not None:
-            self.records = build_batch_heads_records(
-                self.schema,
-                batch_id,
-                session_id or "",
-                user_id or "",
-                path,
-                company_key,
-                account_key,
-                pdf_count,
-                errors,
-                duration_secs,
-                process_time,
-            )
-        self.key = "ID_BATCH"
-        destination_file = _resolve_parquet_file(paths, paths.batch_heads, destination_filename)
-        super().__init__(destination_file, self.schema, self.records, self.key)
-
-
-class BatchLines(Parquet):
-    __slots__ = ("batch_lines", "id", "source_filename", "destination_filename", "project_path")
-
-    def __init__(
-        self,
-        batch_lines: list[dict] | None = None,
-        id: int = -1,
-        source_filename: str | None = None,
-        destination_filename: str | None = None,
-        project_path: Path | None = None,
-    ) -> None:
-        self.batch_lines = batch_lines
-        self.id = id
-        self.source_filename = source_filename
-        self.destination_filename = destination_filename
-        self.project_path = project_path
-        paths = get_paths(project_path)
-        self.schema = pl.DataFrame(
-            orient="row",
-            schema={
-                "ID_BATCH": pl.Utf8,
-                "ID_BATCHLINE": pl.Utf8,
-                "ID_STATEMENT": pl.Utf8,
-                "STD_BATCH_LINE": pl.Int64,
-                "STD_FILENAME": pl.Utf8,
-                "STD_ACCOUNT": pl.Utf8,
-                "STD_DURATION_SECS": pl.Float64,
-                "STD_UPDATETIME": pl.Datetime,
-                "STD_SUCCESS": pl.Boolean,
-                "STD_ERROR_MESSAGE": pl.Utf8,
-                "ERROR_CAB": pl.Boolean,
-                "ERROR_CONFIG": pl.Boolean,
-                "ERROR_DATA": pl.Boolean,
-            },
-        )
-        self.key = "ID_BATCHLINE"
-        self.records: pl.DataFrame | None = None
-
-        source_default = paths.batch_lines_temp(self.id) if self.id > -1 else paths.batch_lines
-        source_file = _resolve_parquet_file(paths, source_default, source_filename)
-
-        if source_filename is not None:
-            self.records = pl.read_parquet(source_file).drop("index")
-        elif self.batch_lines:
-            self.records = build_batch_lines_records(self.schema, self.batch_lines)
-
-        dest_default = paths.batch_lines_temp(self.id) if self.id > -1 else paths.batch_lines
-        destination_file = _resolve_parquet_file(paths, dest_default, destination_filename)
-
-        super().__init__(destination_file, self.schema, self.records, self.key)
-
-
 def update_parquet(
     processed_pdfs: list[BaseException | PdfResult],
     batch_id: str,
@@ -663,14 +640,14 @@ def update_parquet(
     errors: int,
     duration_secs: float,
     process_time: datetime,
-    project_path: Path | None = None,
+    paths: ProjectPaths,
 ) -> float:
     """
     Update parquet files with processed results from all PDFs in a batch.
 
     Iterates through processed PDFs, handles any exceptions, and updates
-    the main parquet files from temporary files created during processing.
-    Also writes batch header metadata. Should be called after all PDFs have
+    the permanent parquet files from temporary files created during processing.
+    Also writes batch header metadata.  Should be called after all PDFs have
     been processed to finalise the batch.
 
     Args:
@@ -689,8 +666,8 @@ def update_parquet(
         errors: Count of failed statement processings.
         duration_secs: Total processing time accumulated so far (seconds).
         process_time: Timestamp when batch processing started.
-        project_path: Optional project root directory for parquet output.
-            If not provided, uses the default project folder.
+        paths: Resolved :class:`~bank_statement_parser.modules.paths.ProjectPaths`
+            instance for this project.
 
     Returns:
         float: Time spent updating parquet files (seconds).
@@ -702,22 +679,22 @@ def update_parquet(
             return 0.0
         elif isinstance(pdf, PdfResult):
             if pdf.batch_lines_stem:
-                bl = BatchLines(source_filename=pdf.batch_lines_stem, project_path=project_path)
+                bl = BatchLines(file=paths.batch_lines, source=paths.parquet / f"{pdf.batch_lines_stem}.parquet")
                 bl.update()
                 bl.cleanup()
                 bl = None
             if pdf.statement_heads_stem:
-                sh = StatementHeads(source_filename=pdf.statement_heads_stem, project_path=project_path)
+                sh = StatementHeads(file=paths.statement_heads, source=paths.parquet / f"{pdf.statement_heads_stem}.parquet")
                 sh.update()
                 sh.cleanup()
                 sh = None
             if pdf.statement_lines_stem:
-                sl = StatementLines(source_filename=pdf.statement_lines_stem, project_path=project_path)
+                sl = StatementLines(file=paths.statement_lines, source=paths.parquet / f"{pdf.statement_lines_stem}.parquet")
                 sl.update()
                 sl.cleanup()
                 sl = None
             if pdf.cab_stem:
-                cb = ChecksAndBalances(source_filename=pdf.cab_stem, project_path=project_path)
+                cb = ChecksAndBalances(file=paths.cab, source=paths.parquet / f"{pdf.cab_stem}.parquet")
                 cb.update()
                 cb.cleanup()
                 cb = None
@@ -726,6 +703,7 @@ def update_parquet(
 
     # Write batch header metadata to parquet
     pq_heads = BatchHeads(
+        file=paths.batch_heads,
         batch_id=batch_id,
         session_id=session_id,
         user_id=user_id,
@@ -736,7 +714,6 @@ def update_parquet(
         errors=errors,
         duration_secs=duration_secs + parquet_secs,
         process_time=process_time,
-        project_path=project_path,
     )
     pq_heads.create()
     pq_heads.cleanup()
@@ -745,12 +722,13 @@ def update_parquet(
     return parquet_secs
 
 
-def main():
-    BatchHeads().truncate()
-    BatchLines().truncate()
-    StatementHeads().truncate()
-    StatementLines().truncate()
-    ...
+def main() -> None:
+    """Truncate all permanent parquet files (dev utility)."""
+    _paths = ProjectPaths.resolve()
+    BatchHeads(file=_paths.batch_heads).truncate()
+    BatchLines(file=_paths.batch_lines).truncate()
+    StatementHeads(file=_paths.statement_heads).truncate()
+    StatementLines(file=_paths.statement_lines).truncate()
 
 
 if __name__ == "__main__":
