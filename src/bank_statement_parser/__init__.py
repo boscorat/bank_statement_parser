@@ -79,6 +79,17 @@ from bank_statement_parser.modules.statements import (
 )
 
 # ---------------------------------------------------------------------------
+# Low-level persistence helpers — consumed by openstan's StanBatch
+# ---------------------------------------------------------------------------
+from bank_statement_parser.modules.database import update_db
+from bank_statement_parser.modules.parquet import update_parquet
+
+# ---------------------------------------------------------------------------
+# Data structures
+# ---------------------------------------------------------------------------
+from bank_statement_parser.modules.data import PdfResult
+
+# ---------------------------------------------------------------------------
 # Debug / diagnostics
 # ---------------------------------------------------------------------------
 from bank_statement_parser.modules.debug import debug_pdf_statement, debug_statements
@@ -131,6 +142,11 @@ __all__ = [
     "process_pdf_statement",
     "copy_statements_to_project",
     "delete_temp_files",
+    # Low-level persistence helpers
+    "update_parquet",
+    "update_db",
+    # Data structures
+    "PdfResult",
     # Debug / diagnostics
     "debug_pdf_statement",
     "debug_statements",
