@@ -26,7 +26,7 @@ from bank_statement_parser.modules.parquet import (
     _build_statement_heads_data,
     _build_statement_lines_data,
 )
-from bank_statement_parser.modules.paths import get_paths
+from bank_statement_parser.modules.paths import ProjectPaths
 from bank_statement_parser.modules.statement_functions import get_results
 
 
@@ -461,7 +461,7 @@ def debug_pdf_statement(
         # ----------------------------------------------------------------
         # 6. Write debug.json
         # ----------------------------------------------------------------
-        paths = get_paths(project_path)
+        paths = ProjectPaths.resolve(project_path)
         folder_name = f"{pdf.parent.name}_{pdf.name}"
         debug_dir = paths.log_debug_dir(folder_name)
         debug_dir.mkdir(parents=True, exist_ok=True)

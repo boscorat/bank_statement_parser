@@ -37,7 +37,7 @@ import polars as pl
 
 from bank_statement_parser.modules import reports_db as db
 from bank_statement_parser.modules.data import PdfResult
-from bank_statement_parser.modules.paths import get_paths
+from bank_statement_parser.modules.paths import ProjectPaths
 from bank_statement_parser.modules.statements import copy_statements_to_project
 
 FLOAT_TOL = 0.005  # monetary comparison tolerance (matches test_datamart.py)
@@ -59,20 +59,20 @@ class TestGoodStatements:
 
     def test_parquet_files_exist(self, good_project):
         """statement_heads, statement_lines and batch_lines parquet files are written."""
-        paths = get_paths(good_project.project_path)
+        paths = ProjectPaths.resolve(good_project.project_path)
         assert paths.statement_heads.exists(), "statement_heads.parquet missing"
         assert paths.statement_lines.exists(), "statement_lines.parquet missing"
         assert paths.batch_lines.exists(), "batch_lines.parquet missing"
 
     def test_db_exists(self, good_project):
         """SQLite project.db is created and non-empty."""
-        paths = get_paths(good_project.project_path)
+        paths = ProjectPaths.resolve(good_project.project_path)
         assert paths.project_db.exists(), "project.db missing"
         assert paths.project_db.stat().st_size > 0, "project.db is empty"
 
     def test_no_temp_files_remain(self, good_project):
         """No *_temp_*.parquet files survive after delete_temp_files()."""
-        paths = get_paths(good_project.project_path)
+        paths = ProjectPaths.resolve(good_project.project_path)
         temp_files = list(paths.parquet.glob("*_temp_*.parquet"))
         assert temp_files == [], f"Temp files still present: {temp_files}"
 
@@ -102,7 +102,7 @@ class TestDbReports:
 
     def test_fact_transaction_row_count(self, good_project):
         """DB FactTransaction row count matches SQLite statement_lines table."""
-        paths = get_paths(good_project.project_path)
+        paths = ProjectPaths.resolve(good_project.project_path)
         with sqlite3.connect(paths.project_db) as conn:
             raw_count = conn.execute("SELECT COUNT(*) FROM statement_lines").fetchone()[0]
         ft = db.FactTransaction(project_path=good_project.project_path).all.collect()
@@ -130,7 +130,7 @@ class TestDbReports:
 
     def test_statement_lines_db_value_in_matches_fact_transaction_db(self, good_project):
         """SUM(STD_PAYMENTS_IN) from SQLite statement_lines equals DB FactTransaction value_in sum."""
-        paths = get_paths(good_project.project_path)
+        paths = ProjectPaths.resolve(good_project.project_path)
         with sqlite3.connect(paths.project_db) as conn:
             raw_sum = conn.execute("SELECT SUM(CAST(STD_PAYMENTS_IN AS REAL)) FROM statement_lines").fetchone()[0]
         ft_sum = db.FactTransaction(project_path=good_project.project_path).all.collect()["value_in"].sum()
@@ -138,7 +138,7 @@ class TestDbReports:
 
     def test_statement_lines_db_value_out_matches_fact_transaction_db(self, good_project):
         """SUM(STD_PAYMENTS_OUT) from SQLite statement_lines equals DB FactTransaction value_out sum."""
-        paths = get_paths(good_project.project_path)
+        paths = ProjectPaths.resolve(good_project.project_path)
         with sqlite3.connect(paths.project_db) as conn:
             raw_sum = conn.execute("SELECT SUM(CAST(STD_PAYMENTS_OUT AS REAL)) FROM statement_lines").fetchone()[0]
         ft_sum = db.FactTransaction(project_path=good_project.project_path).all.collect()["value_out"].sum()
@@ -146,7 +146,7 @@ class TestDbReports:
 
     def test_statement_lines_row_count_matches_db(self, good_project):
         """Raw statement_lines row count agrees between parquet file and SQLite table."""
-        paths = get_paths(good_project.project_path)
+        paths = ProjectPaths.resolve(good_project.project_path)
         pq_count = pl.read_parquet(paths.statement_lines).height
         with sqlite3.connect(paths.project_db) as conn:
             db_count = conn.execute("SELECT COUNT(*) FROM statement_lines").fetchone()[0]
@@ -178,7 +178,7 @@ class TestExports:
     def test_db_export_csv_full(self, good_project):
         """DB export_csv(type='full') writes all six CSV files."""
         db.export_csv(type="full", project_path=good_project.project_path)
-        paths = get_paths(good_project.project_path)
+        paths = ProjectPaths.resolve(good_project.project_path)
         for name in _FULL_CSV_FILES:
             f = paths.csv / name
             assert f.exists(), f"Missing CSV: {name}"
@@ -187,7 +187,7 @@ class TestExports:
     def test_db_export_csv_simple(self, good_project):
         """DB export_csv(type='simple') writes the flat transactions CSV."""
         db.export_csv(type="simple", project_path=good_project.project_path)
-        paths = get_paths(good_project.project_path)
+        paths = ProjectPaths.resolve(good_project.project_path)
         f = paths.csv / "transactions_table.csv"
         assert f.exists(), "Missing transactions_table.csv (db/simple)"
         assert f.stat().st_size > 0, "Empty transactions_table.csv (db/simple)"
@@ -199,7 +199,7 @@ class TestExports:
     def test_db_export_excel_full(self, good_project):
         """DB export_excel(type='full') writes a non-empty workbook."""
         db.export_excel(type="full", project_path=good_project.project_path)
-        paths = get_paths(good_project.project_path)
+        paths = ProjectPaths.resolve(good_project.project_path)
         f = paths.excel / "transactions.xlsx"
         assert f.exists(), "Missing transactions.xlsx (db/full)"
         assert f.stat().st_size > 0, "Empty transactions.xlsx (db/full)"
@@ -207,7 +207,7 @@ class TestExports:
     def test_db_export_excel_simple(self, good_project):
         """DB export_excel(type='simple') writes a non-empty workbook."""
         db.export_excel(type="simple", project_path=good_project.project_path)
-        paths = get_paths(good_project.project_path)
+        paths = ProjectPaths.resolve(good_project.project_path)
         f = paths.excel / "transactions.xlsx"
         assert f.exists(), "Missing transactions.xlsx (db/simple)"
         assert f.stat().st_size > 0, "Empty transactions.xlsx (db/simple)"
@@ -219,7 +219,7 @@ class TestExports:
     def test_batch_export_both(self, good_project):
         """StatementBatch.export(filetype='both') writes both Excel and CSV."""
         good_project.batch.export(filetype="both", type="full")
-        paths = get_paths(good_project.project_path)
+        paths = ProjectPaths.resolve(good_project.project_path)
         # Excel file must exist
         xlsx = paths.excel / "transactions.xlsx"
         assert xlsx.exists(), "Missing transactions.xlsx after filetype='both'"
@@ -258,7 +258,7 @@ class TestCopyStatements:
 
     def test_directory_structure(self, good_project):
         """Copied files land under statements/<year>/<id_account>/<filename>."""
-        paths = get_paths(good_project.project_path)
+        paths = ProjectPaths.resolve(good_project.project_path)
         copied = good_project.batch.copy_statements_to_project()
         for dest in copied:
             # dest must be inside <project>/statements/
@@ -325,7 +325,7 @@ class TestBatchReports:
 
     def _get_batch_id(self, good_project) -> str:
         """Return the first batch ID from the database."""
-        paths = get_paths(good_project.project_path)
+        paths = ProjectPaths.resolve(good_project.project_path)
         with sqlite3.connect(paths.project_db) as conn:
             row = conn.execute("SELECT ID_BATCH FROM batch_heads ORDER BY STD_UPDATETIME LIMIT 1").fetchone()
         assert row is not None, "No batch_heads rows found — cannot test batch filtering"

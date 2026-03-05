@@ -18,7 +18,7 @@ import polars as pl
 from xlsxwriter import Workbook
 
 from bank_statement_parser.modules.errors import ProjectDatabaseMissing
-from bank_statement_parser.modules.paths import get_paths
+from bank_statement_parser.modules.paths import ProjectPaths
 
 
 def _require_db(paths) -> None:
@@ -96,7 +96,7 @@ def export_csv(
             when ``None``.
     """
     if folder is None:
-        paths = get_paths(project_path)
+        paths = ProjectPaths.resolve(project_path)
         paths.ensure_subdir_for_write(paths.csv)
         folder = paths.csv
     if type == "full":
@@ -144,7 +144,7 @@ def export_excel(
             when ``None``.
     """
     if path is None:
-        paths = get_paths(project_path)
+        paths = ProjectPaths.resolve(project_path)
         paths.ensure_subdir_for_write(paths.excel)
         path = paths.excel / "transactions.xlsx"
     with Workbook(str(path)) as wb:
@@ -207,7 +207,7 @@ class FlatTransaction:
     __slots__ = ("all",)
 
     def __init__(self, project_path: Path | None = None, batch_id: str | None = None) -> None:
-        paths = get_paths(project_path)
+        paths = ProjectPaths.resolve(project_path)
         _require_db(paths)
         self.all = _read_data_filtered(paths.project_db, "FlatTransaction", "FlatTransactionBatch", batch_id)
 
@@ -216,7 +216,7 @@ class FactBalance:
     __slots__ = ("all",)
 
     def __init__(self, project_path: Path | None = None, batch_id: str | None = None) -> None:
-        paths = get_paths(project_path)
+        paths = ProjectPaths.resolve(project_path)
         _require_db(paths)
         self.all = _read_data_filtered(paths.project_db, "FactBalance", "FactBalanceBatch", batch_id)
 
@@ -225,7 +225,7 @@ class DimTime:
     __slots__ = ("all",)
 
     def __init__(self, project_path: Path | None = None, batch_id: str | None = None) -> None:
-        paths = get_paths(project_path)
+        paths = ProjectPaths.resolve(project_path)
         _require_db(paths)
         self.all = _read_data_filtered(paths.project_db, "DimTime", "DimTimeBatch", batch_id)
 
@@ -234,7 +234,7 @@ class DimStatement:
     __slots__ = ("all",)
 
     def __init__(self, project_path: Path | None = None, batch_id: str | None = None) -> None:
-        paths = get_paths(project_path)
+        paths = ProjectPaths.resolve(project_path)
         _require_db(paths)
         self.all = _read_data_filtered(paths.project_db, "DimStatement", "DimStatementBatch", batch_id)
 
@@ -243,7 +243,7 @@ class DimAccount:
     __slots__ = ("all",)
 
     def __init__(self, project_path: Path | None = None, batch_id: str | None = None) -> None:
-        paths = get_paths(project_path)
+        paths = ProjectPaths.resolve(project_path)
         _require_db(paths)
         self.all = _read_data_filtered(paths.project_db, "DimAccount", "DimAccountBatch", batch_id)
 
@@ -252,7 +252,7 @@ class FactTransaction:
     __slots__ = ("all",)
 
     def __init__(self, project_path: Path | None = None, batch_id: str | None = None) -> None:
-        paths = get_paths(project_path)
+        paths = ProjectPaths.resolve(project_path)
         _require_db(paths)
         self.all = _read_data_filtered(paths.project_db, "FactTransaction", "FactTransactionBatch", batch_id)
 
@@ -261,7 +261,7 @@ class GapReport:
     __slots__ = ("all", "gaps")
 
     def __init__(self, project_path: Path | None = None) -> None:
-        paths = get_paths(project_path)
+        paths = ProjectPaths.resolve(project_path)
         _require_db(paths)
         self.all = _read_data(paths.project_db, "GapReport")
         self.gaps = self.all.filter(pl.col("gap_flag") == "GAP")
@@ -271,4 +271,4 @@ if __name__ == "__main__":
     pl.Config.set_tbl_rows(100)
     pl.Config.set_tbl_cols(55)
     pl.Config.set_fmt_str_lengths(25)
-    export_excel(get_paths().excel.joinpath("test_db.xlsx"), type="simple")
+    export_excel(ProjectPaths.resolve().excel.joinpath("test_db.xlsx"), type="simple")
