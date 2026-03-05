@@ -107,6 +107,12 @@ Copy the project folder structure (directories only) to a destination.
 
 Validate an existing project or initialise a new one at *project_path*.
 
+### `bsp.ProjectPaths`
+
+*class* — `bank_statement_parser.modules.paths`
+
+All file-system paths for a bank_statement_parser project, derived from a single root directory.
+
 ## Low-level PDF helpers
 
 ### `bsp.pdf_open()`
