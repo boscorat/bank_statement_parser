@@ -31,6 +31,16 @@ PdfResult = namedtuple(
         "error_cab",  # bool — True if checks & balances validation failed
         "error_config",  # bool — True if configuration or parsing failed
         "error_data",  # bool — True if parquet schema/data failure occurred
+        # --- lightweight summary fields (new) ---
+        "id_statement",  # str | None — SHA512 statement identifier
+        "id_account",  # str | None — compound account identifier
+        "account",  # str | None — human-readable account name
+        "statement_date",  # date | None — statement date from header
+        "payments_in",  # Decimal | None — total payments in from checks & balances
+        "payments_out",  # Decimal | None — total payments out from checks & balances
+        "opening_balance",  # Decimal | None — opening balance from header
+        "closing_balance",  # Decimal | None — closing balance from header
+        "error_message",  # str | None — combined error message text
     ],
 )
 """Named tuple returned by :func:`~bank_statement_parser.modules.statements.process_pdf_statement`
@@ -58,6 +68,27 @@ error_config:
 error_data:
     ``True`` if a parquet schema or data-type mismatch failure occurred during
     the ``.extend()`` step (e.g. a ``String`` value where a ``Date`` was expected).
+id_statement:
+    SHA512-based unique identifier for the statement, or ``None`` on failure.
+id_account:
+    Compound account identifier (``{company_key}_{account_type_key}_{account_number}``),
+    or ``None`` if the statement failed or no config matched.
+account:
+    Human-readable account name from config (e.g. ``"Current Account"``),
+    or ``None`` on failure.
+statement_date:
+    Statement date extracted from the header, or ``None`` on failure.
+payments_in:
+    Total payments in (Decimal) from checks & balances, or ``None`` on failure.
+payments_out:
+    Total payments out (Decimal) from checks & balances, or ``None`` on failure.
+opening_balance:
+    Opening balance (Decimal) from the statement header, or ``None`` on failure.
+closing_balance:
+    Closing balance (Decimal) from the statement header, or ``None`` on failure.
+error_message:
+    Combined error message string accumulated during processing,
+    or ``None`` / empty string when processing succeeded.
 """
 
 
