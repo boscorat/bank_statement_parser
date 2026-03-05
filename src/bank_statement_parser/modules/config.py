@@ -26,7 +26,7 @@ from bank_statement_parser.modules.data import (
     StatementType,
 )
 from bank_statement_parser.modules.errors import ProjectConfigMissing, StatementError
-from bank_statement_parser.modules.paths import BASE_CONFIG, get_paths
+from bank_statement_parser.modules.paths import BASE_CONFIG, ProjectPaths
 from bank_statement_parser.modules.statement_functions import get_results
 
 
@@ -136,7 +136,7 @@ class ConfigManager:
     def config_dir(self) -> Path:
         """Return the effective configuration directory path."""
         if self._project_path is not None:
-            return get_paths(self._project_path).config
+            return ProjectPaths.resolve(self._project_path).config
         return BASE_CONFIG
 
     @property

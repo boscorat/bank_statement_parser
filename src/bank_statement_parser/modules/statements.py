@@ -37,7 +37,7 @@ from bank_statement_parser.modules.config import (
 from bank_statement_parser.modules.data import Account, PdfResult, StandardFields
 from bank_statement_parser.modules.database import update_db
 from bank_statement_parser.modules.parquet import update_parquet
-from bank_statement_parser.modules.paths import get_paths, validate_or_initialise_project
+from bank_statement_parser.modules.paths import ProjectPaths, validate_or_initialise_project
 from bank_statement_parser.modules.pdf_functions import pdf_close, pdf_open
 from bank_statement_parser.modules.statement_functions import get_results, get_standard_fields
 
@@ -204,7 +204,7 @@ class Statement:
         sentinel ``"<PDF ERROR>"`` when it does not.
         """
         if not skip_project_validation:
-            validate_or_initialise_project(get_paths(project_path).root)
+            validate_or_initialise_project(ProjectPaths.resolve(project_path).root)
         self.logs: pl.DataFrame = pl.DataFrame(
             schema={
                 "file_path": pl.Utf8,
@@ -577,7 +577,7 @@ def process_pdf_statement(
             ``error_cab``, ``error_config``, and ``error_data``.  See :data:`PdfResult`
             for full field descriptions.
     """
-    paths = get_paths(project_path)
+    paths = ProjectPaths.resolve(project_path)
     batch_lines_stem: str | None = None
     statement_heads_stem: str | None = None
     statement_lines_stem: str | None = None
@@ -641,6 +641,7 @@ def process_pdf_statement(
             try:
                 # Save extracted header data
                 pq_statement_heads = pq.StatementHeads(
+                    file=paths.statement_heads_temp(idx, batch_id),
                     id_statement=stmt.ID_STATEMENT,
                     id_batchline=batch_line["ID_BATCHLINE"],
                     id_account=stmt.ID_ACCOUNT,
@@ -648,11 +649,9 @@ def process_pdf_statement(
                     statement_type=stmt.statement_type,
                     account=stmt.account,
                     header_results=stmt.header_results,
-                    id=idx,
-                    project_path=project_path,
                 )
                 pq_statement_heads.create()
-                statement_heads_stem = paths.statement_heads_temp_stem(idx)
+                statement_heads_stem = paths.statement_heads_temp_stem(idx, batch_id)
                 pq_statement_heads.cleanup()
                 pq_statement_heads = None
             except Exception as e:
@@ -667,13 +666,12 @@ def process_pdf_statement(
             try:
                 # Save extracted transaction line data
                 pq_statement_lines = pq.StatementLines(
+                    file=paths.statement_lines_temp(idx, batch_id),
                     id_statement=stmt.ID_STATEMENT,
                     lines_results=stmt.lines_results,
-                    id=idx,
-                    project_path=project_path,
                 )
                 pq_statement_lines.create()
-                statement_lines_stem = paths.statement_lines_temp_stem(idx)
+                statement_lines_stem = paths.statement_lines_temp_stem(idx, batch_id)
                 pq_statement_lines.cleanup()
                 pq_statement_lines = None
             except Exception as e:
@@ -691,14 +689,13 @@ def process_pdf_statement(
         if not stmt.checks_and_balances.is_empty():
             try:
                 pq_cab = pq.ChecksAndBalances(
+                    file=paths.cab_temp(idx, batch_id),
                     id_statement=stmt.ID_STATEMENT,
                     id_batch=stmt.ID_BATCH,
                     checks_and_balances=stmt.checks_and_balances,
-                    id=idx,
-                    project_path=project_path,
                 )
                 pq_cab.create()
-                cab_stem = paths.cab_temp_stem(idx)
+                cab_stem = paths.cab_temp_stem(idx, batch_id)
                 pq_cab.cleanup()
                 pq_cab = None
             except Exception as e:
@@ -732,9 +729,9 @@ def process_pdf_statement(
     batch_line["STD_UPDATETIME"] = datetime.now()
 
     # Save batch line data
-    pq_batch_lines = pq.BatchLines(batch_lines=[batch_line], id=idx, project_path=project_path)
+    pq_batch_lines = pq.BatchLines(file=paths.batch_lines_temp(idx, batch_id), batch_lines=[batch_line])
     pq_batch_lines.create()
-    batch_lines_stem = paths.batch_lines_temp_stem(idx)
+    batch_lines_stem = paths.batch_lines_temp_stem(idx, batch_id)
     pq_batch_lines.cleanup()
     pq_batch_lines = None
 
@@ -769,7 +766,7 @@ def delete_temp_files(
         project_path: Optional project root directory used to resolve stems
             to full paths.
     """
-    paths = get_paths(project_path)
+    paths = ProjectPaths.resolve(project_path)
     for pdf in processed_pdfs:
         if isinstance(pdf, BaseException):
             return None
@@ -815,7 +812,7 @@ def copy_statements_to_project(
     Returns:
         List of :class:`~pathlib.Path` objects for every file that was copied.
     """
-    paths = get_paths(project_path)
+    paths = ProjectPaths.resolve(project_path)
     copied: list[Path] = []
     for entry in processed_pdfs:
         if not isinstance(entry, PdfResult):
@@ -928,7 +925,7 @@ class StatementBatch:
         copy_statements_to_project() after processing.
         """
         if not skip_project_validation:
-            validate_or_initialise_project(get_paths(project_path).root)
+            validate_or_initialise_project(ProjectPaths.resolve(project_path).root)
         print("processing...")
         self.process_time: datetime = datetime.now()
         self.timer_start = time()
@@ -1132,7 +1129,7 @@ class StatementBatch:
                 errors=self.errors,
                 duration_secs=self.duration_secs,
                 process_time=self.process_time,
-                project_path=resolved,
+                paths=ProjectPaths.resolve(resolved),
             )
             self.duration_secs += self.parquet_secs
         if datadestination in ("database", "both"):

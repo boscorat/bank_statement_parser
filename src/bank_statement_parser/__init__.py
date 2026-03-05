@@ -96,7 +96,7 @@ from bank_statement_parser.modules.errors import (
 # Config helpers
 # ---------------------------------------------------------------------------
 from bank_statement_parser.modules.config import copy_default_config
-from bank_statement_parser.modules.paths import copy_project_folders, validate_or_initialise_project
+from bank_statement_parser.modules.paths import ProjectPaths, copy_project_folders, validate_or_initialise_project
 
 # ---------------------------------------------------------------------------
 # PDF anonymisation utility
@@ -142,6 +142,7 @@ __all__ = [
     "copy_default_config",
     "copy_project_folders",
     "validate_or_initialise_project",
+    "ProjectPaths",
     # Low-level PDF helpers
     "pdf_open",
     "page_crop",

@@ -52,7 +52,7 @@ class ProjectPaths:
           log/
             debug/
 
-    Use :func:`get_paths` to obtain an instance rather than instantiating
+    Use :meth:`resolve` to obtain an instance rather than instantiating
     this class directly.
     """
 
@@ -164,37 +164,65 @@ class ProjectPaths:
     # Temporary Parquet files (written per-PDF during batch processing)
     # ------------------------------------------------------------------
 
-    def cab_temp(self, id: int) -> Path:
-        """Temporary checks-and-balances file for PDF at index *id*."""
-        return self.parquet / f"checks_and_balances_temp_{id}.parquet"
+    def cab_temp(self, id: int, batch_id: str) -> Path:
+        """Temporary checks-and-balances file for PDF at index *id* in batch *batch_id*."""
+        return self.parquet / f"checks_and_balances_temp_{batch_id}_{id}.parquet"
 
-    def batch_lines_temp(self, id: int) -> Path:
-        """Temporary batch-lines file for PDF at index *id*."""
-        return self.parquet / f"batch_lines_temp_{id}.parquet"
+    def batch_lines_temp(self, id: int, batch_id: str) -> Path:
+        """Temporary batch-lines file for PDF at index *id* in batch *batch_id*."""
+        return self.parquet / f"batch_lines_temp_{batch_id}_{id}.parquet"
 
-    def statement_heads_temp(self, id: int) -> Path:
-        """Temporary statement-heads file for PDF at index *id*."""
-        return self.parquet / f"statement_heads_temp_{id}.parquet"
+    def statement_heads_temp(self, id: int, batch_id: str) -> Path:
+        """Temporary statement-heads file for PDF at index *id* in batch *batch_id*."""
+        return self.parquet / f"statement_heads_temp_{batch_id}_{id}.parquet"
 
-    def statement_lines_temp(self, id: int) -> Path:
-        """Temporary statement-lines file for PDF at index *id*."""
-        return self.parquet / f"statement_lines_temp_{id}.parquet"
+    def statement_lines_temp(self, id: int, batch_id: str) -> Path:
+        """Temporary statement-lines file for PDF at index *id* in batch *batch_id*."""
+        return self.parquet / f"statement_lines_temp_{batch_id}_{id}.parquet"
 
     # ------------------------------------------------------------------
     # Filename stems (no directory, no extension)
     # ------------------------------------------------------------------
 
-    def cab_temp_stem(self, id: int) -> str:
-        return f"checks_and_balances_temp_{id}"
+    def cab_temp_stem(self, id: int, batch_id: str) -> str:
+        return f"checks_and_balances_temp_{batch_id}_{id}"
 
-    def batch_lines_temp_stem(self, id: int) -> str:
-        return f"batch_lines_temp_{id}"
+    def batch_lines_temp_stem(self, id: int, batch_id: str) -> str:
+        return f"batch_lines_temp_{batch_id}_{id}"
 
-    def statement_heads_temp_stem(self, id: int) -> str:
-        return f"statement_heads_temp_{id}"
+    def statement_heads_temp_stem(self, id: int, batch_id: str) -> str:
+        return f"statement_heads_temp_{batch_id}_{id}"
 
-    def statement_lines_temp_stem(self, id: int) -> str:
-        return f"statement_lines_temp_{id}"
+    def statement_lines_temp_stem(self, id: int, batch_id: str) -> str:
+        return f"statement_lines_temp_{batch_id}_{id}"
+
+    # ------------------------------------------------------------------
+    # Factory
+    # ------------------------------------------------------------------
+
+    @classmethod
+    def resolve(cls, project_path: Path | None = None) -> "ProjectPaths":
+        """Return a :class:`ProjectPaths` for *project_path*.
+
+        When *project_path* is ``None``, the default project folder bundled
+        with the package is used (``src/bank_statement_parser/project/``).
+
+        This is a pure path-computation factory.  It does **not** validate
+        that the project directory exists or is correctly structured — call
+        :func:`validate_or_initialise_project` for that (done automatically
+        by :class:`~bank_statement_parser.modules.statements.Statement` and
+        :class:`~bank_statement_parser.modules.statements.StatementBatch`).
+
+        Args:
+            project_path: Root of the project directory tree.  Must follow
+                the standard sub-directory layout (``config/``, ``parquet/``,
+                ``database/``, etc.).  Pass ``None`` to use the default
+                bundled project.
+
+        Returns:
+            A :class:`ProjectPaths` instance with all derived path attributes.
+        """
+        return cls(root=project_path if project_path is not None else _DEFAULT_PROJECT_ROOT)
 
     # ------------------------------------------------------------------
     # Sub-directory validation helpers
@@ -228,54 +256,10 @@ class ProjectPaths:
 
 
 # ---------------------------------------------------------------------------
-# Public factory
-# ---------------------------------------------------------------------------
-
-
-def validate_project_path(project_path: Path) -> None:
-    """
-    Raise :exc:`ProjectFolderNotFound` if *project_path* is not an existing directory.
-
-    Args:
-        project_path: The project root directory to validate.
-
-    Raises:
-        ProjectFolderNotFound: If the path does not exist or is not a directory.
-    """
-    if not project_path.is_dir():
-        raise ProjectFolderNotFound(project_path)
-
-
-def get_paths(project_path: Path | None = None) -> ProjectPaths:
-    """
-    Return a :class:`ProjectPaths` for the given project root.
-
-    When *project_path* is ``None``, the default project folder bundled with
-    the package is used (``src/bank_statement_parser/project/``).
-
-    This is a pure path-computation factory. It does **not** validate that the
-    project directory exists or is correctly structured — use
-    :func:`validate_or_initialise_project` for that (called automatically by
-    :class:`~bank_statement_parser.modules.statements.Statement` and
-    :class:`~bank_statement_parser.modules.statements.StatementBatch`).
-
-    Args:
-        project_path: Root of the project directory tree.  Must follow the
-            standard sub-directory layout (``config/``, ``parquet/``,
-            ``database/``, etc.).
-
-    Returns:
-        A :class:`ProjectPaths` instance with all derived path attributes.
-    """
-    return ProjectPaths(root=project_path if project_path is not None else _DEFAULT_PROJECT_ROOT)
-
-
-# ---------------------------------------------------------------------------
 # Ensure the default project structure exists on first import
 # ---------------------------------------------------------------------------
 
-_default_paths = get_paths()
-_default_paths.ensure_dirs()
+ProjectPaths.resolve().ensure_dirs()
 
 
 # ---------------------------------------------------------------------------
@@ -381,7 +365,7 @@ def validate_or_initialise_project(project_path: Path) -> None:
     if not project_path.is_dir():
         raise ProjectFolderNotFound(project_path)
 
-    paths = ProjectPaths(root=project_path)
+    paths = ProjectPaths.resolve(project_path)
 
     has_toml = paths.config.is_dir() and bool(list(paths.config.rglob("*.toml")))
     has_db = paths.project_db.exists()
