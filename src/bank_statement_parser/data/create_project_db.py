@@ -6,7 +6,7 @@ from bank_statement_parser.data.create_project_db_views import create_views
 SCHEMAS = {
     "checks_and_balances": {
         "ID_CAB": "TEXT",
-        "ID_STATEMENT": "TEXT",
+        "ID_BATCHLINE": "TEXT",
         "ID_BATCH": "TEXT",
         "HAS_TRANSACTIONS": "INTEGER",
         "STD_OPENING_BALANCE_HEADS": "REAL",
@@ -64,6 +64,7 @@ SCHEMAS = {
         "STD_ACCOUNT": "TEXT",
         "STD_PDF_COUNT": "INTEGER",
         "STD_ERROR_COUNT": "INTEGER",
+        "STD_REVIEW_COUNT": "INTEGER",
         "STD_DURATION_SECS": "REAL",
         "STD_UPDATETIME": "TEXT",
     },
@@ -86,7 +87,7 @@ SCHEMAS = {
 
 FOREIGN_KEYS = {
     "checks_and_balances": [
-        "FOREIGN KEY (ID_STATEMENT) REFERENCES statement_heads(ID_STATEMENT) ON UPDATE CASCADE ON DELETE CASCADE",
+        "FOREIGN KEY (ID_BATCHLINE) REFERENCES batch_lines(ID_BATCHLINE) ON UPDATE CASCADE ON DELETE CASCADE",
         "FOREIGN KEY (ID_BATCH) REFERENCES batch_heads(ID_BATCH) ON UPDATE CASCADE ON DELETE CASCADE",
     ],
     "statement_heads": [
@@ -97,7 +98,6 @@ FOREIGN_KEYS = {
     ],
     "batch_lines": [
         "FOREIGN KEY (ID_BATCH) REFERENCES batch_heads(ID_BATCH) ON UPDATE CASCADE ON DELETE CASCADE",
-        "FOREIGN KEY (ID_STATEMENT) REFERENCES statement_heads(ID_STATEMENT) ON UPDATE CASCADE ON DELETE CASCADE",
     ],
 }
 
@@ -137,7 +137,7 @@ def main(db_path: Path, with_fk: bool = False):
     if with_fk:
         conn.execute("PRAGMA foreign_keys = ON;")
 
-    table_order = ["batch_heads", "statement_heads", "checks_and_balances", "statement_lines", "batch_lines"]
+    table_order = ["batch_heads", "batch_lines", "statement_heads", "checks_and_balances", "statement_lines"]
 
     for table_name in table_order:
         create_table(conn, table_name, SCHEMAS[table_name], with_fk)
@@ -164,6 +164,7 @@ def create_indexes(db_path: Path):
         "CREATE INDEX IF NOT EXISTS idx_batch_lines_id_statement ON batch_lines(ID_STATEMENT)",
         "CREATE INDEX IF NOT EXISTS idx_sh_stmt_acct ON statement_heads(ID_STATEMENT, ID_ACCOUNT)",
         "CREATE INDEX IF NOT EXISTS idx_batch_lines_stmt_batch ON batch_lines(ID_STATEMENT, ID_BATCH)",
+        "CREATE INDEX IF NOT EXISTS idx_cab_id_batchline ON checks_and_balances(ID_BATCHLINE)",
     ]
 
     for idx_sql in indexes:

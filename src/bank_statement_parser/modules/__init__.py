@@ -4,7 +4,9 @@ Public interface for the bank_statement_parser.modules sub-package.
 Flat exports (imported directly):
     Statement, StatementBatch           -- PDF parsing / batch processing
     process_pdf_statement               -- process a single PDF (module-level)
-    PdfResult                           -- namedtuple returned by process_pdf_statement
+    PdfResult                           -- dataclass returned by process_pdf_statement
+    Success, Review, Failure            -- result payload dataclasses
+    StatementInfo, ParquetFiles         -- typed sub-fields of Success / Review
     delete_temp_files                   -- clean up temp parquet files
     StatementError                      -- root of the exception hierarchy
     pdf_open, page_crop, page_text,
@@ -24,7 +26,7 @@ functions.  Access them via the namespace:
 import bank_statement_parser.modules.reports_db as db
 from bank_statement_parser.modules.config import copy_default_config
 from bank_statement_parser.modules.paths import copy_project_folders
-from bank_statement_parser.modules.data import PdfResult
+from bank_statement_parser.modules.data import Failure, ParquetFiles, PdfResult, Review, StatementInfo, Success
 from bank_statement_parser.modules.errors import StatementError
 from bank_statement_parser.modules.pdf_functions import get_table_from_region, page_crop, page_text, pdf_open, region_search
 from bank_statement_parser.modules.statements import (
@@ -40,6 +42,11 @@ __all__ = [
     "StatementBatch",
     "process_pdf_statement",
     "PdfResult",
+    "Success",
+    "Review",
+    "Failure",
+    "StatementInfo",
+    "ParquetFiles",
     "delete_temp_files",
     # Config helpers
     "copy_default_config",

@@ -1,8 +1,32 @@
-"""Dataclasses and named tuples used throughout the bank_statement_parser pipeline.
+"""Dataclasses used throughout the bank_statement_parser pipeline.
 
-These structures are the primary vehicle for typed configuration: TOML files are
-loaded by ``dacite`` directly into these dataclasses, so every field name here
-corresponds to a key in one of the project TOML files.
+Two distinct categories of dataclass live here:
+
+**Pipeline result types** — returned by :func:`~bank_statement_parser.modules.statements.process_pdf_statement`
+and consumed by downstream persistence, debug, and test code:
+
+* :class:`StatementInfo` — statement-level metadata extracted from a successfully
+  parsed PDF (account, date, balances, canonical rename target).
+* :class:`ParquetFiles` — full :class:`~pathlib.Path` objects for the two
+  statement-level temporary Parquet files (``statement_heads``, ``statement_lines``).
+  Only populated on the ``SUCCESS`` path.
+* :class:`Success` — groups ``StatementInfo`` + ``ParquetFiles`` for a
+  fully-validated result.
+* :class:`Review` — groups ``StatementInfo`` + ``ParquetFiles`` for a statement
+  where extraction succeeded but checks-and-balances validation failed.  Carries
+  the CAB error message and detail so the caller can decide whether to accept the
+  data after human review.
+* :class:`Failure` — carries the error message, error type, and optional detail
+  for any failure mode where no usable statement data was produced.
+* :class:`PdfResult` — top-level result returned by
+  :func:`~bank_statement_parser.modules.statements.process_pdf_statement`.
+  Always present; carries ``result`` (``"SUCCESS"`` / ``"REVIEW"`` / ``"FAILURE"``),
+  ``outcome`` (the specific outcome label), ``batch_lines`` (always written),
+  ``checks_and_balances`` (written for SUCCESS and REVIEW), and ``payload``
+  (the concrete :class:`Success`, :class:`Review`, or :class:`Failure` instance).
+
+**Configuration types** — loaded from TOML files by ``dacite`` into dataclasses.
+Every field name here corresponds to a key in one of the project TOML files.
 
 Annotation convention
 ---------------------
@@ -14,82 +38,234 @@ Each field comment is prefixed with one of:
                  implementation and should not be relied upon.
 """
 
-from collections import namedtuple
 from dataclasses import dataclass
-from typing import Optional
+from datetime import date
+from decimal import Decimal
+from pathlib import Path
+from typing import Literal, Optional
 
 
-PdfResult = namedtuple(
-    "PdfResult",
-    [
-        "batch_lines_stem",  # str | None — temp parquet stem for batch_lines
-        "statement_heads_stem",  # str | None — temp parquet stem for statement_heads
-        "statement_lines_stem",  # str | None — temp parquet stem for statement_lines
-        "cab_stem",  # str | None — temp parquet stem for checks_and_balances
-        "file_src",  # str | None — absolute path of the source PDF
-        "file_dst",  # str | None — canonical rename target basename
-        "error_cab",  # bool — True if checks & balances validation failed
-        "error_config",  # bool — True if configuration or parsing failed
-        "error_data",  # bool — True if parquet schema/data failure occurred
-        # --- lightweight summary fields (new) ---
-        "id_statement",  # str | None — SHA512 statement identifier
-        "id_account",  # str | None — compound account identifier
-        "account",  # str | None — human-readable account name
-        "statement_date",  # date | None — statement date from header
-        "payments_in",  # Decimal | None — total payments in from checks & balances
-        "payments_out",  # Decimal | None — total payments out from checks & balances
-        "opening_balance",  # Decimal | None — opening balance from header
-        "closing_balance",  # Decimal | None — closing balance from header
-        "error_message",  # str | None — combined error message text
-    ],
-)
-"""Named tuple returned by :func:`~bank_statement_parser.modules.statements.process_pdf_statement`
-for each processed PDF.
+@dataclass(frozen=True, slots=True)
+class StatementInfo:
+    """Statement-level metadata extracted from a successfully validated PDF.
 
-Fields
-------
-batch_lines_stem:
-    Filename stem of the temporary batch-lines parquet file, or ``None`` on failure.
-statement_heads_stem:
-    Filename stem of the temporary statement-heads parquet file, or ``None`` on failure.
-statement_lines_stem:
-    Filename stem of the temporary statement-lines parquet file, or ``None`` on failure.
-cab_stem:
-    Filename stem of the temporary checks-and-balances parquet file, or ``None`` on failure.
-file_src:
-    Absolute path string of the original PDF, or ``None`` on failure.
-file_dst:
-    Target basename (``{id_account}_{YYYYMMDD}.pdf``) for the project copy, or ``None`` if
-    the statement did not produce a rename target.
-error_cab:
-    ``True`` if checks & balances validation failed.
-error_config:
-    ``True`` if a configuration or parsing failure occurred.
-error_data:
-    ``True`` if a parquet schema or data-type mismatch failure occurred during
-    the ``.extend()`` step (e.g. a ``String`` value where a ``Date`` was expected).
-id_statement:
-    SHA512-based unique identifier for the statement, or ``None`` on failure.
-id_account:
-    Compound account identifier (``{company_key}_{account_type_key}_{account_number}``),
-    or ``None`` if the statement failed or no config matched.
-account:
-    Human-readable account name from config (e.g. ``"Current Account"``),
-    or ``None`` on failure.
-statement_date:
-    Statement date extracted from the header, or ``None`` on failure.
-payments_in:
-    Total payments in (Decimal) from checks & balances, or ``None`` on failure.
-payments_out:
-    Total payments out (Decimal) from checks & balances, or ``None`` on failure.
-opening_balance:
-    Opening balance (Decimal) from the statement header, or ``None`` on failure.
-closing_balance:
-    Closing balance (Decimal) from the statement header, or ``None`` on failure.
-error_message:
-    Combined error message string accumulated during processing,
-    or ``None`` / empty string when processing succeeded.
-"""
+    Populated once per statement on the success path in
+    :func:`~bank_statement_parser.modules.statements.process_pdf_statement`.
+    All fields are non-optional; a ``StatementInfo`` is only constructed when
+    extraction and checks-and-balances validation both pass.
+
+    Attributes:
+        id_statement: SHA512 hex digest of the first-page text, used as a
+            unique, content-addressable identifier for the statement.
+        id_account: Compound account identifier in the form
+            ``{company_key}_{account_type_key}_{account_number}`` (spaces
+            stripped from the account number).
+        account: Human-readable account name from config
+            (e.g. ``"Current Account"``).
+        statement_date: Statement date extracted from the PDF header.
+        payments_in: Total payments-in figure stated on the statement, as
+            extracted by the checks-and-balances pass.
+        payments_out: Total payments-out figure stated on the statement.
+        opening_balance: Opening balance from the statement header.
+        closing_balance: Closing balance from the statement header.
+        filename_new: Canonical rename target basename for the source PDF in
+            the form ``{id_account}_{YYYYMMDD}.pdf``.
+    """
+
+    id_statement: str
+    id_account: str
+    account: str
+    statement_date: date
+    payments_in: Decimal
+    payments_out: Decimal
+    opening_balance: Decimal
+    closing_balance: Decimal
+    filename_new: str
+
+
+@dataclass(frozen=True, slots=True)
+class ParquetFiles:
+    """Paths to the statement-level temporary Parquet files written on the SUCCESS path.
+
+    Each field holds the absolute :class:`~pathlib.Path` of a temporary file
+    written by :func:`~bank_statement_parser.modules.statements.process_pdf_statement`,
+    or ``None`` when the corresponding write was skipped due to a data error.
+
+    ``batch_lines`` and ``checks_and_balances`` are written for more than just
+    ``SUCCESS`` results and therefore live directly on :class:`PdfResult` rather
+    than here.
+
+    These paths are consumed by
+    :func:`~bank_statement_parser.modules.parquet.update_parquet` and
+    :func:`~bank_statement_parser.modules.database.update_db` to merge the
+    temporary files into the permanent store, and by
+    :func:`~bank_statement_parser.modules.statements.delete_temp_files` to
+    clean them up afterwards.
+
+    Attributes:
+        statement_heads: Path to the temporary ``statement_heads`` Parquet file,
+            or ``None`` if not written.
+        statement_lines: Path to the temporary ``statement_lines`` Parquet file,
+            or ``None`` if not written.
+    """
+
+    statement_heads: Path | None
+    statement_lines: Path | None
+
+
+@dataclass(frozen=True, slots=True)
+class Success:
+    """Payload for a fully-validated PDF result.
+
+    Constructed only when both extraction and checks-and-balances validation
+    succeed.  Groups the statement metadata and the temporary Parquet file
+    paths into a single object carried by :class:`PdfResult`.
+
+    Attributes:
+        statement_info: Statement-level metadata (account, date, balances,
+            rename target).
+        parquet_files: Paths to the two statement-level temporary Parquet files
+            (``statement_heads``, ``statement_lines``) written during processing.
+    """
+
+    statement_info: StatementInfo
+    parquet_files: ParquetFiles
+
+
+@dataclass(frozen=True, slots=True)
+class Review:
+    """Payload for a PDF where extraction succeeded but CAB validation failed.
+
+    Constructed when statement data was fully extracted and written to Parquet
+    but the checks-and-balances validation step found a discrepancy.  The
+    caller must decide — after human review — whether to accept or discard the
+    data.  The statement data is **not** automatically merged into the
+    permanent store.
+
+    Attributes:
+        statement_info: Statement-level metadata (account, date, balances,
+            rename target).  Populated even though CAB failed.
+        parquet_files: Paths to the two statement-level temporary Parquet files
+            (``statement_heads``, ``statement_lines``) written during processing.
+        message: Primary human-readable CAB error message
+            (e.g. ``"** Checks & Balances Failure ** ..."``).
+        message_detail: Per-check delta lines produced by ``_cab_detail``.
+            Empty string when not applicable.
+    """
+
+    statement_info: StatementInfo
+    parquet_files: ParquetFiles
+    message: str
+    message_detail: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class Failure:
+    """Payload for a PDF result where no usable statement data was produced.
+
+    A single ``Failure`` type covers all non-recoverable failure modes; the
+    specific mode is encoded in ``error_type`` rather than through subclasses,
+    which avoids ``__slots__`` inheritance conflicts under ``frozen=True``.
+
+    Note that CAB failures no longer use this class — they produce a
+    :class:`Review` payload instead, because the statement data *was*
+    extracted and *may* be usable after human review.
+
+    Attributes:
+        message: Primary human-readable error message accumulated during
+            processing.
+        error_type: Short string identifying the failure category:
+
+            * ``"config"`` — a configuration or PDF-parsing failure occurred
+              before or during extraction.
+            * ``"data"``   — extraction passed but a Parquet schema/data-type
+              error occurred during the write step.
+            * ``"other"``  — an unexpected exception was caught by the
+              last-resort guard in ``process_pdf_statement``.
+
+        message_detail: Optional supplementary detail appended to ``message``.
+            Empty string when not applicable.
+    """
+
+    message: str
+    error_type: Literal["config", "data", "other"]
+    message_detail: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class PdfResult:
+    """Top-level result returned by :func:`~bank_statement_parser.modules.statements.process_pdf_statement`.
+
+    Every call to ``process_pdf_statement`` returns exactly one ``PdfResult``
+    regardless of whether processing succeeded or failed.  The ``result``
+    sentinel provides fast top-level discrimination; ``outcome`` carries the
+    specific outcome label; ``batch_lines`` and ``checks_and_balances`` carry
+    the paths to always-written and conditionally-written audit files; and
+    ``payload`` is the fully-typed result object.
+
+    Typical usage
+    -------------
+    Check ``result`` first, then access the typed payload::
+
+        pdf_result: PdfResult = process_pdf_statement(...)
+
+        if pdf_result.result == "SUCCESS":
+            info = pdf_result.payload.statement_info
+            pq   = pdf_result.payload.parquet_files
+            print(info.id_account, info.statement_date)
+        elif pdf_result.result == "REVIEW":
+            review = pdf_result.payload
+            print("CAB failed:", review.message)
+            # review.parquet_files holds the written statement data
+        else:
+            failure = pdf_result.payload
+            print(failure.error_type, failure.message)
+
+    For bulk processing via :class:`~bank_statement_parser.modules.statements.StatementBatch`,
+    iterate ``batch.processed_pdfs`` which is typed as
+    ``list[BaseException | PdfResult]``::
+
+        for entry in batch.processed_pdfs:
+            if isinstance(entry, BaseException):
+                continue          # unhandled worker crash
+            if entry.result == "FAILURE":
+                print(entry.payload.message)
+
+    Attributes:
+        result: Top-level outcome sentinel — ``"SUCCESS"``, ``"REVIEW"``, or
+            ``"FAILURE"``.  Use this for fast branching before inspecting
+            ``payload``.
+        outcome: Specific outcome label — one of:
+
+            * ``"SUCCESS"``        — extraction and validation passed.
+            * ``"REVIEW CAB"``     — extraction succeeded but CAB validation
+              failed; data needs human review before acceptance.
+            * ``"FAILURE CONFIG"`` — configuration / PDF-parsing failure.
+            * ``"FAILURE DATA"``   — Parquet write failure during extraction.
+            * ``"FAILURE OTHER"``  — unexpected exception (last-resort guard).
+
+        batch_lines: Path to the temporary ``batch_lines`` Parquet file.
+            Always written regardless of outcome.
+        checks_and_balances: Path to the temporary ``checks_and_balances``
+            Parquet file, or ``None`` if the CAB step did not run (i.e. a
+            ``FAILURE CONFIG`` or ``FAILURE OTHER`` result where
+            ``Statement.__init__`` never completed).
+        payload: The concrete result object — a :class:`Success` on the
+            success path, a :class:`Review` when CAB validation failed, or a
+            :class:`Failure` on any non-recoverable failure path.
+            Use ``isinstance(payload, Success)`` or check ``result`` before
+            accessing type-specific attributes.
+
+    See also
+    --------
+    :class:`Success`, :class:`Review`, :class:`Failure`, :class:`StatementInfo`, :class:`ParquetFiles`
+    """
+
+    result: Literal["SUCCESS", "REVIEW", "FAILURE"]
+    outcome: Literal["SUCCESS", "REVIEW CAB", "FAILURE CONFIG", "FAILURE DATA", "FAILURE OTHER"]
+    batch_lines: Path
+    checks_and_balances: Path | None
+    payload: "Success | Review | Failure"
 
 
 @dataclass(frozen=True, slots=True)
