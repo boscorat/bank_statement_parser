@@ -87,7 +87,7 @@ from bank_statement_parser.modules.parquet import update_parquet
 # ---------------------------------------------------------------------------
 # Data structures
 # ---------------------------------------------------------------------------
-from bank_statement_parser.modules.data import PdfResult
+from bank_statement_parser.modules.data import Failure, ParquetFiles, PdfResult, Review, StatementInfo, Success
 
 # ---------------------------------------------------------------------------
 # Debug / diagnostics
@@ -147,6 +147,11 @@ __all__ = [
     "update_db",
     # Data structures
     "PdfResult",
+    "Success",
+    "Review",
+    "Failure",
+    "StatementInfo",
+    "ParquetFiles",
     # Debug / diagnostics
     "debug_pdf_statement",
     "debug_statements",

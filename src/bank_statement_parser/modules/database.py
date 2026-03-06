@@ -13,7 +13,7 @@ from time import time
 import polars as pl
 
 from bank_statement_parser.data.build_datamart import build_datamart, _ensure_mart_structure
-from bank_statement_parser.modules.data import PdfResult
+from bank_statement_parser.modules.data import PdfResult, Success
 from bank_statement_parser.modules.errors import ProjectDatabaseMissing
 from bank_statement_parser.modules.paths import ProjectPaths
 
@@ -43,6 +43,7 @@ _MIGRATIONS: list[tuple[str, str, str, str]] = [
     ("batch_lines", "ERROR_DATA", "INTEGER", "0"),
     ("batch_heads", "ID_SESSION", "TEXT", "''"),
     ("batch_heads", "ID_USER", "TEXT", "''"),
+    ("batch_heads", "STD_REVIEW_COUNT", "INTEGER", "0"),
 ]
 
 # Views that may be absent from databases created before they were introduced.
@@ -323,6 +324,7 @@ def update_db(
     account_key: str | None,
     pdf_count: int,
     errors: int,
+    reviews: int,
     duration_secs: float,
     process_time: datetime,
     project_path: Path | None = None,
@@ -349,6 +351,7 @@ def update_db(
         account_key: Optional account identifier used for this batch.
         pdf_count: Total number of PDFs in the batch.
         errors: Count of failed statement processings.
+        reviews: Count of REVIEW (CAB-failed) statement processings.
         duration_secs: Total processing time accumulated so far (seconds).
         process_time: Timestamp when batch processing started.
         project_path: Optional project root directory path.
@@ -394,30 +397,27 @@ def update_db(
             conn.close()
             return 0.0
         elif isinstance(pdf, PdfResult):
-            if pdf.batch_lines_stem:
-                batch = paths.parquet / f"{pdf.batch_lines_stem}.parquet"
-                if batch.exists():
-                    df = pl.read_parquet(batch)
-                    _insert_df(df, "batch_lines")
-                    batch.unlink()
-            if pdf.statement_heads_stem:
-                head = paths.parquet / f"{pdf.statement_heads_stem}.parquet"
-                if head.exists():
-                    df = pl.read_parquet(head)
+            # batch_lines is always present on PdfResult
+            if pdf.batch_lines and pdf.batch_lines.exists():
+                df = pl.read_parquet(pdf.batch_lines)
+                _insert_df(df, "batch_lines")
+                pdf.batch_lines.unlink()
+            # checks_and_balances is present for SUCCESS and REVIEW
+            if pdf.checks_and_balances and pdf.checks_and_balances.exists():
+                df = pl.read_parquet(pdf.checks_and_balances)
+                _insert_df(df, "checks_and_balances")
+                pdf.checks_and_balances.unlink()
+            # statement_heads and statement_lines are only inserted for SUCCESS
+            if pdf.result == "SUCCESS" and isinstance(pdf.payload, Success):
+                pq_files = pdf.payload.parquet_files
+                if pq_files.statement_heads and pq_files.statement_heads.exists():
+                    df = pl.read_parquet(pq_files.statement_heads)
                     _insert_df(df, "statement_heads")
-                    head.unlink()
-            if pdf.statement_lines_stem:
-                lines = paths.parquet / f"{pdf.statement_lines_stem}.parquet"
-                if lines.exists():
-                    df = pl.read_parquet(lines)
+                    pq_files.statement_heads.unlink()
+                if pq_files.statement_lines and pq_files.statement_lines.exists():
+                    df = pl.read_parquet(pq_files.statement_lines)
                     _insert_df(df, "statement_lines")
-                    lines.unlink()
-            if pdf.cab_stem:
-                cab = paths.parquet / f"{pdf.cab_stem}.parquet"
-                if cab.exists():
-                    df = pl.read_parquet(cab)
-                    _insert_df(df, "checks_and_balances")
-                    cab.unlink()
+                    pq_files.statement_lines.unlink()
 
     db_secs = time() - update_start
 
@@ -431,6 +431,7 @@ def update_db(
             "STD_ACCOUNT": [account_key],
             "STD_PDF_COUNT": [pdf_count],
             "STD_ERROR_COUNT": [errors],
+            "STD_REVIEW_COUNT": [reviews],
             "STD_DURATION_SECS": [duration_secs + db_secs],
             "STD_UPDATETIME": [process_time.isoformat()],
         }
@@ -441,7 +442,7 @@ def update_db(
     conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
     conn.close()
 
-    if pdf_count > errors:  # if all pdf statements have failed no point in re-building the datamart
+    if pdf_count > (errors + reviews):  # if all pdf statements have failed/are under review no point in re-building the datamart
         try:
             build_datamart(db_path=db_path)
         except Exception as e:

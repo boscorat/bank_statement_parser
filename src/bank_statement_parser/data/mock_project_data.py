@@ -72,6 +72,7 @@ def generate_mock_data(db_path: Path, num_batches: int = 10, statements_per_batc
                 account_types[i % len(account_types)],
                 statements_per_batch,
                 0,
+                0,
                 random.uniform(10.0, 60.0),
                 batch_dates[i],
             )
@@ -214,7 +215,7 @@ def generate_mock_data(db_path: Path, num_batches: int = 10, statements_per_batc
 
     checks_and_balances_data = []
     for i, statement_id in enumerate(statement_ids):
-        cab_id = str(uuid.uuid4())
+        batchline_id = batchline_ids[i]
         batch_idx = batch_assignment[i]
 
         cursor.execute("SELECT SUM(STD_PAYMENTS_IN), SUM(STD_PAYMENTS_OUT) FROM statement_lines WHERE ID_STATEMENT = ?", (statement_id,))
@@ -222,8 +223,8 @@ def generate_mock_data(db_path: Path, num_batches: int = 10, statements_per_batc
 
         checks_and_balances_data.append(
             (
-                cab_id,
-                statement_id,
+                batchline_id,
+                batchline_id,
                 batch_ids[batch_idx],
                 1,
                 statement_heads_data[i][10],
@@ -247,13 +248,13 @@ def generate_mock_data(db_path: Path, num_batches: int = 10, statements_per_batc
         )
 
     cursor.executemany(
-        "INSERT INTO checks_and_balances (ID_CAB, ID_STATEMENT, ID_BATCH, HAS_TRANSACTIONS, STD_OPENING_BALANCE_HEADS, STD_PAYMENTS_IN_HEADS, STD_PAYMENTS_OUT_HEADS, STD_MOVEMENT_HEADS, STD_CLOSING_BALANCE_HEADS, STD_OPENING_BALANCE_LINES, STD_PAYMENTS_IN_LINES, STD_PAYMENTS_OUT_LINES, STD_MOVEMENT_LINES, STD_CLOSING_BALANCE_LINES, CHECK_PAYMENTS_IN, CHECK_PAYMENTS_OUT, CHECK_MOVEMENT, CHECK_CLOSING) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO checks_and_balances (ID_CAB, ID_BATCHLINE, ID_BATCH, HAS_TRANSACTIONS, STD_OPENING_BALANCE_HEADS, STD_PAYMENTS_IN_HEADS, STD_PAYMENTS_OUT_HEADS, STD_MOVEMENT_HEADS, STD_CLOSING_BALANCE_HEADS, STD_OPENING_BALANCE_LINES, STD_PAYMENTS_IN_LINES, STD_PAYMENTS_OUT_LINES, STD_MOVEMENT_LINES, STD_CLOSING_BALANCE_LINES, CHECK_PAYMENTS_IN, CHECK_PAYMENTS_OUT, CHECK_MOVEMENT, CHECK_CLOSING) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         checks_and_balances_data,
     )
     print(f"Inserted {len(checks_and_balances_data)} checks_and_balances")
 
     cursor.executemany(
-        "INSERT INTO batch_heads (ID_BATCH, ID_SESSION, ID_USER, STD_PATH, STD_COMPANY, STD_ACCOUNT, STD_PDF_COUNT, STD_ERROR_COUNT, STD_DURATION_SECS, STD_UPDATETIME) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO batch_heads (ID_BATCH, ID_SESSION, ID_USER, STD_PATH, STD_COMPANY, STD_ACCOUNT, STD_PDF_COUNT, STD_ERROR_COUNT, STD_REVIEW_COUNT, STD_DURATION_SECS, STD_UPDATETIME) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         batch_heads_data,
     )
     print(f"Inserted {len(batch_heads_data)} batch_heads (written last as in production)")
