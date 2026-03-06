@@ -22,7 +22,7 @@ from time import time
 
 import polars as pl
 
-from bank_statement_parser.modules.data import PdfResult
+from bank_statement_parser.modules.data import PdfResult, Success
 from bank_statement_parser.modules.paths import ProjectPaths
 
 
@@ -101,8 +101,8 @@ class ChecksAndBalances(Parquet):
             When provided, records are loaded from *source* rather than built
             from the data arguments.  When omitted, *file* is used as the
             source when reading existing data (via the base class).
-        id_statement: Unique statement identifier (required when building
-            records from raw data).
+        id_batchline: Batch-line identifier (required when building records
+            from raw data).
         id_batch: Batch identifier (required when building records from raw
             data).
         checks_and_balances: Raw checks-and-balances DataFrame from
@@ -116,7 +116,7 @@ class ChecksAndBalances(Parquet):
         self,
         file: Path,
         source: Path | None = None,
-        id_statement: str | None = None,
+        id_batchline: str | None = None,
         id_batch: str | None = None,
         checks_and_balances: pl.DataFrame | None = None,
     ) -> None:
@@ -124,7 +124,7 @@ class ChecksAndBalances(Parquet):
             orient="row",
             schema={
                 "ID_CAB": pl.Utf8,
-                "ID_STATEMENT": pl.Utf8,
+                "ID_BATCHLINE": pl.Utf8,
                 "ID_BATCH": pl.Utf8,
                 "HAS_TRANSACTIONS": pl.Boolean,
                 "STD_OPENING_BALANCE_HEADS": pl.Decimal(16, 4),
@@ -148,8 +148,8 @@ class ChecksAndBalances(Parquet):
 
         if source is not None:
             self.records = _load_source(source)
-        elif checks_and_balances is not None and id_statement is not None and id_batch is not None:
-            self.records = build_checks_and_balances_records(self.schema, id_statement, id_batch, checks_and_balances)
+        elif checks_and_balances is not None and id_batchline is not None and id_batch is not None:
+            self.records = build_checks_and_balances_records(self.schema, id_batchline, id_batch, checks_and_balances)
 
         super().__init__(file, self.schema, self.records, self.key)
 
@@ -276,6 +276,7 @@ class BatchHeads(Parquet):
         account_key: Account identifier.
         pdf_count: Total number of PDFs in the batch.
         errors: Count of failed statement processings.
+        reviews: Count of REVIEW (CAB-failed) statement processings.
         duration_secs: Total processing time (seconds).
         process_time: Timestamp when batch processing started.
     """
@@ -293,6 +294,7 @@ class BatchHeads(Parquet):
         account_key: str | None = None,
         pdf_count: int | None = None,
         errors: int | None = None,
+        reviews: int | None = None,
         duration_secs: float | None = None,
         process_time: datetime | None = None,
     ) -> None:
@@ -307,6 +309,7 @@ class BatchHeads(Parquet):
                 "STD_ACCOUNT": pl.Utf8,
                 "STD_PDF_COUNT": pl.Int64,
                 "STD_ERROR_COUNT": pl.Int64,
+                "STD_REVIEW_COUNT": pl.Int64,
                 "STD_DURATION_SECS": pl.Float64,
                 "STD_UPDATETIME": pl.Datetime,
             },
@@ -323,6 +326,7 @@ class BatchHeads(Parquet):
                 account_key,
                 pdf_count,
                 errors,
+                reviews,
                 duration_secs,
                 process_time,
             )
@@ -377,14 +381,14 @@ class BatchLines(Parquet):
 
 
 def _build_checks_and_balances_data(
-    id_statement: str,
+    id_batchline: str,
     id_batch: str,
     checks_and_balances: pl.DataFrame,
 ) -> pl.DataFrame:
     """Build the data DataFrame for ChecksAndBalances (without extending the schema).
 
     Args:
-        id_statement: Unique statement identifier.
+        id_batchline: Batch-line identifier.
         id_batch: Batch identifier.
         checks_and_balances: The raw checks & balances DataFrame from
             :class:`~bank_statement_parser.modules.statements.Statement`.
@@ -393,8 +397,8 @@ def _build_checks_and_balances_data(
         A single-row DataFrame with the ChecksAndBalances columns.
     """
     return checks_and_balances.select(
-        ID_CAB=pl.lit(id_statement).add(pl.lit(".").add(pl.lit(id_batch))),
-        ID_STATEMENT=pl.lit(id_statement),
+        ID_CAB=pl.lit(id_batchline),
+        ID_BATCHLINE=pl.lit(id_batchline),
         ID_BATCH=pl.lit(id_batch),
         HAS_TRANSACTIONS=~pl.col("ZERO_TRANSACTION_STATEMENT"),
         STD_OPENING_BALANCE_HEADS="STD_OPENING_BALANCE",
@@ -416,7 +420,7 @@ def _build_checks_and_balances_data(
 
 def build_checks_and_balances_records(
     schema: pl.DataFrame,
-    id_statement: str,
+    id_batchline: str,
     id_batch: str,
     checks_and_balances: pl.DataFrame,
 ) -> pl.DataFrame:
@@ -425,7 +429,7 @@ def build_checks_and_balances_records(
     Args:
         schema: Empty DataFrame with the correct column types (from
             ``ChecksAndBalances.schema``).
-        id_statement: Unique statement identifier.
+        id_batchline: Batch-line identifier.
         id_batch: Batch identifier.
         checks_and_balances: The raw checks & balances DataFrame from
             :class:`~bank_statement_parser.modules.statements.Statement`.
@@ -433,7 +437,7 @@ def build_checks_and_balances_records(
     Returns:
         A single-row DataFrame matching *schema* ready for ``.extend()``.
     """
-    return schema.clone().extend(_build_checks_and_balances_data(id_statement, id_batch, checks_and_balances))
+    return schema.clone().extend(_build_checks_and_balances_data(id_batchline, id_batch, checks_and_balances))
 
 
 def _build_statement_heads_data(
@@ -571,6 +575,7 @@ def build_batch_heads_records(
     account_key: str | None,
     pdf_count: int | None,
     errors: int | None,
+    reviews: int | None,
     duration_secs: float | None,
     process_time: datetime | None,
 ) -> pl.DataFrame:
@@ -587,6 +592,7 @@ def build_batch_heads_records(
         account_key: Account identifier.
         pdf_count: Total number of PDFs in the batch.
         errors: Count of failed statement processings.
+        reviews: Count of REVIEW (CAB-failed) statement processings.
         duration_secs: Total processing time (seconds).
         process_time: Timestamp when batch processing started.
 
@@ -604,6 +610,7 @@ def build_batch_heads_records(
                 "STD_ACCOUNT": account_key,
                 "STD_PDF_COUNT": pdf_count,
                 "STD_ERROR_COUNT": errors,
+                "STD_REVIEW_COUNT": reviews,
                 "STD_DURATION_SECS": duration_secs,
                 "STD_UPDATETIME": process_time,
             },
@@ -638,6 +645,7 @@ def update_parquet(
     account_key: str | None,
     pdf_count: int,
     errors: int,
+    reviews: int,
     duration_secs: float,
     process_time: datetime,
     paths: ProjectPaths,
@@ -664,6 +672,7 @@ def update_parquet(
         account_key: Optional account identifier used for this batch.
         pdf_count: Total number of PDFs in the batch.
         errors: Count of failed statement processings.
+        reviews: Count of REVIEW (CAB-failed) statement processings.
         duration_secs: Total processing time accumulated so far (seconds).
         process_time: Timestamp when batch processing started.
         paths: Resolved :class:`~bank_statement_parser.modules.paths.ProjectPaths`
@@ -678,26 +687,31 @@ def update_parquet(
         if isinstance(pdf, BaseException):
             return 0.0
         elif isinstance(pdf, PdfResult):
-            if pdf.batch_lines_stem:
-                bl = BatchLines(file=paths.batch_lines, source=paths.parquet / f"{pdf.batch_lines_stem}.parquet")
+            # batch_lines is always present on PdfResult
+            if pdf.batch_lines:
+                bl = BatchLines(file=paths.batch_lines, source=pdf.batch_lines)
                 bl.update()
                 bl.cleanup()
                 bl = None
-            if pdf.statement_heads_stem:
-                sh = StatementHeads(file=paths.statement_heads, source=paths.parquet / f"{pdf.statement_heads_stem}.parquet")
-                sh.update()
-                sh.cleanup()
-                sh = None
-            if pdf.statement_lines_stem:
-                sl = StatementLines(file=paths.statement_lines, source=paths.parquet / f"{pdf.statement_lines_stem}.parquet")
-                sl.update()
-                sl.cleanup()
-                sl = None
-            if pdf.cab_stem:
-                cb = ChecksAndBalances(file=paths.cab, source=paths.parquet / f"{pdf.cab_stem}.parquet")
+            # checks_and_balances is present for SUCCESS and REVIEW
+            if pdf.checks_and_balances:
+                cb = ChecksAndBalances(file=paths.cab, source=pdf.checks_and_balances)
                 cb.update()
                 cb.cleanup()
                 cb = None
+            # statement_heads and statement_lines are only merged for SUCCESS
+            if pdf.result == "SUCCESS" and isinstance(pdf.payload, Success):
+                pq_files = pdf.payload.parquet_files
+                if pq_files.statement_heads:
+                    sh = StatementHeads(file=paths.statement_heads, source=pq_files.statement_heads)
+                    sh.update()
+                    sh.cleanup()
+                    sh = None
+                if pq_files.statement_lines:
+                    sl = StatementLines(file=paths.statement_lines, source=pq_files.statement_lines)
+                    sl.update()
+                    sl.cleanup()
+                    sl = None
 
     parquet_secs = time() - update_start
 
@@ -712,6 +726,7 @@ def update_parquet(
         account_key=account_key,
         pdf_count=pdf_count,
         errors=errors,
+        reviews=reviews,
         duration_secs=duration_secs + parquet_secs,
         process_time=process_time,
     )

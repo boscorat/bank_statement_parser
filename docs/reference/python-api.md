@@ -75,9 +75,41 @@ Insert processed batch results into the SQLite database.
 
 ## Data structures
 
-### `bsp.PdfResult()`
+### `bsp.PdfResult`
 
-*function* — `bank_statement_parser.modules.data`
+*class* — `bank_statement_parser.modules.data`
+
+Top-level result returned by :func:`~bank_statement_parser.modules.statements.process_pdf_statement`.
+
+### `bsp.Success`
+
+*class* — `bank_statement_parser.modules.data`
+
+Payload for a fully-validated PDF result.
+
+### `bsp.Review`
+
+*class* — `bank_statement_parser.modules.data`
+
+Payload for a PDF where extraction succeeded but CAB validation failed.
+
+### `bsp.Failure`
+
+*class* — `bank_statement_parser.modules.data`
+
+Payload for a PDF result where no usable statement data was produced.
+
+### `bsp.StatementInfo`
+
+*class* — `bank_statement_parser.modules.data`
+
+Statement-level metadata extracted from a successfully validated PDF.
+
+### `bsp.ParquetFiles`
+
+*class* — `bank_statement_parser.modules.data`
+
+Paths to the statement-level temporary Parquet files written on the SUCCESS path.
 
 ## Debug / diagnostics
 

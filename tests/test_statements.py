@@ -30,6 +30,7 @@ Run with:
 """
 
 import sqlite3
+from dataclasses import replace
 from datetime import timedelta
 from pathlib import Path
 
@@ -278,10 +279,8 @@ class TestCopyStatements:
             assert id_account == expected_id_account, f"id_account folder {id_account!r} != expected {expected_id_account!r}"
 
     def test_count_matches_successful_pdfs(self, good_project):
-        """Number of copied files equals number of PdfResult entries with file_dst set."""
-        expected = sum(
-            1 for e in good_project.batch.processed_pdfs if isinstance(e, PdfResult) and e.file_src is not None and e.file_dst is not None
-        )
+        """Number of copied files equals number of successfully processed PdfResult entries."""
+        expected = sum(1 for e in good_project.batch.processed_pdfs if isinstance(e, PdfResult) and e.result == "SUCCESS")
         copied = good_project.batch.copy_statements_to_project()
         assert len(copied) == expected, f"Expected {expected} copies, got {len(copied)}"
 
@@ -295,23 +294,30 @@ class TestCopyStatements:
         """BaseException entries in processed_pdfs are silently ignored."""
         sentinel = RuntimeError("synthetic worker crash")
         mixed: list[BaseException | PdfResult] = [sentinel, *good_project.batch.processed_pdfs]
-        copied = copy_statements_to_project(mixed, project_path=good_project.project_path)
+        mixed_pdfs = [good_project.pdfs[0], *good_project.pdfs]  # extra dummy pdf for the sentinel
+        copied = copy_statements_to_project(mixed, pdfs=mixed_pdfs, project_path=good_project.project_path)
         # Must still copy the real entries — no crash, no reduction in count
-        expected = sum(
-            1 for e in good_project.batch.processed_pdfs if isinstance(e, PdfResult) and e.file_src is not None and e.file_dst is not None
-        )
+        expected = sum(1 for e in good_project.batch.processed_pdfs if isinstance(e, PdfResult) and e.result == "SUCCESS")
         assert len(copied) == expected
 
     def test_skips_entries_without_file_dst(self, good_project):
-        """PdfResult entries with file_dst=None are silently skipped."""
-        # Build a list that has one extra entry with no dst
+        """PdfResult entries with filename_new='' are silently skipped."""
+        # Build a list that has one extra entry with no filename_new
         real_entries: list[BaseException | PdfResult] = list(good_project.batch.processed_pdfs)
-        # Create a PdfResult-like entry with file_dst=None by using the first real entry
-        first = next(e for e in real_entries if isinstance(e, PdfResult) and e.file_dst is not None)
-        no_dst = PdfResult(*[None if f == "file_dst" else getattr(first, f) for f in PdfResult._fields])
+        # Create a PdfResult entry with filename_new cleared by using the first successful entry
+        first = next(e for e in real_entries if isinstance(e, PdfResult) and e.result == "SUCCESS")
+        first_info = first.payload.statement_info  # type: ignore[union-attr]
+        no_dst = replace(
+            first,
+            payload=replace(
+                first.payload,  # type: ignore[union-attr]
+                statement_info=replace(first_info, filename_new=""),
+            ),
+        )
         mixed: list[BaseException | PdfResult] = [no_dst, *real_entries]
-        copied = copy_statements_to_project(mixed, project_path=good_project.project_path)
-        expected = sum(1 for e in real_entries if isinstance(e, PdfResult) and e.file_src is not None and e.file_dst is not None)
+        mixed_pdfs = [good_project.pdfs[0], *good_project.pdfs]  # extra dummy pdf for no_dst
+        copied = copy_statements_to_project(mixed, pdfs=mixed_pdfs, project_path=good_project.project_path)
+        expected = sum(1 for e in real_entries if isinstance(e, PdfResult) and e.result == "SUCCESS")
         assert len(copied) == expected
 
 

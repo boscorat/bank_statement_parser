@@ -34,7 +34,16 @@ from bank_statement_parser.modules.config import (
     get_config_from_company,
     get_config_from_statement,
 )
-from bank_statement_parser.modules.data import Account, PdfResult, StandardFields
+from bank_statement_parser.modules.data import (
+    Account,
+    Failure,
+    ParquetFiles,
+    PdfResult,
+    Review,
+    StandardFields,
+    StatementInfo,
+    Success,
+)
 from bank_statement_parser.modules.database import update_db
 from bank_statement_parser.modules.parquet import update_parquet
 from bank_statement_parser.modules.paths import ProjectPaths, validate_or_initialise_project
@@ -326,15 +335,17 @@ class Statement:
                 )
             self.logs.rechunk()
             self.success = self.is_successfull()
-            if self.success:
-                if self.config:
-                    # Collect header once; use it for ID, rename target, and summary scalars.
-                    _hdr = self.header_results.select(
-                        "STD_ACCOUNT_NUMBER",
-                        "STD_STATEMENT_DATE",
-                        "STD_OPENING_BALANCE",
-                        "STD_CLOSING_BALANCE",
-                    ).collect()
+            if self.config:
+                # Collect header once; use it for ID, rename target, and summary scalars.
+                # Populated for both SUCCESS and REVIEW (CAB failure) paths — scalar fields
+                # must be available whenever extraction succeeded, regardless of CAB outcome.
+                _hdr = self.header_results.select(
+                    "STD_ACCOUNT_NUMBER",
+                    "STD_STATEMENT_DATE",
+                    "STD_OPENING_BALANCE",
+                    "STD_CLOSING_BALANCE",
+                ).collect()
+                if _hdr.height > 0:
                     acct_number = str(_hdr["STD_ACCOUNT_NUMBER"][0]).replace(" ", "")
                     self.ID_ACCOUNT = f"{self.config.company_key}_{self.config.account_type_key}_{acct_number}"
                     # Always populate the canonical rename target for use by copy_statements_to_project
@@ -560,7 +571,6 @@ def _cab_detail(cab: pl.DataFrame) -> str:
 
 
 def process_pdf_statement(
-    idx: int,
     pdf: Path,
     batch_id: str,
     session_id: str,
@@ -568,16 +578,20 @@ def process_pdf_statement(
     company_key: str | None,
     account_key: str | None,
     project_path: Path | None,
+    idx: int = 0,
     skip_project_validation: bool = False,
 ) -> PdfResult:
     """
     Process a single bank statement PDF and save results to parquet files.
 
     This standalone function handles the complete processing workflow for one PDF:
-    1. Creates a Statement object to parse the PDF
-    2. Extracts header and line data
-    3. Saves results to parquet files (temp files keyed by *idx*)
-    4. Cleans up resources
+
+    1. Creates a :class:`Statement` object to parse the PDF.
+    2. Extracts header and line data.
+    3. Saves results to temporary Parquet files (keyed by *idx*).
+    4. Cleans up resources.
+    5. Returns a :class:`~bank_statement_parser.modules.data.PdfResult` that
+       discriminates success from failure and carries all typed metadata.
 
     File copying to the project ``statements/`` directory is handled separately
     via :func:`copy_statements_to_project`, which operates on the full list of
@@ -594,34 +608,38 @@ def process_pdf_statement(
         company_key: Optional company identifier for config lookup.
         account_key: Optional account identifier for config lookup.
         project_path: Optional project root directory.
-        skip_project_validation: If True, skip the project validation / initialisation
-            step inside ``Statement.__init__``.  Pass ``True`` when this function is
-            called from ``StatementBatch``, which already validated the project once.
+        skip_project_validation: If True, skip the project validation /
+            initialisation step inside ``Statement.__init__``.  Pass ``True``
+            when this function is called from ``StatementBatch``, which already
+            validated the project once.
 
     Returns:
-        PdfResult: Named tuple with all processing results including temp parquet stems,
-            error flags, and lightweight financial summary scalars.  See :data:`PdfResult`
-            for full field descriptions.
+        :class:`~bank_statement_parser.modules.data.PdfResult` with
+        ``result == "SUCCESS"`` when extraction and validation both pass, or
+        ``result == "FAILURE"`` otherwise.  On success ``detail.payload`` is a
+        :class:`~bank_statement_parser.modules.data.Success` instance carrying a
+        :class:`~bank_statement_parser.modules.data.StatementInfo` and a
+        :class:`~bank_statement_parser.modules.data.ParquetFiles`.  On failure
+        ``detail.payload`` is a
+        :class:`~bank_statement_parser.modules.data.Failure` instance with
+        ``error_type`` set to ``"config"``, ``"cab"``, ``"data"``, or
+        ``"other"``.  ``detail.payload.parquet_files`` on a ``Failure`` holds
+        any temporary files that *were* written before the failure, including
+        the ``batch_lines`` file which is always written.
     """
     paths = ProjectPaths.resolve(project_path)
-    batch_lines_stem: str | None = None
-    statement_heads_stem: str | None = None
-    statement_lines_stem: str | None = None
-    cab_stem: str | None = None
-    file_src: str | None = None
-    file_dst: str | None = None
+    batch_lines_path: Path | None = None
+    statement_heads_path: Path | None = None
+    statement_lines_path: Path | None = None
+    cab_path: Path | None = None
     error_cab: bool = False
     error_config: bool = False
     error_data: bool = False
-    # Summary scalars — populated inside the try block before stmt.cleanup().
-    summary_id_statement: str | None = None
-    summary_id_account: str | None = None
-    summary_account: str | None = None
-    summary_statement_date = None
-    summary_payments_in = None
-    summary_payments_out = None
-    summary_opening_balance = None
-    summary_closing_balance = None
+    error_other: bool = False
+    error_message: str = ""
+    error_detail_str: str = ""
+    # StatementInfo is only populated on a clean success path
+    statement_info: StatementInfo | None = None
     line_start = time()
     batch_line: dict = {}
     batch_line["ID_BATCH"] = batch_id
@@ -658,21 +676,23 @@ def process_pdf_statement(
             error_config = True
             batch_line["ERROR_CONFIG"] = True
             batch_line["STD_ERROR_MESSAGE"] += stmt.error_message
+            error_message = stmt.error_message
             print(f"[line {batch_line['STD_BATCH_LINE']}] {pdf.name}: {stmt.error_message}")
-        elif not stmt.success:
-            # Statement parsed but failed checks & balances validation
-            error_cab = True
-            batch_line["ERROR_CAB"] = True
-            detail = _cab_detail(stmt.checks_and_balances)
-            cab_message = f"** Checks & Balances Failure **{detail}"
-            batch_line["STD_ERROR_MESSAGE"] += cab_message
-            print(f"[line {batch_line['STD_BATCH_LINE']}] {pdf.name}: {cab_message}")
         else:
-            # Statement parsed and validated successfully — persist to parquet.
-            # Each parquet class gets its own try/except so that a failure in one
-            # (e.g. a schema mismatch in StatementHeads) does not prevent the other
-            # classes from being written.  A write failure is flagged as error_data
-            # and does not prevent the CAB write below.
+            # Statement parsed — persist all data regardless of CAB outcome.
+            # A CAB failure returns REVIEW (not FAILURE), so statement_heads,
+            # statement_lines, and checks_and_balances are all written here.
+            # If CAB failed, note the error but continue to write everything.
+            if not stmt.success:
+                error_cab = True
+                batch_line["ERROR_CAB"] = True
+                detail_str = _cab_detail(stmt.checks_and_balances)
+                cab_message = f"** Checks & Balances Failure **{detail_str}"
+                batch_line["STD_ERROR_MESSAGE"] += cab_message
+                error_message = cab_message
+                error_detail_str = detail_str
+                print(f"[line {batch_line['STD_BATCH_LINE']}] {pdf.name}: {cab_message}")
+
             try:
                 # Save extracted header data
                 pq_statement_heads = pq.StatementHeads(
@@ -686,7 +706,7 @@ def process_pdf_statement(
                     header_results=stmt.header_results,
                 )
                 pq_statement_heads.create()
-                statement_heads_stem = paths.statement_heads_temp_stem(idx, batch_id)
+                statement_heads_path = paths.statement_heads_temp(idx, batch_id)
                 pq_statement_heads.cleanup()
                 pq_statement_heads = None
             except Exception as e:
@@ -695,6 +715,7 @@ def process_pdf_statement(
                 batch_line["STD_SUCCESS"] = False
                 error_data = True
                 batch_line["ERROR_DATA"] = True
+                error_message += parquet_error
                 print(f"[line {batch_line['STD_BATCH_LINE']}] {pdf.name}: {parquet_error}")
                 traceback.print_exc(file=sys.stderr)
 
@@ -706,7 +727,7 @@ def process_pdf_statement(
                     lines_results=stmt.lines_results,
                 )
                 pq_statement_lines.create()
-                statement_lines_stem = paths.statement_lines_temp_stem(idx, batch_id)
+                statement_lines_path = paths.statement_lines_temp(idx, batch_id)
                 pq_statement_lines.cleanup()
                 pq_statement_lines = None
             except Exception as e:
@@ -715,8 +736,33 @@ def process_pdf_statement(
                 batch_line["STD_SUCCESS"] = False
                 error_data = True
                 batch_line["ERROR_DATA"] = True
+                error_message += parquet_error
                 print(f"[line {batch_line['STD_BATCH_LINE']}] {pdf.name}: {parquet_error}")
                 traceback.print_exc(file=sys.stderr)
+
+            # Build StatementInfo from scalar summary slots populated by Statement.__init__.
+            # Built for both SUCCESS and REVIEW paths; omitted only if a data write failed
+            # or header extraction returned no rows (scalars remain None).
+            if (
+                not error_data
+                and stmt.config
+                and stmt.std_statement_date is not None
+                and stmt.std_payments_in is not None
+                and stmt.std_payments_out is not None
+                and stmt.std_opening_balance is not None
+                and stmt.std_closing_balance is not None
+            ):
+                statement_info = StatementInfo(
+                    id_statement=stmt.ID_STATEMENT,
+                    id_account=stmt.ID_ACCOUNT or "",
+                    account=stmt.account or "",
+                    statement_date=stmt.std_statement_date,
+                    payments_in=stmt.std_payments_in,
+                    payments_out=stmt.std_payments_out,
+                    opening_balance=stmt.std_opening_balance,
+                    closing_balance=stmt.std_closing_balance,
+                    filename_new=stmt.file_renamed or "",
+                )
 
         # Save checks & balances only when the DataFrame is populated — an empty
         # frame means Statement construction failed before the validation step ran,
@@ -725,12 +771,12 @@ def process_pdf_statement(
             try:
                 pq_cab = pq.ChecksAndBalances(
                     file=paths.cab_temp(idx, batch_id),
-                    id_statement=stmt.ID_STATEMENT,
+                    id_batchline=batch_line["ID_BATCHLINE"],
                     id_batch=stmt.ID_BATCH,
                     checks_and_balances=stmt.checks_and_balances,
                 )
                 pq_cab.create()
-                cab_stem = paths.cab_temp_stem(idx, batch_id)
+                cab_path = paths.cab_temp(idx, batch_id)
                 pq_cab.cleanup()
                 pq_cab = None
             except Exception as e:
@@ -739,28 +785,17 @@ def process_pdf_statement(
                 batch_line["STD_SUCCESS"] = False
                 error_data = True
                 batch_line["ERROR_DATA"] = True
+                error_message += cab_error
                 print(f"[line {batch_line['STD_BATCH_LINE']}] {pdf.name}: {cab_error}")
                 traceback.print_exc(file=sys.stderr)
 
-        # Capture source path, rename target, and lightweight summary scalars
-        # before destroying the statement object.
-        file_src = str(stmt.file.absolute())
-        file_dst = stmt.file_renamed  # bare filename string, or None
-        summary_id_statement = stmt.ID_STATEMENT
-        summary_id_account = stmt.ID_ACCOUNT
-        summary_account = stmt.account or None
-        summary_statement_date = stmt.std_statement_date
-        summary_payments_in = stmt.std_payments_in
-        summary_payments_out = stmt.std_payments_out
-        summary_opening_balance = stmt.std_opening_balance
-        summary_closing_balance = stmt.std_closing_balance
         stmt.cleanup()
         stmt = None
     except Exception as e:
         # Last-resort guard — should not be reached under normal operation now that
         # Statement.__init__ is non-raising, but kept to protect against unexpected
         # failures outside the statement constructor (e.g. path resolution errors).
-        error_config = True
+        error_other = True
         batch_line["ERROR_CONFIG"] = True
         error_message = f"** Unexpected Failure **: {e}"
         batch_line["STD_ERROR_MESSAGE"] += error_message
@@ -772,32 +807,68 @@ def process_pdf_statement(
     batch_line["STD_DURATION_SECS"] = line_end - line_start
     batch_line["STD_UPDATETIME"] = datetime.now()
 
-    # Save batch line data
+    # Save batch line data — always written regardless of success/failure
     pq_batch_lines = pq.BatchLines(file=paths.batch_lines_temp(idx, batch_id), batch_lines=[batch_line])
     pq_batch_lines.create()
-    batch_lines_stem = paths.batch_lines_temp_stem(idx, batch_id)
+    batch_lines_path = paths.batch_lines_temp(idx, batch_id)
     pq_batch_lines.cleanup()
     pq_batch_lines = None
 
+    # Build the ParquetFiles record — statement-level files only (SUCCESS / REVIEW paths)
+    parquet_files = ParquetFiles(
+        statement_heads=statement_heads_path,
+        statement_lines=statement_lines_path,
+    )
+
+    # SUCCESS: extraction + CAB both passed, no write errors
+    if not error_config and not error_cab and not error_data and not error_other and statement_info is not None:
+        return PdfResult(
+            result="SUCCESS",
+            outcome="SUCCESS",
+            batch_lines=batch_lines_path,
+            checks_and_balances=cab_path,
+            payload=Success(
+                statement_info=statement_info,
+                parquet_files=parquet_files,
+            ),
+        )
+
+    # REVIEW: CAB failed but extraction + writes succeeded — data needs human sign-off
+    if error_cab and not error_data and statement_info is not None:
+        return PdfResult(
+            result="REVIEW",
+            outcome="REVIEW CAB",
+            batch_lines=batch_lines_path,
+            checks_and_balances=cab_path,
+            payload=Review(
+                statement_info=statement_info,
+                parquet_files=parquet_files,
+                message=error_message or batch_line["STD_ERROR_MESSAGE"] or "Unknown CAB failure",
+                message_detail=error_detail_str,
+            ),
+        )
+
+    # FAILURE: determine the most specific failure type
+    if error_config:
+        outcome: Literal["FAILURE CONFIG", "FAILURE DATA", "FAILURE OTHER"] = "FAILURE CONFIG"
+        error_type: Literal["config", "data", "other"] = "config"
+    elif error_data:
+        outcome = "FAILURE DATA"
+        error_type = "data"
+    else:
+        outcome = "FAILURE OTHER"
+        error_type = "other"
+
     return PdfResult(
-        batch_lines_stem=batch_lines_stem,
-        statement_heads_stem=statement_heads_stem,
-        statement_lines_stem=statement_lines_stem,
-        cab_stem=cab_stem,
-        file_src=file_src,
-        file_dst=file_dst,
-        error_cab=error_cab,
-        error_config=error_config,
-        error_data=error_data,
-        id_statement=summary_id_statement,
-        id_account=summary_id_account,
-        account=summary_account,
-        statement_date=summary_statement_date,
-        payments_in=summary_payments_in,
-        payments_out=summary_payments_out,
-        opening_balance=summary_opening_balance,
-        closing_balance=summary_closing_balance,
-        error_message=batch_line["STD_ERROR_MESSAGE"] or None,
+        result="FAILURE",
+        outcome=outcome,
+        batch_lines=batch_lines_path,
+        checks_and_balances=cab_path,
+        payload=Failure(
+            message=error_message or batch_line["STD_ERROR_MESSAGE"] or "Unknown failure",
+            error_type=error_type,
+            message_detail=error_detail_str,
+        ),
     )
 
 
@@ -808,57 +879,79 @@ def delete_temp_files(
     """
     Delete temporary parquet files created during batch processing.
 
-    Cleans up the temporary parquet files that were created when processing
-    each PDF. Should be called after calling both update_parquet() and
-    update_db() to ensure data has been persisted before deletion.
+    Cleans up the temporary Parquet files that were created when processing
+    each PDF.  Should be called after calling both :func:`update_parquet` and
+    :func:`~bank_statement_parser.modules.database.update_db` to ensure data
+    has been persisted before deletion.
+
+    ``batch_lines`` (always written) and ``checks_and_balances`` (written for
+    SUCCESS and REVIEW) are read directly from :class:`~bank_statement_parser.modules.data.PdfResult`.
+    ``statement_heads`` and ``statement_lines`` are read from
+    :attr:`~bank_statement_parser.modules.data.ParquetFiles` inside
+    :class:`~bank_statement_parser.modules.data.Success` or
+    :class:`~bank_statement_parser.modules.data.Review` payloads.
 
     Args:
-        processed_pdfs: List of :class:`PdfResult` entries as returned by
-            :func:`process_pdf_statement`, or :class:`BaseException` for any
-            entry that raised an unhandled worker error.
-        project_path: Optional project root directory used to resolve stems
-            to full paths.
+        processed_pdfs: List of :class:`~bank_statement_parser.modules.data.PdfResult`
+            entries as returned by :func:`process_pdf_statement`, or
+            :class:`BaseException` for any entry that raised an unhandled worker
+            error.
+        project_path: Unused — retained for API compatibility.  Paths are now
+            stored as full :class:`~pathlib.Path` objects inside each result.
     """
-    paths = ProjectPaths.resolve(project_path)
-    for pdf in processed_pdfs:
-        if isinstance(pdf, BaseException):
-            return None
-        elif isinstance(pdf, PdfResult):
-            for stem in (pdf.batch_lines_stem, pdf.statement_heads_stem, pdf.statement_lines_stem, pdf.cab_stem):
-                if stem is not None:
-                    full_path = paths.parquet / f"{stem}.parquet"
-                    if full_path.exists():
-                        full_path.unlink()
+    for entry in processed_pdfs:
+        if isinstance(entry, BaseException):
+            continue
+        if not isinstance(entry, PdfResult):
+            continue
+        # batch_lines is always present; checks_and_balances may be None
+        top_level_paths = (entry.batch_lines, entry.checks_and_balances)
+        # statement_heads / statement_lines live inside Success or Review payloads
+        pq_files = entry.payload.parquet_files if isinstance(entry.payload, (Success, Review)) else None
+        payload_paths = (pq_files.statement_heads, pq_files.statement_lines) if pq_files is not None else ()
+        for full_path in (*top_level_paths, *payload_paths):
+            if full_path is not None and full_path.exists():
+                full_path.unlink()
 
 
 def copy_statements_to_project(
     processed_pdfs: list[BaseException | PdfResult],
+    pdfs: list[Path],
     project_path: Path | None = None,
 ) -> list[Path]:
     """
     Copy processed statement PDFs into the project ``statements/`` directory.
 
-    Each PDF is copied (not moved) to::
+    Each successfully processed PDF is copied (not moved) to::
 
         <project>/statements/<year>/<id_account>/<filename>
 
-    where *year* is derived from the last eight characters of the target filename
-    stem (``YYYYMMDD``) and *id_account* is everything before the trailing
-    ``_YYYYMMDD`` suffix.
+    where *year* is derived from the last eight characters of the target
+    filename stem (``YYYYMMDD``) and *id_account* is everything before the
+    trailing ``_YYYYMMDD`` suffix.
 
-    If two statements in the same batch resolve to the same destination path the
-    later copy overwrites the earlier one, which is consistent with the
-    ``INSERT OR REPLACE`` semantics used by :func:`update_db` and the merge
-    behaviour of :func:`update_parquet`.
+    Pairing between source PDFs and results is done by index: ``pdfs[i]``
+    is the source file for ``processed_pdfs[i]``.  This avoids the need to
+    store the source path inside the result object.
+
+    If two statements in the same batch resolve to the same destination path
+    the later copy overwrites the earlier one, consistent with the
+    ``INSERT OR REPLACE`` semantics used by
+    :func:`~bank_statement_parser.modules.database.update_db` and the merge
+    behaviour of :func:`~bank_statement_parser.modules.parquet.update_parquet`.
 
     Entries in *processed_pdfs* that are a :class:`BaseException` (a fatal
-    worker error) or that carry no rename target (``file_dst`` is ``None``) are
-    silently skipped.
+    worker error) or that have ``result == "FAILURE"`` (no valid rename target)
+    are silently skipped.
 
     Args:
-        processed_pdfs: List of :class:`PdfResult` entries as returned by
-            :func:`process_pdf_statement`, or :class:`BaseException` for any
-            entry that raised an unhandled worker error.
+        processed_pdfs: List of :class:`~bank_statement_parser.modules.data.PdfResult`
+            entries as returned by :func:`process_pdf_statement`, or
+            :class:`BaseException` for any entry that raised an unhandled worker
+            error.
+        pdfs: The original list of PDF :class:`~pathlib.Path` objects passed to
+            the batch, in the same order.  ``pdfs[i]`` is the source for
+            ``processed_pdfs[i]``.
         project_path: Optional project root directory.  When ``None`` the
             default bundled ``project/`` directory is used.
 
@@ -867,20 +960,25 @@ def copy_statements_to_project(
     """
     paths = ProjectPaths.resolve(project_path)
     copied: list[Path] = []
-    for entry in processed_pdfs:
+    for entry, pdf_path in zip(processed_pdfs, pdfs):
+        if isinstance(entry, BaseException):
+            continue
         if not isinstance(entry, PdfResult):
             continue
-        if entry.file_src is None or entry.file_dst is None:
+        if entry.result != "SUCCESS":
+            continue
+        info = entry.payload.statement_info  # type: ignore[union-attr]
+        if not info.filename_new:
             continue
         # Derive year from the last 8 characters of the stem (YYYYMMDD)
-        stem = Path(entry.file_dst).stem  # e.g. "HSBC_UK_SAV_41462695_20210328"
+        stem = Path(info.filename_new).stem  # e.g. "HSBC_UK_SAV_41462695_20210328"
         year = stem[-8:-4]  # characters 0-3 of the date portion → "2021"
         # id_account is everything before the trailing "_YYYYMMDD"
         id_account = stem[: -(len("_YYYYMMDD"))]  # strip "_" + 8 date chars
         dest_dir = paths.statements_dir(year, id_account)
         dest_dir.mkdir(parents=True, exist_ok=True)
-        dest_path = dest_dir / entry.file_dst
-        Path(entry.file_src).copy(dest_path)
+        dest_path = dest_dir / info.filename_new
+        Path(pdf_path).copy(dest_path)
         copied.append(dest_path)
     return copied
 
@@ -931,6 +1029,7 @@ class StatementBatch:
         "pdf_count",
         "log",
         "errors",
+        "reviews",
         "duration_secs",
         "process_secs",
         "parquet_secs",
@@ -997,6 +1096,7 @@ class StatementBatch:
         self.pdf_count: int = len(self.pdfs)
         self.log: list = []
         self.errors: int = 0
+        self.reviews: int = 0
         self.duration_secs: float = 0.00
         self.process_secs: float = 0.00
         self.parquet_secs: float = 0.00
@@ -1038,8 +1138,10 @@ class StatementBatch:
         for idx, pdf in enumerate(self.pdfs):
             result = self.process_single_pdf(idx, pdf)
             self.processed_pdfs.append(result)
-            if isinstance(result, PdfResult) and (result.error_cab or result.error_config or result.error_data):
+            if isinstance(result, PdfResult) and result.result in "FAILURE":
                 self.errors += 1
+            if isinstance(result, PdfResult) and result.result == "REVIEW":
+                self.reviews += 1
 
     async def process_turbo(self):
         """
@@ -1054,8 +1156,10 @@ class StatementBatch:
         """
         self.processed_pdfs = await self.__process_batch_turbo()
         for result in self.processed_pdfs:
-            if isinstance(result, PdfResult) and (result.error_cab or result.error_config or result.error_data):
+            if isinstance(result, PdfResult) and result.result == "FAILURE":
                 self.errors += 1
+            if isinstance(result, PdfResult) and result.result == "REVIEW":
+                self.reviews += 1
         return True
 
     async def __process_batch_turbo(self):
@@ -1092,7 +1196,6 @@ class StatementBatch:
                 loop.run_in_executor(
                     executor,
                     process_pdf_statement,
-                    idx,
                     pdf,
                     self.ID_BATCH,
                     self.ID_SESSION,
@@ -1100,6 +1203,7 @@ class StatementBatch:
                     self.company_key,
                     self.account_key,
                     self.project_path,
+                    idx,
                     True,  # skip_project_validation
                 )
                 for idx, pdf in enumerate(self.pdfs)
@@ -1126,7 +1230,10 @@ class StatementBatch:
             across process boundaries.
 
         Args:
-            idx: Index position of this PDF in the batch.
+        idx: Index position of this PDF in the batch.  Defaults to ``0``
+            when called directly (i.e. outside a batch).  The batch sets
+            this to the enumeration index so that temporary file names are
+            unique across concurrent workers.
             pdf: Path to the PDF file to process.
 
         Returns:
@@ -1180,6 +1287,7 @@ class StatementBatch:
                 account_key=self.account_key,
                 pdf_count=self.pdf_count,
                 errors=self.errors,
+                reviews=self.reviews,
                 duration_secs=self.duration_secs,
                 process_time=self.process_time,
                 paths=ProjectPaths.resolve(resolved),
@@ -1196,6 +1304,7 @@ class StatementBatch:
                 account_key=self.account_key,
                 pdf_count=self.pdf_count,
                 errors=self.errors,
+                reviews=self.reviews,
                 duration_secs=self.duration_secs,
                 process_time=self.process_time,
                 project_path=resolved,
@@ -1227,6 +1336,7 @@ class StatementBatch:
         """
         return copy_statements_to_project(
             processed_pdfs=self.processed_pdfs,
+            pdfs=self.pdfs,
             project_path=project_path if project_path is not None else self.project_path,
         )
 

@@ -5,12 +5,11 @@ from pathlib import Path
 
 class Housekeeping:
     FK_RELATIONSHIPS = [
-        ("checks_and_balances", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
+        ("checks_and_balances", "ID_BATCHLINE", "batch_lines", "ID_BATCHLINE"),
         ("checks_and_balances", "ID_BATCH", "batch_heads", "ID_BATCH"),
         ("statement_heads", "ID_BATCHLINE", "batch_lines", "ID_BATCHLINE"),
         ("statement_lines", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
         ("batch_lines", "ID_BATCH", "batch_heads", "ID_BATCH"),
-        ("batch_lines", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
     ]
 
     DELETE_ORDER = [
@@ -27,23 +26,21 @@ class Housekeeping:
         [
             rel[0]
             for rel in [
-                ("checks_and_balances", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
+                ("checks_and_balances", "ID_BATCHLINE", "batch_lines", "ID_BATCHLINE"),
                 ("checks_and_balances", "ID_BATCH", "batch_heads", "ID_BATCH"),
                 ("statement_heads", "ID_BATCHLINE", "batch_lines", "ID_BATCHLINE"),
                 ("statement_lines", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
                 ("batch_lines", "ID_BATCH", "batch_heads", "ID_BATCH"),
-                ("batch_lines", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
             ]
         ]
         + [
             rel[2]
             for rel in [
-                ("checks_and_balances", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
+                ("checks_and_balances", "ID_BATCHLINE", "batch_lines", "ID_BATCHLINE"),
                 ("checks_and_balances", "ID_BATCH", "batch_heads", "ID_BATCH"),
                 ("statement_heads", "ID_BATCHLINE", "batch_lines", "ID_BATCHLINE"),
                 ("statement_lines", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
                 ("batch_lines", "ID_BATCH", "batch_heads", "ID_BATCH"),
-                ("batch_lines", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
             ]
         ]
     )
