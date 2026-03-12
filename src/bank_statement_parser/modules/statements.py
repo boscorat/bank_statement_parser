@@ -567,7 +567,7 @@ def _cab_detail(cab: pl.DataFrame) -> str:
         stated = row["STD_CLOSING_BALANCE"]
         calculated = row["STD_RUNNING_BALANCE"]
         lines.append(f"  BAL_CLOSING       stated={stated}  calculated={calculated}  delta={round(stated - calculated, 2)}")
-    return ("\n" + "\n".join(lines)) if lines else ""
+    return (" | " + " | ".join(lines)) if lines else ""
 
 
 def process_pdf_statement(
