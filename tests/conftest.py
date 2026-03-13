@@ -4,14 +4,14 @@ conftest.py — session-scoped fixtures for integration tests.
 Two project lifecycles are provided:
 
 ``good_project``
-    Processes all PDFs in ``tests/pdfs/good/`` into a fresh project at
-    ``tests/test_project/``.  The project is fully populated (parquet +
-    SQLite) before any test runs, and torn down afterwards.
+    Processes all PDFs in the bundled ``test_data/pdfs/good/`` directory into a
+    fresh project at ``tests/test_project/``.  The project is fully populated
+    (parquet + SQLite) before any test runs, and torn down afterwards.
 
 ``bad_project``
-    Processes all PDFs in ``tests/pdfs/bad/`` into a fresh project at
-    ``tests/test_project_bad/``.  Used to verify that bad PDFs are flagged
-    as errors rather than processed successfully.
+    Processes all PDFs in the bundled ``test_data/pdfs/bad/`` directory into a
+    fresh project at ``tests/test_project_bad/``.  Used to verify that bad PDFs
+    are flagged as errors rather than processed successfully.
 """
 
 import shutil
@@ -23,10 +23,11 @@ import pytest
 
 from bank_statement_parser.modules.paths import validate_or_initialise_project
 from bank_statement_parser.modules.statements import StatementBatch
+from bank_statement_parser.testing import _pdf_dir
 
 _TESTS_DIR = Path(__file__).parent
-_GOOD_PDFS_DIR = _TESTS_DIR / "pdfs" / "good"
-_BAD_PDFS_DIR = _TESTS_DIR / "pdfs" / "bad"
+_GOOD_PDFS_DIR = _pdf_dir("good")
+_BAD_PDFS_DIR = _pdf_dir("bad")
 _GOOD_PROJECT_DIR = _TESTS_DIR / "test_project"
 _BAD_PROJECT_DIR = _TESTS_DIR / "test_project_bad"
 
