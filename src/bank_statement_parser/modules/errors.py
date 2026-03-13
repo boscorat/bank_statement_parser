@@ -50,3 +50,22 @@ class ProjectConfigMissing(ProjectError):
     def __init__(self, config_path: Path):
         message = f"Project config folder not found or contains no .toml files: {config_path}"
         ProjectError.__init__(self, message)
+
+
+class TestGateFailure(StatementError):
+    """Raised when bsp's own pytest suite fails during TestHarness.setup().
+
+    Attributes:
+        failed: Number of test failures reported by pytest.
+        errors: Number of test errors reported by pytest.
+        output: Captured stdout/stderr from the pytest run.
+    """
+
+    __slots__ = ("failed", "errors", "output")
+
+    def __init__(self, failed: int, errors: int, output: str) -> None:
+        self.failed = failed
+        self.errors = errors
+        self.output = output
+        message = f"bsp test gate failed: {failed} failed, {errors} errors.\n{output}"
+        StatementError.__init__(self, message)
