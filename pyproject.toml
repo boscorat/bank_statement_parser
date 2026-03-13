@@ -44,6 +44,7 @@ build-backend = "uv_build"
 
 [tool.uv.build-backend]
 module-name = "bank_statement_parser"
+include = ["bank_statement_parser/test_data/**"]
 
 [dependency-groups]
 dev = [

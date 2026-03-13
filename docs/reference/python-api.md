@@ -227,6 +227,20 @@ Anonymise a single PDF using exclusion-based full-page letter scrambling.
 
 Anonymise all PDFs matching *pattern* in *folder_path* using exclusion-based scrambling.
 
+## Testing harness
+
+### `bsp.TestHarness`
+
+*class* — `bank_statement_parser.testing`
+
+Programmatic test environment for integration testing by dependent projects.
+
+### `bsp.TestGateFailure`
+
+*class* — `bank_statement_parser.modules.errors`
+
+Raised when bsp's own pytest suite fails during TestHarness.setup().
+
 ## DB Report Backend
 
 `bsp.db` exposes report classes and export functions backed by the SQLite star-schema.
