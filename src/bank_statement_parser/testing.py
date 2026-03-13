@@ -101,12 +101,18 @@ def _tests_dir() -> Path:
 class TestHarness:
     """Programmatic test environment for integration testing by dependent projects.
 
-    Builds a real-PDF bsp project (using the bundled anonymised PDFs), runs bsp's
-    own pytest suite as a quality gate, and exposes the resulting SQLite database
-    path for external comparison queries.
+    Builds a real-PDF bsp project (using the bundled anonymised PDFs), optionally
+    runs bsp's own pytest suite as a quality gate, and exposes the resulting SQLite
+    database path for external comparison queries.
 
     The project directory is either provided by the caller or created in a
     temporary directory that is owned (and cleaned up) by this harness.
+
+    Args:
+        skip_bsp_tests: When ``True``, the bsp pytest suite is not executed
+            during :meth:`setup`.  Use this when bsp is installed as a wheel
+            (non-editable) and the ``tests/`` directory is not present — for
+            example in CI environments.  Defaults to ``False``.
 
     Example::
 
@@ -115,27 +121,32 @@ class TestHarness:
         db_path = harness.db_path   # open with sqlite3 and run your own queries
         harness.teardown()
 
+        # Skip internal bsp tests (e.g. in CI where bsp is a wheel install)
+        harness = TestHarness(skip_bsp_tests=True)
+        harness.setup()
+
     The harness also supports the context manager protocol::
 
         with TestHarness() as h:
             compare_databases(h.db_path, my_db_path)
     """
 
-    __slots__ = ("_project_path", "_owned", "_test_results", "_batch", "_ready")
+    __slots__ = ("_project_path", "_owned", "_test_results", "_batch", "_ready", "_skip_bsp_tests")
 
-    def __init__(self) -> None:
+    def __init__(self, skip_bsp_tests: bool = False) -> None:
         self._project_path: Path | None = None
         self._owned: bool = False  # True when we created the temp dir
         self._test_results: dict | None = None
         self._batch: StatementBatch | None = None
         self._ready: bool = False
+        self._skip_bsp_tests: bool = skip_bsp_tests
 
     # ------------------------------------------------------------------
     # Public lifecycle
     # ------------------------------------------------------------------
 
     def setup(self, project_path: Path | None = None) -> "TestHarness":
-        """Build the real-PDF bsp project and run bsp's pytest suite as a gate.
+        """Build the real-PDF bsp project and optionally run bsp's pytest suite.
 
         Steps performed:
 
@@ -143,11 +154,16 @@ class TestHarness:
         2. Discover the bundled anonymised good PDFs.
         3. Initialise the project scaffold and process all PDFs via
            :class:`~bank_statement_parser.modules.statements.StatementBatch`.
-        4. Run bsp's own pytest suite; raise :exc:`~bank_statement_parser.errors.TestGateFailure`
-           if any test fails or errors.
+        4. Unless ``skip_bsp_tests=True`` was passed to :meth:`__init__`, run
+           bsp's own pytest suite; raise
+           :exc:`~bank_statement_parser.errors.TestGateFailure` if any test
+           fails or errors.  Pass ``skip_bsp_tests=True`` when bsp is installed
+           from a wheel (non-editable) and the bsp ``tests/`` directory is not
+           available on the filesystem — for example in CI environments where
+           bsp is installed as a regular package dependency.
 
-        After a successful ``setup()`` call :attr:`db_path` and
-        :attr:`test_results` are available.
+        After a successful ``setup()`` call :attr:`db_path` is available.
+        :attr:`test_results` is also available unless ``skip_bsp_tests=True``.
 
         Args:
             project_path: Optional directory in which to build the project.
@@ -158,7 +174,8 @@ class TestHarness:
             ``self``, allowing method chaining: ``harness.setup().db_path``.
 
         Raises:
-            TestGateFailure: If bsp's pytest suite reports failures or errors.
+            TestGateFailure: If bsp's pytest suite reports failures or errors
+                (only when ``skip_bsp_tests=False``).
         """
         if project_path is None:
             self._project_path = Path(tempfile.mkdtemp(prefix="bsp_test_harness_"))
@@ -180,7 +197,8 @@ class TestHarness:
         self._batch.update_data()
         self._batch.delete_temp_files()
 
-        self._run_bsp_tests()
+        if not self._skip_bsp_tests:
+            self._run_bsp_tests()
         self._ready = True
         return self
 
@@ -269,10 +287,11 @@ class TestHarness:
             - ``output`` (:class:`str`): combined stdout/stderr from pytest.
 
         Raises:
-            RuntimeError: If :meth:`setup` has not been called yet.
+            RuntimeError: If :meth:`setup` has not been called yet, or if
+                ``skip_bsp_tests=True`` was passed to :meth:`__init__`.
         """
         if not self._ready or self._test_results is None:
-            raise RuntimeError("TestHarness.setup() must be called before accessing test_results.")
+            raise RuntimeError("TestHarness.setup() must be called before accessing test_results, and skip_bsp_tests must be False.")
         return self._test_results
 
     # ------------------------------------------------------------------
