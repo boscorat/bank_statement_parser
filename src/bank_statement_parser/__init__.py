@@ -101,6 +101,7 @@ from bank_statement_parser.modules.errors import (
     ProjectConfigMissing,
     ProjectDatabaseMissing,
     StatementError,
+    TestGateFailure,
 )
 
 # ---------------------------------------------------------------------------
@@ -129,6 +130,11 @@ from bank_statement_parser.modules.pdf_functions import (
 # Database / data-mart utilities
 # ---------------------------------------------------------------------------
 from bank_statement_parser.data import Housekeeping, build_datamart, create_db
+
+# ---------------------------------------------------------------------------
+# Testing harness
+# ---------------------------------------------------------------------------
+from bank_statement_parser.testing import TestHarness
 
 __all__ = [
     # Meta
@@ -177,4 +183,7 @@ __all__ = [
     # PDF anonymisation
     "anonymise_pdf",
     "anonymise_folder",
+    # Testing harness
+    "TestHarness",
+    "TestGateFailure",
 ]

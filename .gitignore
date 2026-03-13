@@ -22,7 +22,8 @@ wheels/
 *.log
 *.pdf
 # allow anonymised test fixtures in tests/pdfs/ subdirectories
-!tests/pdfs/**/anonymised_*.pdf
+# !tests/pdfs/**/anonymised_*.pdf
+!src/bank_statement_parser/test_data/pdfs/**/anonymised_*.pdf
 *.csv
 *.xlsx
 *.json
