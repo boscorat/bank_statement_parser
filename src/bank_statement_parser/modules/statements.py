@@ -17,6 +17,7 @@ import multiprocessing
 import os
 import sys
 import traceback
+import warnings
 from concurrent.futures import ProcessPoolExecutor
 from copy import deepcopy
 from datetime import datetime
@@ -1352,7 +1353,7 @@ class StatementBatch:
 
     def export(
         self,
-        filetype: Literal["excel", "csv", "both"] = "excel",
+        filetype: Literal["excel", "csv", "json", "all", "both"] = "excel",
         folder: Path | None = None,
         type: str = "simple",
         project_path: Path | None = None,
@@ -1362,18 +1363,24 @@ class StatementBatch:
 
         Delegates to the DB-backed module-level export function based on
         *filetype*.  When neither *folder* nor *project_path* is supplied the
-        function writes to the project's ``export/csv/`` or ``export/excel/``
-        sub-directory, creating it if absent.
+        function writes to the project's ``export/csv/``, ``export/excel/``, or
+        ``export/json/`` sub-directory, creating it if absent.
 
         Args:
             filetype: Output format.  ``"excel"`` writes a single ``.xlsx``
                 workbook; ``"csv"`` writes one CSV file per report table;
-                ``"both"`` writes Excel and CSV in sequence.
+                ``"json"`` writes one JSON file per report table; ``"all"``
+                writes Excel, CSV, and JSON in sequence.
                 Defaults to ``"excel"``.
-            folder: For ``filetype="csv"``: directory to write CSV files into,
-                or the workbook path for ``filetype="excel"``.  When ``None``
-                the default export sub-directory for the resolved project is
-                used.
+
+                .. deprecated::
+                    ``"both"`` is a deprecated alias for ``"all"`` and will be
+                    removed in a future release.  Use ``"all"`` instead.
+            folder: Output path passed through to the underlying export
+                function.  For CSV and JSON this is the directory to write
+                files into; for Excel this is the full workbook path.  When
+                ``None`` the default export sub-directory for the resolved
+                project is used.
             type: Export preset passed through to the underlying function.
                 ``"simple"`` exports the flat transactions table only;
                 ``"full"`` exports separate star-schema tables for loading
@@ -1383,8 +1390,16 @@ class StatementBatch:
                 folder.
         """
         if filetype == "both":
+            warnings.warn(
+                "filetype='both' is deprecated and will be removed in a future release. Use filetype='all' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            filetype = "all"
+        if filetype == "all":
             self.export(filetype="excel", folder=folder, type=type, project_path=project_path)
             self.export(filetype="csv", folder=folder, type=type, project_path=project_path)
+            self.export(filetype="json", folder=folder, type=type, project_path=project_path)
             return
         resolved_project_path = project_path if project_path is not None else self.project_path
 
@@ -1392,8 +1407,10 @@ class StatementBatch:
 
         if filetype == "excel":
             _rd.export_excel(path=folder, type=type, project_path=resolved_project_path)
-        else:
+        elif filetype == "csv":
             _rd.export_csv(folder=folder, type=type, project_path=resolved_project_path)
+        elif filetype == "json":
+            _rd.export_json(folder=folder, type=type, project_path=resolved_project_path)
 
     def debug(self, project_path: Path | None = None) -> int:
         """

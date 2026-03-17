@@ -144,14 +144,14 @@ class TestProcessOptions:
         assert action.default == "both"
 
     def test_export_format_choices(self) -> None:
-        """--export-format must accept excel, csv, both."""
+        """--export-format must accept excel, csv, json, all."""
         action = _find_action("process", "--export-format")
-        assert set(action.choices) == {"excel", "csv", "both"}
+        assert set(action.choices) == {"excel", "csv", "json", "all"}
 
     def test_export_format_default(self) -> None:
-        """--export-format must default to 'both'."""
+        """--export-format must default to 'all'."""
         action = _find_action("process", "--export-format")
-        assert action.default == "both"
+        assert action.default == "all"
 
     def test_export_type_choices(self) -> None:
         """--export-type must accept full, simple."""
