@@ -129,7 +129,20 @@ def create_table(conn, table_name, schema: dict, with_fk: bool = False):
     conn.execute(create_sql)
 
 
-def main(db_path: Path, with_fk: bool = False):
+def main(db_path: Path, with_fk: bool = False) -> None:
+    """Create (or recreate) the raw SQLite database with all tables and indexes.
+
+    Drops any existing database file at *db_path* and creates a fresh one with
+    all raw source tables (``batch_heads``, ``batch_lines``, ``statement_heads``,
+    ``statement_lines``, ``checks_and_balances``) plus their indexes and views.
+
+    Args:
+        db_path: Filesystem path for the SQLite database file.  If the file
+            already exists it is deleted before the new database is created.
+        with_fk: When ``True`` the tables are created with ``FOREIGN KEY``
+            constraints (useful for strict-integrity environments).  Defaults
+            to ``False``.
+    """
     if db_path.exists():
         db_path.unlink()
 
