@@ -49,6 +49,9 @@ class ProjectPaths:
             project.db
           export/
             csv/  excel/  json/
+          reporting/
+            data/
+              simple/  full/
           log/
             debug/
 
@@ -93,6 +96,26 @@ class ProjectPaths:
     @property
     def json(self) -> Path:
         return self.exports / "json"
+
+    @property
+    def reporting(self) -> Path:
+        """Root reporting directory."""
+        return self.root / "reporting"
+
+    @property
+    def reporting_data(self) -> Path:
+        """Directory containing reporting data feeds (CSV files)."""
+        return self.reporting / "data"
+
+    @property
+    def reporting_data_simple(self) -> Path:
+        """Reporting data directory for the simple (flat transactions) feed."""
+        return self.reporting_data / "simple"
+
+    @property
+    def reporting_data_full(self) -> Path:
+        """Reporting data directory for the full (star-schema) feed."""
+        return self.reporting_data / "full"
 
     @property
     def statements(self) -> Path:
@@ -246,6 +269,8 @@ class ProjectPaths:
             self.csv,
             self.excel,
             self.json,
+            self.reporting_data_simple,
+            self.reporting_data_full,
             self.log_debug,
         ):
             directory.mkdir(parents=True, exist_ok=True)

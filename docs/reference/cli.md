@@ -39,7 +39,7 @@ bsp anonymise PATH [--folder] [--pattern GLOB] [--output OUT_FILE] [--output-dir
 Discover PDF bank statements, extract transaction data, persist results to Parquet and/or SQLite, copy source PDFs into the project tree, and export reports as Excel, CSV, and/or JSON. A project folder is created automatically if it does not exist.
 
 ```
-bsp process [--project PATH] [--pdfs PATH] [--pattern GLOB] [--no-turbo] [--company KEY] [--account KEY] [--data {parquet,database,both}] [--export-format {excel,csv,json,all}] [--export-type {full,simple}] [--no-export] [--no-copy]
+bsp process [--project PATH] [--pdfs PATH] [--pattern GLOB] [--no-turbo] [--company KEY] [--account KEY] [--data {parquet,database,both}] [--export-format {excel,csv,json,all,reporting}] [--export-type {full,simple}] [--no-export] [--no-copy]
 ```
 
 ### Options
@@ -53,7 +53,7 @@ bsp process [--project PATH] [--pdfs PATH] [--pattern GLOB] [--no-turbo] [--comp
 | `--company` | auto-detect | Company key for config lookup (default: auto-detect from PDF). |
 | `--account` | auto-detect | Account key for config lookup (default: auto-detect from PDF). |
 | `--data` | `both` | Persistence target for update_data() (default: 'both'). Choices: `parquet`, `database`, `both`. |
-| `--export-format` | `all` | Export file format (default: 'all'). Choices: `excel`, `csv`, `json`, `all`. |
+| `--export-format` | `all` | Export file format (default: 'all'). Choices: `excel`, `csv`, `json`, `all`, `reporting`. |
 | `--export-type` | `simple` | Export preset. 'simple' (default) exports a single flat transactions table. 'full' exports separate star-schema tables (accounts, calendar, statements, transactions, balances, gaps) intended for loading into an external database. Choices: `full`, `simple`. |
 | `--no-export` | off | Skip the export step entirely. |
 | `--no-copy` | off | Skip copying source PDFs into the project statements/ directory. |
