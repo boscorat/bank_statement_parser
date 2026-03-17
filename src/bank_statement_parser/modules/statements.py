@@ -1353,7 +1353,7 @@ class StatementBatch:
 
     def export(
         self,
-        filetype: Literal["excel", "csv", "json", "all", "both"] = "excel",
+        filetype: Literal["excel", "csv", "json", "all", "both", "reporting"] = "excel",
         folder: Path | None = None,
         type: str = "simple",
         project_path: Path | None = None,
@@ -1370,7 +1370,9 @@ class StatementBatch:
             filetype: Output format.  ``"excel"`` writes a single ``.xlsx``
                 workbook; ``"csv"`` writes one CSV file per report table;
                 ``"json"`` writes one JSON file per report table; ``"all"``
-                writes Excel, CSV, and JSON in sequence.
+                writes Excel, CSV, and JSON in sequence; ``"reporting"`` writes
+                CSV feeds to ``reporting/data/simple/`` and
+                ``reporting/data/full/`` inside the project directory.
                 Defaults to ``"excel"``.
 
                 .. deprecated::
@@ -1411,6 +1413,8 @@ class StatementBatch:
             _rd.export_csv(folder=folder, type=type, project_path=resolved_project_path)
         elif filetype == "json":
             _rd.export_json(folder=folder, type=type, project_path=resolved_project_path)
+        elif filetype == "reporting":
+            _rd.export_reporting_data(project_path=resolved_project_path)
 
     def debug(self, project_path: Path | None = None) -> int:
         """

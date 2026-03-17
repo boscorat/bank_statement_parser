@@ -246,7 +246,7 @@ def main() -> None:
     )
     proc.add_argument(
         "--export-format",
-        choices=["excel", "csv", "json", "all"],
+        choices=["excel", "csv", "json", "all", "reporting"],
         default="all",
         dest="export_format",
         help="Export file format (default: 'all').",
