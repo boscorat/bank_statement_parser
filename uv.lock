@@ -744,7 +744,7 @@ wheels = [
 
 [[package]]
 name = "uk-bank-statement-parser"
-version = "0.2.1a4"
+version = "0.2.1a5"
 source = { editable = "." }
 dependencies = [
     { name = "dacite" },
