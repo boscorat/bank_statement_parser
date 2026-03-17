@@ -197,7 +197,7 @@ def main() -> None:
         description=(
             "Discover PDF bank statements, extract transaction data, persist "
             "results to Parquet and/or SQLite, copy source PDFs into the "
-            "project tree, and export reports as Excel and/or CSV. "
+            "project tree, and export reports as Excel, CSV, and/or JSON. "
             "A project folder is created automatically if it does not exist."
         ),
     )
@@ -246,10 +246,10 @@ def main() -> None:
     )
     proc.add_argument(
         "--export-format",
-        choices=["excel", "csv", "both"],
-        default="both",
+        choices=["excel", "csv", "json", "all"],
+        default="all",
         dest="export_format",
-        help="Export file format (default: 'both').",
+        help="Export file format (default: 'all').",
     )
     proc.add_argument(
         "--export-type",
