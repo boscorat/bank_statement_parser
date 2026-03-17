@@ -361,6 +361,35 @@ class TestExports:
         assert (paths.csv / "transactions_table.csv").exists()
         assert (paths.json / "transactions_table.json").exists()
 
+    # ------------------------------------------------------------------
+    # DB backend — export_reporting_data existence
+    # ------------------------------------------------------------------
+
+    def test_reporting_data_simple_exists(self, good_project):
+        """export_reporting_data() writes transactions_table.csv to reporting/data/simple/."""
+        db.export_reporting_data(project_path=good_project.project_path)
+        paths = ProjectPaths.resolve(good_project.project_path)
+        f = paths.reporting_data_simple / "transactions_table.csv"
+        assert f.exists(), "Missing reporting/data/simple/transactions_table.csv"
+        assert f.stat().st_size > 0, "Empty reporting/data/simple/transactions_table.csv"
+
+    def test_reporting_data_full_exists(self, good_project):
+        """export_reporting_data() writes all six CSVs to reporting/data/full/."""
+        db.export_reporting_data(project_path=good_project.project_path)
+        paths = ProjectPaths.resolve(good_project.project_path)
+        for stem in _FULL_EXPORT_STEMS:
+            f = paths.reporting_data_full / f"{stem}.csv"
+            assert f.exists(), f"Missing reporting/data/full/{stem}.csv"
+            assert f.stat().st_size > 0, f"Empty reporting/data/full/{stem}.csv"
+
+    def test_batch_export_reporting(self, good_project):
+        """StatementBatch.export(filetype='reporting') populates both reporting directories."""
+        good_project.batch.export(filetype="reporting")
+        paths = ProjectPaths.resolve(good_project.project_path)
+        assert (paths.reporting_data_simple / "transactions_table.csv").exists()
+        for stem in _FULL_EXPORT_STEMS:
+            assert (paths.reporting_data_full / f"{stem}.csv").exists()
+
 
 # ---------------------------------------------------------------------------
 # TestCopyStatements

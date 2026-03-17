@@ -16,10 +16,11 @@ Quick start
     batch.update_data()                                       # writes to parquet + database
     batch.update_data(datadestination="parquet")              # parquet only
     batch.update_data(datadestination="database")             # database only
-    batch.export(filetype="excel")  # writes to project export/excel/
-    batch.export(filetype="csv")    # writes to project export/csv/
-    batch.export(filetype="json")   # writes to project export/json/
-    batch.export(filetype="all")    # writes Excel, CSV, and JSON
+    batch.export(filetype="excel")       # writes to project export/excel/
+    batch.export(filetype="csv")         # writes to project export/csv/
+    batch.export(filetype="json")        # writes to project export/json/
+    batch.export(filetype="all")         # writes Excel, CSV, and JSON
+    batch.export(filetype="reporting")   # writes CSV feeds to reporting/data/simple/ and reporting/data/full/
     batch.copy_statements_to_project()  # copy PDFs to project/statements/
     batch.delete_temp_files()
 
@@ -36,11 +37,13 @@ DB report backend
 -----------------
 ``bsp.db`` exposes FlatTransaction, FactBalance, DimTime, DimStatement,
 DimAccount, FactTransaction, GapReport plus ``export_csv`` / ``export_excel``
-/ ``export_json`` helpers.  Export functions accept an optional ``folder`` /
-``path`` argument; when omitted they write to the project's ``export/csv/``,
-``export/excel/``, or ``export/json/`` sub-directory automatically.
+/ ``export_json`` / ``export_reporting_data`` helpers.  Export functions accept
+an optional ``folder`` / ``path`` argument; when omitted they write to the
+project's ``export/csv/``, ``export/excel/``, ``export/json/``, or
+``reporting/data/simple|full/`` sub-directory automatically.
 
     bsp.db.FlatTransaction(...)
+    bsp.db.export_reporting_data(project_path=Path("/my/project"))  # reporting feeds
 
 Database utilities
 ------------------

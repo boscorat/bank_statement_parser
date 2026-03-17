@@ -6,6 +6,8 @@ Functions:
     export_excel: Write all report sheets to a single Excel workbook
         (defaults to project export/excel/transactions.xlsx).
     export_json: Write all report JSON files to a folder (defaults to project export/json/).
+    export_reporting_data: Write CSV reporting feeds to reporting/data/simple/ and
+        reporting/data/full/ inside the project directory.
 
 Classes:
     FlatTransaction, FactBalance, DimTime, DimStatement, DimAccount,
@@ -223,6 +225,45 @@ def export_json(
         folder = paths.json
     for name, df in _collect_report_frames(type, project_path):
         df.write_json(folder / f"{name}.json")
+
+
+def export_reporting_data(project_path: Path | None = None) -> None:
+    """
+    Write CSV reporting feeds to the project's ``reporting/data/`` sub-directories.
+
+    Calls :func:`export_csv` twice — once with ``type="simple"`` writing to
+    ``reporting/data/simple/`` and once with ``type="full"`` writing to
+    ``reporting/data/full/``.  Both directories are created automatically if
+    absent.
+
+    This produces a stable set of CSV files that external reporting tools
+    (e.g. Power BI, Tableau, Excel) can point at directly without needing
+    to know about the full export machinery.
+
+    Args:
+        project_path: Optional project root directory.  Falls back to the
+            bundled default project when ``None``.
+
+    Example::
+
+        import bank_statement_parser as bsp
+        from pathlib import Path
+
+        bsp.db.export_reporting_data(project_path=Path("/my/project"))
+        # Writes:
+        #   /my/project/reporting/data/simple/transactions_table.csv
+        #   /my/project/reporting/data/full/statement.csv
+        #   /my/project/reporting/data/full/account.csv
+        #   /my/project/reporting/data/full/calendar.csv
+        #   /my/project/reporting/data/full/transactions.csv
+        #   /my/project/reporting/data/full/balances.csv
+        #   /my/project/reporting/data/full/gaps.csv
+    """
+    paths = ProjectPaths.resolve(project_path)
+    paths.ensure_subdir_for_write(paths.reporting_data_simple)
+    paths.ensure_subdir_for_write(paths.reporting_data_full)
+    export_csv(folder=paths.reporting_data_simple, type="simple", project_path=project_path)
+    export_csv(folder=paths.reporting_data_full, type="full", project_path=project_path)
 
 
 class FlatTransaction:
