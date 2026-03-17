@@ -12,15 +12,16 @@ TestDbReports
     processed good-PDF data.
 
 TestExports
-    Verifies CSV and Excel export functions for the database backend,
-    including full and simple presets and the ``filetype="both"``
-    convenience mode on ``StatementBatch.export()``.
+    Verifies CSV, JSON, and Excel export functions for the database backend,
+    including full and simple presets, content/totals checks for CSV and JSON,
+    the ``filetype="all"`` convenience mode on ``StatementBatch.export()``,
+    and the deprecated ``filetype="both"`` alias.
 
 TestCopyStatements
     Verifies that ``copy_statements_to_project()`` copies PDFs into the
-    correct ``statements/<year>/<id_account>/`` directory structure, that
-    all returned paths exist and are non-empty, that the operation is
-    idempotent, and that error/missing entries are silently skipped.
+    correct ``statements/`` directory, that all returned paths exist and
+    are non-empty, that the operation is idempotent, and that error/missing
+    entries are silently skipped.
 
 TestBadStatements
     Verifies that each PDF in ``tests/pdfs/bad/`` is flagged as an error.
@@ -30,6 +31,7 @@ Run with:
 """
 
 import sqlite3
+import warnings
 from dataclasses import replace
 from datetime import timedelta
 
@@ -157,32 +159,47 @@ class TestDbReports:
 # TestExports
 # ---------------------------------------------------------------------------
 
-# CSV file names produced by ``type="full"`` exports.
-_FULL_CSV_FILES = [
-    "statement.csv",
-    "account.csv",
-    "calendar.csv",
-    "transactions.csv",
-    "balances.csv",
-    "gaps.csv",
+# File names produced by ``type="full"`` exports (stem only, no extension).
+_FULL_EXPORT_STEMS = [
+    "statement",
+    "account",
+    "calendar",
+    "transactions",
+    "balances",
+    "gaps",
 ]
+
+# Mapping from full-export logical name → DB table/view name (for row-count checks).
+_FULL_STEM_TO_DB_TABLE = {
+    "statement": "DimStatement",
+    "account": "DimAccount",
+    "calendar": "DimTime",
+    "transactions": "FactTransaction",
+    "balances": "FactBalance",
+    "gaps": "GapReport",
+}
 
 
 class TestExports:
-    """Verify CSV and Excel exports for both backends and presets."""
+    """Verify CSV, JSON, and Excel exports for the database backend and presets.
+
+    Content checks (row counts, monetary totals) are performed for CSV and JSON
+    ``type="simple"`` and ``type="full"`` exports.  Excel tests are
+    existence-only to avoid OS-dependent or extra-dependency parsing.
+    """
 
     # ------------------------------------------------------------------
-    # DB backend — CSV
+    # DB backend — CSV existence
     # ------------------------------------------------------------------
 
     def test_db_export_csv_full(self, good_project):
         """DB export_csv(type='full') writes all six CSV files."""
         db.export_csv(type="full", project_path=good_project.project_path)
         paths = ProjectPaths.resolve(good_project.project_path)
-        for name in _FULL_CSV_FILES:
-            f = paths.csv / name
-            assert f.exists(), f"Missing CSV: {name}"
-            assert f.stat().st_size > 0, f"Empty CSV: {name}"
+        for stem in _FULL_EXPORT_STEMS:
+            f = paths.csv / f"{stem}.csv"
+            assert f.exists(), f"Missing CSV: {stem}.csv"
+            assert f.stat().st_size > 0, f"Empty CSV: {stem}.csv"
 
     def test_db_export_csv_simple(self, good_project):
         """DB export_csv(type='simple') writes the flat transactions CSV."""
@@ -193,7 +210,42 @@ class TestExports:
         assert f.stat().st_size > 0, "Empty transactions_table.csv (db/simple)"
 
     # ------------------------------------------------------------------
-    # DB backend — Excel
+    # DB backend — CSV content: simple totals
+    # ------------------------------------------------------------------
+
+    def test_csv_simple_totals(self, good_project):
+        """transactions_table.csv row count and monetary totals match the DB mart."""
+        db.export_csv(type="simple", project_path=good_project.project_path)
+        paths = ProjectPaths.resolve(good_project.project_path)
+        df = pl.read_csv(paths.csv / "transactions_table.csv", schema_overrides={"account_number": pl.String})
+
+        with sqlite3.connect(str(paths.project_db)) as conn:
+            db_rows = conn.execute("SELECT COUNT(*) FROM FlatTransaction").fetchone()[0]
+            db_value_in = conn.execute("SELECT COALESCE(SUM(value_in), 0) FROM FlatTransaction").fetchone()[0]
+            db_value_out = conn.execute("SELECT COALESCE(SUM(value_out), 0) FROM FlatTransaction").fetchone()[0]
+
+        assert df.height == db_rows, f"CSV row count {df.height} != DB {db_rows}"
+        csv_value_in = df["value_in"].sum() or 0
+        csv_value_out = df["value_out"].sum() or 0
+        assert abs(csv_value_in - db_value_in) <= FLOAT_TOL, f"value_in mismatch: CSV={csv_value_in} DB={db_value_in}"
+        assert abs(csv_value_out - db_value_out) <= FLOAT_TOL, f"value_out mismatch: CSV={csv_value_out} DB={db_value_out}"
+
+    # ------------------------------------------------------------------
+    # DB backend — CSV content: full row counts
+    # ------------------------------------------------------------------
+
+    def test_csv_full_row_counts(self, good_project):
+        """Each full-export CSV file has the same row count as its DB source table."""
+        db.export_csv(type="full", project_path=good_project.project_path)
+        paths = ProjectPaths.resolve(good_project.project_path)
+        with sqlite3.connect(str(paths.project_db)) as conn:
+            for stem, table in _FULL_STEM_TO_DB_TABLE.items():
+                db_rows = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]  # noqa: S608
+                df = pl.read_csv(paths.csv / f"{stem}.csv", infer_schema_length=0)
+                assert df.height == db_rows, f"{stem}.csv: CSV rows={df.height} != DB rows={db_rows}"
+
+    # ------------------------------------------------------------------
+    # DB backend — Excel existence only
     # ------------------------------------------------------------------
 
     def test_db_export_excel_full(self, good_project):
@@ -213,22 +265,101 @@ class TestExports:
         assert f.stat().st_size > 0, "Empty transactions.xlsx (db/simple)"
 
     # ------------------------------------------------------------------
-    # StatementBatch.export() — filetype="both"
+    # DB backend — JSON existence
     # ------------------------------------------------------------------
 
-    def test_batch_export_both(self, good_project):
-        """StatementBatch.export(filetype='both') writes both Excel and CSV."""
-        good_project.batch.export(filetype="both", type="full")
+    def test_db_export_json_full(self, good_project):
+        """DB export_json(type='full') writes all six JSON files."""
+        db.export_json(type="full", project_path=good_project.project_path)
         paths = ProjectPaths.resolve(good_project.project_path)
-        # Excel file must exist
+        for stem in _FULL_EXPORT_STEMS:
+            f = paths.json / f"{stem}.json"
+            assert f.exists(), f"Missing JSON: {stem}.json"
+            assert f.stat().st_size > 0, f"Empty JSON: {stem}.json"
+
+    def test_db_export_json_simple(self, good_project):
+        """DB export_json(type='simple') writes the flat transactions JSON."""
+        db.export_json(type="simple", project_path=good_project.project_path)
+        paths = ProjectPaths.resolve(good_project.project_path)
+        f = paths.json / "transactions_table.json"
+        assert f.exists(), "Missing transactions_table.json (db/simple)"
+        assert f.stat().st_size > 0, "Empty transactions_table.json (db/simple)"
+
+    # ------------------------------------------------------------------
+    # DB backend — JSON content: simple totals
+    # ------------------------------------------------------------------
+
+    def test_json_simple_totals(self, good_project):
+        """transactions_table.json row count and monetary totals match the DB mart."""
+        db.export_json(type="simple", project_path=good_project.project_path)
+        paths = ProjectPaths.resolve(good_project.project_path)
+        df = pl.read_json(paths.json / "transactions_table.json")
+
+        with sqlite3.connect(str(paths.project_db)) as conn:
+            db_rows = conn.execute("SELECT COUNT(*) FROM FlatTransaction").fetchone()[0]
+            db_value_in = conn.execute("SELECT COALESCE(SUM(value_in), 0) FROM FlatTransaction").fetchone()[0]
+            db_value_out = conn.execute("SELECT COALESCE(SUM(value_out), 0) FROM FlatTransaction").fetchone()[0]
+
+        assert df.height == db_rows, f"JSON row count {df.height} != DB {db_rows}"
+        json_value_in = df["value_in"].sum() or 0
+        json_value_out = df["value_out"].sum() or 0
+        assert abs(json_value_in - db_value_in) <= FLOAT_TOL, f"value_in mismatch: JSON={json_value_in} DB={db_value_in}"
+        assert abs(json_value_out - db_value_out) <= FLOAT_TOL, f"value_out mismatch: JSON={json_value_out} DB={db_value_out}"
+
+    # ------------------------------------------------------------------
+    # DB backend — JSON content: full row counts
+    # ------------------------------------------------------------------
+
+    def test_json_full_row_counts(self, good_project):
+        """Each full-export JSON file has the same row count as its DB source table."""
+        db.export_json(type="full", project_path=good_project.project_path)
+        paths = ProjectPaths.resolve(good_project.project_path)
+        with sqlite3.connect(str(paths.project_db)) as conn:
+            for stem, table in _FULL_STEM_TO_DB_TABLE.items():
+                db_rows = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]  # noqa: S608
+                df = pl.read_json(paths.json / f"{stem}.json", infer_schema_length=None)
+                assert df.height == db_rows, f"{stem}.json: JSON rows={df.height} != DB rows={db_rows}"
+
+    # ------------------------------------------------------------------
+    # StatementBatch.export() — filetype="all"
+    # ------------------------------------------------------------------
+
+    def test_batch_export_all(self, good_project):
+        """StatementBatch.export(filetype='all') writes Excel, CSV, and JSON."""
+        good_project.batch.export(filetype="all", type="full")
+        paths = ProjectPaths.resolve(good_project.project_path)
+        # Excel
         xlsx = paths.excel / "transactions.xlsx"
-        assert xlsx.exists(), "Missing transactions.xlsx after filetype='both'"
-        assert xlsx.stat().st_size > 0, "Empty transactions.xlsx after filetype='both'"
-        # CSV files must exist
-        for name in _FULL_CSV_FILES:
-            f = paths.csv / name
-            assert f.exists(), f"Missing CSV after filetype='both': {name}"
-            assert f.stat().st_size > 0, f"Empty CSV after filetype='both': {name}"
+        assert xlsx.exists(), "Missing transactions.xlsx after filetype='all'"
+        assert xlsx.stat().st_size > 0, "Empty transactions.xlsx after filetype='all'"
+        # CSV
+        for stem in _FULL_EXPORT_STEMS:
+            f = paths.csv / f"{stem}.csv"
+            assert f.exists(), f"Missing CSV after filetype='all': {stem}.csv"
+            assert f.stat().st_size > 0, f"Empty CSV after filetype='all': {stem}.csv"
+        # JSON
+        for stem in _FULL_EXPORT_STEMS:
+            f = paths.json / f"{stem}.json"
+            assert f.exists(), f"Missing JSON after filetype='all': {stem}.json"
+            assert f.stat().st_size > 0, f"Empty JSON after filetype='all': {stem}.json"
+
+    # ------------------------------------------------------------------
+    # StatementBatch.export() — filetype="both" deprecated alias
+    # ------------------------------------------------------------------
+
+    def test_batch_export_both_deprecated(self, good_project):
+        """filetype='both' emits a DeprecationWarning and still produces output."""
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            good_project.batch.export(filetype="both", type="simple")
+        dep_warnings = [w for w in caught if issubclass(w.category, DeprecationWarning)]
+        assert len(dep_warnings) == 1, "Expected exactly one DeprecationWarning for filetype='both'"
+        assert "filetype='both'" in str(dep_warnings[0].message)
+        # Output should still be written (all three formats, simple preset)
+        paths = ProjectPaths.resolve(good_project.project_path)
+        assert (paths.excel / "transactions.xlsx").exists()
+        assert (paths.csv / "transactions_table.csv").exists()
+        assert (paths.json / "transactions_table.json").exists()
 
 
 # ---------------------------------------------------------------------------

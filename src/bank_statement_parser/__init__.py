@@ -18,7 +18,9 @@ Quick start
     batch.update_data(datadestination="database")             # database only
     batch.export(filetype="excel")  # writes to project export/excel/
     batch.export(filetype="csv")    # writes to project export/csv/
-    batch.copy_statements_to_project()  # copy PDFs to project/statements/{year}/{account}/
+    batch.export(filetype="json")   # writes to project export/json/
+    batch.export(filetype="all")    # writes Excel, CSV, and JSON
+    batch.copy_statements_to_project()  # copy PDFs to project/statements/
     batch.delete_temp_files()
 
     # Read reports from the DB backend
@@ -34,9 +36,9 @@ DB report backend
 -----------------
 ``bsp.db`` exposes FlatTransaction, FactBalance, DimTime, DimStatement,
 DimAccount, FactTransaction, GapReport plus ``export_csv`` / ``export_excel``
-helpers.  Export functions accept an optional ``folder`` / ``path`` argument;
-when omitted they write to the project's ``export/csv/`` or ``export/excel/``
-sub-directory automatically.
+/ ``export_json`` helpers.  Export functions accept an optional ``folder`` /
+``path`` argument; when omitted they write to the project's ``export/csv/``,
+``export/excel/``, or ``export/json/`` sub-directory automatically.
 
     bsp.db.FlatTransaction(...)
 
