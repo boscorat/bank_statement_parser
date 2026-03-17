@@ -42,10 +42,14 @@ bsp process --pdfs ~/statements --no-export
 #### `export_csv()`
 
 ```python
-export_csv(folder: Path | None = None, type: str = 'simple', project_path: Path | None = None)
+export_csv(folder: Path | None = None, type: str = 'simple', project_path: Path | None = None) -> None
 ```
 
 Write report data to CSV files in *folder*.
+
+Each table is written as a separate ``.csv`` file named after its logical
+table name (e.g. ``transactions_table.csv``, or ``statement.csv``,
+``account.csv``, etc. for ``type="full"``).
 
 
 **Args:**
@@ -63,10 +67,15 @@ Write report data to CSV files in *folder*.
 #### `export_excel()`
 
 ```python
-export_excel(path: Path | None = None, type: str = 'simple', project_path: Path | None = None)
+export_excel(path: Path | None = None, type: str = 'simple', project_path: Path | None = None) -> None
 ```
 
 Write report data to an Excel workbook at *path*.
+
+Each table is written as a separate worksheet.  For ``type="simple"`` a
+single ``transactions_table`` sheet is written; for ``type="full"`` six
+sheets are written (``statement``, ``account``, ``calendar``,
+``transactions``, ``balances``, ``gaps``).
 
 
 **Args:**

@@ -5,6 +5,7 @@ Functions:
     export_csv: Write all report CSVs to a folder (defaults to project export/csv/).
     export_excel: Write all report sheets to a single Excel workbook
         (defaults to project export/excel/transactions.xlsx).
+    export_json: Write all report JSON files to a folder (defaults to project export/json/).
 
 Classes:
     FlatTransaction, FactBalance, DimTime, DimStatement, DimAccount,
@@ -76,13 +77,55 @@ def _read_data_filtered(db_path: Path, table_name: str, batch_table: str, batch_
         return pl.read_database(query, connection=conn, execute_options={"parameters": [batch_id]}, infer_schema_length=None).lazy()
 
 
+# Names of the numeric (float) tables in the full export — used by export_excel
+# to pass float_precision=2.
+_FLOAT_TABLES: frozenset[str] = frozenset({"transactions", "balances"})
+
+
+def _collect_report_frames(
+    type: str,
+    project_path: Path | None,
+) -> list[tuple[str, pl.DataFrame]]:
+    """Collect and return report DataFrames for the given export type.
+
+    Each entry in the returned list is a ``(logical_name, DataFrame)`` pair.
+    The logical name is used by callers to derive file names or worksheet names.
+
+    Args:
+        type: Export preset — ``"simple"`` (flat transactions table only) or
+            ``"full"`` (all six star-schema tables).
+        project_path: Optional project root directory.  Falls back to the
+            bundled default project when ``None``.
+
+    Returns:
+        A list of ``(name, DataFrame)`` tuples in export order.
+    """
+    if type == "full":
+        return [
+            ("statement", DimStatement(project_path).all.collect()),
+            ("account", DimAccount(project_path).all.collect()),
+            ("calendar", DimTime(project_path).all.collect()),
+            ("transactions", FactTransaction(project_path).all.collect()),
+            ("balances", FactBalance(project_path).all.collect()),
+            ("gaps", GapReport(project_path).all.collect()),
+        ]
+    # type == "simple"
+    return [
+        ("transactions_table", FlatTransaction(project_path).all.collect()),
+    ]
+
+
 def export_csv(
     folder: Path | None = None,
     type: str = "simple",
     project_path: Path | None = None,
-):
+) -> None:
     """
     Write report data to CSV files in *folder*.
+
+    Each table is written as a separate ``.csv`` file named after its logical
+    table name (e.g. ``transactions_table.csv``, or ``statement.csv``,
+    ``account.csv``, etc. for ``type="full"``).
 
     Args:
         folder: Directory to write CSV files into.  When ``None`` the project's
@@ -99,28 +142,13 @@ def export_csv(
         paths = ProjectPaths.resolve(project_path)
         paths.ensure_subdir_for_write(paths.csv)
         folder = paths.csv
-    if type == "full":
-        DimStatement(project_path).all.collect().write_csv(
-            file=folder.joinpath("statement.csv"), separator=",", include_header=True, quote_style="non_numeric", float_precision=2
-        )
-        DimAccount(project_path).all.collect().write_csv(
-            file=folder.joinpath("account.csv"), separator=",", include_header=True, quote_style="non_numeric", float_precision=2
-        )
-        DimTime(project_path).all.collect().write_csv(
-            file=folder.joinpath("calendar.csv"), separator=",", include_header=True, quote_style="non_numeric", float_precision=2
-        )
-        FactTransaction(project_path).all.collect().write_csv(
-            file=folder.joinpath("transactions.csv"), separator=",", include_header=True, quote_style="non_numeric", float_precision=2
-        )
-        FactBalance(project_path).all.collect().write_csv(
-            file=folder.joinpath("balances.csv"), separator=",", include_header=True, quote_style="non_numeric", float_precision=2
-        )
-        GapReport(project_path).all.collect().write_csv(
-            file=folder.joinpath("gaps.csv"), separator=",", include_header=True, quote_style="non_numeric", float_precision=2
-        )
-    elif type == "simple":
-        FlatTransaction(project_path).all.collect().write_csv(
-            file=folder.joinpath("transactions_table.csv"), separator=",", include_header=True, quote_style="non_numeric", float_precision=2
+    for name, df in _collect_report_frames(type, project_path):
+        df.write_csv(
+            file=folder / f"{name}.csv",
+            separator=",",
+            include_header=True,
+            quote_style="non_numeric",
+            float_precision=2,
         )
 
 
@@ -128,9 +156,14 @@ def export_excel(
     path: Path | None = None,
     type: str = "simple",
     project_path: Path | None = None,
-):
+) -> None:
     """
     Write report data to an Excel workbook at *path*.
+
+    Each table is written as a separate worksheet.  For ``type="simple"`` a
+    single ``transactions_table`` sheet is written; for ``type="full"`` six
+    sheets are written (``statement``, ``account``, ``calendar``,
+    ``transactions``, ``balances``, ``gaps``).
 
     Args:
         path: Full file path for the output ``.xlsx`` workbook.  When ``None``
@@ -148,59 +181,48 @@ def export_excel(
         paths.ensure_subdir_for_write(paths.excel)
         path = paths.excel / "transactions.xlsx"
     with Workbook(str(path)) as wb:
-        if type == "full":
-            DimStatement(project_path).all.collect().write_excel(
+        for name, df in _collect_report_frames(type, project_path):
+            extra: dict = {"float_precision": 2} if name in _FLOAT_TABLES else {}
+            df.write_excel(
                 workbook=wb,
-                worksheet="statement",
+                worksheet=name,
                 autofit=False,
-                table_name="statement",
+                table_name=name,
                 table_style="Table Style Medium 4",
+                **extra,
             )
-            DimAccount(project_path).all.collect().write_excel(
-                workbook=wb,
-                worksheet="account",
-                autofit=False,
-                table_name="account",
-                table_style="Table Style Medium 4",
-            )
-            DimTime(project_path).all.collect().write_excel(
-                workbook=wb,
-                worksheet="calendar",
-                autofit=False,
-                table_name="calendar",
-                table_style="Table Style Medium 4",
-            )
-            FactTransaction(project_path).all.collect().write_excel(
-                workbook=wb,
-                worksheet="transactions",
-                autofit=False,
-                table_name="transactions",
-                table_style="Table Style Medium 4",
-                float_precision=2,
-            )
-            FactBalance(project_path).all.collect().write_excel(
-                workbook=wb,
-                worksheet="balances",
-                autofit=False,
-                table_name="balances",
-                table_style="Table Style Medium 4",
-                float_precision=2,
-            )
-            GapReport(project_path).all.collect().write_excel(
-                workbook=wb,
-                worksheet="gaps",
-                autofit=False,
-                table_name="gaps",
-                table_style="Table Style Medium 4",
-            )
-        elif type == "simple":
-            FlatTransaction(project_path).all.collect().write_excel(
-                workbook=wb,
-                worksheet="transactions_table",
-                autofit=False,
-                table_name="flat",
-                table_style="Table Style Medium 4",
-            )
+
+
+def export_json(
+    folder: Path | None = None,
+    type: str = "simple",
+    project_path: Path | None = None,
+) -> None:
+    """
+    Write report data to JSON files in *folder*.
+
+    Each table is written as a separate ``.json`` file containing a JSON array
+    of row objects, named after its logical table name (e.g.
+    ``transactions_table.json``, or ``statement.json``, ``account.json``, etc.
+    for ``type="full"``).
+
+    Args:
+        folder: Directory to write JSON files into.  When ``None`` the
+            project's ``export/json/`` directory (resolved via *project_path*)
+            is used and created automatically if absent.
+        type: Export preset — ``"simple"`` (flat transactions table) or
+            ``"full"`` (separate star-schema tables for loading into a
+            database).  Defaults to ``"simple"``.
+        project_path: Optional project root used to resolve the default export
+            folder and data sources.  Falls back to the bundled default project
+            when ``None``.
+    """
+    if folder is None:
+        paths = ProjectPaths.resolve(project_path)
+        paths.ensure_subdir_for_write(paths.json)
+        folder = paths.json
+    for name, df in _collect_report_frames(type, project_path):
+        df.write_json(folder / f"{name}.json")
 
 
 class FlatTransaction:
