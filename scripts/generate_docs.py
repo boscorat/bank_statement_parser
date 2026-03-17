@@ -621,8 +621,8 @@ def _docstring_to_markdown(docstring: str) -> str:
     for line in lines:
         stripped = line.strip()
 
-        # Detect Google-style section headers
-        section_match = re.match(r"^(Args|Returns|Raises|Example|Note|Warning)s?:\s*$", stripped)
+        # Detect Google-style section headers (also handles RST-style "Example::")
+        section_match = re.match(r"^(Args|Returns|Raises|Example|Note|Warning)s?::?\s*$", stripped)
         if section_match:
             section_name = section_match.group(1)
             if section_name == "Example":
@@ -1396,6 +1396,8 @@ def generate_python_api() -> str:
     w("flat = bsp.db.FlatTransaction().all.collect()")
     w("bsp.db.export_csv()")
     w("bsp.db.export_excel()")
+    w("bsp.db.export_json()")
+    w("bsp.db.export_reporting_data()")
     w("```")
     w()
 
@@ -1443,7 +1445,7 @@ def generate_python_api() -> str:
     w("Available in `bsp.db`:")
     w()
 
-    export_funcs = _extract_function_docs(db_source, ["export_csv", "export_excel"])
+    export_funcs = _extract_function_docs(db_source, ["export_csv", "export_excel", "export_json", "export_reporting_data"])
     for func in export_funcs:
         w(f"#### `{func.name}()`")
         w()
@@ -1653,7 +1655,11 @@ def generate_project_structure() -> str:
     w("    csv/               # CSV report exports")
     w("    excel/             # Excel workbook exports")
     w("    json/              # JSON exports")
-    w("  statements/          # Source PDF copies organised by year/account")
+    w("  reporting/")
+    w("    data/")
+    w("      simple/          # Flat transactions CSV feed")
+    w("      full/            # Star-schema CSV feeds")
+    w("  statements/          # Source PDF copies (flat, one file per statement)")
     w("  log/")
     w("    debug/             # Per-statement debug output")
     w("```")
@@ -1766,7 +1772,7 @@ def generate_exports_guide() -> str:
     """Generate the Export Options guide from report module docstrings."""
     db_source = _REPORTS_DB_PY.read_text(encoding="utf-8")
 
-    db_funcs = _extract_function_docs(db_source, ["export_csv", "export_excel"])
+    db_funcs = _extract_function_docs(db_source, ["export_csv", "export_excel", "export_json", "export_reporting_data"])
 
     report_classes = [
         "FlatTransaction",
@@ -1788,9 +1794,9 @@ def generate_exports_guide() -> str:
     w()
     w("# Export Options")
     w()
-    w("bank_statement_parser supports exporting report data in CSV and Excel formats,")
-    w("with two export presets and two data backends. Exports are generated automatically")
-    w("by `bsp process` or can be triggered manually via the Python API.")
+    w("bank_statement_parser supports exporting report data in CSV, Excel, and JSON formats,")
+    w("with two export presets and a dedicated reporting feed for external BI tools. Exports are")
+    w("generated automatically by `bsp process` or can be triggered manually via the Python API.")
     w()
     w("## Export Presets")
     w()
@@ -1817,7 +1823,7 @@ def generate_exports_guide() -> str:
     w("| Option | Choices | Default | Description |")
     w("| --- | --- | --- | --- |")
     w("| `--export-type` | `simple`, `full` | `simple` | Export preset |")
-    w("| `--export-format` | `excel`, `csv`, `both` | `both` | Output file format |")
+    w("| `--export-format` | `excel`, `csv`, `json`, `all`, `reporting` | `all` | Output file format |")
     w("| `--no-export` | — | off | Skip the export step entirely |")
     w()
 
@@ -1825,11 +1831,11 @@ def generate_exports_guide() -> str:
     w()
     w("### Export functions")
     w()
-    w("`bsp.db` provides `export_csv()` and `export_excel()`:")
+    w("`bsp.db` provides `export_csv()`, `export_excel()`, `export_json()`, and `export_reporting_data()`:")
     w()
 
     for func in db_funcs:
-        w(f"#### `export_{func.name.split('_')[-1]}()`")
+        w(f"#### `{func.name}()`")
         w()
         w("```python")
         w(func.signature)
@@ -1850,6 +1856,12 @@ def generate_exports_guide() -> str:
     w("# Export full star-schema tables to Excel")
     w("bsp.db.export_excel(type='full')")
     w()
+    w("# Export JSON")
+    w("bsp.db.export_json()")
+    w("")
+    w("# Write stable CSV feeds for BI tools (simple + full presets)")
+    w("bsp.db.export_reporting_data()")
+    w("")
     w("# Export to a custom directory")
     w("from pathlib import Path")
     w("bsp.db.export_csv(folder=Path('~/exports'))")
@@ -1898,16 +1910,29 @@ def generate_exports_guide() -> str:
     w("| --- | --- | --- |")
     w("| CSV | `export/csv/transactions_table.csv` | Flat transaction table |")
     w("| Excel | `export/excel/transactions.xlsx` | Sheet: `transactions_table` |")
+    w("| JSON | `export/json/transactions_table.json` | Flat transaction table (JSON array) |")
     w()
     w("### Full preset")
     w()
     w("| Format | Files / Sheets | Contents |")
     w("| --- | --- | --- |")
     w(
-        "| CSV | `statement.csv`, `account.csv`, `calendar.csv`, `transactions.csv`, `balances.csv`, `gaps.csv` | Separate star-schema tables |"
+        "| CSV | `export/csv/` — `statement.csv`, `account.csv`, `calendar.csv`, `transactions.csv`, `balances.csv`, `gaps.csv` | Separate star-schema tables |"
     )
     w(
-        "| Excel | `transactions.xlsx` with sheets: `statement`, `account`, `calendar`, `transactions`, `balances`, `gaps` | Star-schema workbook |"
+        "| Excel | `export/excel/transactions.xlsx` with sheets: `statement`, `account`, `calendar`, `transactions`, `balances`, `gaps` | Star-schema workbook |"
+    )
+    w(
+        "| JSON | `export/json/` — `statement.json`, `account.json`, `calendar.json`, `transactions.json`, `balances.json`, `gaps.json` | Separate star-schema tables (JSON arrays) |"
+    )
+    w()
+    w("### Reporting feed (`--export-format reporting`)")
+    w()
+    w("| Preset | Path | Contents |")
+    w("| --- | --- | --- |")
+    w("| `simple` | `reporting/data/simple/transactions_table.csv` | Flat transaction table |")
+    w(
+        "| `full` | `reporting/data/full/` — `statement.csv`, `account.csv`, `calendar.csv`, `transactions.csv`, `balances.csv`, `gaps.csv` | Star-schema CSV feeds |"
     )
 
     return "\n".join(doc)

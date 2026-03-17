@@ -4,6 +4,16 @@ from pathlib import Path
 
 
 class Housekeeping:
+    """Orphan-detection and cascaded-delete helper for the raw SQLite database.
+
+    Inspects foreign-key relationships between the raw source tables and
+    identifies rows whose parent key no longer exists.  Can report orphans or
+    delete them in dependency order.
+
+    Args:
+        db_path: Path to the project's ``database/project.db`` SQLite file.
+    """
+
     FK_RELATIONSHIPS = [
         ("checks_and_balances", "ID_BATCHLINE", "batch_lines", "ID_BATCHLINE"),
         ("checks_and_balances", "ID_BATCH", "batch_heads", "ID_BATCH"),

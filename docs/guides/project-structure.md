@@ -24,7 +24,11 @@ a set of bank statements.
     csv/               # CSV report exports
     excel/             # Excel workbook exports
     json/              # JSON exports
-  statements/          # Source PDF copies organised by year/account
+  reporting/
+    data/
+      simple/          # Flat transactions CSV feed
+      full/            # Star-schema CSV feeds
+  statements/          # Source PDF copies (flat, one file per statement)
   log/
     debug/             # Per-statement debug output
 ```
@@ -74,12 +78,15 @@ List of ``Path`` objects for every directory that was created.
 
 - `NotADirectoryError` — If *destination* exists but is a file, not a directory.
 
-Example::
 
-import bank_statement_parser as bsp
-from pathlib import Path
+**Example:**
 
-bsp.copy_project_folders(Path("~/my_project").expanduser())
+```python
+    import bank_statement_parser as bsp
+    from pathlib import Path
+
+    bsp.copy_project_folders(Path("~/my_project").expanduser())
+```
 
 ### `validate_or_initialise_project()`
 
