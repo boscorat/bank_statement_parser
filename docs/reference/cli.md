@@ -36,7 +36,7 @@ bsp anonymise PATH [--folder] [--pattern GLOB] [--output OUT_FILE] [--output-dir
 
 ## `bsp process`
 
-Discover PDF bank statements, extract transaction data, persist results to Parquet and/or SQLite, copy source PDFs into the project tree, and export reports as Excel, CSV, and/or JSON. A project folder is created automatically if it does not exist.
+Discover PDF bank statements, extract transaction data, persist results to Parquet and/or SQLite, copy source PDFs into the project tree, and export reports as Excel, CSV, JSON, and/or CSV reporting feeds. A project folder is created automatically if it does not exist.
 
 ```
 bsp process [--project PATH] [--pdfs PATH] [--pattern GLOB] [--no-turbo] [--company KEY] [--account KEY] [--data {parquet,database,both}] [--export-format {excel,csv,json,all,reporting}] [--export-type {full,simple}] [--no-export] [--no-copy]

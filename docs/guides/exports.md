@@ -3,9 +3,9 @@
 
 # Export Options
 
-bank_statement_parser supports exporting report data in CSV and Excel formats,
-with two export presets and two data backends. Exports are generated automatically
-by `bsp process` or can be triggered manually via the Python API.
+bank_statement_parser supports exporting report data in CSV, Excel, and JSON formats,
+with two export presets and a dedicated reporting feed for external BI tools. Exports are
+generated automatically by `bsp process` or can be triggered manually via the Python API.
 
 ## Export Presets
 
@@ -30,14 +30,14 @@ bsp process --pdfs ~/statements --no-export
 | Option | Choices | Default | Description |
 | --- | --- | --- | --- |
 | `--export-type` | `simple`, `full` | `simple` | Export preset |
-| `--export-format` | `excel`, `csv`, `both` | `both` | Output file format |
+| `--export-format` | `excel`, `csv`, `json`, `all`, `reporting` | `all` | Output file format |
 | `--no-export` | — | off | Skip the export step entirely |
 
 ## Python API
 
 ### Export functions
 
-`bsp.db` provides `export_csv()` and `export_excel()`:
+`bsp.db` provides `export_csv()`, `export_excel()`, `export_json()`, and `export_reporting_data()`:
 
 #### `export_csv()`
 
@@ -90,6 +90,73 @@ sheets are written (``statement``, ``account``, ``calendar``,
   folder and data sources.  Falls back to the bundled default project
   when ``None``.
 
+#### `export_json()`
+
+```python
+export_json(folder: Path | None = None, type: str = 'simple', project_path: Path | None = None) -> None
+```
+
+Write report data to JSON files in *folder*.
+
+Each table is written as a separate ``.json`` file containing a JSON array
+of row objects, named after its logical table name (e.g.
+``transactions_table.json``, or ``statement.json``, ``account.json``, etc.
+for ``type="full"``).
+
+
+**Args:**
+
+- `folder` — Directory to write JSON files into.  When ``None`` the
+  project's ``export/json/`` directory (resolved via *project_path*)
+  is used and created automatically if absent.
+- `type` — Export preset — ``"simple"`` (flat transactions table) or
+  ``"full"`` (separate star-schema tables for loading into a
+  database).  Defaults to ``"simple"``.
+- `project_path` — Optional project root used to resolve the default export
+  folder and data sources.  Falls back to the bundled default project
+  when ``None``.
+
+#### `export_reporting_data()`
+
+```python
+export_reporting_data(project_path: Path | None = None) -> None
+```
+
+Write CSV reporting feeds to the project's ``reporting/data/`` sub-directories.
+
+Calls :func:`export_csv` twice — once with ``type="simple"`` writing to
+``reporting/data/simple/`` and once with ``type="full"`` writing to
+``reporting/data/full/``.  Both directories are created automatically if
+absent.
+
+This produces a stable set of CSV files that external reporting tools
+(e.g. Power BI, Tableau, Excel) can point at directly without needing
+to know about the full export machinery.
+
+
+**Args:**
+
+- `project_path` — Optional project root directory.  Falls back to the
+  bundled default project when ``None``.
+
+
+**Example:**
+
+```python
+    import bank_statement_parser as bsp
+    from pathlib import Path
+
+    bsp.db.export_reporting_data(project_path=Path("/my/project"))
+    # Writes:
+    #   /my/project/reporting/data/simple/transactions_table.csv
+    #   /my/project/reporting/data/full/statement.csv
+    #   /my/project/reporting/data/full/account.csv
+    #   /my/project/reporting/data/full/calendar.csv
+    #   /my/project/reporting/data/full/transactions.csv
+    #   /my/project/reporting/data/full/balances.csv
+    #   /my/project/reporting/data/full/gaps.csv
+```
+
 ### Usage examples
 
 ```python
@@ -100,6 +167,12 @@ bsp.db.export_csv()
 
 # Export full star-schema tables to Excel
 bsp.db.export_excel(type='full')
+
+# Export JSON
+bsp.db.export_json()
+
+# Write stable CSV feeds for BI tools (simple + full presets)
+bsp.db.export_reporting_data()
 
 # Export to a custom directory
 from pathlib import Path
@@ -157,10 +230,19 @@ Gap detection report. Flags periods where the closing balance of one statement d
 | --- | --- | --- |
 | CSV | `export/csv/transactions_table.csv` | Flat transaction table |
 | Excel | `export/excel/transactions.xlsx` | Sheet: `transactions_table` |
+| JSON | `export/json/transactions_table.json` | Flat transaction table (JSON array) |
 
 ### Full preset
 
 | Format | Files / Sheets | Contents |
 | --- | --- | --- |
-| CSV | `statement.csv`, `account.csv`, `calendar.csv`, `transactions.csv`, `balances.csv`, `gaps.csv` | Separate star-schema tables |
-| Excel | `transactions.xlsx` with sheets: `statement`, `account`, `calendar`, `transactions`, `balances`, `gaps` | Star-schema workbook |
+| CSV | `export/csv/` — `statement.csv`, `account.csv`, `calendar.csv`, `transactions.csv`, `balances.csv`, `gaps.csv` | Separate star-schema tables |
+| Excel | `export/excel/transactions.xlsx` with sheets: `statement`, `account`, `calendar`, `transactions`, `balances`, `gaps` | Star-schema workbook |
+| JSON | `export/json/` — `statement.json`, `account.json`, `calendar.json`, `transactions.json`, `balances.json`, `gaps.json` | Separate star-schema tables (JSON arrays) |
+
+### Reporting feed (`--export-format reporting`)
+
+| Preset | Path | Contents |
+| --- | --- | --- |
+| `simple` | `reporting/data/simple/transactions_table.csv` | Flat transaction table |
+| `full` | `reporting/data/full/` — `statement.csv`, `account.csv`, `calendar.csv`, `transactions.csv`, `balances.csv`, `gaps.csv` | Star-schema CSV feeds |
