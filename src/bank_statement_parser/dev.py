@@ -8,7 +8,7 @@ def main():
 
     # bsp.anonymise_pdf(Path("/home/boscorat/Projects/tsb_spend_and_save_example_1.pdf"))
     # laptop
-    folder = Path("/home/boscorat/repos/bank_statement_parser/tests/pdfs")
+    folder = Path("/Users/boscorat/Library/CloudStorage/OneDrive-Personal/OpenStan/Statements/HSBC/2024")
     # folder = Path("/home/boscorat/repos/bank_statement_parser/tests/pdfs/bad")
     include_subdirs = True  # set True to also include one level of subdirectories
 
@@ -16,12 +16,16 @@ def main():
     if include_subdirs:
         for subdir in folder.iterdir():
             if subdir.is_dir():
-                pdfs.extend(f for f in subdir.iterdir() if f.is_file() and f.suffix == ".pdf")
+                for subsubdir in subdir.iterdir():
+                    if subsubdir.is_dir():
+                        pdfs.extend(f for f in subsubdir.iterdir() if f.is_file() and f.suffix == ".pdf")
+                    else:
+                        pdfs.extend(f for f in subdir.iterdir() if f.is_file() and f.suffix == ".pdf")
 
     batch = statements.StatementBatch(
         pdfs=pdfs,
-        turbo=False,
-        project_path=Path("/home/boscorat/Projects/Telford"),
+        turbo=True,
+        project_path=Path("/Users/boscorat/Projects/bsp_project"),
     )
     print(f"total: {batch.duration_secs}, process: {batch.process_secs}, parquet: {batch.parquet_secs}, db: {batch.db_secs}")
     # batch.debug()
@@ -29,6 +33,8 @@ def main():
     batch.update_data()
     batch.copy_statements_to_project()
     batch.delete_temp_files()
+    batch.export(filetype="all")  # writes Excel, CSV, and JSON
+    batch.export(filetype="reporting")  # writes Excel, CSV, and JSON
     # print(f"total: {batch.duration_secs}, process: {batch.process_secs}, parquet: {batch.parquet_secs}, db: {batch.db_secs}")
     # if batch.errors:
     #     written = batch.debug()
