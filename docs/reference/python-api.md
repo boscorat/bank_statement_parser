@@ -209,9 +209,13 @@ Empty and rebuild all mart tables (DimTime, DimAccount, DimStatement, FactTransa
 
 *function* — `bank_statement_parser.data`
 
+Create (or recreate) the raw SQLite database with all tables and indexes.
+
 ### `bsp.Housekeeping`
 
 *class* — `bank_statement_parser.data`
+
+Orphan-detection and cascaded-delete helper for the raw SQLite database.
 
 ## PDF anonymisation
 
@@ -250,6 +254,8 @@ Raised when bsp's own pytest suite fails during TestHarness.setup().
 flat = bsp.db.FlatTransaction().all.collect()
 bsp.db.export_csv()
 bsp.db.export_excel()
+bsp.db.export_json()
+bsp.db.export_reporting_data()
 ```
 
 ### Report classes
@@ -320,3 +326,70 @@ sheets are written (``statement``, ``account``, ``calendar``,
 - `project_path` — Optional project root used to resolve the default export
   folder and data sources.  Falls back to the bundled default project
   when ``None``.
+
+#### `export_json()`
+
+```python
+export_json(folder: Path | None = None, type: str = 'simple', project_path: Path | None = None) -> None
+```
+
+Write report data to JSON files in *folder*.
+
+Each table is written as a separate ``.json`` file containing a JSON array
+of row objects, named after its logical table name (e.g.
+``transactions_table.json``, or ``statement.json``, ``account.json``, etc.
+for ``type="full"``).
+
+
+**Args:**
+
+- `folder` — Directory to write JSON files into.  When ``None`` the
+  project's ``export/json/`` directory (resolved via *project_path*)
+  is used and created automatically if absent.
+- `type` — Export preset — ``"simple"`` (flat transactions table) or
+  ``"full"`` (separate star-schema tables for loading into a
+  database).  Defaults to ``"simple"``.
+- `project_path` — Optional project root used to resolve the default export
+  folder and data sources.  Falls back to the bundled default project
+  when ``None``.
+
+#### `export_reporting_data()`
+
+```python
+export_reporting_data(project_path: Path | None = None) -> None
+```
+
+Write CSV reporting feeds to the project's ``reporting/data/`` sub-directories.
+
+Calls :func:`export_csv` twice — once with ``type="simple"`` writing to
+``reporting/data/simple/`` and once with ``type="full"`` writing to
+``reporting/data/full/``.  Both directories are created automatically if
+absent.
+
+This produces a stable set of CSV files that external reporting tools
+(e.g. Power BI, Tableau, Excel) can point at directly without needing
+to know about the full export machinery.
+
+
+**Args:**
+
+- `project_path` — Optional project root directory.  Falls back to the
+  bundled default project when ``None``.
+
+
+**Example:**
+
+```python
+    import bank_statement_parser as bsp
+    from pathlib import Path
+
+    bsp.db.export_reporting_data(project_path=Path("/my/project"))
+    # Writes:
+    #   /my/project/reporting/data/simple/transactions_table.csv
+    #   /my/project/reporting/data/full/statement.csv
+    #   /my/project/reporting/data/full/account.csv
+    #   /my/project/reporting/data/full/calendar.csv
+    #   /my/project/reporting/data/full/transactions.csv
+    #   /my/project/reporting/data/full/balances.csv
+    #   /my/project/reporting/data/full/gaps.csv
+```
