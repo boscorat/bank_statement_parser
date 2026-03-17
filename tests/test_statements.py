@@ -32,7 +32,6 @@ Run with:
 import sqlite3
 from dataclasses import replace
 from datetime import timedelta
-from pathlib import Path
 
 import polars as pl
 
@@ -258,25 +257,16 @@ class TestCopyStatements:
         assert empty == [], f"Zero-byte copied files: {empty}"
 
     def test_directory_structure(self, good_project):
-        """Copied files land under statements/<year>/<id_account>/<filename>."""
+        """Copied files land directly under statements/<filename> (flat layout)."""
         paths = ProjectPaths.resolve(good_project.project_path)
         copied = good_project.batch.copy_statements_to_project()
         for dest in copied:
             # dest must be inside <project>/statements/
             assert dest.is_relative_to(paths.statements), f"{dest} is not under {paths.statements}"
-            # Relative path must have exactly three parts: year/id_account/filename
+            # Relative path must have exactly one part: the filename only (no sub-folders)
             rel = dest.relative_to(paths.statements)
             parts = rel.parts
-            assert len(parts) == 3, f"Expected year/id_account/file, got {parts!r} for {dest}"
-            year, id_account, filename = parts
-            # year must be a 4-digit string
-            assert year.isdigit() and len(year) == 4, f"Unexpected year folder {year!r}"
-            # filename stem must end with _YYYYMMDD matching the year folder
-            stem = Path(filename).stem
-            assert stem[-8:-4] == year, f"Year folder {year!r} does not match date in filename stem {stem!r}"
-            # id_account must be the stem minus the trailing _YYYYMMDD
-            expected_id_account = stem[: -(len("_YYYYMMDD"))]
-            assert id_account == expected_id_account, f"id_account folder {id_account!r} != expected {expected_id_account!r}"
+            assert len(parts) == 1, f"Expected flat statements/<filename>, got {parts!r} for {dest}"
 
     def test_count_matches_successful_pdfs(self, good_project):
         """Number of copied files equals number of successfully processed PdfResult entries."""

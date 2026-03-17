@@ -924,11 +924,10 @@ def copy_statements_to_project(
 
     Each successfully processed PDF is copied (not moved) to::
 
-        <project>/statements/<year>/<id_account>/<filename>
+        <project>/statements/<filename>
 
-    where *year* is derived from the last eight characters of the target
-    filename stem (``YYYYMMDD``) and *id_account* is everything before the
-    trailing ``_YYYYMMDD`` suffix.
+    All statements are written directly at the top level of the
+    ``statements/`` directory, with no year or account sub-folders.
 
     Pairing between source PDFs and results is done by index: ``pdfs[i]``
     is the source file for ``processed_pdfs[i]``.  This avoids the need to
@@ -970,12 +969,7 @@ def copy_statements_to_project(
         info = entry.payload.statement_info  # type: ignore[union-attr]
         if not info.filename_new:
             continue
-        # Derive year from the last 8 characters of the stem (YYYYMMDD)
-        stem = Path(info.filename_new).stem  # e.g. "HSBC_UK_SAV_41462695_20210328"
-        year = stem[-8:-4]  # characters 0-3 of the date portion → "2021"
-        # id_account is everything before the trailing "_YYYYMMDD"
-        id_account = stem[: -(len("_YYYYMMDD"))]  # strip "_" + 8 date chars
-        dest_dir = paths.statements_dir(year, id_account)
+        dest_dir = paths.statements
         dest_dir.mkdir(parents=True, exist_ok=True)
         dest_path = dest_dir / info.filename_new
         Path(pdf_path).copy(dest_path)
@@ -1318,7 +1312,10 @@ class StatementBatch:
         Delegates to the module-level :func:`copy_statements_to_project` function.
         Each PDF is copied (not moved) to::
 
-            <project>/statements/<year>/<id_account>/<filename>
+            <project>/statements/<filename>
+
+        All statements are written directly at the top level of the
+        ``statements/`` directory, with no year or account sub-folders.
 
         This method must be called after the batch has finished processing.
         It is safe to call even when two statements in the batch resolve to the
