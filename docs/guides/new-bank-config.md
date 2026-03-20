@@ -364,6 +364,7 @@ Currency formatting rules used to strip symbols and separators before numeric ca
 
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
+| `name` | `str` | ACTIVE | Human-readable currency name (e.g. "British Pound Sterling"). |
 | `symbols` | `list[str]` | ACTIVE | List of currency symbol strings to strip from the raw value before casting (e.g. ["£", "$"]).  Replaced with empty string via str.replace_many(). |
 | `seperator_decimal` | `str` | STUB | Intended decimal separator character (e.g. ".").  Declared but never read by the pipeline; decimal handling is implicit after symbols and thousands separators are stripped. |
 | `seperators_thousands` | `list[str]` | ACTIVE | List of thousands-separator strings to strip (e.g. [","]). Replaced with empty string via str.replace_many() before casting. |
@@ -847,6 +848,7 @@ Currency formatting rules used to strip symbols and separators before numeric ca
 
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
+| `name` | `str` | ACTIVE | Human-readable currency name (e.g. "British Pound Sterling"). |
 | `symbols` | `list[str]` | ACTIVE | List of currency symbol strings to strip from the raw value before casting (e.g. ["£", "$"]).  Replaced with empty string via str.replace_many(). |
 | `seperator_decimal` | `str` | STUB | Intended decimal separator character (e.g. ".").  Declared but never read by the pipeline; decimal handling is implicit after symbols and thousands separators are stripped. |
 | `seperators_thousands` | `list[str]` | ACTIVE | List of thousands-separator strings to strip (e.g. [","]). Replaced with empty string via str.replace_many() before casting. |

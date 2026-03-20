@@ -356,6 +356,9 @@ class CurrencySpec:
     ``numeric_currency = "GBP"``.
     """
 
+    name: str
+    # [ACTIVE] — Human-readable currency name (e.g. "British Pound Sterling").
+
     symbols: list[str]
     # [ACTIVE] — List of currency symbol strings to strip from the raw value before
     # casting (e.g. ["£", "$"]).  Replaced with empty string via str.replace_many().
