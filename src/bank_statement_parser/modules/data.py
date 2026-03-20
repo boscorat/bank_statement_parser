@@ -38,7 +38,7 @@ Each field comment is prefixed with one of:
                  implementation and should not be relied upon.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
@@ -1088,3 +1088,31 @@ class Account:
     # [ACTIVE] — Account-level identification config.  A lightweight extraction step
     # run to confirm a PDF belongs to this account before the full extraction pass.
     # Defined inline under ``[ACCOUNT_KEY.config]`` in accounts.toml.
+
+
+@dataclass(frozen=True, slots=True)
+class ForexApiConfig:
+    """Configuration for the forex exchange-rate fetching service.
+
+    Loaded from ``<project>/config/forex_api_config.toml`` when present.
+    All fields have safe defaults so the file is entirely optional — omitting
+    it causes :func:`~bank_statement_parser.modules.forex.get_exchange_rates`
+    to use Frankfurter with no API key and no extra currencies.
+
+    Attributes:
+        provider: Primary rate provider to use.  ``"frankfurter"`` (default)
+            requires no API key and covers 30 currencies via the ECB dataset.
+            ``"exchangerate-api"`` is the optional secondary provider for
+            currencies not covered by Frankfurter (e.g. AED, SAR).
+        api_key: API key for providers that require authentication.  Leave
+            blank for Frankfurter.
+        base_currency: Pivot currency for all rates.  Must be ``"USD"``; other
+            values are not supported by the current implementation.
+        extra_currencies: Additional ISO 4217 currency codes to fetch rates
+            for beyond those detected from ``DimAccount.currency``.
+    """
+
+    provider: str = "frankfurter"
+    api_key: str = ""
+    base_currency: str = "USD"
+    extra_currencies: list[str] = field(default_factory=list)

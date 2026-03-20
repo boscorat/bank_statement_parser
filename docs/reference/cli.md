@@ -10,6 +10,22 @@ PDFs and anonymising PDF files. Install the package to get the `bsp` entry point
 pip install uk-bank-statement-parser
 ```
 
+## `bsp forex`
+
+Fetches daily USD-based exchange rates for all currencies found in DimAccount plus any extras specified, forward-fills weekend and holiday gaps, and writes the results to the exchange_rates table. Provider and API key can be configured via forex_api_config.toml in the project config directory.
+
+```
+bsp forex [--project PATH] [--currencies CODE] [--api-key KEY]
+```
+
+### Options
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `--project` | auto-detect | Project folder path (default: ./bsp_project/ in CWD). |
+| `--currencies` | auto-detect | Additional ISO 4217 currency codes to fetch (e.g. --currencies AED SAR). |
+| `--api-key` | auto-detect | Override the API key from forex_api_config.toml. |
+
 ## `bsp anonymise`
 
 Start from a completely scrambled PDF (every letter replaced) and use anonymise.toml to specify exclusions — text that should remain readable (transaction type codes, account descriptions, etc.) and numbers that should be scrambled. Driven by anonymise.toml in the project config directory.
