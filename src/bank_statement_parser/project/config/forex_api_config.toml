@@ -1,0 +1,29 @@
+# forex_api_config.toml — Exchange-rate provider configuration
+#
+# Used by `get_exchange_rates()` to fetch daily USD-based rates for all
+# currencies found in DimAccount plus any extras listed below.
+#
+# Rate direction: rate_USD is the multiplier to convert from the named
+# currency to USD.  e.g. for GBP, rate_USD ≈ 0.79 means £100 × 0.79 = $79.
+#
+# Provider chain:
+#   1. Primary provider fetches all requested currencies.
+#   2. Any currencies unsupported by the primary are tried on the secondary
+#      (if configured).
+#   3. Any still-unresolved currencies produce a warning and are skipped.
+
+# Primary provider.  "frankfurter" requires no API key and covers ~30 currencies
+# via the ECB dataset.  "exchangerate-api" is the optional secondary.
+provider = "frankfurter"
+
+# API key — leave blank for providers that do not require authentication
+# (e.g. Frankfurter).
+api_key = ""
+
+# Pivot currency for all rates.  Only "USD" is supported.
+base_currency = "USD"
+
+# Additional ISO 4217 currency codes to fetch beyond those auto-detected from
+# DimAccount.  Useful for currencies not yet tied to any account
+# (e.g. ["AED", "SAR"]).
+extra_currencies = []

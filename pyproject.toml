@@ -26,6 +26,7 @@ dependencies = [
     "pdfplumber>=0.11.9",
     "pikepdf>=10.3.0",
     "polars>=1.36.1",
+    "requests>=2.32",
     "xlsxwriter>=3.2.9",
 ]
 

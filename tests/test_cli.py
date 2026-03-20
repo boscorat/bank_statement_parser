@@ -73,7 +73,7 @@ for action in _PARSER._subparsers._actions:
 class TestSubcommands:
     """Verify that the expected subcommands are registered."""
 
-    EXPECTED_SUBCOMMANDS = {"anonymise", "process"}
+    EXPECTED_SUBCOMMANDS = {"anonymise", "forex", "process"}
 
     def test_expected_subcommands_exist(self) -> None:
         """All expected subcommands must be present in the parser."""
