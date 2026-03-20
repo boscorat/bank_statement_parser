@@ -108,7 +108,7 @@ def strip(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: str, 
             pl.col(f"value_{step}").str.strip_chars_end(field.strip_characters_end).fill_null("").alias(f"value_{step}")
         )
 
-    if spec and field.type == "numeric":
+    if spec and field.type in ("numeric", "currency"):
         data = data.with_columns(
             pl.col(f"value_{step}")
             .str.replace_many(spec.symbols, [""])
@@ -172,7 +172,7 @@ def cast(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: str) -
         pl.lit(False).alias(f"success_{step}"),
         pl.lit(f"{step} error").alias(f"error_{step}"),
     )
-    if field.type == "numeric":
+    if field.type in ("numeric", "currency"):
         if field.numeric_modifier:
             if field.numeric_modifier.prefix or field.numeric_modifier.suffix:
                 if field.numeric_modifier.prefix:
@@ -214,7 +214,7 @@ def cast(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: str) -
 
     # cast the value back as a string so we don't get mixed types in the column value_cast column
     data = data.with_columns(pl.col(f"value_{step}").cast(str).fill_null("").alias(f"value_{step}"))
-    if field.type == "numeric":
+    if field.type in ("numeric", "currency"):
         data = data.with_columns(pl.col(f"value_{step}").str.to_decimal(scale=4).cast(str).alias(f"value_{step}"))
 
     data = data.with_columns(
@@ -275,6 +275,7 @@ def extract_fields(
     location_id: int,
     logs: pl.DataFrame,
     file_path: str,
+    account_currency: str | None = None,
     debug_collector: list | None = None,
 ) -> pl.DataFrame:
     results: pl.DataFrame = pl.DataFrame()
@@ -326,8 +327,10 @@ def extract_fields(
                 pl.col("value_raw_offset"),
             )
             spec = None
-            if config_field.type == "numeric":
-                spec = currency_spec[config_field.numeric_currency]
+            if config_field.type == "currency":
+                spec = currency_spec[account_currency] if account_currency else None
+            elif config_field.type == "numeric" and config_field.currency_override:
+                spec = currency_spec[config_field.currency_override]
             result = (
                 result.pipe(strip, config_field, logs, file_path, spec)
                 .pipe(patmatch, config_field, logs, file_path, spec)
@@ -407,8 +410,10 @@ def extract_fields(
                         pl.col("value_raw_offset"),
                     )
                     spec = None
-                    if field.type == "numeric":
-                        spec = currency_spec[field.numeric_currency]
+                    if field.type == "currency":
+                        spec = currency_spec[account_currency] if account_currency else None
+                    elif field.type == "numeric" and field.currency_override:
+                        spec = currency_spec[field.currency_override]
                     result = (
                         result.pipe(strip, field, logs, file_path, spec)
                         .pipe(patmatch, field, logs, file_path, spec)
@@ -443,8 +448,10 @@ def extract_fields(
                         else pl.nth(field.column + field.value_offset.cols_offset),
                     ).with_row_index("row")
                     spec = None
-                    if field.type == "numeric":
-                        spec = currency_spec[field.numeric_currency]
+                    if field.type == "currency":
+                        spec = currency_spec[account_currency] if account_currency else None
+                    elif field.type == "numeric" and field.currency_override:
+                        spec = currency_spec[field.currency_override]
                     result = (
                         result.pipe(strip, field, logs, file_path, spec)
                         .pipe(patmatch, field, logs, file_path, spec)
@@ -463,13 +470,17 @@ def extract_fields(
                                     field,
                                     string_pattern=None,
                                     value_offset=None,
-                                    numeric_currency=field.value_offset.numeric_currency,
+                                    currency_override=field.value_offset.currency_override,
                                     vital=field.value_offset.vital,
                                     type=field.value_offset.type,
                                     numeric_modifier=field.value_offset.numeric_modifier,
                                 )
-                                if field_vo.type == "numeric":
-                                    spec = currency_spec[field_vo.numeric_currency]
+                                if field_vo.type == "currency":
+                                    spec = currency_spec[account_currency] if account_currency else None
+                                elif field_vo.type == "numeric" and field_vo.currency_override:
+                                    spec = currency_spec[field_vo.currency_override]
+                                else:
+                                    spec = None
 
                                 result_vo = (
                                     result_vo.lazy()
@@ -580,6 +591,7 @@ def get_results(
     file_path: str,
     scope: str = "success",
     exclude_last_n_pages: int = 0,
+    account_currency: str | None = None,
     debug_collector: list | None = None,
 ) -> pl.DataFrame:  # scope can be all, success, fail, or hard_fail
     result: pl.DataFrame = pl.DataFrame()
@@ -598,6 +610,7 @@ def get_results(
                 location_id=i,
                 logs=logs,
                 file_path=file_path,
+                account_currency=account_currency,
                 debug_collector=debug_collector,
             )
             if result.height > 0:

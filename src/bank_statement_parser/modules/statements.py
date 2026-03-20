@@ -446,6 +446,7 @@ class Statement:
                             logs=self.logs,
                             file_path=self.file_absolute,
                             exclude_last_n_pages=self.config.exclude_last_n_pages,
+                            account_currency=self.config.currency,
                         ),
                         in_place=True,
                     )
@@ -465,6 +466,7 @@ class Statement:
                             logs=self.logs,
                             file_path=self.file_absolute,
                             exclude_last_n_pages=self.config.exclude_last_n_pages,
+                            account_currency=self.config.currency,
                         ),
                         in_place=True,
                     )
@@ -694,6 +696,8 @@ def process_pdf_statement(
                 error_detail_str = detail_str
                 print(f"[line {batch_line['STD_BATCH_LINE']}] {pdf.name}: {cab_message}")
 
+            # Derive currency directly from the account configuration
+            _currency: str | None = stmt.config.currency if stmt.config else None
             try:
                 # Save extracted header data
                 pq_statement_heads = pq.StatementHeads(
@@ -705,6 +709,7 @@ def process_pdf_statement(
                     statement_type=stmt.statement_type,
                     account=stmt.account,
                     header_results=stmt.header_results,
+                    currency=_currency,
                 )
                 pq_statement_heads.create()
                 statement_heads_path = paths.statement_heads_temp(idx, batch_id)

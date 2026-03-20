@@ -169,14 +169,15 @@ CREATE TABLE DimAccount (
     account_type    TEXT,
     account_number  TEXT,
     sortcode        TEXT,
-    account_holder  TEXT
+    account_holder  TEXT,
+    currency        TEXT
 );
 
 INSERT INTO DimAccount (account_id, id_account, company, account_type,
-                        account_number, sortcode, account_holder)
+                        account_number, sortcode, account_holder, currency)
 SELECT
     ROW_NUMBER() OVER (ORDER BY id_account) AS account_id,
-    id_account, company, account_type, account_number, sortcode, account_holder
+    id_account, company, account_type, account_number, sortcode, account_holder, currency
 FROM (
     SELECT
         sh.ID_ACCOUNT           AS id_account,
@@ -185,6 +186,7 @@ FROM (
         sh.STD_ACCOUNT_NUMBER   AS account_number,
         sh.STD_SORTCODE         AS sortcode,
         sh.STD_ACCOUNT_HOLDER   AS account_holder,
+        sh.STD_CURRENCY         AS currency,
         ROW_NUMBER() OVER (
             PARTITION BY sh.ID_ACCOUNT
             ORDER BY sh.STD_STATEMENT_DATE DESC
@@ -215,6 +217,7 @@ CREATE TABLE DimStatement (
     payments_out    REAL,
     closing_balance REAL,
     statement_type  TEXT,
+    currency        TEXT,
     filename        TEXT,
     batch_time      TEXT
 );
@@ -223,7 +226,7 @@ INSERT INTO DimStatement (
     statement_id, id_statement, account_id, id_batch,
     company, account_type, account_number, sortcode, account_holder,
     statement_date, opening_balance, payments_in, payments_out,
-    closing_balance, statement_type, filename, batch_time
+    closing_balance, statement_type, currency, filename, batch_time
 )
 SELECT
     ROW_NUMBER() OVER (ORDER BY sh.ID_STATEMENT) AS statement_id,
@@ -241,6 +244,7 @@ SELECT
     sh.STD_PAYMENTS_OUT,
     sh.STD_CLOSING_BALANCE,
     sh.STD_STATEMENT_TYPE,
+    sh.STD_CURRENCY,
     bl.STD_FILENAME,
     bl.STD_UPDATETIME
 FROM statement_heads sh

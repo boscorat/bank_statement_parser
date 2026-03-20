@@ -44,6 +44,7 @@ _MIGRATIONS: list[tuple[str, str, str, str]] = [
     ("batch_heads", "ID_SESSION", "TEXT", "''"),
     ("batch_heads", "ID_USER", "TEXT", "''"),
     ("batch_heads", "STD_REVIEW_COUNT", "INTEGER", "0"),
+    ("statement_heads", "STD_CURRENCY", "TEXT", "'GBP'"),
 ]
 
 # Views that may be absent from databases created before they were introduced.

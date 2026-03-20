@@ -352,8 +352,9 @@ class CurrencySpec:
     """Currency formatting rules used to strip symbols and separators before numeric casting.
 
     Instances are defined in ``currency.py`` (not loaded from TOML) and keyed by
-    currency code (e.g. "GBP").  A ``Field`` references one by setting
-    ``numeric_currency = "GBP"``.
+    currency code (e.g. "GBP").  A ``Field`` of ``type = "currency"`` inherits the
+    spec from its account's ``Account.currency``.  A ``Field`` of ``type = "numeric"``
+    may still override the spec via ``Field.currency_override``.
     """
 
     name: str
@@ -452,7 +453,7 @@ class FieldOffset:
     numeric amount sits one column to the right in the same row.
 
     Example TOML (currently commented-out reference):
-    ``value_offset = {rows_offset = 0, cols_offset = 1, type = "numeric", vital = false, numeric_currency = "GBP"}``
+    ``value_offset = {rows_offset = 0, cols_offset = 1, type = "currency", vital = false}``
     """
 
     rows_offset: int
@@ -469,12 +470,13 @@ class FieldOffset:
     # extraction failure is treated as a hard failure for that row.
 
     type: str
-    # [ACTIVE] — Data type for the offset value: "string" or "numeric".  Overrides
-    # the parent Field.type for this value read.
+    # [ACTIVE] — Data type for the offset value: "string", "numeric", or "currency".
+    # Overrides the parent Field.type for this value read.
 
-    numeric_currency: Optional[str] = None
-    # [ACTIVE] — Currency key (e.g. "GBP") for numeric stripping of the offset
-    # value.  Overrides the parent Field.numeric_currency.
+    currency_override: str | None = None
+    # [ACTIVE] — Explicit currency key (e.g. "GBP") for numeric stripping of the
+    # offset value when type == "numeric".  Overrides the account-level currency.
+    # When type == "currency" the account-level currency is used and this is ignored.
 
     numeric_modifier: Optional[NumericModifier] = None
     # [ACTIVE] — Sign/multiplier modifier for the offset value.  Overrides the
@@ -515,23 +517,32 @@ class Field:
     # recorded but the row is retained.
 
     type: str
-    # [ACTIVE] — Data type: "string" or "numeric".  Controls which processing
-    # branches run in strip(), patmatch(), cast(), and trim().
+    # [ACTIVE] — Data type: "string", "numeric", or "currency".
+    #
+    # * "string"   — raw text extraction; pattern matching and trimming applied.
+    # * "numeric"  — numeric extraction with optional explicit currency stripping via
+    #                ``currency_override``.
+    # * "currency" — identical to "numeric" but inherits the CurrencySpec from the
+    #                account's ``Account.currency`` rather than requiring an explicit
+    #                ``currency_override`` on every field.  Use this for all monetary
+    #                amount fields; reserve "numeric" for non-monetary numerics (e.g.
+    #                APR, sort code).
 
     strip_characters_start: Optional[str] = None
     # [ACTIVE] — Characters to strip from the start of the raw string before pattern
     # matching (passed to Polars str.strip_chars_start()).  Useful for leading
-    # currency symbols not covered by numeric_currency.
+    # currency symbols not covered by the account currency spec.
 
     strip_characters_end: Optional[str] = None
     # [ACTIVE] — Characters to strip from the end of the raw string before pattern
     # matching (passed to Polars str.strip_chars_end()).
 
-    numeric_currency: Optional[str] = None
-    # [ACTIVE] — Key into the CurrencySpec dictionary (e.g. "GBP").  When set,
-    # currency symbols and thousands separators defined in the spec are stripped
-    # before casting.  Required for all numeric fields that contain currency
-    # formatting.
+    currency_override: str | None = None
+    # [ACTIVE] — Explicit ISO 4217 currency key (e.g. "GBP") used when
+    # ``type == "numeric"`` and currency stripping is needed but should differ from
+    # the account-level ``Account.currency``.  Ignored when ``type == "currency"``
+    # (which always uses the account-level currency).  Omit for non-monetary numeric
+    # fields (e.g. APR, sort code) where no currency stripping is required.
 
     numeric_modifier: Optional[NumericModifier] = None
     # [ACTIVE] — Sign/multiplier transformation applied after numeric casting.
@@ -820,7 +831,7 @@ class StatementTable:
         locations = [{vertical_lines = [50, 150, 150, 320, 320, 400, 400, 480]}]
         fields = [
             {field = 'date',       column = 0, vital = false, type = "string", string_pattern = '^[0-3][0-9]'},
-            {field = '£_paid_out', column = 3, vital = false, type = "numeric", numeric_currency = "GBP"},
+            {field = '£_paid_out', column = 3, vital = false, type = "currency"},
         ]
         [MY_TABLE_KEY.transaction_spec]
         transaction_bookends = [...]
@@ -1023,6 +1034,7 @@ class Account:
         account_type_key = "CUR"
         statement_type_key = "MY_BANK_CUR"
         exclude_last_n_pages = 1
+        currency = "GBP"
 
         [MY_ACCOUNT_KEY.config]
         config = "Account Identification"
@@ -1065,6 +1077,12 @@ class Account:
     # Set to 1 (or more) when the final page(s) contain terms & conditions or other
     # non-transaction content that would otherwise be passed to the extraction
     # pipeline.
+
+    currency: str
+    # [ACTIVE] — ISO 4217 currency code for all monetary fields on this account
+    # (e.g. "GBP", "USD", "PHP").  Must be a key in ``currency_spec`` in
+    # ``currency.py``; validated at config load time.  Used by the extraction
+    # pipeline to resolve the CurrencySpec for fields of type "currency".
 
     config: Config
     # [ACTIVE] — Account-level identification config.  A lightweight extraction step
