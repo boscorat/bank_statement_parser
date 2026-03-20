@@ -98,6 +98,23 @@ class ProjectPaths:
         return self.exports / "json"
 
     @property
+    def export_specs(self) -> Path:
+        """Directory containing export spec TOML files."""
+        return self.exports / "specs"
+
+    def export_specs_output(self, spec_stem: str) -> Path:
+        """Output directory for a named export spec (``export/<spec_stem>/``).
+
+        Args:
+            spec_stem: The stem of the spec TOML file (filename without extension),
+                e.g. ``"quickbooks_3column"``.
+
+        Returns:
+            A :class:`Path` pointing to ``export/<spec_stem>/`` inside the project.
+        """
+        return self.exports / spec_stem
+
+    @property
     def reporting(self) -> Path:
         """Root reporting directory."""
         return self.root / "reporting"
@@ -269,6 +286,7 @@ class ProjectPaths:
             self.csv,
             self.excel,
             self.json,
+            self.export_specs,
             self.reporting_data_simple,
             self.reporting_data_full,
             self.log_debug,
