@@ -4,6 +4,7 @@ company_key = 'HSBC_UK'
 account_type_key = 'CRD'
 statement_type_key = 'HSBC_UK_CRD'
 exclude_last_n_pages = 1
+currency = "GBP"
     [HSBC_UK_CRD_RCC.config]
     config = 'Account Info'
     locations = [{page_number = 1, top_left = [275, 20], bottom_right = [575, 70]}]
@@ -15,6 +16,7 @@ company_key = 'HSBC_UK'
 account_type_key = 'SAV'
 statement_type_key = 'HSBC_UK_SAV'
 exclude_last_n_pages = 1
+currency = "GBP"
     [HSBC_UK_SAV_FLX.config]
     config = 'Account Info'
     locations = [{page_number = 1, top_left = [37, 425], bottom_right = [255, 480]}]
@@ -26,6 +28,7 @@ company_key = 'HSBC_UK'
 account_type_key = 'CUR'
 statement_type_key = 'HSBC_UK_CUR'
 exclude_last_n_pages = 1
+currency = "GBP"
     [HSBC_UK_CUR_STD.config]
     config = 'Account Info'
     locations = [{page_number = 1, top_left = [37, 400], bottom_right = [255, 465]}]
@@ -37,6 +40,7 @@ company_key = 'HSBC_UK'
 account_type_key = 'CUR'
 statement_type_key = 'HSBC_UK_CUR'
 exclude_last_n_pages = 1
+currency = "GBP"
     [HSBC_UK_CUR_ADV.config]
     config = 'Account Info'
     locations = [{page_number = 1, top_left = [25, 400], bottom_right = [270, 445]}]
@@ -48,6 +52,7 @@ company_key = 'HSBC_UK'
 account_type_key = 'SAV'
 statement_type_key = 'HSBC_UK_SAV'
 exclude_last_n_pages = 1
+currency = "GBP"
     [HSBC_UK_SAV_OBS.config]
     config = 'Account Info'
     locations = [{page_number = 1, top_left = [37, 425], bottom_right = [255, 490]}]

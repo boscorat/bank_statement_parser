@@ -31,6 +31,7 @@ SCHEMAS = {
         "STD_COMPANY": "TEXT",
         "STD_STATEMENT_TYPE": "TEXT",
         "STD_ACCOUNT": "TEXT",
+        "STD_CURRENCY": "TEXT",
         "STD_SORTCODE": "TEXT",
         "STD_ACCOUNT_NUMBER": "TEXT",
         "STD_ACCOUNT_HOLDER": "TEXT",
