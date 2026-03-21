@@ -167,6 +167,8 @@ class StatementHeads(Parquet):
         statement_type: Statement type label.
         account: Account label.
         header_results: LazyFrame of extracted header fields.
+        currency: ISO 4217 currency code (e.g. "GBP") for all monetary fields
+            on this statement.  Derived from the account's field configuration.
     """
 
     __slots__ = ()
@@ -182,6 +184,7 @@ class StatementHeads(Parquet):
         statement_type: str | None = None,
         account: str | None = None,
         header_results: pl.LazyFrame | None = None,
+        currency: str | None = None,
     ) -> None:
         self.schema = pl.DataFrame(
             orient="row",
@@ -192,6 +195,7 @@ class StatementHeads(Parquet):
                 "STD_COMPANY": pl.Utf8,
                 "STD_STATEMENT_TYPE": pl.Utf8,
                 "STD_ACCOUNT": pl.Utf8,
+                "STD_CURRENCY": pl.Utf8,
                 "STD_SORTCODE": pl.Utf8,
                 "STD_ACCOUNT_NUMBER": pl.Utf8,
                 "STD_ACCOUNT_HOLDER": pl.Utf8,
@@ -209,7 +213,7 @@ class StatementHeads(Parquet):
             self.records = _load_source(source)
         elif header_results is not None and id_statement is not None:
             self.records = build_statement_heads_records(
-                self.schema, id_statement, id_batchline, id_account, company, statement_type, account, header_results
+                self.schema, id_statement, id_batchline, id_account, company, statement_type, account, header_results, currency
             )
 
         super().__init__(file, self.schema, self.records, self.key)
@@ -448,6 +452,7 @@ def _build_statement_heads_data(
     statement_type: str | None,
     account: str | None,
     header_results: pl.LazyFrame,
+    currency: str | None = None,
 ) -> pl.DataFrame:
     """Build the data DataFrame for StatementHeads (without extending the schema).
 
@@ -459,6 +464,8 @@ def _build_statement_heads_data(
         statement_type: Statement type label.
         account: Account label.
         header_results: LazyFrame of extracted header fields.
+        currency: ISO 4217 currency code (e.g. "GBP") for all monetary fields
+            on this statement.
 
     Returns:
         A single-row DataFrame with the StatementHeads columns.
@@ -471,6 +478,7 @@ def _build_statement_heads_data(
             "STD_COMPANY": company,
             "STD_STATEMENT_TYPE": statement_type,
             "STD_ACCOUNT": account,
+            "STD_CURRENCY": currency,
         },
         orient="row",
     ).hstack(
@@ -496,6 +504,7 @@ def build_statement_heads_records(
     statement_type: str | None,
     account: str | None,
     header_results: pl.LazyFrame,
+    currency: str | None = None,
 ) -> pl.DataFrame:
     """Build the records DataFrame for a StatementHeads parquet write.
 
@@ -508,12 +517,14 @@ def build_statement_heads_records(
         statement_type: Statement type label.
         account: Account label.
         header_results: LazyFrame of extracted header fields.
+        currency: ISO 4217 currency code (e.g. "GBP") for all monetary fields
+            on this statement.  Derived from the account's field configuration.
 
     Returns:
         A single-row DataFrame matching *schema* ready for ``.extend()``.
     """
     return schema.clone().extend(
-        _build_statement_heads_data(id_statement, id_batchline, id_account, company, statement_type, account, header_results)
+        _build_statement_heads_data(id_statement, id_batchline, id_account, company, statement_type, account, header_results, currency)
     )
 
 

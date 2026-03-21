@@ -137,6 +137,12 @@ from bank_statement_parser.modules.pdf_functions import (
 from bank_statement_parser.data import Housekeeping, build_datamart, create_db
 
 # ---------------------------------------------------------------------------
+# Forex / currency conversion
+# ---------------------------------------------------------------------------
+from bank_statement_parser.modules.forex import get_exchange_rates
+from bank_statement_parser.modules.data import ForexApiConfig
+
+# ---------------------------------------------------------------------------
 # Testing harness
 # ---------------------------------------------------------------------------
 from bank_statement_parser.testing import TestHarness
@@ -188,6 +194,9 @@ __all__ = [
     # PDF anonymisation
     "anonymise_pdf",
     "anonymise_folder",
+    # Forex / currency conversion
+    "get_exchange_rates",
+    "ForexApiConfig",
     # Testing harness
     "TestHarness",
     "TestGateFailure",

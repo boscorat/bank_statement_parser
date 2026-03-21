@@ -231,6 +231,20 @@ Anonymise a single PDF using exclusion-based full-page letter scrambling.
 
 Anonymise all PDFs matching *pattern* in *folder_path* using exclusion-based scrambling.
 
+## Forex / currency conversion
+
+### `bsp.get_exchange_rates()`
+
+*function* — `bank_statement_parser.modules.forex`
+
+Fetch daily USD-based exchange rates and persist them to ``exchange_rates``.
+
+### `bsp.ForexApiConfig`
+
+*class* — `bank_statement_parser.modules.data`
+
+Configuration for the forex exchange-rate fetching service.
+
 ## Testing harness
 
 ### `bsp.TestHarness`

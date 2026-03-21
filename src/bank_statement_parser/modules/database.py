@@ -44,6 +44,24 @@ _MIGRATIONS: list[tuple[str, str, str, str]] = [
     ("batch_heads", "ID_SESSION", "TEXT", "''"),
     ("batch_heads", "ID_USER", "TEXT", "''"),
     ("batch_heads", "STD_REVIEW_COUNT", "INTEGER", "0"),
+    ("statement_heads", "STD_CURRENCY", "TEXT", "'GBP'"),
+]
+
+# Tables that may be absent from databases created before they were introduced.
+# Each entry is (table_name, create_sql).  Only created when missing — the table
+# is never dropped — so existing data is preserved.
+_TABLE_MIGRATIONS: list[tuple[str, str]] = [
+    (
+        "exchange_rates",
+        """
+        CREATE TABLE exchange_rates (
+            "id_date"   TEXT NOT NULL,
+            "currency"  TEXT NOT NULL,
+            "rate_USD"  REAL NOT NULL,
+            PRIMARY KEY (id_date, currency)
+        )
+        """,
+    ),
 ]
 
 # Views that may be absent from databases created before they were introduced.
@@ -275,19 +293,22 @@ _VIEW_MIGRATIONS: list[tuple[str, str]] = [
 
 
 def _migrate_db(conn: sqlite3.Connection) -> None:
-    """Apply forward-only schema migrations for missing columns, mart tables, and views.
+    """Apply forward-only schema migrations for missing columns, tables, mart tables, and views.
 
-    Three classes of migration are applied in order:
+    Four classes of migration are applied in order:
 
     1. **Column migrations** — ``ALTER TABLE … ADD COLUMN`` for any column in
        :data:`_MIGRATIONS` not yet present in its table.
-    2. **Mart table bootstrap** — creates the five mart tables (``DimTime``,
+    2. **Table migrations** — ``CREATE TABLE`` for any table in
+       :data:`_TABLE_MIGRATIONS` not yet present.  Tables are created empty;
+       existing data is never dropped.
+    3. **Mart table bootstrap** — creates the five mart tables (``DimTime``,
        ``DimAccount``, ``DimStatement``, ``FactTransaction``, ``FactBalance``)
        and their indexes if absent, via :func:`~bank_statement_parser.data.build_datamart._ensure_mart_structure`.
        Tables are created empty; :func:`~bank_statement_parser.data.build_datamart.build_datamart`
        populates them on every ``update_db`` call using the drop-and-recreate
        strategy, which preserves bulk-insert performance.
-    3. **View migrations** — ``CREATE VIEW`` for any view in :data:`_VIEW_MIGRATIONS`
+    4. **View migrations** — ``CREATE VIEW`` for any view in :data:`_VIEW_MIGRATIONS`
        not yet present.  Existing views (including any user-customised ones) are
        never dropped.
 
@@ -302,6 +323,12 @@ def _migrate_db(conn: sqlite3.Connection) -> None:
         if column not in existing:
             conn.execute(f'ALTER TABLE {table} ADD COLUMN "{column}" {col_type} DEFAULT {default}')
             print(f"[migrate] added column {column} to {table}")
+
+    existing_tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'").fetchall()}
+    for table_name, create_sql in _TABLE_MIGRATIONS:
+        if table_name not in existing_tables:
+            conn.execute(create_sql)
+            print(f"[migrate] created table {table_name}")
 
     _ensure_mart_structure(conn)
 

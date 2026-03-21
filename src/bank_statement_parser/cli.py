@@ -7,6 +7,7 @@ Add new subcommands here.
 Current subcommands
 -------------------
 anonymise   Anonymise one PDF or all PDFs in a folder (exclusion-based full scrambling).
+forex       Fetch daily USD-based exchange rates and persist them to the project database.
 process     Parse bank statement PDFs, persist data, and export reports.
 """
 
@@ -15,6 +16,38 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
+
+
+def _cmd_forex(args: argparse.Namespace) -> int:
+    """Handler for the ``forex`` subcommand.
+
+    Fetches daily USD-based exchange rates for all currencies in DimAccount
+    (plus any extras) and writes them to the ``exchange_rates`` table.
+
+    Args:
+        args: Parsed command-line arguments.
+
+    Returns:
+        Exit code (0 = success, 1 = error).
+    """
+    from bank_statement_parser.modules.forex import get_exchange_rates
+
+    project_path = Path(args.project).resolve() if args.project else Path.cwd() / "bsp_project"
+
+    extra: list[str] | None = args.currencies if args.currencies else None
+    api_key: str | None = args.api_key if args.api_key else None
+
+    try:
+        get_exchange_rates(
+            project_path=project_path,
+            extra_currencies=extra,
+            api_key=api_key,
+        )
+    except Exception as exc:
+        print(f"Error: {type(exc).__name__}: {exc}", file=sys.stderr)
+        return 1
+
+    return 0
 
 
 def _cmd_anonymise(args: argparse.Namespace) -> int:
@@ -136,6 +169,41 @@ def main() -> None:
         description="bank_statement_parser — command-line tools",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
+
+    # ------------------------------------------------------------------
+    # forex subcommand
+    # ------------------------------------------------------------------
+    forex_parser = subparsers.add_parser(
+        "forex",
+        help="Fetch daily USD-based exchange rates and persist to the project database.",
+        description=(
+            "Fetches daily USD-based exchange rates for all currencies found in "
+            "DimAccount plus any extras specified, forward-fills weekend and "
+            "holiday gaps, and writes the results to the exchange_rates table. "
+            "Provider and API key can be configured via forex_api_config.toml in "
+            "the project config directory."
+        ),
+    )
+    forex_parser.add_argument(
+        "--project",
+        metavar="PATH",
+        default=None,
+        help="Project folder path (default: ./bsp_project/ in CWD).",
+    )
+    forex_parser.add_argument(
+        "--currencies",
+        metavar="CODE",
+        nargs="+",
+        default=None,
+        help="Additional ISO 4217 currency codes to fetch (e.g. --currencies AED SAR).",
+    )
+    forex_parser.add_argument(
+        "--api-key",
+        metavar="KEY",
+        dest="api_key",
+        default=None,
+        help="Override the API key from forex_api_config.toml.",
+    )
 
     # ------------------------------------------------------------------
     # anonymise subcommand
@@ -281,7 +349,9 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    if args.command == "anonymise":
+    if args.command == "forex":
+        sys.exit(_cmd_forex(args))
+    elif args.command == "anonymise":
         sys.exit(_cmd_anonymise(args))
     elif args.command == "process":
         sys.exit(_cmd_process(args))

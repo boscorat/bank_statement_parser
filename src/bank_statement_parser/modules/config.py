@@ -25,7 +25,7 @@ from bank_statement_parser.modules.data import (
     StatementTable,
     StatementType,
 )
-from bank_statement_parser.modules.errors import ProjectConfigMissing, StatementError
+from bank_statement_parser.modules.errors import ConfigError, ProjectConfigMissing, StatementError
 from bank_statement_parser.modules.paths import BASE_CONFIG, ProjectPaths
 from bank_statement_parser.modules.statement_functions import get_results
 
@@ -292,12 +292,22 @@ class ConfigManager:
         Link account objects to their corresponding account type, statement type, and company.
 
         Populates the account_type, statement_type, and company attributes on each
-        Account object by looking up the referenced keys.
+        Account object by looking up the referenced keys.  Also validates that
+        ``account.currency`` is a recognised ISO 4217 code present in
+        ``currency_spec``.
+
+        Raises:
+            ConfigError: If ``account.currency`` is not a key in ``currency_spec``.
         """
+        from bank_statement_parser.modules.currency import currency_spec
+
         for key, account in config_dict["accounts"]["config"].items():
             account.account_type = config_dict["account_types"]["config"][account.account_type_key]
             account.statement_type = config_dict["statement_types"]["config"][account.statement_type_key]
             account.company = config_dict["companies"]["config"][account.company_key]
+            if account.currency not in currency_spec:
+                valid = ", ".join(sorted(currency_spec.keys()))
+                raise ConfigError(f"Account '{key}': currency '{account.currency}' is not a recognised ISO 4217 code. Valid codes: {valid}")
 
     def get_account(self, account_key: str) -> Account | None:
         """
