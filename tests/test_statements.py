@@ -161,22 +161,22 @@ class TestDbReports:
 
 # File names produced by ``type="full"`` exports (stem only, no extension).
 _FULL_EXPORT_STEMS = [
-    "statement",
-    "account",
-    "calendar",
-    "transactions",
-    "balances",
-    "gaps",
+    "statement_dimension",
+    "account_dimension",
+    "calendar_dimension",
+    "transaction_measures",
+    "daily_account_balances",
+    "missing_statement_report",
 ]
 
 # Mapping from full-export logical name → DB table/view name (for row-count checks).
 _FULL_STEM_TO_DB_TABLE = {
-    "statement": "DimStatement",
-    "account": "DimAccount",
-    "calendar": "DimTime",
-    "transactions": "FactTransaction",
-    "balances": "FactBalance",
-    "gaps": "GapReport",
+    "statement_dimension": "DimStatement",
+    "account_dimension": "DimAccount",
+    "calendar_dimension": "DimTime",
+    "transaction_measures": "FactTransaction",
+    "daily_account_balances": "FactBalance",
+    "missing_statement_report": "GapReport",
 }
 
 
@@ -205,9 +205,9 @@ class TestExports:
         """DB export_csv(type='simple') writes the flat transactions CSV."""
         db.export_csv(type="simple", project_path=good_project.project_path)
         paths = ProjectPaths.resolve(good_project.project_path)
-        f = paths.csv / "transactions_table.csv"
-        assert f.exists(), "Missing transactions_table.csv (db/simple)"
-        assert f.stat().st_size > 0, "Empty transactions_table.csv (db/simple)"
+        f = paths.csv / "transactions.csv"
+        assert f.exists(), "Missing transactions.csv (db/simple)"
+        assert f.stat().st_size > 0, "Empty transactions.csv (db/simple)"
 
     # ------------------------------------------------------------------
     # DB backend — CSV content: simple totals
@@ -217,7 +217,7 @@ class TestExports:
         """transactions_table.csv row count and monetary totals match the DB mart."""
         db.export_csv(type="simple", project_path=good_project.project_path)
         paths = ProjectPaths.resolve(good_project.project_path)
-        df = pl.read_csv(paths.csv / "transactions_table.csv", schema_overrides={"account_number": pl.String})
+        df = pl.read_csv(paths.csv / "transactions.csv", schema_overrides={"account_number": pl.String})
 
         with sqlite3.connect(str(paths.project_db)) as conn:
             db_rows = conn.execute("SELECT COUNT(*) FROM FlatTransaction").fetchone()[0]
@@ -281,9 +281,9 @@ class TestExports:
         """DB export_json(type='simple') writes the flat transactions JSON."""
         db.export_json(type="simple", project_path=good_project.project_path)
         paths = ProjectPaths.resolve(good_project.project_path)
-        f = paths.json / "transactions_table.json"
-        assert f.exists(), "Missing transactions_table.json (db/simple)"
-        assert f.stat().st_size > 0, "Empty transactions_table.json (db/simple)"
+        f = paths.json / "transactions.json"
+        assert f.exists(), "Missing transactions.json (db/simple)"
+        assert f.stat().st_size > 0, "Empty transactions.json (db/simple)"
 
     # ------------------------------------------------------------------
     # DB backend — JSON content: simple totals
@@ -293,7 +293,7 @@ class TestExports:
         """transactions_table.json row count and monetary totals match the DB mart."""
         db.export_json(type="simple", project_path=good_project.project_path)
         paths = ProjectPaths.resolve(good_project.project_path)
-        df = pl.read_json(paths.json / "transactions_table.json")
+        df = pl.read_json(paths.json / "transactions.json")
 
         with sqlite3.connect(str(paths.project_db)) as conn:
             db_rows = conn.execute("SELECT COUNT(*) FROM FlatTransaction").fetchone()[0]
@@ -358,20 +358,20 @@ class TestExports:
         # Output should still be written (all three formats, simple preset)
         paths = ProjectPaths.resolve(good_project.project_path)
         assert (paths.excel / "transactions.xlsx").exists()
-        assert (paths.csv / "transactions_table.csv").exists()
-        assert (paths.json / "transactions_table.json").exists()
+        assert (paths.csv / "transactions.csv").exists()
+        assert (paths.json / "transactions.json").exists()
 
     # ------------------------------------------------------------------
     # DB backend — export_reporting_data existence
     # ------------------------------------------------------------------
 
     def test_reporting_data_simple_exists(self, good_project):
-        """export_reporting_data() writes transactions_table.csv to reporting/data/simple/."""
+        """export_reporting_data() writes transactions.csv to reporting/data/simple/."""
         db.export_reporting_data(project_path=good_project.project_path)
         paths = ProjectPaths.resolve(good_project.project_path)
-        f = paths.reporting_data_simple / "transactions_table.csv"
-        assert f.exists(), "Missing reporting/data/simple/transactions_table.csv"
-        assert f.stat().st_size > 0, "Empty reporting/data/simple/transactions_table.csv"
+        f = paths.reporting_data_simple / "transactions.csv"
+        assert f.exists(), "Missing reporting/data/simple/transactions.csv"
+        assert f.stat().st_size > 0, "Empty reporting/data/simple/transactions.csv"
 
     def test_reporting_data_full_exists(self, good_project):
         """export_reporting_data() writes all six CSVs to reporting/data/full/."""
@@ -386,7 +386,7 @@ class TestExports:
         """StatementBatch.export(filetype='reporting') populates both reporting directories."""
         good_project.batch.export(filetype="reporting")
         paths = ProjectPaths.resolve(good_project.project_path)
-        assert (paths.reporting_data_simple / "transactions_table.csv").exists()
+        assert (paths.reporting_data_simple / "transactions.csv").exists()
         for stem in _FULL_EXPORT_STEMS:
             assert (paths.reporting_data_full / f"{stem}.csv").exists()
 

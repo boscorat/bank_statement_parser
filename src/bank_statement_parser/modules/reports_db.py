@@ -8,6 +8,7 @@ Functions:
     export_json: Write all report JSON files to a folder (defaults to project export/json/).
     export_reporting_data: Write CSV reporting feeds to reporting/data/simple/ and
         reporting/data/full/ inside the project directory.
+    export_spec: Load a TOML export spec and write filtered, formatted export file(s).
 
 Classes:
     FlatTransaction, FactBalance, DimTime, DimStatement, DimAccount,
@@ -81,7 +82,7 @@ def _read_data_filtered(db_path: Path, table_name: str, batch_table: str, batch_
 
 # Names of the numeric (float) tables in the full export — used by export_excel
 # to pass float_precision=2.
-_FLOAT_TABLES: frozenset[str] = frozenset({"transactions", "balances"})
+_FLOAT_TABLES: frozenset[str] = frozenset({"transaction_measures", "daily_account_balances"})
 
 
 def _collect_report_frames(
@@ -104,16 +105,16 @@ def _collect_report_frames(
     """
     if type == "full":
         return [
-            ("statement", DimStatement(project_path).all.collect()),
-            ("account", DimAccount(project_path).all.collect()),
-            ("calendar", DimTime(project_path).all.collect()),
-            ("transactions", FactTransaction(project_path).all.collect()),
-            ("balances", FactBalance(project_path).all.collect()),
-            ("gaps", GapReport(project_path).all.collect()),
+            ("statement_dimension", DimStatement(project_path).all.collect()),
+            ("account_dimension", DimAccount(project_path).all.collect()),
+            ("calendar_dimension", DimTime(project_path).all.collect()),
+            ("transaction_measures", FactTransaction(project_path).all.collect()),
+            ("daily_account_balances", FactBalance(project_path).all.collect()),
+            ("missing_statement_report", GapReport(project_path).all.collect()),
         ]
     # type == "simple"
     return [
-        ("transactions_table", FlatTransaction(project_path).all.collect()),
+        ("transactions", FlatTransaction(project_path).all.collect()),
     ]
 
 

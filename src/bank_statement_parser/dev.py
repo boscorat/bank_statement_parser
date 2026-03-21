@@ -1,14 +1,17 @@
 from pathlib import Path
 
+# from bank_statement_parser import get_exchange_rates
+
 # import bank_statement_parser as bsp
 from bank_statement_parser.modules import statements
 
 
 def main():
-
+    project_path = Path("/home/boscorat/Downloads/2024/bsp_project")
     # bsp.anonymise_pdf(Path("/home/boscorat/Projects/tsb_spend_and_save_example_1.pdf"))
     # laptop
-    folder = Path("/Users/boscorat/Library/CloudStorage/OneDrive-Personal/OpenStan/Statements/HSBC/2024")
+    # folder = Path("/Users/boscorat/Library/CloudStorage/OneDrive-Personal/OpenStan/Statements/HSBC/2024")
+    folder = Path("/home/boscorat/Downloads/2025")
     # folder = Path("/home/boscorat/repos/bank_statement_parser/tests/pdfs/bad")
     include_subdirs = True  # set True to also include one level of subdirectories
 
@@ -25,14 +28,16 @@ def main():
     batch = statements.StatementBatch(
         pdfs=pdfs,
         turbo=True,
-        project_path=Path("/Users/boscorat/Projects/bsp_project"),
+        # project_path=Path("/Users/boscorat/Projects/bsp_project"),
+        project_path=Path(project_path),
     )
     print(f"total: {batch.duration_secs}, process: {batch.process_secs}, parquet: {batch.parquet_secs}, db: {batch.db_secs}")
     # batch.debug()
 
     batch.update_data()
-    batch.copy_statements_to_project()
-    batch.delete_temp_files()
+    # get_exchange_rates(project_path=project_path)
+    # batch.copy_statements_to_project()
+    # batch.delete_temp_files()
     batch.export(filetype="all")  # writes Excel, CSV, and JSON
     batch.export(filetype="reporting")  # writes Excel, CSV, and JSON
     # print(f"total: {batch.duration_secs}, process: {batch.process_secs}, parquet: {batch.parquet_secs}, db: {batch.db_secs}")
