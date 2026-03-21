@@ -22,7 +22,6 @@ import polars as pl
 from xlsxwriter import Workbook
 
 from bank_statement_parser.modules.errors import ProjectDatabaseMissing
-from bank_statement_parser.modules.export_spec import export_spec
 from bank_statement_parser.modules.paths import ProjectPaths
 
 
