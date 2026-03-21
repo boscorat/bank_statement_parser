@@ -160,6 +160,11 @@ class ProjectPaths:
         """Path to the SQLite database file."""
         return self.database / "project.db"
 
+    @property
+    def forex_config(self) -> Path:
+        """Path to the optional forex API config file."""
+        return self.config / "forex_api_config.toml"
+
     # ------------------------------------------------------------------
     # Permanent Parquet files
     # ------------------------------------------------------------------

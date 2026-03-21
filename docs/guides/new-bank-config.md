@@ -170,10 +170,10 @@ Extraction specification for a single column or cell within a PDF table.
 | `cell` | `Cell` | ACTIVE | Row/column address for summary or detail table extraction. Mutually exclusive with ``column``; set to None for transaction tables. |
 | `column` | `int | None` | ACTIVE | Zero-based column index for transaction table extraction. Mutually exclusive with ``cell``; set to None for summary/detail tables. |
 | `vital` | `bool` | ACTIVE | When True, extraction failure for this field causes the row to be flagged as a hard failure and excluded from output.  When False, failure is recorded but the row is retained. |
-| `type` | `str` | ACTIVE | Data type: "string" or "numeric".  Controls which processing branches run in strip(), patmatch(), cast(), and trim(). |
-| `strip_characters_start` | `str` | ACTIVE | Characters to strip from the start of the raw string before pattern matching (passed to Polars str.strip_chars_start()).  Useful for leading currency symbols not covered by numeric_currency. |
+| `type` | `str` | ACTIVE | Data type: "string", "numeric", or "currency".  * "string"   — raw text extraction; pattern matching and trimming applied. * "numeric"  — numeric extraction with optional explicit currency stripping via ``currency_override``. * "currency" — identical to "numeric" but inherits the CurrencySpec from the account's ``Account.currency`` rather than requiring an explicit ``currency_override`` on every field.  Use this for all monetary amount fields; reserve "numeric" for non-monetary numerics (e.g. APR, sort code). |
+| `strip_characters_start` | `str` | ACTIVE | Characters to strip from the start of the raw string before pattern matching (passed to Polars str.strip_chars_start()).  Useful for leading currency symbols not covered by the account currency spec. |
 | `strip_characters_end` | `str` | ACTIVE | Characters to strip from the end of the raw string before pattern matching (passed to Polars str.strip_chars_end()). |
-| `numeric_currency` | `str` | ACTIVE | Key into the CurrencySpec dictionary (e.g. "GBP").  When set, currency symbols and thousands separators defined in the spec are stripped before casting.  Required for all numeric fields that contain currency formatting. |
+| `currency_override` | `str | None` | ACTIVE | Explicit ISO 4217 currency key (e.g. "GBP") used when ``type == "numeric"`` and currency stripping is needed but should differ from the account-level ``Account.currency``.  Ignored when ``type == "currency"`` (which always uses the account-level currency).  Omit for non-monetary numeric fields (e.g. APR, sort code) where no currency stripping is required. |
 | `numeric_modifier` | `NumericModifier` | ACTIVE | Sign/multiplier transformation applied after numeric casting. See NumericModifier.  Omit for straightforward positive numeric values. |
 | `string_pattern` | `str` | ACTIVE | Regex pattern the extracted string must match.  Extraction is marked as failed (success = False) if the value does not match.  Used to validate field contents (e.g. date format) and to skip blank or irrelevant rows. |
 | `string_max_length` | `int` | ACTIVE | Maximum character length for string values; longer strings are truncated via str.head().  Useful for capping free-text description fields. Defaults to 999 if not set. |
@@ -218,10 +218,10 @@ locations = [
     {page_number=1, top_left = [345, 180], bottom_right = [575, 300], vertical_lines = [360, 475, 475, 550], dynamic_last_vertical_line = {image_id = 0, image_location_tag = "x1"}, allow_text_failover = true},
 ]
 fields = [
-    {field = 'opening_balance', cell = {row = 1, col = 1}, vital=true, type = 'numeric', numeric_currency ="GBP", numeric_modifier = {suffix = "D", multiplier = -1}},
-    {field = 'payments_in', cell = {row = 2, col = 1}, vital=true, type = 'numeric', numeric_currency ="GBP"},
-    {field = 'payments_out', cell = {row = 3, col = 1}, vital=true, type = 'numeric', numeric_currency ="GBP"},
-    {field = 'closing_balance', cell = {row = 4, col = 1}, vital=true, type = 'numeric', numeric_currency ="GBP", numeric_modifier = {suffix = "D", multiplier = -1}},
+    {field = 'opening_balance', cell = {row = 1, col = 1}, vital=true, type = 'currency', numeric_modifier = {suffix = "D", multiplier = -1}},
+    {field = 'payments_in', cell = {row = 2, col = 1}, vital=true, type = 'currency'},
+    {field = 'payments_out', cell = {row = 3, col = 1}, vital=true, type = 'currency'},
+    {field = 'closing_balance', cell = {row = 4, col = 1}, vital=true, type = 'currency', numeric_modifier = {suffix = "D", multiplier = -1}},
 ]
 ```
 
@@ -242,9 +242,9 @@ fields = [
     {field = 'date', column = 0, vital=false, type = "string", string_pattern ='^[0-3][0-9]\s?[A-Z][a-z]{2}\s?[0-3][0-9]$'},
     {field = 'payment_type', column = 1, vital=false, type = "string", string_pattern ='(^[A-Z0-9]{1,3}$)|(^[)]{3}$)'},
     {field = 'details', column = 2, vital=true, type = "string", string_pattern ='.+', string_max_length = 100},
-    {field = '£_paid_out', column = 3, vital=false, type = "numeric", numeric_currency = "GBP"},
-    {field = '£_paid_in', column = 4, vital=false, type = "numeric", numeric_currency = "GBP"},
-    {field = '£_balance', column = 5, vital=false, type = "numeric", numeric_currency = "GBP", numeric_modifier = {suffix = "D", multiplier = -1.0000}},
+    {field = '£_paid_out', column = 3, vital=false, type = "currency"},
+    {field = '£_paid_in', column = 4, vital=false, type = "currency"},
+    {field = '£_balance', column = 5, vital=false, type = "currency", numeric_modifier = {suffix = "D", multiplier = -1.0000}},
 ]
 delete_success_false = true
 delete_cast_success_false = true
@@ -314,10 +314,10 @@ Extraction specification for a single column or cell within a PDF table.
 | `cell` | `Cell` | ACTIVE | Row/column address for summary or detail table extraction. Mutually exclusive with ``column``; set to None for transaction tables. |
 | `column` | `int | None` | ACTIVE | Zero-based column index for transaction table extraction. Mutually exclusive with ``cell``; set to None for summary/detail tables. |
 | `vital` | `bool` | ACTIVE | When True, extraction failure for this field causes the row to be flagged as a hard failure and excluded from output.  When False, failure is recorded but the row is retained. |
-| `type` | `str` | ACTIVE | Data type: "string" or "numeric".  Controls which processing branches run in strip(), patmatch(), cast(), and trim(). |
-| `strip_characters_start` | `str` | ACTIVE | Characters to strip from the start of the raw string before pattern matching (passed to Polars str.strip_chars_start()).  Useful for leading currency symbols not covered by numeric_currency. |
+| `type` | `str` | ACTIVE | Data type: "string", "numeric", or "currency".  * "string"   — raw text extraction; pattern matching and trimming applied. * "numeric"  — numeric extraction with optional explicit currency stripping via ``currency_override``. * "currency" — identical to "numeric" but inherits the CurrencySpec from the account's ``Account.currency`` rather than requiring an explicit ``currency_override`` on every field.  Use this for all monetary amount fields; reserve "numeric" for non-monetary numerics (e.g. APR, sort code). |
+| `strip_characters_start` | `str` | ACTIVE | Characters to strip from the start of the raw string before pattern matching (passed to Polars str.strip_chars_start()).  Useful for leading currency symbols not covered by the account currency spec. |
 | `strip_characters_end` | `str` | ACTIVE | Characters to strip from the end of the raw string before pattern matching (passed to Polars str.strip_chars_end()). |
-| `numeric_currency` | `str` | ACTIVE | Key into the CurrencySpec dictionary (e.g. "GBP").  When set, currency symbols and thousands separators defined in the spec are stripped before casting.  Required for all numeric fields that contain currency formatting. |
+| `currency_override` | `str | None` | ACTIVE | Explicit ISO 4217 currency key (e.g. "GBP") used when ``type == "numeric"`` and currency stripping is needed but should differ from the account-level ``Account.currency``.  Ignored when ``type == "currency"`` (which always uses the account-level currency).  Omit for non-monetary numeric fields (e.g. APR, sort code) where no currency stripping is required. |
 | `numeric_modifier` | `NumericModifier` | ACTIVE | Sign/multiplier transformation applied after numeric casting. See NumericModifier.  Omit for straightforward positive numeric values. |
 | `string_pattern` | `str` | ACTIVE | Regex pattern the extracted string must match.  Extraction is marked as failed (success = False) if the value does not match.  Used to validate field contents (e.g. date format) and to skip blank or irrelevant rows. |
 | `string_max_length` | `int` | ACTIVE | Maximum character length for string values; longer strings are truncated via str.head().  Useful for capping free-text description fields. Defaults to 999 if not set. |
@@ -354,8 +354,8 @@ Reads a field's value from an adjacent column rather than the field's own column
 | `rows_offset` | `int` | STUB | Intended row offset for reading the value from a different row. Declared and accepted in TOML but never read by the pipeline; only cols_offset is currently consumed.  Always set to 0 in TOML examples. |
 | `cols_offset` | `int` | ACTIVE | Column offset applied to Field.column to locate the source cell (e.g. 1 reads from the column immediately to the right). |
 | `vital` | `bool` | ACTIVE | Passed to the extraction pipeline for the offset field; when True extraction failure is treated as a hard failure for that row. |
-| `type` | `str` | ACTIVE | Data type for the offset value: "string" or "numeric".  Overrides the parent Field.type for this value read. |
-| `numeric_currency` | `str` | ACTIVE | Currency key (e.g. "GBP") for numeric stripping of the offset value.  Overrides the parent Field.numeric_currency. |
+| `type` | `str` | ACTIVE | Data type for the offset value: "string", "numeric", or "currency". Overrides the parent Field.type for this value read. |
+| `currency_override` | `str | None` | ACTIVE | Explicit currency key (e.g. "GBP") for numeric stripping of the offset value when type == "numeric".  Overrides the account-level currency. When type == "currency" the account-level currency is used and this is ignored. |
 | `numeric_modifier` | `NumericModifier` | ACTIVE | Sign/multiplier modifier for the offset value.  Overrides the parent Field.numeric_modifier. |
 
 #### `CurrencySpec`
@@ -364,6 +364,7 @@ Currency formatting rules used to strip symbols and separators before numeric ca
 
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
+| `name` | `str` | ACTIVE | Human-readable currency name (e.g. "British Pound Sterling"). |
 | `symbols` | `list[str]` | ACTIVE | List of currency symbol strings to strip from the raw value before casting (e.g. ["£", "$"]).  Replaced with empty string via str.replace_many(). |
 | `seperator_decimal` | `str` | STUB | Intended decimal separator character (e.g. ".").  Declared but never read by the pipeline; decimal handling is implicit after symbols and thousands separators are stripped. |
 | `seperators_thousands` | `list[str]` | ACTIVE | List of thousands-separator strings to strip (e.g. [","]). Replaced with empty string via str.replace_many() before casting. |
@@ -549,6 +550,7 @@ company_key = 'HSBC_UK'
 account_type_key = 'CRD'
 statement_type_key = 'HSBC_UK_CRD'
 exclude_last_n_pages = 1
+currency = "GBP"
     [HSBC_UK_CRD_RCC.config]
     config = 'Account Info'
     locations = [{page_number = 1, top_left = [275, 20], bottom_right = [575, 70]}]
@@ -579,6 +581,7 @@ Full runtime configuration for one bank account.
 | `statement_type_key` | `str` | ACTIVE | Key into statement_types.toml identifying the extraction layout for this account's statements.  Used to look up the StatementType object at load time. |
 | `statement_type` | `StatementType` | ACTIVE | Resolved at load time from statement_type_key.  Provides the header and lines ConfigGroups used during extraction. |
 | `exclude_last_n_pages` | `int` | ACTIVE | Number of trailing pages to skip when cloning per-page locations. Set to 1 (or more) when the final page(s) contain terms & conditions or other non-transaction content that would otherwise be passed to the extraction pipeline. |
+| `currency` | `str` | ACTIVE | ISO 4217 currency code for all monetary fields on this account (e.g. "GBP", "USD", "PHP").  Must be a key in ``currency_spec`` in ``currency.py``; validated at config load time.  Used by the extraction pipeline to resolve the CurrencySpec for fields of type "currency". |
 | `config` | `Config` | ACTIVE | Account-level identification config.  A lightweight extraction step run to confirm a PDF belongs to this account before the full extraction pass. Defined inline under ``[ACCOUNT_KEY.config]`` in accounts.toml. |
 
 ## Step 7: Register Standard Field Mappings
@@ -703,6 +706,7 @@ Full runtime configuration for one bank account.
 | `statement_type_key` | `str` | ACTIVE | Key into statement_types.toml identifying the extraction layout for this account's statements.  Used to look up the StatementType object at load time. |
 | `statement_type` | `StatementType` | ACTIVE | Resolved at load time from statement_type_key.  Provides the header and lines ConfigGroups used during extraction. |
 | `exclude_last_n_pages` | `int` | ACTIVE | Number of trailing pages to skip when cloning per-page locations. Set to 1 (or more) when the final page(s) contain terms & conditions or other non-transaction content that would otherwise be passed to the extraction pipeline. |
+| `currency` | `str` | ACTIVE | ISO 4217 currency code for all monetary fields on this account (e.g. "GBP", "USD", "PHP").  Must be a key in ``currency_spec`` in ``currency.py``; validated at config load time.  Used by the extraction pipeline to resolve the CurrencySpec for fields of type "currency". |
 | `config` | `Config` | ACTIVE | Account-level identification config.  A lightweight extraction step run to confirm a PDF belongs to this account before the full extraction pass. Defined inline under ``[ACCOUNT_KEY.config]`` in accounts.toml. |
 
 ### `AccountType`
@@ -797,10 +801,10 @@ Extraction specification for a single column or cell within a PDF table.
 | `cell` | `Cell` | ACTIVE | Row/column address for summary or detail table extraction. Mutually exclusive with ``column``; set to None for transaction tables. |
 | `column` | `int | None` | ACTIVE | Zero-based column index for transaction table extraction. Mutually exclusive with ``cell``; set to None for summary/detail tables. |
 | `vital` | `bool` | ACTIVE | When True, extraction failure for this field causes the row to be flagged as a hard failure and excluded from output.  When False, failure is recorded but the row is retained. |
-| `type` | `str` | ACTIVE | Data type: "string" or "numeric".  Controls which processing branches run in strip(), patmatch(), cast(), and trim(). |
-| `strip_characters_start` | `str` | ACTIVE | Characters to strip from the start of the raw string before pattern matching (passed to Polars str.strip_chars_start()).  Useful for leading currency symbols not covered by numeric_currency. |
+| `type` | `str` | ACTIVE | Data type: "string", "numeric", or "currency".  * "string"   — raw text extraction; pattern matching and trimming applied. * "numeric"  — numeric extraction with optional explicit currency stripping via ``currency_override``. * "currency" — identical to "numeric" but inherits the CurrencySpec from the account's ``Account.currency`` rather than requiring an explicit ``currency_override`` on every field.  Use this for all monetary amount fields; reserve "numeric" for non-monetary numerics (e.g. APR, sort code). |
+| `strip_characters_start` | `str` | ACTIVE | Characters to strip from the start of the raw string before pattern matching (passed to Polars str.strip_chars_start()).  Useful for leading currency symbols not covered by the account currency spec. |
 | `strip_characters_end` | `str` | ACTIVE | Characters to strip from the end of the raw string before pattern matching (passed to Polars str.strip_chars_end()). |
-| `numeric_currency` | `str` | ACTIVE | Key into the CurrencySpec dictionary (e.g. "GBP").  When set, currency symbols and thousands separators defined in the spec are stripped before casting.  Required for all numeric fields that contain currency formatting. |
+| `currency_override` | `str | None` | ACTIVE | Explicit ISO 4217 currency key (e.g. "GBP") used when ``type == "numeric"`` and currency stripping is needed but should differ from the account-level ``Account.currency``.  Ignored when ``type == "currency"`` (which always uses the account-level currency).  Omit for non-monetary numeric fields (e.g. APR, sort code) where no currency stripping is required. |
 | `numeric_modifier` | `NumericModifier` | ACTIVE | Sign/multiplier transformation applied after numeric casting. See NumericModifier.  Omit for straightforward positive numeric values. |
 | `string_pattern` | `str` | ACTIVE | Regex pattern the extracted string must match.  Extraction is marked as failed (success = False) if the value does not match.  Used to validate field contents (e.g. date format) and to skip blank or irrelevant rows. |
 | `string_max_length` | `int` | ACTIVE | Maximum character length for string values; longer strings are truncated via str.head().  Useful for capping free-text description fields. Defaults to 999 if not set. |
@@ -825,8 +829,8 @@ Reads a field's value from an adjacent column rather than the field's own column
 | `rows_offset` | `int` | STUB | Intended row offset for reading the value from a different row. Declared and accepted in TOML but never read by the pipeline; only cols_offset is currently consumed.  Always set to 0 in TOML examples. |
 | `cols_offset` | `int` | ACTIVE | Column offset applied to Field.column to locate the source cell (e.g. 1 reads from the column immediately to the right). |
 | `vital` | `bool` | ACTIVE | Passed to the extraction pipeline for the offset field; when True extraction failure is treated as a hard failure for that row. |
-| `type` | `str` | ACTIVE | Data type for the offset value: "string" or "numeric".  Overrides the parent Field.type for this value read. |
-| `numeric_currency` | `str` | ACTIVE | Currency key (e.g. "GBP") for numeric stripping of the offset value.  Overrides the parent Field.numeric_currency. |
+| `type` | `str` | ACTIVE | Data type for the offset value: "string", "numeric", or "currency". Overrides the parent Field.type for this value read. |
+| `currency_override` | `str | None` | ACTIVE | Explicit currency key (e.g. "GBP") for numeric stripping of the offset value when type == "numeric".  Overrides the account-level currency. When type == "currency" the account-level currency is used and this is ignored. |
 | `numeric_modifier` | `NumericModifier` | ACTIVE | Sign/multiplier modifier for the offset value.  Overrides the parent Field.numeric_modifier. |
 
 ### `NumericModifier`
@@ -847,6 +851,7 @@ Currency formatting rules used to strip symbols and separators before numeric ca
 
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
+| `name` | `str` | ACTIVE | Human-readable currency name (e.g. "British Pound Sterling"). |
 | `symbols` | `list[str]` | ACTIVE | List of currency symbol strings to strip from the raw value before casting (e.g. ["£", "$"]).  Replaced with empty string via str.replace_many(). |
 | `seperator_decimal` | `str` | STUB | Intended decimal separator character (e.g. ".").  Declared but never read by the pipeline; decimal handling is implicit after symbols and thousands separators are stripped. |
 | `seperators_thousands` | `list[str]` | ACTIVE | List of thousands-separator strings to strip (e.g. [","]). Replaced with empty string via str.replace_many() before casting. |

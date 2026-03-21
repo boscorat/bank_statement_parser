@@ -8,10 +8,10 @@ locations = [
     {page_number=1, top_left = [30, 405], bottom_right = [300, 470], vertical_lines = [40, 200, 200, 280], dynamic_last_vertical_line = {image_id = 0, image_location_tag = "x1"}, allow_text_failover = true},
 ]
 fields = [
-    {field = 'opening_balance', cell = {row = 1, col = 1}, vital=true, type = 'numeric', numeric_currency ="GBP", numeric_modifier = {suffix = "D", multiplier = -1}},
-    {field = 'payments_in', cell = {row = 2, col = 1}, vital=true, type = 'numeric', numeric_currency ="GBP"},
-    {field = 'payments_out', cell = {row = 3, col = 1}, vital=true, type = 'numeric', numeric_currency ="GBP"},
-    {field = 'closing_balance', cell = {row = 4, col = 1}, vital=true, type = 'numeric', numeric_currency ="GBP", numeric_modifier = {suffix = "D", multiplier = -1}},
+    {field = 'opening_balance', cell = {row = 1, col = 1}, vital=true, type = 'currency', numeric_modifier = {suffix = "D", multiplier = -1}},
+    {field = 'payments_in', cell = {row = 2, col = 1}, vital=true, type = 'currency'},
+    {field = 'payments_out', cell = {row = 3, col = 1}, vital=true, type = 'currency'},
+    {field = 'closing_balance', cell = {row = 4, col = 1}, vital=true, type = 'currency', numeric_modifier = {suffix = "D", multiplier = -1}},
 ]
 
 [TSB_UK_CUR_ACCT_DET]
@@ -39,9 +39,9 @@ fields = [
     {field = 'date', column = 0, vital=false, type = "string", string_pattern ='^[0-3][0-9]\s?[A-Z][a-z]{2}\s?[0-3][0-9]$'},
     {field = 'payment_type', column = 1, vital=false, type = "string", string_pattern ='^(.+)?$'},
     {field = 'details', column = 2, vital=true, type = "string", string_pattern ='.+', string_max_length = 100},
-    {field = '£_paid_out', column = 3, vital=false, type = "numeric", numeric_currency = "GBP"},
-    {field = '£_paid_in', column = 4, vital=false, type = "numeric", numeric_currency = "GBP"},
-    {field = '£_balance', column = 5, vital=false, type = "numeric", numeric_currency = "GBP", numeric_modifier = {suffix = "D", multiplier = -1.0000}}
+    {field = '£_paid_out', column = 3, vital=false, type = "currency"},
+    {field = '£_paid_in', column = 4, vital=false, type = "currency"},
+    {field = '£_balance', column = 5, vital=false, type = "currency", numeric_modifier = {suffix = "D", multiplier = -1.0000}}
 ]
 delete_success_false = true
 delete_cast_success_false = true

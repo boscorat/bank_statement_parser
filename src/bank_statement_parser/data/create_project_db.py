@@ -3,6 +3,18 @@ from pathlib import Path
 
 from bank_statement_parser.data.create_project_db_views import create_views
 
+# DDL for the exchange_rates reference table.  Uses a composite primary key
+# (id_date, currency) so it cannot be created via the generic create_table()
+# helper (which only supports single-column PKs).
+_DDL_EXCHANGE_RATES = """
+CREATE TABLE exchange_rates (
+    "id_date"   TEXT NOT NULL,
+    "currency"  TEXT NOT NULL,
+    "rate_USD"  REAL NOT NULL,
+    PRIMARY KEY (id_date, currency)
+);
+"""
+
 SCHEMAS = {
     "checks_and_balances": {
         "ID_CAB": "TEXT",
@@ -31,6 +43,7 @@ SCHEMAS = {
         "STD_COMPANY": "TEXT",
         "STD_STATEMENT_TYPE": "TEXT",
         "STD_ACCOUNT": "TEXT",
+        "STD_CURRENCY": "TEXT",
         "STD_SORTCODE": "TEXT",
         "STD_ACCOUNT_NUMBER": "TEXT",
         "STD_ACCOUNT_HOLDER": "TEXT",
@@ -155,6 +168,11 @@ def main(db_path: Path, with_fk: bool = False) -> None:
     for table_name in table_order:
         create_table(conn, table_name, SCHEMAS[table_name], with_fk)
 
+    # exchange_rates has a composite PK — create it separately.
+    print("Creating table: exchange_rates")
+    print(_DDL_EXCHANGE_RATES)
+    conn.execute(_DDL_EXCHANGE_RATES)
+
     conn.commit()
     conn.close()
     print(f"Database created: {db_path}")
@@ -178,6 +196,8 @@ def create_indexes(db_path: Path):
         "CREATE INDEX IF NOT EXISTS idx_sh_stmt_acct ON statement_heads(ID_STATEMENT, ID_ACCOUNT)",
         "CREATE INDEX IF NOT EXISTS idx_batch_lines_stmt_batch ON batch_lines(ID_STATEMENT, ID_BATCH)",
         "CREATE INDEX IF NOT EXISTS idx_cab_id_batchline ON checks_and_balances(ID_BATCHLINE)",
+        "CREATE INDEX IF NOT EXISTS idx_exchange_rates_currency ON exchange_rates(currency)",
+        "CREATE INDEX IF NOT EXISTS idx_exchange_rates_id_date ON exchange_rates(id_date)",
     ]
 
     for idx_sql in indexes:
