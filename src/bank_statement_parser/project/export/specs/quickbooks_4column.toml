@@ -1,0 +1,47 @@
+# QuickBooks Online UK — 4-column bank upload format
+#
+# Accepted by QuickBooks Online (UK) when uploading bank transactions manually.
+# Uses separate Credit and Debit columns; the unused column must be left blank
+# for each row (blank_zeros = true enforces this).
+#
+# Reference:
+#   https://quickbooks.intuit.com/learn-support/en-uk/help-article/bank-transactions/
+#   format-csv-files-excel-get-bank-transactions/L4BjLWckq_GB_en_GB
+#
+# Runtime parameters (passed to export_spec()):
+#   account_key        — required, matches DimAccount.id_account
+#   date_from          — optional date filter (inclusive)
+#   date_to            — optional date filter (inclusive)
+#   statement_key      — optional, restrict to a single statement
+#   split_by_statement — override spec default (false)
+#   invert_polarity    — not applicable to this format (Credit/Debit are always
+#                        positive); leave as false
+
+[meta]
+description   = "QuickBooks Online UK — 4-column bank upload format"
+source_table  = "FlatTransaction"
+
+[export]
+format             = "csv"
+split_by_statement = false
+
+# Column mapping: export column name = source column (or computed token)
+# Credit = money in (value_in); Debit = money out (value_out).
+# blank_zeros = true ensures the unused column is blank rather than 0.00,
+# which is required by the QuickBooks import validator.
+[columns]
+Date        = "transaction_date"
+Description = "transaction_desc"
+Credit      = "value_in"
+Debit       = "value_out"
+
+[format]
+date_format      = "%d/%m/%Y"
+float_precision  = 2
+invert_polarity  = false
+blank_zeros      = true
+
+[sanitise]
+# Characters stripped silently from all string fields before export.
+# QuickBooks rejects uploads containing these special characters.
+strip_chars = "!@#$%^&*(),.?\":{}|<>"
