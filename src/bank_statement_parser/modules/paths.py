@@ -528,7 +528,16 @@ def _scaffold_new_project(paths: ProjectPaths) -> None:
         if not dst.exists():
             shutil.copy2(src, dst)
 
-    # 3. Create the SQLite database with the full schema.
+    # 3. Copy export spec files (.toml and .sql) from the default config/export/.
+    for src in BASE_CONFIG_EXPORT.rglob("*"):
+        if src.is_file():
+            relative = src.relative_to(BASE_CONFIG_EXPORT)
+            dst = paths.config_export / relative
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            if not dst.exists():
+                shutil.copy2(src, dst)
+
+    # 4. Create the SQLite database with the full schema.
     #    Import here to avoid a circular dependency at module level
     #    (database.py → paths.py; paths.py must not import database.py at top).
     from bank_statement_parser.data.create_project_db import main as create_db  # noqa: PLC0415

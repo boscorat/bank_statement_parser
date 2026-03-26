@@ -1,16 +1,22 @@
 """
 Export spec engine — load TOML spec files and produce filtered, formatted exports.
 
-A spec file declares the source table, column mapping, date/number formatting,
-string sanitisation, and output options (format, split mode, polarity).  The
-:func:`export_spec` function is the single public entry point.
+A spec file declares the column mapping, date/number formatting, string
+sanitisation, and output options (format, split mode, polarity).  Each spec
+**must** have a matching ``.sql`` file in the same directory that defines the
+data-retrieval query.  The query is executed with four named parameters
+(``account_key``, ``date_from``, ``date_to``, ``statement_key``); pass
+``NULL`` for any that are not needed.
+
+The :func:`export_spec` function is the single public entry point.
 
 Functions:
     export_spec: Load a TOML spec and write filtered, formatted export file(s).
 
 Private helpers:
     _load_spec: Parse and validate a TOML spec file into an :class:`ExportSpec`.
-    _build_frame: Query the database and apply account/date/statement filters.
+    _load_sql: Read the ``.sql`` file that accompanies a spec.
+    _run_sql_file: Execute a SQL string against the database with named parameters.
     _apply_column_mapping: Rename, compute, and select output columns.
     _apply_date_format: Format date columns as strings per the spec.
     _sanitise_strings: Silently strip forbidden characters from string columns.
@@ -43,7 +49,7 @@ _KNOWN_COMPUTED: frozenset[str] = frozenset({_COMPUTED_SIGNED_AMOUNT})
 # Columns in FlatTransaction that contain dates (need format conversion)
 _DATE_COLUMNS: frozenset[str] = frozenset({"transaction_date", "statement_date"})
 
-# Allowed source tables / views
+# Allowed source tables / views — kept as metadata; the .sql file is authoritative
 _ALLOWED_TABLES: frozenset[str] = frozenset(
     {
         "FlatTransaction",
@@ -55,6 +61,11 @@ _ALLOWED_TABLES: frozenset[str] = frozenset(
         "GapReport",
     }
 )
+
+# Column carried by _run_sql_file that enables statement-level partitioning.
+# Must be present in every .sql file; dropped from output by _apply_column_mapping
+# because it is never declared in spec.columns.
+_SPLIT_ANCHOR = "id_statement"
 
 
 # ---------------------------------------------------------------------------
@@ -68,7 +79,8 @@ class ExportSpec:
 
     Attributes:
         description: Human-readable description of the spec.
-        source_table: DB table or view to query (e.g. ``"FlatTransaction"``).
+        source_table: DB table or view the spec targets (metadata only; the
+            ``.sql`` file is the authoritative data source).
         format: Output format — ``"csv"`` or ``"xlsx"``.
         split_by_statement: When ``True``, produce one file per ``id_statement``.
         columns: Ordered mapping of export column name → source column name or
@@ -217,86 +229,75 @@ def _require_int(section: dict, key: str, spec_path: Path) -> int:
 
 
 # ---------------------------------------------------------------------------
-# _build_frame
+# _load_sql
 # ---------------------------------------------------------------------------
 
-# Columns needed beyond those declared in a spec when split_by_statement is True.
-# We always fetch id_statement so we can partition, then drop it from output.
-_SPLIT_ANCHOR = "id_statement"
+
+def _load_sql(spec_path: Path) -> str:
+    """Read the ``.sql`` file that accompanies a TOML export spec.
+
+    The ``.sql`` file must live in the same directory as the ``.toml`` file
+    and share the same stem (e.g. ``quickbooks_3column.sql`` alongside
+    ``quickbooks_3column.toml``).
+
+    Args:
+        spec_path: Path to the ``.toml`` spec file.
+
+    Returns:
+        The SQL query string read from the matching ``.sql`` file.
+
+    Raises:
+        ConfigError: If no matching ``.sql`` file exists alongside the spec.
+    """
+    sql_path = spec_path.with_suffix(".sql")
+    if not sql_path.exists():
+        raise ConfigError(f"Export spec requires a matching .sql file that was not found: {sql_path}")
+    return sql_path.read_text(encoding="utf-8")
 
 
-def _build_frame(
+# ---------------------------------------------------------------------------
+# _run_sql_file
+# ---------------------------------------------------------------------------
+
+
+def _run_sql_file(
     db_path: Path,
-    spec: ExportSpec,
+    sql: str,
     account_key: str,
     date_from: date | None,
     date_to: date | None,
     statement_key: str | None,
 ) -> pl.LazyFrame:
-    """Query the database, apply filters, and return a raw :class:`pl.LazyFrame`.
+    """Execute *sql* against *db_path* with named parameters and return a LazyFrame.
 
-    Filters are applied as parameterised SQL (no user-value interpolation).
-    The returned frame contains all columns from *source_table* plus, when
-    ``split_by_statement`` is ``True`` and the source is ``FlatTransaction``,
-    an ``id_statement`` column joined from ``FactTransaction``.
+    The SQL must use the named parameter placeholders ``:account_key``,
+    ``:date_from``, ``:date_to``, and ``:statement_key``.  Optional parameters
+    that are not applicable should be passed as ``NULL`` (i.e. ``None``) — the
+    SQL is expected to guard against them with ``IS NULL`` checks.
+
+    The result always includes an ``id_statement`` column (required by the
+    split-by-statement logic in :func:`export_spec`).
 
     Args:
         db_path: Path to the SQLite project database.
-        spec: The loaded :class:`ExportSpec`.
+        sql: The SQL query string loaded from a ``.sql`` file.
         account_key: Value to match against ``DimAccount.id_account``.
         date_from: Optional earliest transaction date (inclusive).
         date_to: Optional latest transaction date (inclusive).
         statement_key: Optional ``id_statement`` value to restrict rows.
 
     Returns:
-        A :class:`pl.LazyFrame` of the filtered rows.
+        A :class:`pl.LazyFrame` of the query results.
     """
-    params: list = [account_key]
-    where_clauses: list[str] = []
-
-    # FlatTransaction is a view over FactTransaction + DimStatement + DimAccount.
-    # Re-implement the same joins against the base tables so we can filter on
-    # da.id_account without re-joining through the view (which would risk fan-out
-    # if transaction_number is non-unique across accounts).
-    if spec.source_table == "FlatTransaction":
-        id_statement_col = ", ft2.id_statement" if spec.split_by_statement else ""
-        base_query = (
-            f"SELECT ft2.id_date AS transaction_date, ds.statement_date, ds.filename,"
-            f" da.company, da.account_type, da.account_number, da.sortcode, da.account_holder,"
-            f" ft2.transaction_number, ft2.transaction_credit_or_debit AS CD,"
-            f" ft2.transaction_type AS type, ft2.transaction_desc,"
-            f" SUBSTR(ft2.transaction_desc, 1, 25) AS short_desc,"
-            f" ft2.value_in, ft2.value_out, ft2.value{id_statement_col}"
-            f" FROM FactTransaction ft2"
-            f" INNER JOIN DimStatement ds ON ft2.statement_id = ds.statement_id"
-            f" INNER JOIN DimAccount da ON ft2.account_id = da.account_id"
-        )
-        where_clauses.append("da.id_account = ?")
-    else:
-        # For other tables that already carry id_account directly
-        base_query = f"SELECT * FROM {spec.source_table}"  # noqa: S608
-        where_clauses.append("id_account = ?")
-
-    if date_from is not None:
-        where_clauses.append("transaction_date >= ?")
-        params.append(date_from.isoformat())
-    if date_to is not None:
-        where_clauses.append("transaction_date <= ?")
-        params.append(date_to.isoformat())
-    if statement_key is not None:
-        if spec.source_table == "FlatTransaction":
-            where_clauses.append("ft2.id_statement = ?")
-        else:
-            where_clauses.append("id_statement = ?")
-        params.append(statement_key)
-
-    query = base_query
-    if where_clauses:
-        query = f"{base_query} WHERE {' AND '.join(where_clauses)}"
-
+    params = {
+        "account_key": account_key,
+        "date_from": date_from.isoformat() if date_from is not None else None,
+        "date_to": date_to.isoformat() if date_to is not None else None,
+        "statement_key": statement_key,
+    }
     with sqlite3.connect(db_path) as conn:
         return pl.read_database(
-            query,
+            sql,
             connection=conn,
             execute_options={"parameters": params},
             infer_schema_length=None,
@@ -592,43 +593,34 @@ def export_spec(
     if not paths.project_db.exists():
         raise ProjectDatabaseMissing(paths.project_db)
 
-    # Query and transform
-    lf = _build_frame(paths.project_db, loaded, account_key, date_from, date_to, statement_key)
-    lf = _apply_column_mapping(lf, loaded)
-    lf = _apply_date_format(lf, loaded)
-    lf = _apply_blank_zeros(lf, loaded)
-    lf = _sanitise_strings(lf, loaded)
+    # Load the matching .sql file — raises ConfigError if absent.
+    sql = _load_sql(spec)
+
+    # Fetch raw data (always includes id_statement for optional partitioning).
+    df_raw = _run_sql_file(paths.project_db, sql, account_key, date_from, date_to, statement_key).collect()
 
     output_dir = paths.export_output(spec.stem)
     paths.ensure_subdir_for_write(output_dir)
 
     if not loaded.split_by_statement:
-        df = lf.collect()
-        stem = account_key
-        written = _write_frames([(stem, df)], output_dir, loaded)
+        lf = pl.LazyFrame(df_raw)
+        lf = _apply_column_mapping(lf, loaded)
+        lf = _apply_date_format(lf, loaded)
+        lf = _apply_blank_zeros(lf, loaded)
+        lf = _sanitise_strings(lf, loaded)
+        written = _write_frames([(account_key, lf.collect())], output_dir, loaded)
     else:
-        # Partition by id_statement — the column was added by _build_frame and
-        # removed by _apply_column_mapping (it is not in spec.columns).
-        # We need to re-fetch with split anchor before mapping strips it.
-        lf_raw = _build_frame(paths.project_db, loaded, account_key, date_from, date_to, statement_key)
-        df_raw = lf_raw.collect()
-
-        # Determine unique statement keys
-        if _SPLIT_ANCHOR not in df_raw.columns:
-            # Fallback: write as single file if split column unavailable
-            df_mapped = lf.collect()
-            written = _write_frames([(account_key, df_mapped)], output_dir, loaded)
-        else:
-            statement_ids = df_raw[_SPLIT_ANCHOR].unique().sort().to_list()
-            frames: list[tuple[str, pl.DataFrame]] = []
-            for sid in statement_ids:
-                partition = df_raw.filter(pl.col(_SPLIT_ANCHOR) == sid).lazy()
-                partition = _apply_column_mapping(partition, loaded)
-                partition = _apply_date_format(partition, loaded)
-                partition = _apply_blank_zeros(partition, loaded)
-                partition = _sanitise_strings(partition, loaded)
-                stem = f"{account_key}_{sid}"
-                frames.append((stem, partition.collect()))
-            written = _write_frames(frames, output_dir, loaded)
+        # Partition by id_statement — column is always present in the SQL result
+        # but is not in spec.columns, so _apply_column_mapping drops it.
+        statement_ids = df_raw[_SPLIT_ANCHOR].unique().sort().to_list()
+        frames: list[tuple[str, pl.DataFrame]] = []
+        for sid in statement_ids:
+            partition = df_raw.filter(pl.col(_SPLIT_ANCHOR) == sid).lazy()
+            partition = _apply_column_mapping(partition, loaded)
+            partition = _apply_date_format(partition, loaded)
+            partition = _apply_blank_zeros(partition, loaded)
+            partition = _sanitise_strings(partition, loaded)
+            frames.append((f"{account_key}_{sid}", partition.collect()))
+        written = _write_frames(frames, output_dir, loaded)
 
     return written
