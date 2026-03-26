@@ -599,7 +599,7 @@ def export_spec(
     lf = _apply_blank_zeros(lf, loaded)
     lf = _sanitise_strings(lf, loaded)
 
-    output_dir = paths.export_specs_output(spec.stem)
+    output_dir = paths.export_output(spec.stem)
     paths.ensure_subdir_for_write(output_dir)
 
     if not loaded.split_by_statement:

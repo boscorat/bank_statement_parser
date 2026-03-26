@@ -83,14 +83,14 @@ from bank_statement_parser.modules._anonymise_shared import (
     _parse_tounicode_cmap,
     _rewrite_page_content_stream,
 )
-from bank_statement_parser.modules.paths import BASE_CONFIG
+from bank_statement_parser.modules.paths import BASE_CONFIG_USER
 
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 
 # Default config path.
-_DEFAULT_CONFIG_PATH: Path = BASE_CONFIG / "anonymise.toml"
+_DEFAULT_CONFIG_PATH: Path = BASE_CONFIG_USER / "anonymise.toml"
 
 # Digit characters as a frozenset for fast membership test.
 _DIGITS: frozenset[str] = frozenset("0123456789")
