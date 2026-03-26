@@ -42,7 +42,7 @@ from bank_statement_parser.modules.paths import ProjectPaths
 # ---------------------------------------------------------------------------
 
 # Paths to the two shipped QuickBooks spec files
-_SPECS_DIR = Path(__file__).parent.parent / "src" / "bank_statement_parser" / "project" / "export" / "specs"
+_SPECS_DIR = Path(__file__).parent.parent / "src" / "bank_statement_parser" / "project" / "config" / "export"
 _SPEC_3COL = _SPECS_DIR / "quickbooks_3column.toml"
 _SPEC_4COL = _SPECS_DIR / "quickbooks_4column.toml"
 

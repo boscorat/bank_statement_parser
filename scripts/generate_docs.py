@@ -39,7 +39,7 @@ _INIT_PY = _SRC / "__init__.py"
 _ANONYMISE_PY = _MODULES / "anonymise.py"
 _PATHS_PY = _MODULES / "paths.py"
 _REPORTS_DB_PY = _MODULES / "reports_db.py"
-_CONFIG_DIR = _SRC / "project" / "config"
+_CONFIG_DIR = _SRC / "project" / "config" / "import"
 _HSBC_DIR = _CONFIG_DIR / "HSBC_UK"
 
 # Output paths
@@ -723,9 +723,9 @@ def generate_bank_config() -> str:
     w()
     w("| Location | Purpose |")
     w("| --- | --- |")
-    w("| `project/config/<BANK_COUNTRY>/` | Bank-specific config folder (4 TOML files) |")
-    w("| `project/config/account_types.toml` | Shared account type registry |")
-    w("| `project/config/standard_fields.toml` | Shared standard field mappings |")
+    w("| `project/config/import/<BANK_COUNTRY>/` | Bank-specific config folder (4 TOML files) |")
+    w("| `project/config/import/account_types.toml` | Shared account type registry |")
+    w("| `project/config/import/standard_fields.toml` | Shared standard field mappings |")
     w()
     w("### Bank config folder structure")
     w()
@@ -763,7 +763,7 @@ def generate_bank_config() -> str:
     w("If your bank uses an account type not already in `account_types.toml`, add a new")
     w("entry. Most banks will use the existing types (`CRD`, `CUR`, `SAV`, `ISA`).")
     w()
-    w("**File:** `project/config/account_types.toml`")
+    w("**File:** `project/config/import/account_types.toml`")
     w()
     w("```toml")
     w(account_types_toml)
@@ -776,11 +776,11 @@ def generate_bank_config() -> str:
     # ----- Step 2: Create folder -----
     w("## Step 2: Create the Bank Config Folder")
     w()
-    w("Create a new subfolder under `project/config/` using the naming convention")
+    w("Create a new subfolder under `project/config/import/` using the naming convention")
     w("`<BANK>_<COUNTRY>` in SCREAMING_SNAKE_CASE:")
     w()
     w("```")
-    w("project/config/")
+    w("project/config/import/")
     w("  HSBC_UK/          # existing")
     w("  TSB_UK/           # existing")
     w("  NEWBANK_UK/       # <- your new folder")
@@ -972,7 +972,7 @@ def generate_bank_config() -> str:
     w("For each `STD_*` field, add a new `std_refs` entry with your statement type's")
     w("name and the corresponding raw field name from your `statement_tables.toml`.")
     w()
-    w("**File:** `project/config/standard_fields.toml`")
+    w("**File:** `project/config/import/standard_fields.toml`")
     w()
     w("**Example** (showing `STD_OPENING_BALANCE` with entries for multiple banks):")
     w()
@@ -1026,7 +1026,7 @@ def generate_bank_config() -> str:
     w("Use this checklist to verify your configuration is complete:")
     w()
     w("- [ ] Account type registered in `account_types.toml` (or existing type reused)")
-    w("- [ ] Bank config folder created: `project/config/<BANK_COUNTRY>/`")
+    w("- [ ] Bank config folder created: `project/config/import/<BANK_COUNTRY>/`")
     w("- [ ] `companies.toml` — company key, name, and PDF detection rule")
     w("- [ ] `statement_tables.toml` — all table extraction rules (summary, detail, transaction)")
     w("- [ ] `statement_types.toml` — header and lines config groups referencing your table keys")

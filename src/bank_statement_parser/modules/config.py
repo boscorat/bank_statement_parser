@@ -75,7 +75,7 @@ def copy_default_config(destination: Path, overwrite: bool = False) -> list[Path
         import bank_statement_parser as bsp
         from pathlib import Path
 
-        copied = bsp.copy_default_config(Path("my_project/config"))
+        copied = bsp.copy_default_config(Path("my_project/config/import"))
         # Edit the TOML files, then:
         batch = bsp.StatementBatch(pdfs=[...], project_path=Path("my_project"))
     """
