@@ -83,14 +83,14 @@ from bank_statement_parser.modules._anonymise_shared import (
     _parse_tounicode_cmap,
     _rewrite_page_content_stream,
 )
-from bank_statement_parser.modules.paths import BASE_CONFIG
+from bank_statement_parser.modules.paths import BASE_CONFIG_USER
 
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 
-# Default config path.
-_DEFAULT_CONFIG_PATH: Path = BASE_CONFIG / "anonymise.toml"
+# Default config path — looks for anonymise.toml in the user config subfolder.
+_DEFAULT_CONFIG_PATH: Path = BASE_CONFIG_USER / "anonymise.toml"
 
 # Digit characters as a frozenset for fast membership test.
 _DIGITS: frozenset[str] = frozenset("0123456789")
@@ -141,7 +141,7 @@ def _load_config(config_path: Path) -> _AnonymiseConfig:
     """
     if not config_path.exists():
         raise FileNotFoundError(
-            f"anonymise.toml not found at {config_path}.\nCopy project/config/user/anonymise_example.toml to project/config/import/anonymise.toml and fill in your exclusions."
+            f"anonymise.toml not found at {config_path}.\nCopy project/config/user/anonymise_example.toml to project/config/user/anonymise.toml and fill in your exclusions."
         )
 
     with config_path.open("rb") as fh:

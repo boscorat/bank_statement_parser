@@ -26,7 +26,7 @@ from bank_statement_parser.modules.data import (
     StatementType,
 )
 from bank_statement_parser.modules.errors import ConfigError, ProjectConfigMissing, StatementError
-from bank_statement_parser.modules.paths import BASE_CONFIG, ProjectPaths
+from bank_statement_parser.modules.paths import BASE_CONFIG_IMPORT, ProjectPaths
 from bank_statement_parser.modules.statement_functions import get_results
 
 
@@ -85,7 +85,7 @@ def copy_default_config(destination: Path, overwrite: bool = False) -> list[Path
     destination.mkdir(parents=True, exist_ok=True)
 
     copied: list[Path] = []
-    for src in BASE_CONFIG.glob("*.toml"):
+    for src in BASE_CONFIG_IMPORT.glob("*.toml"):
         dst = destination / src.name
         if dst.exists() and not overwrite:
             continue
@@ -122,8 +122,8 @@ class ConfigManager:
 
         Args:
             project_path: Optional Path to the project root directory.
-                          Config files are read from ``project_path / "config"``.
-                          If None, falls back to the shipped ``BASE_CONFIG``
+                          Config files are read from ``project_path / "config" / "import"``.
+                          If None, falls back to the shipped ``BASE_CONFIG_IMPORT``
                           directory bundled with the package.
         """
         self._project_path = project_path
@@ -134,10 +134,10 @@ class ConfigManager:
 
     @property
     def config_dir(self) -> Path:
-        """Return the effective configuration directory path."""
+        """Return the effective configuration directory path (``config/import/``)."""
         if self._project_path is not None:
-            return ProjectPaths.resolve(self._project_path).config
-        return BASE_CONFIG
+            return ProjectPaths.resolve(self._project_path).config_import
+        return BASE_CONFIG_IMPORT
 
     @property
     def config_dict(self) -> dict:

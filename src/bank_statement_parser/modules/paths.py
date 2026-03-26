@@ -21,8 +21,14 @@ _BSP = Path(__file__).parent.parent
 # The default project root bundled with the package.
 _DEFAULT_PROJECT_ROOT: Path = _BSP.joinpath("project")
 
-# Base config lives inside the default project's config/import sub-directory.
-BASE_CONFIG = _DEFAULT_PROJECT_ROOT / "config" / "import"
+# Root config directory bundled with the package.
+BASE_CONFIG = _DEFAULT_PROJECT_ROOT / "config"
+
+# Config sub-directory constants — each maps to one of the four config subfolders.
+BASE_CONFIG_IMPORT = BASE_CONFIG / "import"  # Bank statement parsing TOML configs.
+BASE_CONFIG_EXPORT = BASE_CONFIG / "export"  # Export spec TOML files.
+BASE_CONFIG_REPORT = BASE_CONFIG / "report"  # Report config (reserved).
+BASE_CONFIG_USER = BASE_CONFIG / "user"  # User-specific config (e.g. anonymise.toml).
 
 # The modules directory (used by a few internal references).
 MODULES = _BSP.joinpath("modules")
@@ -58,7 +64,6 @@ class ProjectPaths:
               simple/  full/
           log/
             debug/
-
     Use :meth:`resolve` to obtain an instance rather than instantiating
     this class directly.
     """
@@ -70,9 +75,29 @@ class ProjectPaths:
     # ------------------------------------------------------------------
 
     @property
-    def config(self) -> Path:
-        """Directory containing import TOML config files (``config/import/``)."""
-        return self.root / "config" / "import"
+    def config_root(self) -> Path:
+        """Root config directory (``config/``)."""
+        return self.root / "config"
+
+    @property
+    def config_import(self) -> Path:
+        """Directory containing TOML configs for parsing bank statements (``config/import/``)."""
+        return self.config_root / "import"
+
+    @property
+    def config_export(self) -> Path:
+        """Directory containing export spec TOML files (``config/export/``)."""
+        return self.config_root / "export"
+
+    @property
+    def config_report(self) -> Path:
+        """Directory for report config files — reserved for future use (``config/report/``)."""
+        return self.config_root / "report"
+
+    @property
+    def config_user(self) -> Path:
+        """Directory for user-specific config files, e.g. ``anonymise.toml`` (``config/user/``)."""
+        return self.config_root / "user"
 
     @property
     def parquet(self) -> Path:
@@ -104,7 +129,7 @@ class ProjectPaths:
     @property
     def export_specs(self) -> Path:
         """Directory containing export spec TOML files (``config/export/``)."""
-        return self.root / "config" / "export"
+        return self.config_export
 
     def export_specs_output(self, spec_stem: str) -> Path:
         """Output directory for a named export spec (``export/<spec_stem>/``).
@@ -167,7 +192,7 @@ class ProjectPaths:
     @property
     def forex_config(self) -> Path:
         """Path to the optional forex API config file."""
-        return self.config / "forex_api_config.toml"
+        return self.config_import / "forex_api_config.toml"
 
     # ------------------------------------------------------------------
     # Permanent Parquet files
@@ -289,16 +314,15 @@ class ProjectPaths:
     def ensure_dirs(self) -> None:
         """Create all project sub-directories if they do not already exist."""
         for directory in (
-            self.config,
-            self.root / "config" / "export",
-            self.root / "config" / "report",
-            self.root / "config" / "user",
+            self.config_import,
+            self.config_export,
+            self.config_report,
+            self.config_user,
             self.parquet,
             self.database,
             self.csv,
             self.excel,
             self.json,
-            self.export_specs,
             self.reporting_data_simple,
             self.reporting_data_full,
             self.log_debug,
@@ -418,7 +442,7 @@ def validate_or_initialise_project(project_path: Path) -> None:
 
     paths = ProjectPaths.resolve(project_path)
 
-    has_toml = paths.config.is_dir() and bool(list(paths.config.rglob("*.toml")))
+    has_toml = paths.config_import.is_dir() and bool(list(paths.config_import.rglob("*.toml")))
     has_db = paths.project_db.exists()
 
     # Rule 2: neither present → new project, scaffold in full.
@@ -438,7 +462,7 @@ def validate_or_initialise_project(project_path: Path) -> None:
 
     # Rule 4: DB present but config missing → corrupted/partial project.
     if has_db and not has_toml:
-        raise ProjectConfigMissing(paths.config)
+        raise ProjectConfigMissing(paths.config_import)
 
     # Rule 5: both present → valid, nothing to do.
 
@@ -479,9 +503,9 @@ def _scaffold_new_project(paths: ProjectPaths) -> None:
     paths.ensure_dirs()
 
     # 2. Copy default TOML config files (including any company subfolders).
-    for src in BASE_CONFIG.rglob("*.toml"):
-        relative = src.relative_to(BASE_CONFIG)
-        dst = paths.config / relative
+    for src in BASE_CONFIG_IMPORT.rglob("*.toml"):
+        relative = src.relative_to(BASE_CONFIG_IMPORT)
+        dst = paths.config_import / relative
         dst.parent.mkdir(parents=True, exist_ok=True)
         if not dst.exists():
             shutil.copy2(src, dst)
