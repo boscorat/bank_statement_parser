@@ -35,16 +35,16 @@ import pytest
 
 from bank_statement_parser.modules.errors import ConfigError
 from bank_statement_parser.modules.export_spec import ExportSpec, _load_spec, export_spec
-from bank_statement_parser.modules.paths import ProjectPaths
+from bank_statement_parser.modules.paths import BASE_CONFIG_EXPORT, ProjectPaths
 
 # ---------------------------------------------------------------------------
 # Helpers / constants
 # ---------------------------------------------------------------------------
 
 # Paths to the two shipped QuickBooks spec files
-_SPECS_DIR = Path(__file__).parent.parent / "src" / "bank_statement_parser" / "project" / "config" / "export"
-_SPEC_3COL = _SPECS_DIR / "quickbooks_3column.toml"
-_SPEC_4COL = _SPECS_DIR / "quickbooks_4column.toml"
+_SPECS_DIR = BASE_CONFIG_EXPORT
+_SPEC_3COL = _SPECS_DIR.joinpath("quickbooks_3column.toml")
+_SPEC_4COL = _SPECS_DIR.joinpath("quickbooks_4column.toml")
 
 # One well-known id_account present in the good_project test data
 _ACCOUNT_KEY = "HSBC_UK_CUR_12345678"

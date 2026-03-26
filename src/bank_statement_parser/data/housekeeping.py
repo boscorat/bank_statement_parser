@@ -187,6 +187,8 @@ class Housekeeping:
 
 
 if __name__ == "__main__":
+    from bank_statement_parser.modules.paths import ProjectPaths  # noqa: PLC0415
+
     parser = argparse.ArgumentParser(description="Database integrity housekeeping")
     parser.add_argument(
         "--delete",
@@ -196,7 +198,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--db",
         type=Path,
-        default=Path(__file__).parent.parent.joinpath("project", "database", "project.db"),
+        default=ProjectPaths.resolve().project_db,
         help="Path to database file",
     )
     args = parser.parse_args()

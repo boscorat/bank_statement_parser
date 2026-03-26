@@ -210,4 +210,6 @@ def create_indexes(db_path: Path):
 
 
 if __name__ == "__main__":
-    main(db_path=Path(__file__).parent.parent.joinpath("project", "database", "project.db"), with_fk=True)
+    from bank_statement_parser.modules.paths import ProjectPaths  # noqa: PLC0415
+
+    main(db_path=ProjectPaths.resolve().project_db, with_fk=True)
