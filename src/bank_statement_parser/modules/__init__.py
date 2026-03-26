@@ -24,7 +24,7 @@ functions.  Access them via the namespace:
 """
 
 import bank_statement_parser.modules.reports_db as db
-from bank_statement_parser.modules.config import copy_default_config
+from bank_statement_parser.modules.import_config import copy_default_import_config
 from bank_statement_parser.modules.paths import copy_project_folders
 from bank_statement_parser.modules.data import Failure, ParquetFiles, PdfResult, Review, StatementInfo, Success
 from bank_statement_parser.modules.errors import StatementError
@@ -49,7 +49,7 @@ __all__ = [
     "ParquetFiles",
     "delete_temp_files",
     # Config helpers
-    "copy_default_config",
+    "copy_default_import_config",
     "copy_project_folders",
     # Errors
     "StatementError",

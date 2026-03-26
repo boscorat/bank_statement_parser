@@ -141,11 +141,11 @@ Re-process all failing statements from a completed batch and write debug files.
 
 ## Config helpers
 
-### `bsp.copy_default_config()`
+### `bsp.copy_default_import_config()`
 
-*function* — `bank_statement_parser.modules.config`
+*function* — `bank_statement_parser.modules.import_config`
 
-Copy all default TOML configuration files to a destination directory.
+Copy all default import TOML configuration files to a destination directory.
 
 ### `bsp.copy_project_folders()`
 

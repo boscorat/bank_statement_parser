@@ -257,7 +257,7 @@ class TestHarness:
         """
         if not self._ready or self._project_path is None:
             raise RuntimeError("TestHarness.setup() must be called before accessing db_path.")
-        return ProjectPaths(root=self._project_path).project_db
+        return ProjectPaths.resolve(self._project_path).project_db
 
     @property
     def project_path(self) -> Path:
