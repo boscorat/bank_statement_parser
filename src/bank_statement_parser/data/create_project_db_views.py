@@ -272,4 +272,6 @@ def create_views(db_path: Path):
 
 
 if __name__ == "__main__":
-    create_views(Path(__file__).parent.parent.joinpath("project", "database", "project.db"))
+    from bank_statement_parser.modules.paths import ProjectPaths  # noqa: PLC0415
+
+    create_views(ProjectPaths.resolve().project_db)

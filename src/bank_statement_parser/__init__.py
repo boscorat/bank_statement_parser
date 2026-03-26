@@ -112,7 +112,7 @@ from bank_statement_parser.modules.errors import (
 # ---------------------------------------------------------------------------
 # Config helpers
 # ---------------------------------------------------------------------------
-from bank_statement_parser.modules.config import copy_default_config
+from bank_statement_parser.modules.import_config import copy_default_import_config
 from bank_statement_parser.modules.paths import ProjectPaths, copy_project_folders, validate_or_initialise_project
 
 # ---------------------------------------------------------------------------
@@ -177,7 +177,7 @@ __all__ = [
     "ProjectDatabaseMissing",
     "ProjectConfigMissing",
     # Config helpers
-    "copy_default_config",
+    "copy_default_import_config",
     "copy_project_folders",
     "validate_or_initialise_project",
     "ProjectPaths",

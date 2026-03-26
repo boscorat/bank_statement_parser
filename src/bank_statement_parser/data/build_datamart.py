@@ -714,11 +714,13 @@ def build_datamart(db_path: Path, verbose: bool = True) -> dict:
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
+    from bank_statement_parser.modules.paths import ProjectPaths  # noqa: PLC0415
+
     parser = argparse.ArgumentParser(description="Build (or rebuild) the data mart tables from raw source data.")
     parser.add_argument(
         "--db",
         type=Path,
-        default=Path(__file__).parent.parent / "project" / "database" / "project.db",
+        default=ProjectPaths.resolve().project_db,
         help="Path to the SQLite database (default: project.db)",
     )
     parser.add_argument(

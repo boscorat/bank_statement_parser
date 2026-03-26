@@ -1,8 +1,12 @@
 """
-Configuration management for bank statement parsing.
+Import configuration management for bank statement parsing.
 
-This module provides ConfigManager class for loading and accessing TOML-based
-configuration files, as well as backward-compatible module-level functions.
+This module provides :class:`ImportConfigManager` for loading and accessing
+TOML-based configuration files that drive the bank-statement import pipeline
+(companies, accounts, statement types, statement tables, standard fields).
+
+Configuration files live under ``<project>/config/import/``.  The shipped
+defaults are in ``src/bank_statement_parser/project/config/import/``.
 """
 
 import shutil
@@ -37,7 +41,7 @@ class _ConfigEntry(TypedDict):
     config: dict[str, Any]
 
 
-REQUIRED_CONFIG_FILES = [
+REQUIRED_CONFIG_FILES: list[str] = [
     "companies.toml",
     "account_types.toml",
     "accounts.toml",
@@ -47,15 +51,18 @@ REQUIRED_CONFIG_FILES = [
 ]
 
 
-def copy_default_config(destination: Path, overwrite: bool = False) -> list[Path]:
+def copy_default_import_config(destination: Path, overwrite: bool = False) -> list[Path]:
     """
-    Copy all default TOML configuration files to a destination directory.
+    Copy all default import TOML configuration files to a destination directory.
 
-    Copies every ``*.toml`` file from the shipped ``base_config`` folder into
-    *destination*, creating the directory (and any parents) if it does not
-    already exist.  The copied files are the starting-point for a user config
-    override: place the returned files in ``<project_path>/config/`` and pass
-    that project root as ``project_path`` to ``ConfigManager`` (or
+    Copies every ``*.toml`` file (including company sub-directories) from the
+    shipped ``base_config/import`` folder into *destination*, preserving the
+    relative directory structure.  The destination directory (and any parents)
+    are created if they do not already exist.
+
+    The copied files are the starting-point for a user config override: place
+    the returned files in ``<project_path>/config/import/`` and pass that
+    project root as ``project_path`` to :class:`ImportConfigManager` (or
     ``Statement``/``StatementBatch``) to override the built-in defaults.
 
     Args:
@@ -75,7 +82,7 @@ def copy_default_config(destination: Path, overwrite: bool = False) -> list[Path
         import bank_statement_parser as bsp
         from pathlib import Path
 
-        copied = bsp.copy_default_config(Path("my_project/config/import"))
+        copied = bsp.copy_default_import_config(Path("my_project/config/import"))
         # Edit the TOML files, then:
         batch = bsp.StatementBatch(pdfs=[...], project_path=Path("my_project"))
     """
@@ -85,8 +92,10 @@ def copy_default_config(destination: Path, overwrite: bool = False) -> list[Path
     destination.mkdir(parents=True, exist_ok=True)
 
     copied: list[Path] = []
-    for src in BASE_CONFIG_IMPORT.glob("*.toml"):
-        dst = destination / src.name
+    for src in BASE_CONFIG_IMPORT.rglob("*.toml"):
+        relative = src.relative_to(BASE_CONFIG_IMPORT)
+        dst = destination.joinpath(relative)
+        dst.parent.mkdir(parents=True, exist_ok=True)
         if dst.exists() and not overwrite:
             continue
         shutil.copy2(src, dst)
@@ -95,13 +104,13 @@ def copy_default_config(destination: Path, overwrite: bool = False) -> list[Path
     return copied
 
 
-class ConfigManager:
+class ImportConfigManager:
     """
-    Manages configuration loading and access for bank statement parsing.
+    Manages import configuration loading and access for bank statement parsing.
 
-    This class handles loading TOML configuration files, converting them to
-    dataclasses, linking references between config objects, and providing
-    access to account, company, and statement type configurations.
+    Loads TOML configuration files from ``<project>/config/import/``, converts
+    them to dataclasses, links cross-section references, and provides lookup
+    methods for accounts, companies, and statement types.
 
     Attributes:
         _project_path: Optional project root directory path.
@@ -111,36 +120,40 @@ class ConfigManager:
         _companies_df: Lazy-loaded DataFrame of companies.
 
     Example:
-        >>> config = ConfigManager()
+        >>> config = ImportConfigManager()
         >>> account = config.get_account("my_account")
         >>> accounts = config.get_accounts_for_company("my_company")
     """
 
-    def __init__(self, project_path: Path | None = None):
+    __slots__ = ("_project_path", "_config_dict", "_accounts_df", "_statement_types_df", "_companies_df")
+
+    def __init__(self, project_path: Path | None = None) -> None:
         """
-        Initialize ConfigManager with optional project path.
+        Initialise ImportConfigManager with an optional project path.
 
         Args:
             project_path: Optional Path to the project root directory.
-                          Config files are read from ``project_path / "config" / "import"``.
-                          If None, falls back to the shipped ``BASE_CONFIG_IMPORT``
-                          directory bundled with the package.
+                          Config files are read from
+                          ``project_path / "config" / "import"``.
+                          If ``None``, falls back to the shipped
+                          ``BASE_CONFIG_IMPORT`` directory bundled with the
+                          package.
         """
-        self._project_path = project_path
-        self._config_dict: dict | None = None
+        self._project_path: Path | None = project_path
+        self._config_dict: dict[str, _ConfigEntry] | None = None
         self._accounts_df: pl.DataFrame | None = None
         self._statement_types_df: pl.DataFrame | None = None
         self._companies_df: pl.DataFrame | None = None
 
     @property
     def config_dir(self) -> Path:
-        """Return the effective configuration directory path (``config/import/``)."""
+        """Return the effective import configuration directory path."""
         if self._project_path is not None:
             return ProjectPaths.resolve(self._project_path).config_import
         return BASE_CONFIG_IMPORT
 
     @property
-    def config_dict(self) -> dict:
+    def config_dict(self) -> dict[str, _ConfigEntry]:
         """Return the full configuration dictionary, loading if necessary."""
         if self._config_dict is None:
             self._load_config()
@@ -191,19 +204,19 @@ class ConfigManager:
 
     def _require_config_dir(self) -> None:
         """
-        Validate that the project config directory exists and contains .toml files.
+        Validate that the project import config directory exists and contains .toml files.
 
         Only called when ``_project_path`` is not ``None``.  The project is
         expected to have been initialised already (by
         :func:`~bank_statement_parser.modules.paths.validate_or_initialise_project`
         called from ``Statement`` or ``StatementBatch``).
 
-        Scans both the root config directory and any immediate company
+        Scans both the root config/import directory and any immediate company
         subdirectories for ``.toml`` files.
 
         Raises:
-            ProjectConfigMissing: If ``config/`` is absent or contains no
-                ``.toml`` files at any level.
+            ProjectConfigMissing: If ``config/import/`` is absent or contains
+                no ``.toml`` files at any level.
         """
         config_dir = self.config_dir
         if not config_dir.is_dir() or not list(config_dir.rglob("*.toml")):
@@ -214,11 +227,11 @@ class ConfigManager:
         Load and parse all TOML configuration files.
 
         For each config section, loads the root-level file (e.g.
-        ``config/account_types.toml``) if present, then discovers and merges
-        all matching files from immediate company subdirectories (e.g.
-        ``config/HSBC_UK/accounts.toml``, ``config/TSB_UK/accounts.toml``).
-        All top-level TOML keys must be unique across files; no key may appear
-        in more than one file for the same section.
+        ``config/import/account_types.toml``) if present, then discovers and
+        merges all matching files from immediate company subdirectories (e.g.
+        ``config/import/HSBC_UK/accounts.toml``).  All top-level TOML keys
+        must be unique across files; no key may appear in more than one file
+        for the same section.
 
         Converts raw TOML data to dataclasses and links cross-section
         references between statement tables and account objects.
@@ -238,11 +251,11 @@ class ConfigManager:
         for key in config_dict:
             file_name = f"{key}.toml"
             # Load root-level file first (e.g. account_types.toml, standard_fields.toml)
-            self._merge_toml_file(config_dict, key, self.config_dir / file_name)
+            self._merge_toml_file(config_dict, key, self.config_dir.joinpath(file_name))
             # Load matching files from each immediate company subdirectory
             for subdir in sorted(self.config_dir.iterdir()):
                 if subdir.is_dir():
-                    self._merge_toml_file(config_dict, key, subdir / file_name)
+                    self._merge_toml_file(config_dict, key, subdir.joinpath(file_name))
 
         for v in config_dict.values():
             for k in v["config"]:
@@ -277,8 +290,12 @@ class ConfigManager:
         """
         Link statement table configurations to their parent statement types.
 
-        For each statement type header and lines config that has a statement_table_key,
-        resolves the actual StatementTable object from the config dictionary.
+        For each statement type header and lines config that has a
+        ``statement_table_key``, resolves the actual :class:`StatementTable`
+        object from the config dictionary.
+
+        Args:
+            config_dict: The fully loaded (but not yet linked) config dictionary.
         """
         for key, statement_type in config_dict["statement_types"]["config"].items():
             for config_group in [statement_type.header.configs, statement_type.lines.configs]:
@@ -291,10 +308,13 @@ class ConfigManager:
         """
         Link account objects to their corresponding account type, statement type, and company.
 
-        Populates the account_type, statement_type, and company attributes on each
-        Account object by looking up the referenced keys.  Also validates that
-        ``account.currency`` is a recognised ISO 4217 code present in
-        ``currency_spec``.
+        Populates the ``account_type``, ``statement_type``, and ``company``
+        attributes on each :class:`Account` object by looking up the referenced
+        keys.  Also validates that ``account.currency`` is a recognised ISO 4217
+        code present in ``currency_spec``.
+
+        Args:
+            config_dict: The fully loaded (but not yet linked) config dictionary.
 
         Raises:
             ConfigError: If ``account.currency`` is not a key in ``currency_spec``.
@@ -317,7 +337,7 @@ class ConfigManager:
             account_key: The unique identifier for the account.
 
         Returns:
-            The Account object if found, None otherwise.
+            The Account object if found, ``None`` otherwise.
         """
         return self.accounts.get(account_key)
 
@@ -341,7 +361,7 @@ class ConfigManager:
             company_key: The unique identifier for the company.
 
         Returns:
-            The Company object if found, None otherwise.
+            The Company object if found, ``None`` otherwise.
         """
         return self.companies.get(company_key)
 
@@ -350,7 +370,7 @@ class ConfigManager:
         Identify the company and account from a PDF bank statement.
 
         Attempts to match the PDF against known company configurations by
-        looking for identifying text patterns. Returns the matched account
+        looking for identifying text patterns.  Returns the matched account
         and company key.
 
         Args:
@@ -460,7 +480,7 @@ class ConfigManager:
         """
         Fully identify both company and account from a PDF statement.
 
-        This is the main entry point for automatic detection. It attempts to
+        This is the main entry point for automatic detection.  It attempts to
         identify the company first, then the specific account within that company.
 
         Args:
@@ -494,138 +514,3 @@ class ConfigManager:
                 return account
 
         raise StatementError(f"Unable to identify the company from the statement provided: {file_path}")
-
-
-# Module-level singleton for default configuration
-_default_config: ConfigManager | None = None
-
-
-def _get_default_config() -> ConfigManager:
-    """
-    Get or create the default ConfigManager singleton.
-
-    Returns:
-        The default ConfigManager instance.
-    """
-    global _default_config
-    if _default_config is None:
-        _default_config = ConfigManager()
-    return _default_config
-
-
-def _get_accounts() -> dict[str, Account]:
-    """Get accounts dict from default config."""
-    return _get_default_config().accounts
-
-
-def _get_statement_types() -> dict[str, StatementType]:
-    """Get statement types dict from default config."""
-    return _get_default_config().statement_types
-
-
-def _get_companies() -> dict[str, Company]:
-    """Get companies dict from default config."""
-    return _get_default_config().companies
-
-
-def _get_standard_fields() -> dict[str, StandardFields]:
-    """Get standard fields dict from default config."""
-    return _get_default_config().standard_fields
-
-
-# Backward-compatible module-level exports
-# Singletons are initialised lazily on first access via __getattr__ so that
-# importing this module does NOT trigger TOML file I/O immediately.
-_LAZY_SINGLETONS: dict[str, object] = {}
-
-_LAZY_FACTORIES: dict[str, object] = {
-    "config_accounts": _get_accounts,
-    "config_statement_types": _get_statement_types,
-    "config_companies": _get_companies,
-    "config_standard_fields": _get_standard_fields,
-}
-
-
-def __getattr__(name: str) -> object:
-    """Lazily initialise module-level config singletons on first access."""
-    if name in _LAZY_FACTORIES:
-        if name not in _LAZY_SINGLETONS:
-            _LAZY_SINGLETONS[name] = _LAZY_FACTORIES[name]()  # type: ignore[operator]
-        return _LAZY_SINGLETONS[name]
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-
-def get_config_from_account(account_key: str, logs: pl.DataFrame, file_path: str, project_path: Path | None = None) -> Account:
-    """
-    Retrieve account configuration by key (backward-compatible function).
-
-    Args:
-        account_key: The account identifier.
-        logs: Polars DataFrame for logging operations.
-        file_path: Path to the PDF file being processed.
-        project_path: Optional project root directory path.
-
-    Returns:
-        The Account object.
-
-    Raises:
-        StatementError: If the account cannot be found.
-    """
-    config = ConfigManager(project_path) if project_path else _get_default_config()
-    return config.get_config_from_account(account_key, logs, file_path)
-
-
-def get_config_from_company(company_key: str, pdf: PDF, logs: pl.DataFrame, file_path: str, project_path: Path | None = None) -> Account:
-    """
-    Identify account from company by testing against PDF (backward-compatible function).
-
-    Args:
-        company_key: The company identifier.
-        pdf: The opened PDF object.
-        logs: Polars DataFrame for logging operations.
-        file_path: Path to the PDF file being processed.
-        project_path: Optional project root directory path.
-
-    Returns:
-        The matched Account object.
-
-    Raises:
-        StatementError: If no account can be matched.
-    """
-    config = ConfigManager(project_path) if project_path else _get_default_config()
-    return config.get_config_from_company(company_key, pdf, logs, file_path)
-
-
-def get_config_from_statement(pdf: PDF, file_path: str, logs: pl.DataFrame, project_path: Path | None = None) -> Account:
-    """
-    Identify company and account from PDF (backward-compatible function).
-
-    Args:
-        pdf: The opened PDF object.
-        file_path: Path to the PDF file being processed.
-        logs: Polars DataFrame for logging operations.
-        project_path: Optional project root directory path.
-
-    Returns:
-        The identified Account object.
-
-    Raises:
-        StatementError: If neither company nor account can be identified.
-    """
-    config = ConfigManager(project_path) if project_path else _get_default_config()
-    return config.get_config_from_statement(pdf, file_path, logs)
-
-
-def config_company_accounts(company_key: str, project_path: Path | None = None) -> list[Account]:
-    """
-    Get all accounts for a company (backward-compatible function).
-
-    Args:
-        company_key: The company identifier to filter by.
-        project_path: Optional project root directory path.
-
-    Returns:
-        List of Account objects for the specified company.
-    """
-    config = ConfigManager(project_path) if project_path else _get_default_config()
-    return config.get_accounts_for_company(company_key)

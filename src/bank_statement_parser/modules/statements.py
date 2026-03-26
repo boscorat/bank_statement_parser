@@ -28,13 +28,8 @@ from uuid import uuid4
 
 import polars as pl
 
-import bank_statement_parser.modules.config as _config_module
 import bank_statement_parser.modules.parquet as pq
-from bank_statement_parser.modules.config import (
-    get_config_from_account,
-    get_config_from_company,
-    get_config_from_statement,
-)
+from bank_statement_parser.modules.import_config import ImportConfigManager
 from bank_statement_parser.modules.data import (
     Account,
     Failure,
@@ -472,15 +467,9 @@ class Statement:
                     )
 
         if self.statement_type:
-            # Resolve config_standard_fields at call time via the module reference so that:
-            #   a) the lazy __getattr__ singleton is not frozen at import time, and
-            #   b) a custom project_path on this Statement is respected.
-            if self.project_path:
-                from bank_statement_parser.modules.config import ConfigManager
-
-                std_fields: dict[str, StandardFields] = ConfigManager(self.project_path).standard_fields
-            else:
-                std_fields = _config_module.config_standard_fields  # type: ignore[assignment]
+            # Resolve standard_fields via ImportConfigManager so that a custom
+            # project_path on this Statement is always respected.
+            std_fields: dict[str, StandardFields] = ImportConfigManager(self.project_path).standard_fields
             # Apply standard field transformations based on statement type
             results = results.pipe(
                 get_standard_fields,
@@ -508,13 +497,15 @@ class Statement:
             return None
         if self.account_key:
             # Use explicit account key if provided
-            config = get_config_from_account(self.account_key, self.logs, self.file_absolute, self.project_path)
+            config = ImportConfigManager(self.project_path).get_config_from_account(self.account_key, self.logs, self.file_absolute)
         elif self.company_key:
             # Use explicit company key if provided
-            config = get_config_from_company(self.company_key, self.pdf, self.logs, self.file_absolute, self.project_path)
+            config = ImportConfigManager(self.project_path).get_config_from_company(
+                self.company_key, self.pdf, self.logs, self.file_absolute
+            )
         else:
             # Attempt auto-detection from statement content
-            config = get_config_from_statement(self.pdf, self.file_absolute, self.logs, self.project_path)
+            config = ImportConfigManager(self.project_path).get_config_from_statement(self.pdf, self.file_absolute, self.logs)
         return deepcopy(config) if config else None  # we return a deepcopy in case we need to make statement-specific modifications
 
     def cleanup(self):
