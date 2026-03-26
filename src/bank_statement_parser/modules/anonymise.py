@@ -141,7 +141,7 @@ def _load_config(config_path: Path) -> _AnonymiseConfig:
     """
     if not config_path.exists():
         raise FileNotFoundError(
-            f"anonymise.toml not found at {config_path}.\nCopy anonymise_example.toml to anonymise.toml and fill in your exclusions."
+            f"anonymise.toml not found at {config_path}.\nCopy project/config/user/anonymise_example.toml to project/config/import/anonymise.toml and fill in your exclusions."
         )
 
     with config_path.open("rb") as fh:

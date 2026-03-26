@@ -30,7 +30,7 @@ wheels/
 *.xls
 
 # anonymise.toml contains real PII — never commit it
-src/bank_statement_parser/project/config/anonymise.toml
+anonymise.toml
 
 # test project directories (created and deleted by integration tests)
 tests/test_project/
