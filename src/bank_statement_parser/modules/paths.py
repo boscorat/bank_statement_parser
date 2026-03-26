@@ -1,3 +1,19 @@
+"""
+paths — file-system layout constants and ProjectPaths factory.
+
+Module-level constants and the :class:`ProjectPaths` dataclass that derives
+every runtime path from a single project root directory.
+
+Constants:
+    BASE_CONFIG: Root of the default project's ``config/`` directory.
+    BASE_CONFIG_IMPORT: Default ``config/import/`` directory (bank-parsing TOMLs).
+    BASE_CONFIG_EXPORT: Default ``config/export/`` directory (export spec files).
+    BASE_CONFIG_REPORT: Default ``config/report/`` directory (report config).
+    BASE_CONFIG_USER: Default ``config/user/`` directory (user-specific config).
+    MODULES: The ``modules/`` directory inside the installed package.
+    DATA: The ``data/`` directory inside the installed package.
+"""
+
 from __future__ import annotations
 
 import shutil
@@ -15,24 +31,24 @@ from bank_statement_parser.modules.errors import (
 # Package-internal constants (never change — tied to the installed package)
 # ---------------------------------------------------------------------------
 
-# The shipped default TOML config files (inside the package, not the project).
-_BSP = Path(__file__).parent.parent
+# Anchor: the bank_statement_parser package root (src/bank_statement_parser/).
+_BSP: Path = Path(__file__).parent.parent
 
 # The default project root bundled with the package.
 _DEFAULT_PROJECT_ROOT: Path = _BSP.joinpath("project")
 
-# Root config directory bundled with the package.
-BASE_CONFIG = _DEFAULT_PROJECT_ROOT / "config"
+# Root of the default project's config/ directory.
+BASE_CONFIG: Path = _DEFAULT_PROJECT_ROOT.joinpath("config")
 
-# Config sub-directory constants — each maps to one of the four config subfolders.
-BASE_CONFIG_IMPORT = BASE_CONFIG / "import"  # Bank statement parsing TOML configs.
-BASE_CONFIG_EXPORT = BASE_CONFIG / "export"  # Export spec TOML files.
-BASE_CONFIG_REPORT = BASE_CONFIG / "report"  # Report config (reserved).
-BASE_CONFIG_USER = BASE_CONFIG / "user"  # User-specific config (e.g. anonymise.toml).
+# Sub-directory constants beneath BASE_CONFIG.
+BASE_CONFIG_IMPORT: Path = BASE_CONFIG.joinpath("import")
+BASE_CONFIG_EXPORT: Path = BASE_CONFIG.joinpath("export")
+BASE_CONFIG_REPORT: Path = BASE_CONFIG.joinpath("report")
+BASE_CONFIG_USER: Path = BASE_CONFIG.joinpath("user")
 
-# The modules directory (used by a few internal references).
-MODULES = _BSP.joinpath("modules")
-DATA = _BSP.joinpath("data")
+# The modules and data directories (used by a few internal references).
+MODULES: Path = _BSP.joinpath("modules")
+DATA: Path = _BSP.joinpath("data")
 
 
 # ---------------------------------------------------------------------------
@@ -52,7 +68,7 @@ class ProjectPaths:
           config/
             import/    ← TOML configs for parsing bank statements
             export/    ← export spec TOML files
-            report/    ← report config (reserved)
+            report/    ← report config
             user/      ← user-specific config (e.g. anonymise.toml)
           parquet/
           database/
@@ -64,6 +80,7 @@ class ProjectPaths:
               simple/  full/
           log/
             debug/
+
     Use :meth:`resolve` to obtain an instance rather than instantiating
     this class directly.
     """
@@ -71,60 +88,71 @@ class ProjectPaths:
     root: Path
 
     # ------------------------------------------------------------------
-    # Sub-directories
+    # Config sub-directories
     # ------------------------------------------------------------------
 
     @property
     def config_root(self) -> Path:
         """Root config directory (``config/``)."""
-        return self.root / "config"
+        return self.root.joinpath("config")
 
     @property
     def config_import(self) -> Path:
-        """Directory containing TOML configs for parsing bank statements (``config/import/``)."""
-        return self.config_root / "import"
+        """Directory containing import TOML config files (``config/import/``)."""
+        return self.config_root.joinpath("import")
 
     @property
     def config_export(self) -> Path:
-        """Directory containing export spec TOML files (``config/export/``)."""
-        return self.config_root / "export"
+        """Directory containing export spec files (``config/export/``)."""
+        return self.config_root.joinpath("export")
 
     @property
     def config_report(self) -> Path:
-        """Directory for report config files — reserved for future use (``config/report/``)."""
-        return self.config_root / "report"
+        """Directory containing report config files (``config/report/``)."""
+        return self.config_root.joinpath("report")
 
     @property
     def config_user(self) -> Path:
-        """Directory for user-specific config files, e.g. ``anonymise.toml`` (``config/user/``)."""
-        return self.config_root / "user"
+        """Directory containing user-specific config files (``config/user/``)."""
+        return self.config_root.joinpath("user")
+
+    # ------------------------------------------------------------------
+    # Data directories
+    # ------------------------------------------------------------------
 
     @property
     def parquet(self) -> Path:
         """Directory containing permanent and temporary Parquet files."""
-        return self.root / "parquet"
+        return self.root.joinpath("parquet")
 
     @property
     def database(self) -> Path:
         """Directory containing the SQLite database."""
-        return self.root / "database"
+        return self.root.joinpath("database")
+
+    # ------------------------------------------------------------------
+    # Export output directories
+    # ------------------------------------------------------------------
 
     @property
     def exports(self) -> Path:
-        """Root exports directory."""
-        return self.root / "export"
+        """Root exports directory (``export/``)."""
+        return self.root.joinpath("export")
 
     @property
     def csv(self) -> Path:
-        return self.exports / "csv"
+        """Directory for CSV export output (``export/csv/``)."""
+        return self.exports.joinpath("csv")
 
     @property
     def excel(self) -> Path:
-        return self.exports / "excel"
+        """Directory for Excel export output (``export/excel/``)."""
+        return self.exports.joinpath("excel")
 
     @property
     def json(self) -> Path:
-        return self.exports / "json"
+        """Directory for JSON export output (``export/json/``)."""
+        return self.exports.joinpath("json")
 
     @property
     def export_specs(self) -> Path:
@@ -135,50 +163,72 @@ class ProjectPaths:
         """Output directory for a named export spec (``export/<spec_stem>/``).
 
         Args:
-            spec_stem: The stem of the spec TOML file (filename without extension),
-                e.g. ``"quickbooks_3column"``.
+            spec_stem: The stem of the spec TOML file (filename without
+                extension), e.g. ``"quickbooks_3column"``.
 
         Returns:
-            A :class:`Path` pointing to ``export/<spec_stem>/`` inside the project.
+            A :class:`Path` pointing to ``export/<spec_stem>/`` inside the
+            project.
         """
-        return self.exports / spec_stem
+        return self.exports.joinpath(spec_stem)
+
+    # ------------------------------------------------------------------
+    # Reporting directories
+    # ------------------------------------------------------------------
 
     @property
     def reporting(self) -> Path:
-        """Root reporting directory."""
-        return self.root / "reporting"
+        """Root reporting directory (``reporting/``)."""
+        return self.root.joinpath("reporting")
 
     @property
     def reporting_data(self) -> Path:
-        """Directory containing reporting data feeds (CSV files)."""
-        return self.reporting / "data"
+        """Directory containing reporting data feeds (``reporting/data/``)."""
+        return self.reporting.joinpath("data")
 
     @property
     def reporting_data_simple(self) -> Path:
         """Reporting data directory for the simple (flat transactions) feed."""
-        return self.reporting_data / "simple"
+        return self.reporting_data.joinpath("simple")
 
     @property
     def reporting_data_full(self) -> Path:
         """Reporting data directory for the full (star-schema) feed."""
-        return self.reporting_data / "full"
+        return self.reporting_data.joinpath("full")
+
+    # ------------------------------------------------------------------
+    # Statements directory
+    # ------------------------------------------------------------------
 
     @property
     def statements(self) -> Path:
-        """Root directory for copied statement PDFs."""
-        return self.root / "statements"
+        """Root directory for copied statement PDFs (``statements/``)."""
+        return self.root.joinpath("statements")
+
+    # ------------------------------------------------------------------
+    # Log directories
+    # ------------------------------------------------------------------
 
     @property
     def logs(self) -> Path:
-        return self.root / "log"
+        """Root log directory (``log/``)."""
+        return self.root.joinpath("log")
 
     @property
     def log_debug(self) -> Path:
-        return self.logs / "debug"
+        """Directory for per-statement debug output (``log/debug/``)."""
+        return self.logs.joinpath("debug")
 
     def log_debug_dir(self, filename: str) -> Path:
-        """Returns the per-statement debug output directory inside log/debug/."""
-        return self.log_debug / filename
+        """Returns the per-statement debug output directory inside ``log/debug/``.
+
+        Args:
+            filename: The statement filename used to name the debug sub-directory.
+
+        Returns:
+            A :class:`Path` pointing to ``log/debug/<filename>/``.
+        """
+        return self.log_debug.joinpath(filename)
 
     # ------------------------------------------------------------------
     # Database file
@@ -186,13 +236,13 @@ class ProjectPaths:
 
     @property
     def project_db(self) -> Path:
-        """Path to the SQLite database file."""
-        return self.database / "project.db"
+        """Path to the SQLite database file (``database/project.db``)."""
+        return self.database.joinpath("project.db")
 
     @property
     def forex_config(self) -> Path:
-        """Path to the optional forex API config file."""
-        return self.config_import / "forex_api_config.toml"
+        """Path to the optional forex API config file (``config/import/forex_api_config.toml``)."""
+        return self.config_import.joinpath("forex_api_config.toml")
 
     # ------------------------------------------------------------------
     # Permanent Parquet files
@@ -200,23 +250,28 @@ class ProjectPaths:
 
     @property
     def cab(self) -> Path:
-        return self.parquet / "checks_and_balances.parquet"
+        """Permanent checks-and-balances Parquet file."""
+        return self.parquet.joinpath("checks_and_balances.parquet")
 
     @property
     def batch_heads(self) -> Path:
-        return self.parquet / "batch_heads.parquet"
+        """Permanent batch-heads Parquet file."""
+        return self.parquet.joinpath("batch_heads.parquet")
 
     @property
     def batch_lines(self) -> Path:
-        return self.parquet / "batch_lines.parquet"
+        """Permanent batch-lines Parquet file."""
+        return self.parquet.joinpath("batch_lines.parquet")
 
     @property
     def statement_heads(self) -> Path:
-        return self.parquet / "statement_heads.parquet"
+        """Permanent statement-heads Parquet file."""
+        return self.parquet.joinpath("statement_heads.parquet")
 
     @property
     def statement_lines(self) -> Path:
-        return self.parquet / "statement_lines.parquet"
+        """Permanent statement-lines Parquet file."""
+        return self.parquet.joinpath("statement_lines.parquet")
 
     # ------------------------------------------------------------------
     # Log files
@@ -224,47 +279,53 @@ class ProjectPaths:
 
     @property
     def log_error(self) -> Path:
-        return self.logs / "error.parquet"
+        """Error log Parquet file (``log/error.parquet``)."""
+        return self.logs.joinpath("error.parquet")
 
     @property
     def log_perf(self) -> Path:
-        return self.logs / "perf.parquet"
+        """Performance log Parquet file (``log/perf.parquet``)."""
+        return self.logs.joinpath("perf.parquet")
 
     # ------------------------------------------------------------------
     # Temporary Parquet files (written per-PDF during batch processing)
     # ------------------------------------------------------------------
 
-    def cab_temp(self, id: int, batch_id: str) -> Path:
-        """Temporary checks-and-balances file for PDF at index *id* in batch *batch_id*."""
-        return self.parquet / f"checks_and_balances_temp_{batch_id}_{id}.parquet"
+    def cab_temp(self, idx: int, batch_id: str) -> Path:
+        """Temporary checks-and-balances file for PDF at index *idx* in batch *batch_id*."""
+        return self.parquet.joinpath(f"checks_and_balances_temp_{batch_id}_{idx}.parquet")
 
-    def batch_lines_temp(self, id: int, batch_id: str) -> Path:
-        """Temporary batch-lines file for PDF at index *id* in batch *batch_id*."""
-        return self.parquet / f"batch_lines_temp_{batch_id}_{id}.parquet"
+    def batch_lines_temp(self, idx: int, batch_id: str) -> Path:
+        """Temporary batch-lines file for PDF at index *idx* in batch *batch_id*."""
+        return self.parquet.joinpath(f"batch_lines_temp_{batch_id}_{idx}.parquet")
 
-    def statement_heads_temp(self, id: int, batch_id: str) -> Path:
-        """Temporary statement-heads file for PDF at index *id* in batch *batch_id*."""
-        return self.parquet / f"statement_heads_temp_{batch_id}_{id}.parquet"
+    def statement_heads_temp(self, idx: int, batch_id: str) -> Path:
+        """Temporary statement-heads file for PDF at index *idx* in batch *batch_id*."""
+        return self.parquet.joinpath(f"statement_heads_temp_{batch_id}_{idx}.parquet")
 
-    def statement_lines_temp(self, id: int, batch_id: str) -> Path:
-        """Temporary statement-lines file for PDF at index *id* in batch *batch_id*."""
-        return self.parquet / f"statement_lines_temp_{batch_id}_{id}.parquet"
+    def statement_lines_temp(self, idx: int, batch_id: str) -> Path:
+        """Temporary statement-lines file for PDF at index *idx* in batch *batch_id*."""
+        return self.parquet.joinpath(f"statement_lines_temp_{batch_id}_{idx}.parquet")
 
     # ------------------------------------------------------------------
     # Filename stems (no directory, no extension)
     # ------------------------------------------------------------------
 
-    def cab_temp_stem(self, id: int, batch_id: str) -> str:
-        return f"checks_and_balances_temp_{batch_id}_{id}"
+    def cab_temp_stem(self, idx: int, batch_id: str) -> str:
+        """Stem of the temporary checks-and-balances file for PDF *idx* in batch *batch_id*."""
+        return f"checks_and_balances_temp_{batch_id}_{idx}"
 
-    def batch_lines_temp_stem(self, id: int, batch_id: str) -> str:
-        return f"batch_lines_temp_{batch_id}_{id}"
+    def batch_lines_temp_stem(self, idx: int, batch_id: str) -> str:
+        """Stem of the temporary batch-lines file for PDF *idx* in batch *batch_id*."""
+        return f"batch_lines_temp_{batch_id}_{idx}"
 
-    def statement_heads_temp_stem(self, id: int, batch_id: str) -> str:
-        return f"statement_heads_temp_{batch_id}_{id}"
+    def statement_heads_temp_stem(self, idx: int, batch_id: str) -> str:
+        """Stem of the temporary statement-heads file for PDF *idx* in batch *batch_id*."""
+        return f"statement_heads_temp_{batch_id}_{idx}"
 
-    def statement_lines_temp_stem(self, id: int, batch_id: str) -> str:
-        return f"statement_lines_temp_{batch_id}_{id}"
+    def statement_lines_temp_stem(self, idx: int, batch_id: str) -> str:
+        """Stem of the temporary statement-lines file for PDF *idx* in batch *batch_id*."""
+        return f"statement_lines_temp_{batch_id}_{idx}"
 
     # ------------------------------------------------------------------
     # Factory
@@ -299,12 +360,23 @@ class ProjectPaths:
     # ------------------------------------------------------------------
 
     def require_subdir_for_read(self, subdir: Path) -> None:
-        """Raise ProjectSubFolderNotFound if *subdir* does not exist (read guard)."""
+        """Raise ProjectSubFolderNotFound if *subdir* does not exist (read guard).
+
+        Args:
+            subdir: The sub-directory path to check.
+
+        Raises:
+            ProjectSubFolderNotFound: If *subdir* is not a directory.
+        """
         if not subdir.is_dir():
             raise ProjectSubFolderNotFound(subdir)
 
     def ensure_subdir_for_write(self, subdir: Path) -> None:
-        """Create *subdir* (and any parents) if it does not already exist (write guard)."""
+        """Create *subdir* (and any parents) if it does not already exist (write guard).
+
+        Args:
+            subdir: The sub-directory path to create.
+        """
         subdir.mkdir(parents=True, exist_ok=True)
 
     # ------------------------------------------------------------------
@@ -377,7 +449,7 @@ def copy_project_folders(destination: Path) -> list[Path]:
     for src_dir in sorted(_DEFAULT_PROJECT_ROOT.rglob("*")):
         if src_dir.is_dir():
             relative = src_dir.relative_to(_DEFAULT_PROJECT_ROOT)
-            dest_dir = destination / relative
+            dest_dir = destination.joinpath(relative)
             dest_dir.mkdir(parents=True, exist_ok=True)
             created.append(dest_dir)
 
@@ -489,8 +561,9 @@ def _create_project_db(paths: ProjectPaths) -> None:
 
 def _scaffold_new_project(paths: ProjectPaths) -> None:
     """
-    Create all project sub-directories, copy default TOML configs, and
-    initialise a new empty SQLite database.
+    Create all project sub-directories, copy default TOML configs, copy default
+    export specs, copy default report configs, and initialise a new empty SQLite
+    database.
 
     This is an internal helper called only by
     :func:`validate_or_initialise_project`.
@@ -502,15 +575,33 @@ def _scaffold_new_project(paths: ProjectPaths) -> None:
     # 1. Create the full directory tree.
     paths.ensure_dirs()
 
-    # 2. Copy default TOML config files (including any company subfolders).
+    # 2. Copy default import TOML config files (including company subfolders).
     for src in BASE_CONFIG_IMPORT.rglob("*.toml"):
         relative = src.relative_to(BASE_CONFIG_IMPORT)
-        dst = paths.config_import / relative
+        dst = paths.config_import.joinpath(relative)
         dst.parent.mkdir(parents=True, exist_ok=True)
         if not dst.exists():
             shutil.copy2(src, dst)
 
-    # 3. Create the SQLite database with the full schema.
+    # 3. Copy export spec files (.toml and .sql) from the default config/export/.
+    for src in BASE_CONFIG_EXPORT.rglob("*"):
+        if src.is_file():
+            relative = src.relative_to(BASE_CONFIG_EXPORT)
+            dst = paths.config_export.joinpath(relative)
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            if not dst.exists():
+                shutil.copy2(src, dst)
+
+    # 4. Copy report config files from the default config/report/.
+    for src in BASE_CONFIG_REPORT.rglob("*"):
+        if src.is_file():
+            relative = src.relative_to(BASE_CONFIG_REPORT)
+            dst = paths.config_report.joinpath(relative)
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            if not dst.exists():
+                shutil.copy2(src, dst)
+
+    # 5. Create the SQLite database with the full schema.
     #    Import here to avoid a circular dependency at module level
     #    (database.py → paths.py; paths.py must not import database.py at top).
     from bank_statement_parser.data.create_project_db import main as create_db  # noqa: PLC0415

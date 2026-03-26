@@ -90,7 +90,7 @@ from bank_statement_parser.modules.paths import BASE_CONFIG_USER
 # ---------------------------------------------------------------------------
 
 # Default config path — looks for anonymise.toml in the user config subfolder.
-_DEFAULT_CONFIG_PATH: Path = BASE_CONFIG_USER / "anonymise.toml"
+_DEFAULT_CONFIG_PATH: Path = BASE_CONFIG_USER.joinpath("anonymise.toml")
 
 # Digit characters as a frozenset for fast membership test.
 _DIGITS: frozenset[str] = frozenset("0123456789")
