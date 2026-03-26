@@ -21,8 +21,8 @@ _BSP = Path(__file__).parent.parent
 # The default project root bundled with the package.
 _DEFAULT_PROJECT_ROOT: Path = _BSP.joinpath("project")
 
-# Base config lives inside the default project's config sub-directory.
-BASE_CONFIG = _DEFAULT_PROJECT_ROOT / "config"
+# Base config lives inside the default project's config/import sub-directory.
+BASE_CONFIG = _DEFAULT_PROJECT_ROOT / "config" / "import"
 
 # The modules directory (used by a few internal references).
 MODULES = _BSP.joinpath("modules")
@@ -44,6 +44,10 @@ class ProjectPaths:
 
         <root>/
           config/
+            import/    ← TOML configs for parsing bank statements
+            export/    ← export spec TOML files
+            report/    ← report config (reserved)
+            user/      ← user-specific config (e.g. anonymise.toml)
           parquet/
           database/
             project.db
@@ -67,8 +71,8 @@ class ProjectPaths:
 
     @property
     def config(self) -> Path:
-        """Directory containing TOML config files."""
-        return self.root / "config"
+        """Directory containing import TOML config files (``config/import/``)."""
+        return self.root / "config" / "import"
 
     @property
     def parquet(self) -> Path:
@@ -99,8 +103,8 @@ class ProjectPaths:
 
     @property
     def export_specs(self) -> Path:
-        """Directory containing export spec TOML files."""
-        return self.exports / "specs"
+        """Directory containing export spec TOML files (``config/export/``)."""
+        return self.root / "config" / "export"
 
     def export_specs_output(self, spec_stem: str) -> Path:
         """Output directory for a named export spec (``export/<spec_stem>/``).
@@ -286,6 +290,9 @@ class ProjectPaths:
         """Create all project sub-directories if they do not already exist."""
         for directory in (
             self.config,
+            self.root / "config" / "export",
+            self.root / "config" / "report",
+            self.root / "config" / "user",
             self.parquet,
             self.database,
             self.csv,

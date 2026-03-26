@@ -17,9 +17,9 @@ The configuration lives in two places:
 
 | Location | Purpose |
 | --- | --- |
-| `project/config/<BANK_COUNTRY>/` | Bank-specific config folder (4 TOML files) |
-| `project/config/account_types.toml` | Shared account type registry |
-| `project/config/standard_fields.toml` | Shared standard field mappings |
+| `project/config/import/<BANK_COUNTRY>/` | Bank-specific config folder (4 TOML files) |
+| `project/config/import/account_types.toml` | Shared account type registry |
+| `project/config/import/standard_fields.toml` | Shared standard field mappings |
 
 ### Bank config folder structure
 
@@ -55,7 +55,7 @@ Understanding the processing order helps when writing config:
 If your bank uses an account type not already in `account_types.toml`, add a new
 entry. Most banks will use the existing types (`CRD`, `CUR`, `SAV`, `ISA`).
 
-**File:** `project/config/account_types.toml`
+**File:** `project/config/import/account_types.toml`
 
 ```toml
 [CRD]
@@ -82,11 +82,11 @@ Simple lookup label for an account type category.
 
 ## Step 2: Create the Bank Config Folder
 
-Create a new subfolder under `project/config/` using the naming convention
+Create a new subfolder under `project/config/import/` using the naming convention
 `<BANK>_<COUNTRY>` in SCREAMING_SNAKE_CASE:
 
 ```
-project/config/
+project/config/import/
   HSBC_UK/          # existing
   TSB_UK/           # existing
   NEWBANK_UK/       # <- your new folder
@@ -593,7 +593,7 @@ standardised output columns (`STD_*`).
 For each `STD_*` field, add a new `std_refs` entry with your statement type's
 name and the corresponding raw field name from your `statement_tables.toml`.
 
-**File:** `project/config/standard_fields.toml`
+**File:** `project/config/import/standard_fields.toml`
 
 **Example** (showing `STD_OPENING_BALANCE` with entries for multiple banks):
 
@@ -667,7 +667,7 @@ Declaration of a single standard output column and how to derive it.
 Use this checklist to verify your configuration is complete:
 
 - [ ] Account type registered in `account_types.toml` (or existing type reused)
-- [ ] Bank config folder created: `project/config/<BANK_COUNTRY>/`
+- [ ] Bank config folder created: `project/config/import/<BANK_COUNTRY>/`
 - [ ] `companies.toml` — company key, name, and PDF detection rule
 - [ ] `statement_tables.toml` — all table extraction rules (summary, detail, transaction)
 - [ ] `statement_types.toml` — header and lines config groups referencing your table keys
