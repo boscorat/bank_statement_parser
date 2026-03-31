@@ -154,14 +154,14 @@ class TestProcessOptions:
         assert action.default == "all"
 
     def test_export_type_choices(self) -> None:
-        """--export-type must accept full, simple."""
+        """--export-type must accept single, multi."""
         action = _find_action("process", "--export-type")
-        assert set(action.choices) == {"full", "simple"}
+        assert set(action.choices) == {"single", "multi"}
 
     def test_export_type_default(self) -> None:
-        """--export-type must default to 'simple'."""
+        """--export-type must default to 'single'."""
         action = _find_action("process", "--export-type")
-        assert action.default == "simple"
+        assert action.default == "single"
 
     def test_pattern_default(self) -> None:
         """--pattern must default to '**/*.pdf'."""
