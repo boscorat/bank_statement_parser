@@ -143,6 +143,8 @@ def _cmd_process(args: argparse.Namespace) -> int:
         batch.export(
             filetype=args.export_format,
             type=args.export_type,
+            batch_id=args.batch_id if args.batch_id else None,
+            filename_timestamp=args.filename_timestamp,
         )
 
     # -- cleanup temp files --------------------------------------------------
@@ -322,12 +324,12 @@ def main() -> None:
     )
     proc.add_argument(
         "--export-type",
-        choices=["full", "simple"],
-        default="simple",
+        choices=["single", "multi"],
+        default="single",
         dest="export_type",
         help=(
-            "Export preset. 'simple' (default) exports a single flat "
-            "transactions table. 'full' exports separate star-schema "
+            "Export preset. 'single' (default) exports a single flat "
+            "transactions table. 'multi' exports separate star-schema "
             "tables (accounts, calendar, statements, transactions, "
             "balances, gaps) intended for loading into an external database."
         ),
@@ -345,6 +347,23 @@ def main() -> None:
         default=False,
         dest="no_copy",
         help="Skip copying source PDFs into the project statements/ directory.",
+    )
+    proc.add_argument(
+        "--batch-id",
+        metavar="ID",
+        dest="batch_id",
+        default=None,
+        help="Filter exports to a single batch identifier (default: export all batches).",
+    )
+    proc.add_argument(
+        "--filename-timestamp",
+        action="store_true",
+        default=False,
+        dest="filename_timestamp",
+        help=(
+            "Append a human-readable timestamp (yyyymmddHHMMSS) to exported filenames. "
+            "For multi exports (CSV/JSON) a timestamped sub-folder is created instead."
+        ),
     )
 
     args = parser.parse_args()

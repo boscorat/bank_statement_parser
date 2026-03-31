@@ -1,13 +1,12 @@
 from pathlib import Path
 
 # from bank_statement_parser import get_exchange_rates
-
 # import bank_statement_parser as bsp
 from bank_statement_parser.modules import statements
 
 
 def main():
-    project_path = Path("/home/boscorat/Downloads/2024/bsp_project")
+    project_path = Path("/home/boscorat/Projects/bsp_project")
     # bsp.anonymise_pdf(Path("/home/boscorat/Projects/tsb_spend_and_save_example_1.pdf"))
     # laptop
     # folder = Path("/Users/boscorat/Library/CloudStorage/OneDrive-Personal/OpenStan/Statements/HSBC/2024")
@@ -38,7 +37,7 @@ def main():
     # get_exchange_rates(project_path=project_path)
     # batch.copy_statements_to_project()
     # batch.delete_temp_files()
-    batch.export(filetype="all")  # writes Excel, CSV, and JSON
+    batch.export(filetype="all", filename_timestamp=True, type="multi")  # writes Excel, CSV, and JSON
     batch.export(filetype="reporting")  # writes Excel, CSV, and JSON
     # print(f"total: {batch.duration_secs}, process: {batch.process_secs}, parquet: {batch.parquet_secs}, db: {batch.db_secs}")
     # if batch.errors:
