@@ -55,7 +55,7 @@ bsp anonymise PATH [--folder] [--pattern GLOB] [--output OUT_FILE] [--output-dir
 Discover PDF bank statements, extract transaction data, persist results to Parquet and/or SQLite, copy source PDFs into the project tree, and export reports as Excel, CSV, JSON, and/or CSV reporting feeds. A project folder is created automatically if it does not exist.
 
 ```
-bsp process [--project PATH] [--pdfs PATH] [--pattern GLOB] [--no-turbo] [--company KEY] [--account KEY] [--data {parquet,database,both}] [--export-format {excel,csv,json,all,reporting}] [--export-type {full,simple}] [--no-export] [--no-copy]
+bsp process [--project PATH] [--pdfs PATH] [--pattern GLOB] [--no-turbo] [--company KEY] [--account KEY] [--data {parquet,database,both}] [--export-format {excel,csv,json,all,reporting}] [--export-type {single,multi}] [--no-export] [--no-copy] [--batch-id ID] [--filename-timestamp]
 ```
 
 ### Options
@@ -70,9 +70,11 @@ bsp process [--project PATH] [--pdfs PATH] [--pattern GLOB] [--no-turbo] [--comp
 | `--account` | auto-detect | Account key for config lookup (default: auto-detect from PDF). |
 | `--data` | `both` | Persistence target for update_data() (default: 'both'). Choices: `parquet`, `database`, `both`. |
 | `--export-format` | `all` | Export file format (default: 'all'). Choices: `excel`, `csv`, `json`, `all`, `reporting`. |
-| `--export-type` | `simple` | Export preset. 'simple' (default) exports a single flat transactions table. 'full' exports separate star-schema tables (accounts, calendar, statements, transactions, balances, gaps) intended for loading into an external database. Choices: `full`, `simple`. |
+| `--export-type` | `single` | Export preset. 'single' (default) exports a single flat transactions table. 'multi' exports separate star-schema tables (accounts, calendar, statements, transactions, balances, gaps) intended for loading into an external database. Choices: `single`, `multi`. |
 | `--no-export` | off | Skip the export step entirely. |
 | `--no-copy` | off | Skip copying source PDFs into the project statements/ directory. |
+| `--batch-id` | auto-detect | Filter exports to a single batch identifier (default: export all batches). |
+| `--filename-timestamp` | off | Append a human-readable timestamp (yyyymmddHHMMSS) to exported filenames. For multi exports (CSV/JSON) a timestamped sub-folder is created instead. |
 
 ## Examples
 

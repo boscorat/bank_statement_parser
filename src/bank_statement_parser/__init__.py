@@ -40,7 +40,10 @@ DimAccount, FactTransaction, GapReport plus ``export_csv`` / ``export_excel``
 / ``export_json`` / ``export_reporting_data`` helpers.  Export functions accept
 an optional ``folder`` / ``path`` argument; when omitted they write to the
 project's ``export/csv/``, ``export/excel/``, ``export/json/``, or
-``reporting/data/simple|full/`` sub-directory automatically.
+``reporting/data/simple|full/`` sub-directory automatically.  All three export
+functions also accept ``batch_id: str | None`` to filter to a single batch and
+``filename_timestamp: bool`` to append a Unix timestamp to the output filename
+(or create a timestamped sub-folder for multi-file full exports).
 
     bsp.db.FlatTransaction(...)
     bsp.db.export_reporting_data(project_path=Path("/my/project"))  # reporting feeds

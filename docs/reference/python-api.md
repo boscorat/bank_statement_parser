@@ -293,14 +293,28 @@ Available in `bsp.db`:
 #### `export_csv()`
 
 ```python
-export_csv(folder: Path | None = None, type: str = 'simple', project_path: Path | None = None) -> None
+export_csv(folder: Path | None = None, type: Literal['single', 'multi'] = 'single', project_path: Path | None = None, batch_id: str | None = None, filename_timestamp: bool = False) -> None
 ```
 
 Write report data to CSV files in *folder*.
 
 Each table is written as a separate ``.csv`` file named after its logical
-table name (e.g. ``transactions_table.csv``, or ``statement.csv``,
-``account.csv``, etc. for ``type="full"``).
+table name (e.g. ``transactions.csv``, or ``statement_dimension.csv``,
+``account_dimension.csv``, etc. for ``type="multi"``).
+
+When *filename_timestamp* is ``True``:
+
+- ``type="single"``: the timestamp is appended to the filename, e.g.
+``transactions_20250331143022.csv``.
+- ``type="multi"``: files are written into a ``multi_20250331143022/``
+sub-folder inside *folder* with their original names.
+
+When *filename_timestamp* is ``False``:
+
+- ``type="single"``: files are written directly to *folder* with their
+original names, e.g. ``transactions.csv``.
+- ``type="multi"``: files are written into a ``multi/`` sub-folder inside
+*folder* with their original names.
 
 
 **Args:**
@@ -308,25 +322,40 @@ table name (e.g. ``transactions_table.csv``, or ``statement.csv``,
 - `folder` — Directory to write CSV files into.  When ``None`` the project's
   ``export/csv/`` directory (resolved via *project_path*) is used and
   created automatically if absent.
-- `type` — Export preset — ``"simple"`` (flat transactions table) or
-  ``"full"`` (separate star-schema tables for loading into a
-  database).  Defaults to ``"simple"``.
+- `type` — Export preset — ``"single"`` (flat transactions table) or
+  ``"multi"`` (separate star-schema tables for loading into a
+  database).  Defaults to ``"single"``.
 - `project_path` — Optional project root used to resolve the default export
   folder and data sources.  Falls back to the bundled default project
   when ``None``.
+- `batch_id` — Optional batch identifier to filter report data to a single
+  batch.  When ``None`` all rows are exported.
+- `filename_timestamp` — When ``True``, append a human-readable timestamp
+  (``yyyymmddHHMMSS``) to the filename (single) or create a
+  timestamped sub-folder (multi).  Defaults to ``False``.
 
 #### `export_excel()`
 
 ```python
-export_excel(path: Path | None = None, type: str = 'simple', project_path: Path | None = None) -> None
+export_excel(path: Path | None = None, type: Literal['single', 'multi'] = 'single', project_path: Path | None = None, batch_id: str | None = None, filename_timestamp: bool = False) -> None
 ```
 
 Write report data to an Excel workbook at *path*.
 
-Each table is written as a separate worksheet.  For ``type="simple"`` a
-single ``transactions_table`` sheet is written; for ``type="full"`` six
-sheets are written (``statement``, ``account``, ``calendar``,
-``transactions``, ``balances``, ``gaps``).
+Each table is written as a separate worksheet.  For ``type="single"`` a
+single ``transactions`` sheet is written; for ``type="multi"`` six sheets
+are written (``statement_dimension``, ``account_dimension``,
+``calendar_dimension``, ``transaction_measures``,
+``daily_account_balances``, ``missing_statement_report``).
+
+Filename conventions:
+
+- ``type="single"``, no timestamp: ``transactions.xlsx``
+- ``type="single"``, with timestamp: ``transactions_20250331143022.xlsx``
+- ``type="multi"``, no timestamp: ``transactions_multi.xlsx``
+- ``type="multi"``, with timestamp: ``transactions_multi_20250331143022.xlsx``
+
+Worksheet names are never modified by the timestamp or type logic.
 
 
 **Args:**
@@ -334,25 +363,44 @@ sheets are written (``statement``, ``account``, ``calendar``,
 - `path` — Full file path for the output ``.xlsx`` workbook.  When ``None``
   the file is written to ``export/excel/transactions.xlsx`` inside the
   project directory resolved via *project_path*.
-- `type` — Export preset — ``"simple"`` (flat transactions table) or
-  ``"full"`` (separate star-schema sheets for loading into a
-  database).  Defaults to ``"simple"``.
+- `type` — Export preset — ``"single"`` (flat transactions table) or
+  ``"multi"`` (separate star-schema sheets for loading into a
+  database).  Defaults to ``"single"``.
 - `project_path` — Optional project root used to resolve the default export
   folder and data sources.  Falls back to the bundled default project
   when ``None``.
+- `batch_id` — Optional batch identifier to filter report data to a single
+  batch.  When ``None`` all rows are exported.
+- `filename_timestamp` — When ``True``, append a human-readable timestamp
+  (``yyyymmddHHMMSS``) to the workbook filename.  Worksheet names
+  are unaffected.  Defaults to ``False``.
 
 #### `export_json()`
 
 ```python
-export_json(folder: Path | None = None, type: str = 'simple', project_path: Path | None = None) -> None
+export_json(folder: Path | None = None, type: Literal['single', 'multi'] = 'single', project_path: Path | None = None, batch_id: str | None = None, filename_timestamp: bool = False) -> None
 ```
 
 Write report data to JSON files in *folder*.
 
 Each table is written as a separate ``.json`` file containing a JSON array
 of row objects, named after its logical table name (e.g.
-``transactions_table.json``, or ``statement.json``, ``account.json``, etc.
-for ``type="full"``).
+``transactions.json``, or ``statement_dimension.json``,
+``account_dimension.json``, etc. for ``type="multi"``).
+
+When *filename_timestamp* is ``True``:
+
+- ``type="single"``: the timestamp is appended to the filename, e.g.
+``transactions_20250331143022.json``.
+- ``type="multi"``: files are written into a ``multi_20250331143022/``
+sub-folder inside *folder* with their original names.
+
+When *filename_timestamp* is ``False``:
+
+- ``type="single"``: files are written directly to *folder* with their
+original names, e.g. ``transactions.json``.
+- ``type="multi"``: files are written into a ``multi/`` sub-folder inside
+*folder* with their original names.
 
 
 **Args:**
@@ -360,12 +408,17 @@ for ``type="full"``).
 - `folder` — Directory to write JSON files into.  When ``None`` the
   project's ``export/json/`` directory (resolved via *project_path*)
   is used and created automatically if absent.
-- `type` — Export preset — ``"simple"`` (flat transactions table) or
-  ``"full"`` (separate star-schema tables for loading into a
-  database).  Defaults to ``"simple"``.
+- `type` — Export preset — ``"single"`` (flat transactions table) or
+  ``"multi"`` (separate star-schema tables for loading into a
+  database).  Defaults to ``"single"``.
 - `project_path` — Optional project root used to resolve the default export
   folder and data sources.  Falls back to the bundled default project
   when ``None``.
+- `batch_id` — Optional batch identifier to filter report data to a single
+  batch.  When ``None`` all rows are exported.
+- `filename_timestamp` — When ``True``, append a human-readable timestamp
+  (``yyyymmddHHMMSS``) to the filename (single) or create a
+  timestamped sub-folder (multi).  Defaults to ``False``.
 
 #### `export_reporting_data()`
 
@@ -375,9 +428,10 @@ export_reporting_data(project_path: Path | None = None) -> None
 
 Write CSV reporting feeds to the project's ``reporting/data/`` sub-directories.
 
-Calls :func:`export_csv` twice — once with ``type="simple"`` writing to
-``reporting/data/simple/`` and once with ``type="full"`` writing to
-``reporting/data/full/``.  Both directories are created automatically if
+Calls :func:`export_csv` twice — once with ``type="single"`` writing to
+``reporting/data/single/`` and once with ``type="multi"`` writing to
+``reporting/data/multi/`` (created as a sub-folder of ``reporting/data/``
+by the multi-export logic).  Both directories are created automatically if
 absent.
 
 This produces a stable set of CSV files that external reporting tools
@@ -399,11 +453,11 @@ to know about the full export machinery.
 
     bsp.db.export_reporting_data(project_path=Path("/my/project"))
     # Writes:
-    #   /my/project/reporting/data/simple/transactions_table.csv
-    #   /my/project/reporting/data/full/statement.csv
-    #   /my/project/reporting/data/full/account.csv
-    #   /my/project/reporting/data/full/calendar.csv
-    #   /my/project/reporting/data/full/transactions.csv
-    #   /my/project/reporting/data/full/balances.csv
-    #   /my/project/reporting/data/full/gaps.csv
+    #   /my/project/reporting/data/single/transactions.csv
+    #   /my/project/reporting/data/multi/statement_dimension.csv
+    #   /my/project/reporting/data/multi/account_dimension.csv
+    #   /my/project/reporting/data/multi/calendar_dimension.csv
+    #   /my/project/reporting/data/multi/transaction_measures.csv
+    #   /my/project/reporting/data/multi/daily_account_balances.csv
+    #   /my/project/reporting/data/multi/missing_statement_report.csv
 ```
