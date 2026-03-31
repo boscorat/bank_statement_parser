@@ -24,10 +24,10 @@ functions.  Access them via the namespace:
 """
 
 import bank_statement_parser.modules.reports_db as db
-from bank_statement_parser.modules.import_config import copy_default_import_config
-from bank_statement_parser.modules.paths import copy_project_folders
 from bank_statement_parser.modules.data import Failure, ParquetFiles, PdfResult, Review, StatementInfo, Success
 from bank_statement_parser.modules.errors import StatementError
+from bank_statement_parser.modules.import_config import copy_default_import_config
+from bank_statement_parser.modules.paths import copy_project_folders
 from bank_statement_parser.modules.pdf_functions import get_table_from_region, page_crop, page_text, pdf_open, region_search
 from bank_statement_parser.modules.statements import (
     Statement,

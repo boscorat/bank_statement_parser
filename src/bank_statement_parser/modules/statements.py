@@ -29,7 +29,6 @@ from uuid import uuid4
 import polars as pl
 
 import bank_statement_parser.modules.parquet as pq
-from bank_statement_parser.modules.import_config import ImportConfigManager
 from bank_statement_parser.modules.data import (
     Account,
     Failure,
@@ -41,6 +40,7 @@ from bank_statement_parser.modules.data import (
     Success,
 )
 from bank_statement_parser.modules.database import update_db
+from bank_statement_parser.modules.import_config import ImportConfigManager
 from bank_statement_parser.modules.parquet import update_parquet
 from bank_statement_parser.modules.paths import ProjectPaths, validate_or_initialise_project
 from bank_statement_parser.modules.pdf_functions import pdf_close, pdf_open
@@ -1351,8 +1351,10 @@ class StatementBatch:
         self,
         filetype: Literal["excel", "csv", "json", "all", "both", "reporting"] = "excel",
         folder: Path | None = None,
-        type: str = "simple",
+        type: Literal["single", "multi"] = "single",
         project_path: Path | None = None,
+        batch_id: str | None = None,
+        filename_timestamp: bool = False,
     ) -> None:
         """
         Export processed batch data to a file or set of files.
@@ -1367,8 +1369,8 @@ class StatementBatch:
                 workbook; ``"csv"`` writes one CSV file per report table;
                 ``"json"`` writes one JSON file per report table; ``"all"``
                 writes Excel, CSV, and JSON in sequence; ``"reporting"`` writes
-                CSV feeds to ``reporting/data/simple/`` and
-                ``reporting/data/full/`` inside the project directory.
+                CSV feeds to ``reporting/data/single/`` and
+                ``reporting/data/multi/`` inside the project directory.
                 Defaults to ``"excel"``.
 
                 .. deprecated::
@@ -1380,12 +1382,18 @@ class StatementBatch:
                 ``None`` the default export sub-directory for the resolved
                 project is used.
             type: Export preset passed through to the underlying function.
-                ``"simple"`` exports the flat transactions table only;
-                ``"full"`` exports separate star-schema tables for loading
-                into a database.  Defaults to ``"simple"``.
+                ``"single"`` exports the flat transactions table only;
+                ``"multi"`` exports separate star-schema tables for loading
+                into a database.  Defaults to ``"single"``.
             project_path: Optional project root directory.  If not provided,
                 uses the project_path set on this batch, or the default project
                 folder.
+            batch_id: Optional batch identifier to filter report data to a
+                single batch.  When ``None`` all rows are exported.
+            filename_timestamp: When ``True``, append a human-readable
+                timestamp (``yyyymmddHHMMSS``) to the output filename or create
+                a timestamped sub-folder for multi-file exports.  Defaults to
+                ``False``.
         """
         if filetype == "both":
             warnings.warn(
@@ -1395,20 +1403,47 @@ class StatementBatch:
             )
             filetype = "all"
         if filetype == "all":
-            self.export(filetype="excel", folder=folder, type=type, project_path=project_path)
-            self.export(filetype="csv", folder=folder, type=type, project_path=project_path)
-            self.export(filetype="json", folder=folder, type=type, project_path=project_path)
+            self.export(
+                filetype="excel",
+                folder=folder,
+                type=type,
+                project_path=project_path,
+                batch_id=batch_id,
+                filename_timestamp=filename_timestamp,
+            )
+            self.export(
+                filetype="csv",
+                folder=folder,
+                type=type,
+                project_path=project_path,
+                batch_id=batch_id,
+                filename_timestamp=filename_timestamp,
+            )
+            self.export(
+                filetype="json",
+                folder=folder,
+                type=type,
+                project_path=project_path,
+                batch_id=batch_id,
+                filename_timestamp=filename_timestamp,
+            )
             return
         resolved_project_path = project_path if project_path is not None else self.project_path
 
-        import bank_statement_parser.modules.reports_db as _rd
+        import bank_statement_parser.modules.reports_db as _rd  # noqa: PLC0415
 
         if filetype == "excel":
-            _rd.export_excel(path=folder, type=type, project_path=resolved_project_path)
+            _rd.export_excel(
+                path=folder, type=type, project_path=resolved_project_path, batch_id=batch_id, filename_timestamp=filename_timestamp
+            )
         elif filetype == "csv":
-            _rd.export_csv(folder=folder, type=type, project_path=resolved_project_path)
+            _rd.export_csv(
+                folder=folder, type=type, project_path=resolved_project_path, batch_id=batch_id, filename_timestamp=filename_timestamp
+            )
         elif filetype == "json":
-            _rd.export_json(folder=folder, type=type, project_path=resolved_project_path)
+            _rd.export_json(
+                folder=folder, type=type, project_path=resolved_project_path, batch_id=batch_id, filename_timestamp=filename_timestamp
+            )
         elif filetype == "reporting":
             _rd.export_reporting_data(project_path=resolved_project_path)
 
