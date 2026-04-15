@@ -406,7 +406,7 @@ class DimTime:
     def __init__(self, project_path: Path | None = None, batch_id: str | None = None) -> None:
         paths = ProjectPaths.resolve(project_path)
         _require_db(paths)
-        self.all = _read_data_filtered(paths.project_db, "DimTime", "DimTimeBatch", batch_id)
+        self.all = _read_data_filtered(paths.project_db, "DimDate", "DimDateBatch", batch_id)
 
 
 class DimStatement:
