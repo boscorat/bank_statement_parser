@@ -51,7 +51,7 @@ _ALLOWED_TABLES: frozenset[str] = frozenset(
         "FactBalance",
         "DimStatement",
         "DimAccount",
-        "DimTime",
+        "DimDate",
         "GapReport",
     }
 )
@@ -268,8 +268,8 @@ def _build_frame(
             f" SUBSTR(ft2.transaction_desc, 1, 25) AS short_desc,"
             f" ft2.value_in, ft2.value_out, ft2.value{id_statement_col}"
             f" FROM FactTransaction ft2"
-            f" INNER JOIN DimStatement ds ON ft2.statement_id = ds.statement_id"
-            f" INNER JOIN DimAccount da ON ft2.account_id = da.account_id"
+            f" INNER JOIN DimStatement ds ON ft2.statement_int = ds.statement_int"
+            f" INNER JOIN DimAccount da ON ft2.account_int = da.account_int"
         )
         where_clauses.append("da.id_account = ?")
     else:

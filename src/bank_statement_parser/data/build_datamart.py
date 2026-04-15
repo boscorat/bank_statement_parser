@@ -8,9 +8,9 @@ from pathlib import Path
 # Mart table DDL
 # ---------------------------------------------------------------------------
 
-_DDL_DIM_TIME = """
-    CREATE TABLE DimTime (
-        time_id              INTEGER NOT NULL PRIMARY KEY,
+_DDL_DIM_DATE = """
+    CREATE TABLE DimDate (
+        date_int             INTEGER NOT NULL PRIMARY KEY,
         id_date              TEXT    NOT NULL UNIQUE,
         date_local_format    TEXT,
         date_integer         INTEGER,
@@ -40,7 +40,7 @@ _DDL_DIM_TIME = """
 
 _DDL_DIM_ACCOUNT = """
     CREATE TABLE DimAccount (
-        account_id      INTEGER NOT NULL PRIMARY KEY,
+        account_int     INTEGER NOT NULL PRIMARY KEY,
         id_account      TEXT    NOT NULL UNIQUE,
         company         TEXT,
         account_type    TEXT,
@@ -53,9 +53,10 @@ _DDL_DIM_ACCOUNT = """
 
 _DDL_DIM_STATEMENT = """
     CREATE TABLE DimStatement (
-        statement_id    INTEGER NOT NULL PRIMARY KEY,
+        statement_int   INTEGER NOT NULL PRIMARY KEY,
         id_statement    TEXT    NOT NULL UNIQUE,
-        account_id      INTEGER NOT NULL REFERENCES DimAccount(account_id),
+        account_int     INTEGER NOT NULL REFERENCES DimAccount(account_int),
+        id_account      TEXT    NOT NULL,
         id_batch        TEXT,
         company         TEXT,
         account_type    TEXT,
@@ -76,37 +77,37 @@ _DDL_DIM_STATEMENT = """
 
 _DDL_FACT_TRANSACTION = """
     CREATE TABLE FactTransaction (
-        transaction_id          INTEGER NOT NULL PRIMARY KEY,
-        id_transaction          TEXT    NOT NULL UNIQUE,
-        statement_id            INTEGER NOT NULL REFERENCES DimStatement(statement_id),
-        account_id              INTEGER NOT NULL REFERENCES DimAccount(account_id),
-        time_id                 INTEGER NOT NULL REFERENCES DimTime(time_id),
-        id_date                 TEXT    NOT NULL,
-        id_account              TEXT    NOT NULL,
-        id_statement            TEXT    NOT NULL,
-        transaction_number      INTEGER,
+        transaction_int             INTEGER NOT NULL PRIMARY KEY,
+        id_transaction              TEXT    NOT NULL UNIQUE,
+        statement_int               INTEGER NOT NULL REFERENCES DimStatement(statement_int),
+        account_int                 INTEGER NOT NULL REFERENCES DimAccount(account_int),
+        date_int                    INTEGER NOT NULL REFERENCES DimDate(date_int),
+        id_date                     TEXT    NOT NULL,
+        id_account                  TEXT    NOT NULL,
+        id_statement                TEXT    NOT NULL,
+        transaction_number          INTEGER,
         transaction_credit_or_debit TEXT,
-        transaction_type        TEXT,
-        transaction_type_cd     TEXT,
-        transaction_desc        TEXT,
-        opening_balance         REAL,
-        value_in                REAL,
-        value_out               REAL,
-        value                   REAL
+        transaction_type            TEXT,
+        transaction_type_cd         TEXT,
+        transaction_desc            TEXT,
+        opening_balance             REAL,
+        value_in                    REAL,
+        value_out                   REAL,
+        value                       REAL
     )
 """
 
 _DDL_FACT_BALANCE = """
     CREATE TABLE FactBalance (
-        time_id          INTEGER NOT NULL REFERENCES DimTime(time_id),
-        account_id       INTEGER NOT NULL REFERENCES DimAccount(account_id),
+        date_int         INTEGER NOT NULL REFERENCES DimDate(date_int),
+        account_int      INTEGER NOT NULL REFERENCES DimAccount(account_int),
         id_date          TEXT    NOT NULL,
         id_account       TEXT    NOT NULL,
         opening_balance  REAL,
         closing_balance  REAL,
         movement         REAL    NOT NULL DEFAULT 0,
         outside_date     INTEGER NOT NULL DEFAULT 0,
-        PRIMARY KEY (time_id, account_id)
+        PRIMARY KEY (date_int, account_int)
     )
 """
 
@@ -117,9 +118,9 @@ _DDL_FACT_BALANCE = """
 # drop-and-recreate build steps and intentionally omit IF NOT EXISTS.
 # ---------------------------------------------------------------------------
 
-_DDL_DIM_TIME_ENSURE = """
-    CREATE TABLE IF NOT EXISTS DimTime (
-        time_id              INTEGER NOT NULL PRIMARY KEY,
+_DDL_DIM_DATE_ENSURE = """
+    CREATE TABLE IF NOT EXISTS DimDate (
+        date_int             INTEGER NOT NULL PRIMARY KEY,
         id_date              TEXT    NOT NULL UNIQUE,
         date_local_format    TEXT,
         date_integer         INTEGER,
@@ -149,7 +150,7 @@ _DDL_DIM_TIME_ENSURE = """
 
 _DDL_DIM_ACCOUNT_ENSURE = """
     CREATE TABLE IF NOT EXISTS DimAccount (
-        account_id      INTEGER NOT NULL PRIMARY KEY,
+        account_int     INTEGER NOT NULL PRIMARY KEY,
         id_account      TEXT    NOT NULL UNIQUE,
         company         TEXT,
         account_type    TEXT,
@@ -162,9 +163,10 @@ _DDL_DIM_ACCOUNT_ENSURE = """
 
 _DDL_DIM_STATEMENT_ENSURE = """
     CREATE TABLE IF NOT EXISTS DimStatement (
-        statement_id    INTEGER NOT NULL PRIMARY KEY,
+        statement_int   INTEGER NOT NULL PRIMARY KEY,
         id_statement    TEXT    NOT NULL UNIQUE,
-        account_id      INTEGER NOT NULL REFERENCES DimAccount(account_id),
+        account_int     INTEGER NOT NULL REFERENCES DimAccount(account_int),
+        id_account      TEXT    NOT NULL,
         id_batch        TEXT,
         company         TEXT,
         account_type    TEXT,
@@ -185,51 +187,51 @@ _DDL_DIM_STATEMENT_ENSURE = """
 
 _DDL_FACT_TRANSACTION_ENSURE = """
     CREATE TABLE IF NOT EXISTS FactTransaction (
-        transaction_id          INTEGER NOT NULL PRIMARY KEY,
-        id_transaction          TEXT    NOT NULL UNIQUE,
-        statement_id            INTEGER NOT NULL REFERENCES DimStatement(statement_id),
-        account_id              INTEGER NOT NULL REFERENCES DimAccount(account_id),
-        time_id                 INTEGER NOT NULL REFERENCES DimTime(time_id),
-        id_date                 TEXT    NOT NULL,
-        id_account              TEXT    NOT NULL,
-        id_statement            TEXT    NOT NULL,
-        transaction_number      INTEGER,
+        transaction_int             INTEGER NOT NULL PRIMARY KEY,
+        id_transaction              TEXT    NOT NULL UNIQUE,
+        statement_int               INTEGER NOT NULL REFERENCES DimStatement(statement_int),
+        account_int                 INTEGER NOT NULL REFERENCES DimAccount(account_int),
+        date_int                    INTEGER NOT NULL REFERENCES DimDate(date_int),
+        id_date                     TEXT    NOT NULL,
+        id_account                  TEXT    NOT NULL,
+        id_statement                TEXT    NOT NULL,
+        transaction_number          INTEGER,
         transaction_credit_or_debit TEXT,
-        transaction_type        TEXT,
-        transaction_type_cd     TEXT,
-        transaction_desc        TEXT,
-        opening_balance         REAL,
-        value_in                REAL,
-        value_out               REAL,
-        value                   REAL
+        transaction_type            TEXT,
+        transaction_type_cd         TEXT,
+        transaction_desc            TEXT,
+        opening_balance             REAL,
+        value_in                    REAL,
+        value_out                   REAL,
+        value                       REAL
     )
 """
 
 _DDL_FACT_BALANCE_ENSURE = """
     CREATE TABLE IF NOT EXISTS FactBalance (
-        time_id          INTEGER NOT NULL REFERENCES DimTime(time_id),
-        account_id       INTEGER NOT NULL REFERENCES DimAccount(account_id),
+        date_int         INTEGER NOT NULL REFERENCES DimDate(date_int),
+        account_int      INTEGER NOT NULL REFERENCES DimAccount(account_int),
         id_date          TEXT    NOT NULL,
         id_account       TEXT    NOT NULL,
         opening_balance  REAL,
         closing_balance  REAL,
         movement         REAL    NOT NULL DEFAULT 0,
         outside_date     INTEGER NOT NULL DEFAULT 0,
-        PRIMARY KEY (time_id, account_id)
+        PRIMARY KEY (date_int, account_int)
     )
 """
 
 # Indexes that belong to the mart tables.  All use IF NOT EXISTS so running
 # _ensure_mart_structure() on an already-populated database is a no-op.
 _MART_INDEXES: list[str] = [
-    "CREATE INDEX IF NOT EXISTS idx_dt_id_date     ON DimTime (id_date)",
+    "CREATE INDEX IF NOT EXISTS idx_dd_id_date      ON DimDate (id_date)",
     "CREATE INDEX IF NOT EXISTS idx_ds_id_statement ON DimStatement (id_statement)",
-    "CREATE INDEX IF NOT EXISTS idx_ds_account_id   ON DimStatement (account_id)",
-    "CREATE INDEX IF NOT EXISTS idx_ft_account_date ON FactTransaction (account_id, time_id)",
-    "CREATE INDEX IF NOT EXISTS idx_ft_time_id      ON FactTransaction (time_id)",
-    "CREATE INDEX IF NOT EXISTS idx_ft_statement_id ON FactTransaction (statement_id)",
-    "CREATE INDEX IF NOT EXISTS idx_fb_account_date ON FactBalance (account_id, time_id)",
-    "CREATE INDEX IF NOT EXISTS idx_fb_time_id      ON FactBalance (time_id)",
+    "CREATE INDEX IF NOT EXISTS idx_ds_account_int  ON DimStatement (account_int)",
+    "CREATE INDEX IF NOT EXISTS idx_ft_account_date ON FactTransaction (account_int, date_int)",
+    "CREATE INDEX IF NOT EXISTS idx_ft_date_int     ON FactTransaction (date_int)",
+    "CREATE INDEX IF NOT EXISTS idx_ft_statement_int ON FactTransaction (statement_int)",
+    "CREATE INDEX IF NOT EXISTS idx_fb_account_date ON FactBalance (account_int, date_int)",
+    "CREATE INDEX IF NOT EXISTS idx_fb_date_int     ON FactBalance (date_int)",
 ]
 
 
@@ -240,7 +242,7 @@ _MART_INDEXES: list[str] = [
 
 def _drop_mart_objects(conn: sqlite3.Connection) -> None:
     """Drop all mart tables/views (both old view and new table forms)."""
-    for name in ("FactBalance", "FactTransaction", "DimStatement", "DimAccount", "DimTime"):
+    for name in ("FactBalance", "FactTransaction", "DimStatement", "DimAccount", "DimDate"):
         row = conn.execute("SELECT type FROM sqlite_master WHERE name = ?", (name,)).fetchone()
         if row is not None:
             kw = "VIEW" if row[0] == "view" else "TABLE"
@@ -265,7 +267,7 @@ def _ensure_mart_structure(conn: sqlite3.Connection) -> None:
         conn: Open SQLite connection with write access.
     """
     for ddl in (
-        _DDL_DIM_TIME_ENSURE,
+        _DDL_DIM_DATE_ENSURE,
         _DDL_DIM_ACCOUNT_ENSURE,
         _DDL_DIM_STATEMENT_ENSURE,
         _DDL_FACT_TRANSACTION_ENSURE,
@@ -281,13 +283,13 @@ def _ensure_mart_structure(conn: sqlite3.Connection) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _build_dim_time(conn: sqlite3.Connection, verbose: bool) -> float:
+def _build_dim_date(conn: sqlite3.Connection, verbose: bool) -> float:
     t0 = time.monotonic()
 
-    conn.execute(_DDL_DIM_TIME)
+    conn.execute(_DDL_DIM_DATE)
     conn.execute("""
-        INSERT INTO DimTime (
-            time_id, id_date, date_local_format, date_integer,
+        INSERT INTO DimDate (
+            date_int, id_date, date_local_format, date_integer,
             year, year_short, quarter, quarter_name,
             month_number, month_number_padded, month_name, month_abbrv,
             period, week, year_week,
@@ -311,7 +313,7 @@ def _build_dim_time(conn: sqlite3.Connection, verbose: bool) -> float:
             WHERE id_date < date(max_date)
         )
         SELECT
-            ROW_NUMBER() OVER (ORDER BY id_date)                            AS time_id,
+            ROW_NUMBER() OVER (ORDER BY id_date)                            AS date_int,
             id_date,
             -- %x / %y / %B / %b / %A / %a are not supported by SQLite's strftime;
             -- they return NULL.  Use CASE expressions and arithmetic instead.
@@ -320,7 +322,7 @@ def _build_dim_time(conn: sqlite3.Connection, verbose: bool) -> float:
             CAST(strftime('%Y', id_date) AS INTEGER)                        AS year,
             CAST(strftime('%Y', id_date) AS INTEGER) % 100                  AS year_short,
             -- NOTE: quarter/quarter_name deliberately use month number to
-            -- preserve parity with the original DimTime view behaviour.
+            -- preserve parity with the original DimDate view behaviour.
             CAST(strftime('%m', id_date) AS INTEGER)                        AS quarter,
             'Q' || CAST(strftime('%m', id_date) AS INTEGER)                 AS quarter_name,
             CAST(strftime('%m', id_date) AS INTEGER)                        AS month_number,
@@ -381,12 +383,12 @@ def _build_dim_time(conn: sqlite3.Connection, verbose: bool) -> float:
             CASE WHEN strftime('%w', id_date) NOT IN ('0', '6') THEN 1 ELSE 0 END AS is_weekday
         FROM recursive_dates
     """)
-    conn.execute("CREATE INDEX idx_dt_id_date ON DimTime (id_date)")
+    conn.execute("CREATE INDEX idx_dd_id_date ON DimDate (id_date)")
 
     elapsed = time.monotonic() - t0
-    n = conn.execute("SELECT COUNT(*) FROM DimTime").fetchone()[0]
+    n = conn.execute("SELECT COUNT(*) FROM DimDate").fetchone()[0]
     if verbose:
-        print(f"  [1/5] DimTime ({n:,} rows):          {elapsed:.2f}s")
+        print(f"  [1/5] DimDate ({n:,} rows):          {elapsed:.2f}s")
     return elapsed
 
 
@@ -395,10 +397,10 @@ def _build_dim_account(conn: sqlite3.Connection, verbose: bool) -> float:
 
     conn.execute(_DDL_DIM_ACCOUNT)
     conn.execute("""
-        INSERT INTO DimAccount (account_id, id_account, company, account_type,
+        INSERT INTO DimAccount (account_int, id_account, company, account_type,
                                 account_number, sortcode, account_holder, currency)
         SELECT
-            ROW_NUMBER() OVER (ORDER BY id_account) AS account_id,
+            ROW_NUMBER() OVER (ORDER BY id_account) AS account_int,
             id_account, company, account_type, account_number, sortcode, account_holder, currency
         FROM (
             SELECT
@@ -432,15 +434,16 @@ def _build_dim_statement(conn: sqlite3.Connection, verbose: bool) -> float:
     conn.execute(_DDL_DIM_STATEMENT)
     conn.execute("""
         INSERT INTO DimStatement (
-            statement_id, id_statement, account_id, id_batch,
+            statement_int, id_statement, account_int, id_account, id_batch,
             company, account_type, account_number, sortcode, account_holder,
             statement_date, opening_balance, payments_in, payments_out,
             closing_balance, statement_type, currency, filename, batch_time
         )
         SELECT
-            ROW_NUMBER() OVER (ORDER BY sh.ID_STATEMENT) AS statement_id,
+            ROW_NUMBER() OVER (ORDER BY sh.ID_STATEMENT) AS statement_int,
             sh.ID_STATEMENT,
-            da.account_id,
+            da.account_int,
+            sh.ID_ACCOUNT,
             bl.ID_BATCH,
             sh.STD_COMPANY,
             sh.STD_ACCOUNT,
@@ -461,7 +464,7 @@ def _build_dim_statement(conn: sqlite3.Connection, verbose: bool) -> float:
         INNER JOIN DimAccount da ON sh.ID_ACCOUNT = da.id_account
     """)
     conn.execute("CREATE INDEX idx_ds_id_statement ON DimStatement (id_statement)")
-    conn.execute("CREATE INDEX idx_ds_account_id   ON DimStatement (account_id)")
+    conn.execute("CREATE INDEX idx_ds_account_int  ON DimStatement (account_int)")
 
     elapsed = time.monotonic() - t0
     n = conn.execute("SELECT COUNT(*) FROM DimStatement").fetchone()[0]
@@ -476,19 +479,19 @@ def _build_fact_transaction(conn: sqlite3.Connection, verbose: bool) -> float:
     conn.execute(_DDL_FACT_TRANSACTION)
     conn.execute("""
         INSERT INTO FactTransaction (
-            transaction_id, id_transaction,
-            statement_id, account_id, time_id,
+            transaction_int, id_transaction,
+            statement_int, account_int, date_int,
             id_date, id_account, id_statement,
             transaction_number, transaction_credit_or_debit,
             transaction_type, transaction_type_cd, transaction_desc,
             opening_balance, value_in, value_out, value
         )
         SELECT
-            ROW_NUMBER() OVER (ORDER BY sl.ID_TRANSACTION) AS transaction_id,
+            ROW_NUMBER() OVER (ORDER BY sl.ID_TRANSACTION) AS transaction_int,
             sl.ID_TRANSACTION,
-            ds.statement_id,
-            da.account_id,
-            dt.time_id,
+            ds.statement_int,
+            da.account_int,
+            dd.date_int,
             sl.STD_TRANSACTION_DATE,
             sh.ID_ACCOUNT,
             sh.ID_STATEMENT,
@@ -505,11 +508,11 @@ def _build_fact_transaction(conn: sqlite3.Connection, verbose: bool) -> float:
         INNER JOIN statement_heads sh ON sl.ID_STATEMENT  = sh.ID_STATEMENT
         INNER JOIN DimStatement    ds ON sh.ID_STATEMENT  = ds.id_statement
         INNER JOIN DimAccount      da ON sh.ID_ACCOUNT    = da.id_account
-        INNER JOIN DimTime         dt ON sl.STD_TRANSACTION_DATE = dt.id_date
+        INNER JOIN DimDate         dd ON sl.STD_TRANSACTION_DATE = dd.id_date
     """)
-    conn.execute("CREATE INDEX idx_ft_account_date ON FactTransaction (account_id, time_id)")
-    conn.execute("CREATE INDEX idx_ft_time_id      ON FactTransaction (time_id)")
-    conn.execute("CREATE INDEX idx_ft_statement_id ON FactTransaction (statement_id)")
+    conn.execute("CREATE INDEX idx_ft_account_date ON FactTransaction (account_int, date_int)")
+    conn.execute("CREATE INDEX idx_ft_date_int      ON FactTransaction (date_int)")
+    conn.execute("CREATE INDEX idx_ft_statement_int ON FactTransaction (statement_int)")
 
     elapsed = time.monotonic() - t0
     n = conn.execute("SELECT COUNT(*) FROM FactTransaction").fetchone()[0]
@@ -523,32 +526,32 @@ def _build_fact_balance(conn: sqlite3.Connection, verbose: bool) -> float:
     Build FactBalance using the fill-group trick (no correlated subqueries,
     no IGNORE NULLS — which SQLite does not support).
 
-    The grid is built from already-materialised mart tables (DimTime, DimAccount)
+    The grid is built from already-materialised mart tables (DimDate, DimAccount)
     rather than raw source tables, which avoids re-scanning statement_heads /
     statement_lines and benefits from the indexes already built on the mart tables.
 
     Forward fill:
-        fwd_group = COUNT(non-null closing_balance) OVER (PARTITION BY account_id
-                    ORDER BY time_id ROWS UNBOUNDED PRECEDING)
-        MAX(closing_balance) OVER (PARTITION BY account_id, fwd_group) gives the
+        fwd_group = COUNT(non-null closing_balance) OVER (PARTITION BY account_int
+                    ORDER BY date_int ROWS UNBOUNDED PRECEDING)
+        MAX(closing_balance) OVER (PARTITION BY account_int, fwd_group) gives the
         last known balance carried forward — correct even for negative values
         because each group contains exactly one non-null row.
 
     Backward fill (opening_balance before the first transaction):
-        bwd_group = same but ORDER BY time_id DESC
-        MAX(closing_balance) OVER (PARTITION BY account_id, bwd_group)
+        bwd_group = same but ORDER BY date_int DESC
+        MAX(closing_balance) OVER (PARTITION BY account_int, bwd_group)
     """
     t0 = time.monotonic()
 
     # ------------------------------------------------------------------
-    # Temp 1: aggregate FactTransaction to one row per (account_id, time_id)
+    # Temp 1: aggregate FactTransaction to one row per (account_int, date_int)
     # ------------------------------------------------------------------
     conn.execute("DROP TABLE IF EXISTS _fb_agg")
     conn.execute("""
         CREATE TEMP TABLE _fb_agg AS
         SELECT
-            account_id,
-            time_id,
+            account_int,
+            date_int,
             id_date,
             id_account,
             MAX(STD_CLOSING_BALANCE_FROM_SRC)   AS closing_balance,
@@ -556,8 +559,8 @@ def _build_fact_balance(conn: sqlite3.Connection, verbose: bool) -> float:
         FROM (
             -- Pull closing_balance from statement_lines via the transaction
             SELECT
-                ft.account_id,
-                ft.time_id,
+                ft.account_int,
+                ft.date_int,
                 ft.id_date,
                 ft.id_account,
                 sl.STD_CLOSING_BALANCE              AS STD_CLOSING_BALANCE_FROM_SRC,
@@ -565,26 +568,26 @@ def _build_fact_balance(conn: sqlite3.Connection, verbose: bool) -> float:
             FROM FactTransaction ft
             INNER JOIN statement_lines sl ON ft.id_transaction = sl.ID_TRANSACTION
         )
-        GROUP BY account_id, time_id, id_date, id_account
+        GROUP BY account_int, date_int, id_date, id_account
     """)
-    conn.execute("CREATE INDEX idx_fb_agg ON _fb_agg (account_id, time_id)")
+    conn.execute("CREATE INDEX idx_fb_agg ON _fb_agg (account_int, date_int)")
 
     # ------------------------------------------------------------------
-    # Temp 2: account bookends from _fb_agg (first/last time_id per account)
+    # Temp 2: account bookends from _fb_agg (first/last date_int per account)
     # ------------------------------------------------------------------
     conn.execute("DROP TABLE IF EXISTS _fb_bk")
     conn.execute("""
         CREATE TEMP TABLE _fb_bk AS
-        SELECT account_id, MIN(time_id) AS first_tid, MAX(time_id) AS last_tid
+        SELECT account_int, MIN(date_int) AS first_did, MAX(date_int) AS last_did
         FROM _fb_agg
-        GROUP BY account_id
+        GROUP BY account_int
     """)
-    conn.execute("CREATE INDEX idx_fb_bk ON _fb_bk (account_id)")
+    conn.execute("CREATE INDEX idx_fb_bk ON _fb_bk (account_int)")
 
     # ------------------------------------------------------------------
     # Temp 3: full grid with fill groups
     #
-    # Cross-join DimTime × DimAccount (already small, indexed tables)
+    # Cross-join DimDate × DimAccount (already small, indexed tables)
     # then left-join the aggregated actuals.
     # ------------------------------------------------------------------
     conn.execute("DROP TABLE IF EXISTS _fb_grid")
@@ -592,33 +595,33 @@ def _build_fact_balance(conn: sqlite3.Connection, verbose: bool) -> float:
         CREATE TEMP TABLE _fb_grid AS
         WITH grid AS (
             SELECT
-                dt.time_id,
-                dt.id_date,
-                da.account_id,
+                dd.date_int,
+                dd.id_date,
+                da.account_int,
                 da.id_account,
-                CASE WHEN dt.time_id < bk.first_tid THEN 1 ELSE 0 END  AS pre_date,
-                CASE WHEN dt.time_id > bk.last_tid  THEN 1 ELSE 0 END  AS post_date,
+                CASE WHEN dd.date_int < bk.first_did THEN 1 ELSE 0 END  AS pre_date,
+                CASE WHEN dd.date_int > bk.last_did  THEN 1 ELSE 0 END  AS post_date,
                 ag.closing_balance,
                 COALESCE(ag.movement, 0.0)                               AS movement
-            FROM DimTime dt
+            FROM DimDate dd
             CROSS JOIN DimAccount da
-            LEFT JOIN _fb_bk bk ON da.account_id = bk.account_id
+            LEFT JOIN _fb_bk bk ON da.account_int = bk.account_int
             LEFT JOIN _fb_agg ag
-                   ON dt.time_id    = ag.time_id
-                  AND da.account_id = ag.account_id
+                   ON dd.date_int    = ag.date_int
+                  AND da.account_int = ag.account_int
         )
         SELECT
-            time_id, id_date, account_id, id_account,
+            date_int, id_date, account_int, id_account,
             pre_date, post_date, closing_balance, movement,
             COUNT(CASE WHEN closing_balance IS NOT NULL THEN 1 END)
-                OVER (PARTITION BY account_id ORDER BY time_id
+                OVER (PARTITION BY account_int ORDER BY date_int
                       ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS fwd_group,
             COUNT(CASE WHEN closing_balance IS NOT NULL THEN 1 END)
-                OVER (PARTITION BY account_id ORDER BY time_id DESC
+                OVER (PARTITION BY account_int ORDER BY date_int DESC
                       ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS bwd_group
         FROM grid
     """)
-    conn.execute("CREATE INDEX idx_fb_grid ON _fb_grid (account_id, fwd_group, bwd_group)")
+    conn.execute("CREATE INDEX idx_fb_grid ON _fb_grid (account_int, fwd_group, bwd_group)")
 
     # ------------------------------------------------------------------
     # Populate FactBalance
@@ -626,28 +629,28 @@ def _build_fact_balance(conn: sqlite3.Connection, verbose: bool) -> float:
     conn.execute(_DDL_FACT_BALANCE)
     conn.execute("""
         INSERT INTO FactBalance (
-            time_id, account_id, id_date, id_account,
+            date_int, account_int, id_date, id_account,
             opening_balance, closing_balance, movement, outside_date
         )
         SELECT
-            g.time_id,
-            g.account_id,
+            g.date_int,
+            g.account_int,
             g.id_date,
             g.id_account,
             CASE WHEN g.pre_date = 1 THEN NULL
                  ELSE MAX(g.closing_balance)
-                      OVER (PARTITION BY g.account_id, g.bwd_group)
+                      OVER (PARTITION BY g.account_int, g.bwd_group)
             END                                                              AS opening_balance,
             CASE WHEN g.pre_date = 1 THEN NULL
                  ELSE MAX(g.closing_balance)
-                      OVER (PARTITION BY g.account_id, g.fwd_group)
+                      OVER (PARTITION BY g.account_int, g.fwd_group)
             END                                                              AS closing_balance,
             g.movement,
             CASE WHEN g.pre_date = 1 OR g.post_date = 1 THEN 1 ELSE 0 END  AS outside_date
         FROM _fb_grid g
     """)
-    conn.execute("CREATE INDEX idx_fb_account_date ON FactBalance (account_id, time_id)")
-    conn.execute("CREATE INDEX idx_fb_time_id      ON FactBalance (time_id)")
+    conn.execute("CREATE INDEX idx_fb_account_date ON FactBalance (account_int, date_int)")
+    conn.execute("CREATE INDEX idx_fb_date_int      ON FactBalance (date_int)")
 
     # Cleanup temp tables
     for tbl in ("_fb_agg", "_fb_bk", "_fb_grid"):
@@ -667,7 +670,7 @@ def _build_fact_balance(conn: sqlite3.Connection, verbose: bool) -> float:
 
 def build_datamart(db_path: Path, verbose: bool = True) -> dict:
     """
-    Empty and rebuild all mart tables (DimTime, DimAccount, DimStatement,
+    Empty and rebuild all mart tables (DimDate, DimAccount, DimStatement,
     FactTransaction, FactBalance) from the raw source tables.
 
     Each mart table is a real SQLite table with an integer surrogate primary key.
@@ -690,7 +693,7 @@ def build_datamart(db_path: Path, verbose: bool = True) -> dict:
     _drop_mart_objects(conn)
 
     timings: dict[str, float] = {}
-    timings["DimTime"] = _build_dim_time(conn, verbose)
+    timings["DimDate"] = _build_dim_date(conn, verbose)
     timings["DimAccount"] = _build_dim_account(conn, verbose)
     timings["DimStatement"] = _build_dim_statement(conn, verbose)
     timings["FactTransaction"] = _build_fact_transaction(conn, verbose)
