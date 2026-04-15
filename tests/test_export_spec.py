@@ -111,6 +111,21 @@ def _get_statement_ids(project_path: Path, account_key: str) -> list[str]:
     return [r[0] for r in rows]
 
 
+def _get_statement_dates(project_path: Path, account_key: str) -> list[str]:
+    """Return all statement_date values for a given account as YYYYMMDD strings, sorted."""
+    paths = ProjectPaths.resolve(project_path)
+    with sqlite3.connect(paths.project_db) as conn:
+        rows = conn.execute(
+            "SELECT ds.statement_date"
+            " FROM DimStatement ds"
+            " INNER JOIN DimAccount da ON ds.account_int = da.account_int"
+            " WHERE da.id_account = ?"
+            " ORDER BY ds.statement_date",
+            [account_key],
+        ).fetchall()
+    return [r[0].replace("-", "") for r in rows]
+
+
 # ---------------------------------------------------------------------------
 # TestLoadSpec
 # ---------------------------------------------------------------------------
@@ -330,11 +345,11 @@ class TestExportSpecOutput:
         assert written[0].stat().st_size > 0
 
     def test_output_dir_is_under_export(self, good_project):
-        """Output file lives under export/<spec_stem>/ not export/specs/."""
+        """Output file lives under export/<spec_stem>/<timestamp>/ not export/specs/."""
         written = export_spec(_SPEC_3COL, account_key=_ACCOUNT_KEY, project_path=good_project.project_path)
         paths = ProjectPaths.resolve(good_project.project_path)
-        expected_dir = paths.exports / _SPEC_3COL.stem
-        assert written[0].parent == expected_dir
+        expected_base = paths.exports / _SPEC_3COL.stem
+        assert written[0].parent.parent == expected_base
 
     def test_output_filename_matches_account_key(self, good_project):
         """Single-file output is named <account_key>.csv."""
@@ -552,15 +567,15 @@ class TestExportSpecFiltering:
         assert len(written) == len(statement_ids), f"Expected {len(statement_ids)} files, got {len(written)}"
 
     def test_split_by_statement_filenames(self, good_project):
-        """Each split file is named <account_key>_<id_statement>.csv."""
-        statement_ids = _get_statement_ids(good_project.project_path, _ACCOUNT_KEY)
+        """Each split file is named <account_key>_<YYYYMMDD>.csv."""
+        statement_dates = _get_statement_dates(good_project.project_path, _ACCOUNT_KEY)
         written = export_spec(
             _SPEC_3COL,
             account_key=_ACCOUNT_KEY,
             project_path=good_project.project_path,
             split_by_statement=True,
         )
-        expected_stems = {f"{_ACCOUNT_KEY}_{sid}" for sid in statement_ids}
+        expected_stems = {f"{_ACCOUNT_KEY}_{d}" for d in statement_dates}
         actual_stems = {p.stem for p in written}
         assert actual_stems == expected_stems, f"Stem mismatch.\nExpected: {sorted(expected_stems)}\nActual:   {sorted(actual_stems)}"
 
