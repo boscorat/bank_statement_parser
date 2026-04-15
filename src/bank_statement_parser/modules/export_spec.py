@@ -21,7 +21,7 @@ import re
 import sqlite3
 import tomllib
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 import polars as pl
@@ -43,6 +43,12 @@ _KNOWN_COMPUTED: frozenset[str] = frozenset({_COMPUTED_SIGNED_AMOUNT})
 # Columns in FlatTransaction that contain dates (need format conversion)
 _DATE_COLUMNS: frozenset[str] = frozenset({"transaction_date", "statement_date"})
 
+# Column used to partition rows when split_by_statement=True
+_SPLIT_ANCHOR = "id_statement"
+
+# Column used to derive the filename stem when split_by_statement=True
+_SPLIT_DATE_ANCHOR = "statement_date"
+
 # Allowed source tables / views
 _ALLOWED_TABLES: frozenset[str] = frozenset(
     {
@@ -55,6 +61,15 @@ _ALLOWED_TABLES: frozenset[str] = frozenset(
         "GapReport",
     }
 )
+
+
+def _ts() -> str:
+    """Return the current local datetime as a compact timestamp string.
+
+    Returns:
+        Datetime formatted as ``"yyyymmddHHMMSS"``, e.g. ``"20250331143022"``.
+    """
+    return datetime.now().strftime("%Y%m%d%H%M%S")
 
 
 # ---------------------------------------------------------------------------
@@ -219,10 +234,6 @@ def _require_int(section: dict, key: str, spec_path: Path) -> int:
 # ---------------------------------------------------------------------------
 # _build_frame
 # ---------------------------------------------------------------------------
-
-# Columns needed beyond those declared in a spec when split_by_statement is True.
-# We always fetch id_statement so we can partition, then drop it from output.
-_SPLIT_ANCHOR = "id_statement"
 
 
 def _build_frame(
@@ -599,7 +610,7 @@ def export_spec(
     lf = _apply_blank_zeros(lf, loaded)
     lf = _sanitise_strings(lf, loaded)
 
-    output_dir = paths.export_specs_output(spec.stem)
+    output_dir = paths.export_specs_output(spec.stem) / _ts()
     paths.ensure_subdir_for_write(output_dir)
 
     if not loaded.split_by_statement:
@@ -620,14 +631,32 @@ def export_spec(
             written = _write_frames([(account_key, df_mapped)], output_dir, loaded)
         else:
             statement_ids = df_raw[_SPLIT_ANCHOR].unique().sort().to_list()
+
+            # Map each id_statement → YYYYMMDD from statement_date
+            sid_to_date: dict[str, str] = {}
+            for sid in statement_ids:
+                raw_date = df_raw.filter(pl.col(_SPLIT_ANCHOR) == sid)[_SPLIT_DATE_ANCHOR][0]
+                sid_to_date[sid] = str(raw_date).replace("-", "")
+
+            # Resolve duplicate dates by appending a counter (_1, _2, ...)
+            date_counts: dict[str, int] = {}
+            for d in sid_to_date.values():
+                date_counts[d] = date_counts.get(d, 0) + 1
+            date_seen: dict[str, int] = {}
+
             frames: list[tuple[str, pl.DataFrame]] = []
             for sid in statement_ids:
+                date_str = sid_to_date[sid]
+                if date_counts[date_str] > 1:
+                    date_seen[date_str] = date_seen.get(date_str, 0) + 1
+                    stem = f"{account_key}_{date_str}_{date_seen[date_str]}"
+                else:
+                    stem = f"{account_key}_{date_str}"
                 partition = df_raw.filter(pl.col(_SPLIT_ANCHOR) == sid).lazy()
                 partition = _apply_column_mapping(partition, loaded)
                 partition = _apply_date_format(partition, loaded)
                 partition = _apply_blank_zeros(partition, loaded)
                 partition = _sanitise_strings(partition, loaded)
-                stem = f"{account_key}_{sid}"
                 frames.append((stem, partition.collect()))
             written = _write_frames(frames, output_dir, loaded)
 
