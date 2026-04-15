@@ -62,7 +62,7 @@ def _get_flat_transaction_count(project_path: Path, account_key: str) -> int:
     paths = ProjectPaths.resolve(project_path)
     with sqlite3.connect(paths.project_db) as conn:
         row = conn.execute(
-            "SELECT COUNT(*) FROM FactTransaction ft INNER JOIN DimAccount da ON ft.account_id = da.account_id WHERE da.id_account = ?",
+            "SELECT COUNT(*) FROM FactTransaction ft INNER JOIN DimAccount da ON ft.account_int = da.account_int WHERE da.id_account = ?",
             [account_key],
         ).fetchone()
     return row[0] if row else 0
@@ -75,7 +75,7 @@ def _get_fact_transaction_value_in_sum(project_path: Path, account_key: str) -> 
         row = conn.execute(
             "SELECT COALESCE(SUM(ft.value_in), 0)"
             " FROM FactTransaction ft"
-            " INNER JOIN DimAccount da ON ft.account_id = da.account_id"
+            " INNER JOIN DimAccount da ON ft.account_int = da.account_int"
             " WHERE da.id_account = ?",
             [account_key],
         ).fetchone()
@@ -89,7 +89,7 @@ def _get_fact_transaction_value_out_sum(project_path: Path, account_key: str) ->
         row = conn.execute(
             "SELECT COALESCE(SUM(ft.value_out), 0)"
             " FROM FactTransaction ft"
-            " INNER JOIN DimAccount da ON ft.account_id = da.account_id"
+            " INNER JOIN DimAccount da ON ft.account_int = da.account_int"
             " WHERE da.id_account = ?",
             [account_key],
         ).fetchone()
@@ -103,7 +103,7 @@ def _get_statement_ids(project_path: Path, account_key: str) -> list[str]:
         rows = conn.execute(
             "SELECT ds.id_statement"
             " FROM DimStatement ds"
-            " INNER JOIN DimAccount da ON ds.account_id = da.account_id"
+            " INNER JOIN DimAccount da ON ds.account_int = da.account_int"
             " WHERE da.id_account = ?"
             " ORDER BY ds.id_statement",
             [account_key],

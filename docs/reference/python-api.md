@@ -203,7 +203,7 @@ Extract a structured table from a PDF region using configurable extraction setti
 
 *function* — `bank_statement_parser.data`
 
-Empty and rebuild all mart tables (DimTime, DimAccount, DimStatement, FactTransaction, FactBalance) from the raw source tables.
+Empty and rebuild all mart tables (DimDate, DimAccount, DimStatement, FactTransaction, FactBalance) from the raw source tables.
 
 ### `bsp.create_db()`
 
