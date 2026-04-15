@@ -1,5 +1,5 @@
 """
-Tests that validate the data mart (DimTime, DimAccount, DimStatement,
+Tests that validate the data mart (DimDate, DimAccount, DimStatement,
 FactTransaction, FactBalance) against the raw source tables.
 
 A session-scoped fixture creates a fresh SQLite database in the tests/
@@ -57,29 +57,29 @@ def _scalar(conn: sqlite3.Connection, sql: str, params: tuple = ()) -> Any:
 
 
 # ---------------------------------------------------------------------------
-# DimTime
+# DimDate
 # ---------------------------------------------------------------------------
 
 
 class TestDimTime:
     def test_row_count_matches_date_range(self, conn):
-        """DimTime has exactly one row per calendar day from the earliest
+        """DimDate has exactly one row per calendar day from the earliest
         transaction date to the latest statement date (inclusive)."""
         min_date_str = _scalar(conn, "SELECT MIN(STD_TRANSACTION_DATE) FROM statement_lines")
         max_date_str = _scalar(conn, "SELECT MAX(STD_STATEMENT_DATE) FROM statement_heads")
         expected = (datetime.date.fromisoformat(max_date_str) - datetime.date.fromisoformat(min_date_str)).days + 1
-        actual = _scalar(conn, "SELECT COUNT(*) FROM DimTime")
+        actual = _scalar(conn, "SELECT COUNT(*) FROM DimDate")
         assert actual == expected
 
     def test_date_spine_is_contiguous(self, conn):
-        """There are no missing days in the DimTime date spine."""
+        """There are no missing days in the DimDate date spine."""
         gaps = _scalar(
             conn,
             """
             SELECT COUNT(*) FROM (
                 SELECT id_date,
                        LAG(id_date) OVER (ORDER BY id_date) AS prev_date
-                FROM DimTime
+                FROM DimDate
             )
             WHERE prev_date IS NOT NULL
             AND julianday(id_date) - julianday(prev_date) != 1
@@ -89,29 +89,29 @@ class TestDimTime:
 
     def test_min_date_equals_earliest_transaction(self, conn):
         raw_min = _scalar(conn, "SELECT MIN(STD_TRANSACTION_DATE) FROM statement_lines")
-        mart_min = _scalar(conn, "SELECT MIN(id_date) FROM DimTime")
+        mart_min = _scalar(conn, "SELECT MIN(id_date) FROM DimDate")
         assert mart_min == raw_min
 
     def test_max_date_equals_latest_statement(self, conn):
         raw_max = _scalar(conn, "SELECT MAX(STD_STATEMENT_DATE) FROM statement_heads")
-        mart_max = _scalar(conn, "SELECT MAX(id_date) FROM DimTime")
+        mart_max = _scalar(conn, "SELECT MAX(id_date) FROM DimDate")
         assert mart_max == raw_max
 
     def test_no_null_columns(self, conn):
-        """Every column in DimTime is fully populated — no NULLs anywhere."""
-        cols = [c[1] for c in conn.execute("PRAGMA table_info(DimTime)").fetchall()]
-        null_counts = {col: _scalar(conn, f"SELECT COUNT(*) FROM DimTime WHERE {col} IS NULL") for col in cols}
+        """Every column in DimDate is fully populated — no NULLs anywhere."""
+        cols = [c[1] for c in conn.execute("PRAGMA table_info(DimDate)").fetchall()]
+        null_counts = {col: _scalar(conn, f"SELECT COUNT(*) FROM DimDate WHERE {col} IS NULL") for col in cols}
         nulls = {col: n for col, n in null_counts.items() if n > 0}
         assert nulls == {}, f"Columns with NULLs: {nulls}"
 
     def test_time_id_is_unique(self, conn):
-        total = _scalar(conn, "SELECT COUNT(*)          FROM DimTime")
-        distinct = _scalar(conn, "SELECT COUNT(DISTINCT time_id) FROM DimTime")
+        total = _scalar(conn, "SELECT COUNT(*)           FROM DimDate")
+        distinct = _scalar(conn, "SELECT COUNT(DISTINCT date_int) FROM DimDate")
         assert total == distinct
 
     def test_id_date_is_unique(self, conn):
-        total = _scalar(conn, "SELECT COUNT(*)           FROM DimTime")
-        distinct = _scalar(conn, "SELECT COUNT(DISTINCT id_date) FROM DimTime")
+        total = _scalar(conn, "SELECT COUNT(*)           FROM DimDate")
+        distinct = _scalar(conn, "SELECT COUNT(DISTINCT id_date) FROM DimDate")
         assert total == distinct
 
     def test_year_derived_correctly(self, conn):
@@ -119,7 +119,7 @@ class TestDimTime:
         mismatches = _scalar(
             conn,
             """
-            SELECT COUNT(*) FROM DimTime
+            SELECT COUNT(*) FROM DimDate
             WHERE year != CAST(strftime('%Y', id_date) AS INTEGER)
         """,
         )
@@ -130,7 +130,7 @@ class TestDimTime:
         mismatches = _scalar(
             conn,
             """
-            SELECT COUNT(*) FROM DimTime
+            SELECT COUNT(*) FROM DimDate
             WHERE year_short != year % 100
         """,
         )
@@ -140,7 +140,7 @@ class TestDimTime:
         mismatches = _scalar(
             conn,
             """
-            SELECT COUNT(*) FROM DimTime
+            SELECT COUNT(*) FROM DimDate
             WHERE month_number != CAST(strftime('%m', id_date) AS INTEGER)
         """,
         )
@@ -162,7 +162,7 @@ class TestDimTime:
             11: "November",
             12: "December",
         }
-        rows = conn.execute("SELECT DISTINCT month_number, month_name FROM DimTime ORDER BY month_number").fetchall()
+        rows = conn.execute("SELECT DISTINCT month_number, month_name FROM DimDate ORDER BY month_number").fetchall()
         actual = {r[0]: r[1] for r in rows}
         for num, name in expected.items():
             if num in actual:
@@ -183,7 +183,7 @@ class TestDimTime:
             11: "Nov",
             12: "Dec",
         }
-        rows = conn.execute("SELECT DISTINCT month_number, month_abbrv FROM DimTime ORDER BY month_number").fetchall()
+        rows = conn.execute("SELECT DISTINCT month_number, month_abbrv FROM DimDate ORDER BY month_number").fetchall()
         actual = {r[0]: r[1] for r in rows}
         for num, abbrv in expected.items():
             if num in actual:
@@ -195,7 +195,7 @@ class TestDimTime:
         expected = {0: "Sunday", 1: "Monday", 2: "Tuesday", 3: "Wednesday", 4: "Thursday", 5: "Friday", 6: "Saturday"}
         rows = conn.execute("""
             SELECT DISTINCT CAST(strftime('%w', id_date) AS INTEGER) AS dow, weekday
-            FROM DimTime ORDER BY dow
+            FROM DimDate ORDER BY dow
         """).fetchall()
         for dow, name in rows:
             assert name == expected[dow], f"dow {dow}: expected {expected[dow]!r}, got {name!r}"
@@ -204,7 +204,7 @@ class TestDimTime:
         mismatches = _scalar(
             conn,
             """
-            SELECT COUNT(*) FROM DimTime
+            SELECT COUNT(*) FROM DimDate
             WHERE weekday_abbrv != SUBSTR(weekday, 1, 3)
         """,
         )
@@ -212,8 +212,8 @@ class TestDimTime:
 
     def test_day_of_week_is_one_indexed(self, conn):
         """day_of_week runs 1–7 (Sunday=1 through Saturday=7)."""
-        min_dow = _scalar(conn, "SELECT MIN(day_of_week) FROM DimTime")
-        max_dow = _scalar(conn, "SELECT MAX(day_of_week) FROM DimTime")
+        min_dow = _scalar(conn, "SELECT MIN(day_of_week) FROM DimDate")
+        max_dow = _scalar(conn, "SELECT MAX(day_of_week) FROM DimDate")
         assert min_dow == 1
         assert max_dow == 7
 
@@ -222,7 +222,7 @@ class TestDimTime:
         mismatches = _scalar(
             conn,
             """
-            SELECT COUNT(*) FROM DimTime
+            SELECT COUNT(*) FROM DimDate
             WHERE is_weekday != CASE WHEN day_of_week BETWEEN 2 AND 6 THEN 1 ELSE 0 END
         """,
         )
@@ -233,7 +233,7 @@ class TestDimTime:
         mismatches = _scalar(
             conn,
             """
-            SELECT COUNT(*) FROM DimTime
+            SELECT COUNT(*) FROM DimDate
             WHERE is_last_day_of_month != CASE
                 WHEN day_of_month =
                      CAST(strftime('%d', date(id_date, 'start of month', '+1 month', '-1 day')) AS INTEGER)
@@ -257,8 +257,8 @@ class TestDimAccount:
         assert mart == raw
 
     def test_account_id_is_unique(self, conn):
-        total = _scalar(conn, "SELECT COUNT(*)               FROM DimAccount")
-        distinct = _scalar(conn, "SELECT COUNT(DISTINCT account_id) FROM DimAccount")
+        total = _scalar(conn, "SELECT COUNT(*)                FROM DimAccount")
+        distinct = _scalar(conn, "SELECT COUNT(DISTINCT account_int) FROM DimAccount")
         assert total == distinct
 
     def test_id_account_is_unique(self, conn):
@@ -295,7 +295,7 @@ class TestDimAccount:
             conn.execute("""
             SELECT da.id_account, COUNT(*)
             FROM DimStatement ds
-            JOIN DimAccount da ON ds.account_id = da.account_id
+            JOIN DimAccount da ON ds.account_int = da.account_int
             GROUP BY da.id_account
         """).fetchall()
         )
@@ -314,8 +314,8 @@ class TestDimStatement:
         assert mart == raw
 
     def test_statement_id_is_unique(self, conn):
-        total = _scalar(conn, "SELECT COUNT(*)                  FROM DimStatement")
-        distinct = _scalar(conn, "SELECT COUNT(DISTINCT statement_id) FROM DimStatement")
+        total = _scalar(conn, "SELECT COUNT(*)                    FROM DimStatement")
+        distinct = _scalar(conn, "SELECT COUNT(DISTINCT statement_int) FROM DimStatement")
         assert total == distinct
 
     def test_id_statement_is_unique(self, conn):
@@ -365,7 +365,7 @@ class TestDimStatement:
             conn.execute("""
             SELECT da.id_account, ROUND(SUM(ds.payments_in), 4)
             FROM DimStatement ds
-            JOIN DimAccount da ON ds.account_id = da.account_id
+            JOIN DimAccount da ON ds.account_int = da.account_int
             GROUP BY da.id_account
         """).fetchall()
         )
@@ -378,8 +378,8 @@ class TestDimStatement:
             conn,
             """
             SELECT COUNT(*) FROM DimStatement ds
-            LEFT JOIN DimAccount da ON ds.account_id = da.account_id
-            WHERE da.account_id IS NULL
+            LEFT JOIN DimAccount da ON ds.account_int = da.account_int
+            WHERE da.account_int IS NULL
         """,
         )
         assert orphans == 0
@@ -397,8 +397,8 @@ class TestFactTransaction:
         assert mart == raw
 
     def test_transaction_id_is_unique(self, conn):
-        total = _scalar(conn, "SELECT COUNT(*)                     FROM FactTransaction")
-        distinct = _scalar(conn, "SELECT COUNT(DISTINCT transaction_id) FROM FactTransaction")
+        total = _scalar(conn, "SELECT COUNT(*)                       FROM FactTransaction")
+        distinct = _scalar(conn, "SELECT COUNT(DISTINCT transaction_int) FROM FactTransaction")
         assert total == distinct
 
     def test_id_transaction_covers_all_raw(self, conn):
@@ -442,7 +442,7 @@ class TestFactTransaction:
             conn.execute("""
             SELECT da.id_account, ROUND(SUM(ft.value_in), 4)
             FROM FactTransaction ft
-            JOIN DimAccount da ON ft.account_id = da.account_id
+            JOIN DimAccount da ON ft.account_int = da.account_int
             GROUP BY da.id_account
         """).fetchall()
         )
@@ -463,7 +463,7 @@ class TestFactTransaction:
             conn.execute("""
             SELECT da.id_account, ROUND(SUM(ft.value_out), 4)
             FROM FactTransaction ft
-            JOIN DimAccount da ON ft.account_id = da.account_id
+            JOIN DimAccount da ON ft.account_int = da.account_int
             GROUP BY da.id_account
         """).fetchall()
         )
@@ -484,7 +484,7 @@ class TestFactTransaction:
             conn.execute("""
             SELECT da.id_account, COUNT(*)
             FROM FactTransaction ft
-            JOIN DimAccount da ON ft.account_id = da.account_id
+            JOIN DimAccount da ON ft.account_int = da.account_int
             GROUP BY da.id_account
         """).fetchall()
         )
@@ -502,10 +502,10 @@ class TestFactTransaction:
         )
         mart = dict(
             conn.execute("""
-            SELECT dt.period, COUNT(*)
+            SELECT dd.period, COUNT(*)
             FROM FactTransaction ft
-            JOIN DimTime dt ON ft.time_id = dt.time_id
-            GROUP BY dt.period
+            JOIN DimDate dd ON ft.date_int = dd.date_int
+            GROUP BY dd.period
         """).fetchall()
         )
         assert mart == raw
@@ -515,8 +515,8 @@ class TestFactTransaction:
             conn,
             """
             SELECT COUNT(*) FROM FactTransaction ft
-            LEFT JOIN DimAccount da ON ft.account_id = da.account_id
-            WHERE da.account_id IS NULL
+            LEFT JOIN DimAccount da ON ft.account_int = da.account_int
+            WHERE da.account_int IS NULL
         """,
         )
         assert orphans == 0
@@ -526,8 +526,8 @@ class TestFactTransaction:
             conn,
             """
             SELECT COUNT(*) FROM FactTransaction ft
-            LEFT JOIN DimTime dt ON ft.time_id = dt.time_id
-            WHERE dt.time_id IS NULL
+            LEFT JOIN DimDate dd ON ft.date_int = dd.date_int
+            WHERE dd.date_int IS NULL
         """,
         )
         assert orphans == 0
@@ -537,20 +537,20 @@ class TestFactTransaction:
             conn,
             """
             SELECT COUNT(*) FROM FactTransaction ft
-            LEFT JOIN DimStatement ds ON ft.statement_id = ds.statement_id
-            WHERE ds.statement_id IS NULL
+            LEFT JOIN DimStatement ds ON ft.statement_int = ds.statement_int
+            WHERE ds.statement_int IS NULL
         """,
         )
         assert orphans == 0
 
     def test_id_date_consistent_with_time_id(self, conn):
-        """id_date on FactTransaction matches the id_date of the joined DimTime row."""
+        """id_date on FactTransaction matches the id_date of the joined DimDate row."""
         mismatches = _scalar(
             conn,
             """
             SELECT COUNT(*) FROM FactTransaction ft
-            JOIN DimTime dt ON ft.time_id = dt.time_id
-            WHERE ft.id_date != dt.id_date
+            JOIN DimDate dd ON ft.date_int = dd.date_int
+            WHERE ft.id_date != dd.id_date
         """,
         )
         assert mismatches == 0
@@ -565,7 +565,7 @@ class TestFactBalance:
     def test_row_count_equals_accounts_times_date_spine(self, conn):
         """FactBalance has exactly one row per (account, day) across the full spine."""
         n_accounts = _scalar(conn, "SELECT COUNT(*) FROM DimAccount")
-        n_days = _scalar(conn, "SELECT COUNT(*) FROM DimTime")
+        n_days = _scalar(conn, "SELECT COUNT(*) FROM DimDate")
         expected = n_accounts * n_days
         actual = _scalar(conn, "SELECT COUNT(*) FROM FactBalance")
         assert actual == expected
@@ -575,9 +575,9 @@ class TestFactBalance:
             conn,
             """
             SELECT COUNT(*) FROM (
-                SELECT time_id, account_id, COUNT(*) AS c
+                SELECT date_int, account_int, COUNT(*) AS c
                 FROM FactBalance
-                GROUP BY time_id, account_id
+                GROUP BY date_int, account_int
                 HAVING c > 1
             )
         """,
@@ -589,8 +589,8 @@ class TestFactBalance:
             conn,
             """
             SELECT COUNT(*) FROM FactBalance fb
-            LEFT JOIN DimAccount da ON fb.account_id = da.account_id
-            WHERE da.account_id IS NULL
+            LEFT JOIN DimAccount da ON fb.account_int = da.account_int
+            WHERE da.account_int IS NULL
         """,
         )
         assert orphans == 0
@@ -600,8 +600,8 @@ class TestFactBalance:
             conn,
             """
             SELECT COUNT(*) FROM FactBalance fb
-            LEFT JOIN DimTime dt ON fb.time_id = dt.time_id
-            WHERE dt.time_id IS NULL
+            LEFT JOIN DimDate dd ON fb.date_int = dd.date_int
+            WHERE dd.date_int IS NULL
         """,
         )
         assert orphans == 0
@@ -658,9 +658,9 @@ class TestFactBalance:
                 """
                 SELECT fb.closing_balance
                 FROM FactBalance fb
-                JOIN DimAccount da ON fb.account_id = da.account_id
-                JOIN DimTime    dt ON fb.time_id    = dt.time_id
-                WHERE da.id_account = ? AND dt.id_date = ?
+                JOIN DimAccount da ON fb.account_int = da.account_int
+                JOIN DimDate    dd ON fb.date_int    = dd.date_int
+                WHERE da.id_account = ? AND dd.id_date = ?
             """,
                 (id_account, last_date),
             )
@@ -694,9 +694,9 @@ class TestFactBalance:
                 """
                 SELECT fb.closing_balance
                 FROM FactBalance fb
-                JOIN DimAccount da ON fb.account_id = da.account_id
-                JOIN DimTime    dt ON fb.time_id    = dt.time_id
-                WHERE da.id_account = ? AND dt.id_date = ?
+                JOIN DimAccount da ON fb.account_int = da.account_int
+                JOIN DimDate    dd ON fb.date_int    = dd.date_int
+                WHERE da.id_account = ? AND dd.id_date = ?
             """,
                 (id_account, first_date),
             )
@@ -714,8 +714,8 @@ class TestFactBalance:
             WHERE fb.movement != 0
             AND NOT EXISTS (
                 SELECT 1 FROM FactTransaction ft
-                WHERE ft.account_id = fb.account_id
-                AND ft.time_id = fb.time_id
+                WHERE ft.account_int = fb.account_int
+                AND ft.date_int = fb.date_int
             )
         """,
         )
@@ -728,16 +728,16 @@ class TestFactBalance:
             conn,
             """
             WITH bookends AS (
-                SELECT account_id,
-                       MIN(time_id) AS first_tid,
-                       MAX(time_id) AS last_tid
+                SELECT account_int,
+                       MIN(date_int) AS first_did,
+                       MAX(date_int) AS last_did
                 FROM FactTransaction
-                GROUP BY account_id
+                GROUP BY account_int
             )
             SELECT COUNT(*) FROM FactBalance fb
-            JOIN bookends bk ON fb.account_id = bk.account_id
+            JOIN bookends bk ON fb.account_int = bk.account_int
             WHERE fb.outside_date != CASE
-                WHEN fb.time_id < bk.first_tid OR fb.time_id > bk.last_tid
+                WHEN fb.date_int < bk.first_did OR fb.date_int > bk.last_did
                 THEN 1 ELSE 0
             END
         """,
@@ -749,8 +749,8 @@ class TestFactBalance:
             conn,
             """
             SELECT COUNT(*) FROM FactBalance fb
-            JOIN DimTime dt ON fb.time_id = dt.time_id
-            WHERE fb.id_date != dt.id_date
+            JOIN DimDate dd ON fb.date_int = dd.date_int
+            WHERE fb.id_date != dd.id_date
         """,
         )
         assert mismatches == 0
@@ -760,7 +760,7 @@ class TestFactBalance:
             conn,
             """
             SELECT COUNT(*) FROM FactBalance fb
-            JOIN DimAccount da ON fb.account_id = da.account_id
+            JOIN DimAccount da ON fb.account_int = da.account_int
             WHERE fb.id_account != da.id_account
         """,
         )
@@ -774,12 +774,12 @@ class TestFactBalance:
 
 class TestSurrogateKeyConsistency:
     def test_fact_transaction_account_id_matches_dim_account(self, conn):
-        """FactTransaction.id_account matches DimAccount.id_account via account_id FK."""
+        """FactTransaction.id_account matches DimAccount.id_account via account_int FK."""
         mismatches = _scalar(
             conn,
             """
             SELECT COUNT(*) FROM FactTransaction ft
-            JOIN DimAccount da ON ft.account_id = da.account_id
+            JOIN DimAccount da ON ft.account_int = da.account_int
             WHERE ft.id_account != da.id_account
         """,
         )
@@ -790,19 +790,19 @@ class TestSurrogateKeyConsistency:
             conn,
             """
             SELECT COUNT(*) FROM FactTransaction ft
-            JOIN DimStatement ds ON ft.statement_id = ds.statement_id
+            JOIN DimStatement ds ON ft.statement_int = ds.statement_int
             WHERE ft.id_statement != ds.id_statement
         """,
         )
         assert mismatches == 0
 
     def test_dim_statement_account_id_matches_dim_account(self, conn):
-        """Every DimStatement.account_id resolves to the correct id_account."""
+        """Every DimStatement.account_int resolves to the correct id_account."""
         mismatches = _scalar(
             conn,
             """
             SELECT COUNT(*) FROM DimStatement ds
-            JOIN DimAccount da ON ds.account_id = da.account_id
+            JOIN DimAccount da ON ds.account_int = da.account_int
             JOIN statement_heads sh ON ds.id_statement = sh.ID_STATEMENT
             WHERE da.id_account != sh.ID_ACCOUNT
         """,

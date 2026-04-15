@@ -173,7 +173,7 @@ _MULTI_EXPORT_STEMS = [
 _MULTI_STEM_TO_DB_TABLE = {
     "statement_dimension": "DimStatement",
     "account_dimension": "DimAccount",
-    "calendar_dimension": "DimTime",
+    "calendar_dimension": "DimDate",
     "transaction_measures": "FactTransaction",
     "daily_account_balances": "FactBalance",
     "missing_statement_report": "GapReport",
