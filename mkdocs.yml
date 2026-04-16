@@ -45,6 +45,7 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - Quick Start: guides/quick-start.md
   - Guides:
       - Adding a New Bank: guides/new-bank-config.md
       - Anonymisation: guides/anonymisation.md
