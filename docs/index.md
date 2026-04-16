@@ -1,37 +1,57 @@
 # Bank Statement Parser
 
-Welcome to the documentation for **bank_statement_parser** — a Python library for parsing
-bank statement PDFs, extracting structured transaction data, and persisting results to
-Parquet files and a SQLite star-schema data mart.
+Stop copying transactions from PDF statements into spreadsheets by hand. **Bank Statement Parser** reads your bank statement PDFs, pulls out every transaction automatically, and gives you clean, ready-to-use files — CSV, Excel, or direct import formats for accounting software.
 
-## Guides
+Everything runs on your own computer. No data is sent anywhere.
 
-- **[Adding a New Bank](guides/new-bank-config.md)** — step-by-step guide to creating
-  configuration files for parsing statements from a new bank, including the TOML file
-  structure, field extraction rules, and standard field mappings.
-- **[Anonymisation](guides/anonymisation.md)** — redacting personally identifiable
-  information from statement PDFs, config setup, and output review.
-- **[Project Structure](guides/project-structure.md)** — directory layout, SQLite
-  schema, and Parquet file organisation.
-- **[Export Options](guides/exports.md)** — simple vs. full export presets, CSV and
-  Excel output.
+---
 
-## Reference
+## What it does for you
 
-- **[CLI Reference](reference/cli.md)** — all `bsp process` and `bsp anonymise`
-  options with examples.
-- **[Python API Reference](reference/python-api.md)** — `StatementBatch`, report
-  backends, export helpers, and database utilities.
+- **Reads your PDF statements** — drop a folder of PDFs in, get structured data out
+- **No manual re-entry** — dates, amounts, descriptions, and running balances are all extracted automatically
+- **Export to the format you need** — CSV, Excel, or QuickBooks-compatible import files
+- **Handles multiple accounts at once** — current accounts, savings accounts, and credit cards in one pass
+- **Avoids duplicates** — re-running on the same statements won't create duplicate records
+- **Works fully offline** — your statements never leave your machine
+- **Free and open source** — no subscription, no sign-up
 
-## Quick Links
+---
+
+## Supported banks and accounts
+
+| Bank | Supported accounts |
+|---|---|
+| **HSBC UK** | Bank Account (Current), HSBC Advance, Flexible Saver, Online Bonus Saver, Rewards Credit Card |
+| **TSB UK** | Spend & Save (Current Account) |
+| **NatWest UK** | *(coming soon)* |
+
+> Support for more banks can be added by creating configuration files. See the [Adding a New Bank](guides/new-bank-config.md) guide.
+
+---
+
+## Getting started
+
+New to Bank Statement Parser? The [Quick Start guide](guides/quick-start.md) walks you through installation and your first run step by step — no technical experience needed.
+
+---
+
+## Going further
+
+| | |
+|---|---|
+| [Quick Start](guides/quick-start.md) | Install and run for the first time |
+| [Export Options](guides/exports.md) | CSV, Excel, and accounting software formats |
+| [Anonymisation](guides/anonymisation.md) | Redact personal details from PDFs before sharing |
+| [Project Structure](guides/project-structure.md) | How output files and folders are organised |
+| [Adding a New Bank](guides/new-bank-config.md) | Configure support for a bank not listed above |
+| [CLI Reference](reference/cli.md) | All command-line options |
+| [Python API Reference](reference/python-api.md) | Automate from your own scripts |
+
+---
+
+## Links
 
 - [GitHub Repository](https://github.com/boscorat/bank_statement_parser)
 - [PyPI Package](https://pypi.org/project/uk-bank-statement-parser/)
 - [Issue Tracker](https://github.com/boscorat/bank_statement_parser/issues)
-
-## About This Documentation
-
-This site is built with [Zensical](https://zensical.org/), a modern static site
-generator compatible with the Material for MkDocs theme. Reference pages and guide
-sections are **auto-generated** from docstrings and comments in the source code using
-`scripts/generate_docs.py`, ensuring the documentation stays in sync with the codebase.
