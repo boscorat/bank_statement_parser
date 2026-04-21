@@ -67,8 +67,8 @@ Example
 
 from __future__ import annotations
 
-import random
 import re
+import secrets
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -215,8 +215,9 @@ def _make_digit_map() -> dict[str, str]:
     """
     digits = list("0123456789")
     shuffled = digits[:]
+    _rng = secrets.SystemRandom()
     while True:
-        random.shuffle(shuffled)
+        _rng.shuffle(shuffled)
         if all(orig != shuf for orig, shuf in zip(digits, shuffled)):
             break
     return dict(zip(digits, shuffled))

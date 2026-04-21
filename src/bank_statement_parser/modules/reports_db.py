@@ -26,6 +26,38 @@ from xlsxwriter import Workbook
 from bank_statement_parser.modules.errors import ProjectDatabaseMissing
 from bank_statement_parser.modules.paths import ProjectPaths
 
+# Whitelist of all table/view names that _read_data is permitted to query.
+_ALLOWED_READ_TARGETS: frozenset[str] = frozenset(
+    {
+        "FlatTransaction",
+        "FlatTransactionBatch",
+        "FactBalance",
+        "FactBalanceBatch",
+        "FactTransaction",
+        "FactTransactionBatch",
+        "DimDate",
+        "DimDateBatch",
+        "DimStatement",
+        "DimStatementBatch",
+        "DimAccount",
+        "DimAccountBatch",
+        "GapReport",
+    }
+)
+
+
+def _validate_read_target(name: str) -> None:
+    """Raise ValueError if *name* is not a recognised table/view name.
+
+    Args:
+        name: The table or view name to validate.
+
+    Raises:
+        ValueError: If *name* is not in :data:`_ALLOWED_READ_TARGETS`.
+    """
+    if name not in _ALLOWED_READ_TARGETS:
+        raise ValueError(f"table/view name {name!r} is not in the allowed list (allowed: {sorted(_ALLOWED_READ_TARGETS)})")
+
 
 def _require_db(paths) -> None:
     """Raise appropriate errors if the database directory or file are missing.
@@ -51,8 +83,12 @@ def _read_data(db_path: Path, table_name: str) -> pl.LazyFrame:
 
     Returns:
         A :class:`pl.LazyFrame` containing all rows from the table/view.
+
+    Raises:
+        ValueError: If *table_name* is not in the allowed whitelist.
     """
-    query = f"SELECT * FROM {table_name}"
+    _validate_read_target(table_name)
+    query = f"SELECT * FROM {table_name}"  # noqa: S608
     with sqlite3.connect(db_path) as conn:
         return pl.read_database(query, connection=conn, infer_schema_length=None).lazy()
 
@@ -74,10 +110,14 @@ def _read_data_filtered(db_path: Path, table_name: str, batch_table: str, batch_
 
     Returns:
         A :class:`pl.LazyFrame` containing the matching rows.
+
+    Raises:
+        ValueError: If *table_name* or *batch_table* is not in the allowed whitelist.
     """
     if batch_id is None:
         return _read_data(db_path, table_name)
-    query = f"SELECT * FROM {batch_table} WHERE batch_id = ?"
+    _validate_read_target(batch_table)
+    query = f"SELECT * FROM {batch_table} WHERE batch_id = ?"  # noqa: S608
     with sqlite3.connect(db_path) as conn:
         return pl.read_database(query, connection=conn, execute_options={"parameters": [batch_id]}, infer_schema_length=None).lazy()
 
