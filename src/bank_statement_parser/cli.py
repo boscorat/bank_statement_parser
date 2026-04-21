@@ -14,6 +14,7 @@ process     Parse bank statement PDFs, persist data, and export reports.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -35,7 +36,8 @@ def _cmd_forex(args: argparse.Namespace) -> int:
     project_path = Path(args.project).resolve() if args.project else Path.cwd() / "bsp_project"
 
     extra: list[str] | None = args.currencies if args.currencies else None
-    api_key: str | None = args.api_key if args.api_key else None
+    # Prefer explicit --api-key arg, then BSP_FOREX_API_KEY env var.
+    api_key: str | None = args.api_key or os.environ.get("BSP_FOREX_API_KEY") or None
 
     try:
         get_exchange_rates(
@@ -204,7 +206,7 @@ def main() -> None:
         metavar="KEY",
         dest="api_key",
         default=None,
-        help="Override the API key from forex_api_config.toml.",
+        help="Override the API key from forex_api_config.toml. Prefer setting the BSP_FOREX_API_KEY environment variable instead to avoid key exposure in shell history.",
     )
 
     # ------------------------------------------------------------------

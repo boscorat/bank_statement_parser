@@ -3,6 +3,12 @@ import sqlite3
 import time
 from pathlib import Path
 
+# Whitelist of mart object names that _drop_mart_objects is permitted to DROP.
+# This guards against a tampered sqlite_master injecting unexpected object names.
+_ALLOWED_MART_NAMES: frozenset[str] = frozenset(
+    {"FactBalance", "FactTransaction", "DimStatement", "DimAccount", "DimDate"}
+)
+
 
 # ---------------------------------------------------------------------------
 # Mart table DDL
@@ -245,8 +251,10 @@ def _drop_mart_objects(conn: sqlite3.Connection) -> None:
     for name in ("FactBalance", "FactTransaction", "DimStatement", "DimAccount", "DimDate"):
         row = conn.execute("SELECT type FROM sqlite_master WHERE name = ?", (name,)).fetchone()
         if row is not None:
+            if name not in _ALLOWED_MART_NAMES:  # defence-in-depth: name is a literal above
+                raise ValueError(f"Unexpected mart object name {name!r}; refusing to DROP.")
             kw = "VIEW" if row[0] == "view" else "TABLE"
-            conn.execute(f"DROP {kw} IF EXISTS {name}")
+            conn.execute(f"DROP {kw} IF EXISTS {name}")  # noqa: S608
 
 
 def _ensure_mart_structure(conn: sqlite3.Connection) -> None:
@@ -653,8 +661,11 @@ def _build_fact_balance(conn: sqlite3.Connection, verbose: bool) -> float:
     conn.execute("CREATE INDEX idx_fb_date_int      ON FactBalance (date_int)")
 
     # Cleanup temp tables
+    _ALLOWED_TEMP: frozenset[str] = frozenset({"_fb_agg", "_fb_bk", "_fb_grid"})
     for tbl in ("_fb_agg", "_fb_bk", "_fb_grid"):
-        conn.execute(f"DROP TABLE IF EXISTS {tbl}")
+        if tbl not in _ALLOWED_TEMP:
+            raise ValueError(f"Unexpected temp table name {tbl!r}; refusing to DROP.")
+        conn.execute(f"DROP TABLE IF EXISTS {tbl}")  # noqa: S608
 
     elapsed = time.monotonic() - t0
     n = conn.execute("SELECT COUNT(*) FROM FactBalance").fetchone()[0]

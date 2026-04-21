@@ -24,7 +24,7 @@ bsp forex [--project PATH] [--currencies CODE] [--api-key KEY]
 | --- | --- | --- |
 | `--project` | auto-detect | Project folder path (default: ./bsp_project/ in CWD). |
 | `--currencies` | auto-detect | Additional ISO 4217 currency codes to fetch (e.g. --currencies AED SAR). |
-| `--api-key` | auto-detect | Override the API key from forex_api_config.toml. |
+| `--api-key` | auto-detect | Override the API key from forex_api_config.toml. Prefer setting the BSP_FOREX_API_KEY environment variable instead to avoid key exposure in shell history. |
 
 ## `bsp anonymise`
 
