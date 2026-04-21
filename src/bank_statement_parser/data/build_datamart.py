@@ -5,9 +5,7 @@ from pathlib import Path
 
 # Whitelist of mart object names that _drop_mart_objects is permitted to DROP.
 # This guards against a tampered sqlite_master injecting unexpected object names.
-_ALLOWED_MART_NAMES: frozenset[str] = frozenset(
-    {"FactBalance", "FactTransaction", "DimStatement", "DimAccount", "DimDate"}
-)
+_ALLOWED_MART_NAMES: frozenset[str] = frozenset({"FactBalance", "FactTransaction", "DimStatement", "DimAccount", "DimDate"})
 
 
 # ---------------------------------------------------------------------------

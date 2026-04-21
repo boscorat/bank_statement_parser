@@ -57,9 +57,7 @@ def _validate_currency_code(code: str) -> None:
         ValueError: If *code* does not match the ``[A-Z]{3}`` pattern.
     """
     if not _ISO4217_RE.match(code):
-        raise ValueError(
-            f"Currency code {code!r} is not a valid ISO 4217 code (expected 3 uppercase letters)."
-        )
+        raise ValueError(f"Currency code {code!r} is not a valid ISO 4217 code (expected 3 uppercase letters).")
 
 
 # ---------------------------------------------------------------------------
