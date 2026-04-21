@@ -56,10 +56,7 @@ def _validate_read_target(name: str) -> None:
         ValueError: If *name* is not in :data:`_ALLOWED_READ_TARGETS`.
     """
     if name not in _ALLOWED_READ_TARGETS:
-        raise ValueError(
-            f"table/view name {name!r} is not in the allowed list "
-            f"(allowed: {sorted(_ALLOWED_READ_TARGETS)})"
-        )
+        raise ValueError(f"table/view name {name!r} is not in the allowed list (allowed: {sorted(_ALLOWED_READ_TARGETS)})")
 
 
 def _require_db(paths) -> None:

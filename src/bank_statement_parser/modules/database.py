@@ -39,12 +39,8 @@ def _require_db(db_path: Path) -> None:
 
 # Whitelists for migration identifier validation — prevents any future
 # regression if _MIGRATIONS entries are ever made dynamic.
-_ALLOWED_MIGRATION_TABLES: frozenset[str] = frozenset(
-    {"batch_lines", "batch_heads", "statement_heads"}
-)
-_ALLOWED_MIGRATION_COLUMNS: frozenset[str] = frozenset(
-    {"ERROR_DATA", "ID_SESSION", "ID_USER", "STD_REVIEW_COUNT", "STD_CURRENCY"}
-)
+_ALLOWED_MIGRATION_TABLES: frozenset[str] = frozenset({"batch_lines", "batch_heads", "statement_heads"})
+_ALLOWED_MIGRATION_COLUMNS: frozenset[str] = frozenset({"ERROR_DATA", "ID_SESSION", "ID_USER", "STD_REVIEW_COUNT", "STD_CURRENCY"})
 _ALLOWED_MIGRATION_TYPES: frozenset[str] = frozenset({"INTEGER", "TEXT", "REAL"})
 
 
