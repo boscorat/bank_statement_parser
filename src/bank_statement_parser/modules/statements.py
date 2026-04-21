@@ -50,6 +50,26 @@ CPU_WORKERS = os.cpu_count()
 
 _MAX_STRING_LEN = 500  # truncate long strings captured from locals
 
+# Variable names that are safe to capture from frame locals during error reporting.
+# Omitting this set (capturing all str locals) risks leaking financial data or PII
+# that happens to be held in string variables at the time of the exception.
+_SAFE_LOCAL_NAMES: frozenset[str] = frozenset(
+    {
+        "file",
+        "file_path",
+        "section",
+        "company_key",
+        "account_key",
+        "batch_id",
+        "session_id",
+        "error_message",
+        "error_type",
+        "outcome",
+        "table_name",
+        "col_type",
+    }
+)
+
 
 def _build_error_detail(exc: BaseException) -> dict:
     """
@@ -84,13 +104,15 @@ def _build_error_detail(exc: BaseException) -> dict:
         )
 
     # Walk the live traceback chain to collect frame locals.
+    # Only capture variables whose names are in the safe allowlist to avoid
+    # leaking financial data or PII held in arbitrary string locals.
     current_tb = tb
     while current_tb is not None:
         frame = current_tb.tb_frame
         str_vars = {
             k: (v if len(v) <= _MAX_STRING_LEN else f"{v[:_MAX_STRING_LEN]}…")
             for k, v in frame.f_locals.items()
-            if isinstance(v, str) and k != "__doc__"
+            if isinstance(v, str) and k in _SAFE_LOCAL_NAMES
         }
         if str_vars:
             string_locals_by_frame.append(

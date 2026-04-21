@@ -1105,7 +1105,9 @@ class ForexApiConfig:
             ``"exchangerate-api"`` is the optional secondary provider for
             currencies not covered by Frankfurter (e.g. AED, SAR).
         api_key: API key for providers that require authentication.  Leave
-            blank for Frankfurter.
+            blank for Frankfurter.  The ``BSP_FOREX_API_KEY`` environment
+            variable is checked by the CLI before this field, so the key
+            never needs to be written to disk.
         base_currency: Pivot currency for all rates.  Must be ``"USD"``; other
             values are not supported by the current implementation.
         extra_currencies: Additional ISO 4217 currency codes to fetch rates

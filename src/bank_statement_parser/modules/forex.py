@@ -23,6 +23,7 @@ in the ``DimTime`` range by propagating the most recent known rate forward
 across weekends and holidays.
 """
 
+import re
 import sqlite3
 import warnings
 from datetime import date, timedelta
@@ -41,6 +42,24 @@ from bank_statement_parser.modules.paths import ProjectPaths
 _FRANKFURTER_UNSUPPORTED: frozenset[str] = frozenset({"AED", "SAR", "PHP", "IDR", "SGD", "HKD", "CNY", "NZD"})
 
 _FRANKFURTER_BASE_URL = "https://api.frankfurter.dev/v1"
+
+# ISO 4217 currency code pattern: exactly 3 uppercase ASCII letters.
+_ISO4217_RE = re.compile(r"^[A-Z]{3}$")
+
+
+def _validate_currency_code(code: str) -> None:
+    """Raise ValueError if *code* is not a valid ISO 4217 currency code format.
+
+    Args:
+        code: The currency code to validate.
+
+    Raises:
+        ValueError: If *code* does not match the ``[A-Z]{3}`` pattern.
+    """
+    if not _ISO4217_RE.match(code):
+        raise ValueError(
+            f"Currency code {code!r} is not a valid ISO 4217 code (expected 3 uppercase letters)."
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -112,6 +131,10 @@ def _provider_frankfurter(
     supported = [c for c in currencies if c not in _FRANKFURTER_UNSUPPORTED]
     if not supported:
         return []
+
+    # Validate all codes before interpolating into the URL to prevent query-string injection.
+    for code in supported:
+        _validate_currency_code(code)
 
     symbols = ",".join(supported)
     url = f"{_FRANKFURTER_BASE_URL}/{date_from}..{date_to}?base=USD&symbols={symbols}"
@@ -286,6 +309,9 @@ def get_exchange_rates(
             pass
 
         all_extra = list(extra_currencies or []) + list(config.extra_currencies)
+        # Validate all caller-supplied currency codes before use.
+        for code in all_extra:
+            _validate_currency_code(code)
         currencies: list[str] = sorted(set(dim_currencies + all_extra))
 
         if not currencies:

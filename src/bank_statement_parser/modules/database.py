@@ -37,6 +37,32 @@ def _require_db(db_path: Path) -> None:
         raise ProjectDatabaseMissing(db_path)
 
 
+# Whitelists for migration identifier validation — prevents any future
+# regression if _MIGRATIONS entries are ever made dynamic.
+_ALLOWED_MIGRATION_TABLES: frozenset[str] = frozenset(
+    {"batch_lines", "batch_heads", "statement_heads"}
+)
+_ALLOWED_MIGRATION_COLUMNS: frozenset[str] = frozenset(
+    {"ERROR_DATA", "ID_SESSION", "ID_USER", "STD_REVIEW_COUNT", "STD_CURRENCY"}
+)
+_ALLOWED_MIGRATION_TYPES: frozenset[str] = frozenset({"INTEGER", "TEXT", "REAL"})
+
+
+def _validate_migration_identifier(value: str, allowed: frozenset[str], label: str) -> None:
+    """Raise ValueError if *value* is not in *allowed*.
+
+    Args:
+        value: The identifier to validate.
+        allowed: Frozenset of permitted values.
+        label: Human-readable label for the error message.
+
+    Raises:
+        ValueError: If *value* is not in *allowed*.
+    """
+    if value not in allowed:
+        raise ValueError(f"Unexpected migration {label} {value!r}; not in allowed set.")
+
+
 # Columns that may have been added after the initial schema was created.
 # Each entry is (table_name, column_name, column_type, default_value).
 _MIGRATIONS: list[tuple[str, str, str, str]] = [
@@ -319,9 +345,12 @@ def _migrate_db(conn: sqlite3.Connection) -> None:
         conn: Open SQLite connection with write access.
     """
     for table, column, col_type, default in _MIGRATIONS:
-        existing = {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+        _validate_migration_identifier(table, _ALLOWED_MIGRATION_TABLES, "table")
+        _validate_migration_identifier(column, _ALLOWED_MIGRATION_COLUMNS, "column")
+        _validate_migration_identifier(col_type, _ALLOWED_MIGRATION_TYPES, "column type")
+        existing = {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}  # noqa: S608
         if column not in existing:
-            conn.execute(f'ALTER TABLE {table} ADD COLUMN "{column}" {col_type} DEFAULT {default}')
+            conn.execute(f'ALTER TABLE {table} ADD COLUMN "{column}" {col_type} DEFAULT {default}')  # noqa: S608
             print(f"[migrate] added column {column} to {table}")
 
     existing_tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'").fetchall()}

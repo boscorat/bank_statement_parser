@@ -18,8 +18,8 @@ None of the symbols here form part of the public API.  Import from
 
 from __future__ import annotations
 
-import random
 import re
+import secrets
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -736,14 +736,15 @@ def _make_scramble_map() -> dict[int, int]:
         A translation table suitable for use with :meth:`str.translate`.
     """
     lower_shuffled = list(_LOWER_LETTERS)
+    _rng = secrets.SystemRandom()
     while True:
-        random.shuffle(lower_shuffled)
+        _rng.shuffle(lower_shuffled)
         if all(orig != shuf for orig, shuf in zip(_LOWER_LETTERS, lower_shuffled)):
             break
 
     upper_shuffled = list(_UPPER_LETTERS)
     while True:
-        random.shuffle(upper_shuffled)
+        _rng.shuffle(upper_shuffled)
         if all(orig != shuf for orig, shuf in zip(_UPPER_LETTERS, upper_shuffled)):
             break
 
