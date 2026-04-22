@@ -1,6 +1,6 @@
 [project]
 name = "uk-bank-statement-parser"
-version = "0.2.1a9"
+version = "0.2.1b1"
 description = "Parse bank statement PDFs, extract transactions, and persist to Parquet and SQLite."
 readme = "README.md"
 license = "MIT"
