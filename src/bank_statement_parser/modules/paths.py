@@ -16,6 +16,7 @@ Constants:
 
 from __future__ import annotations
 
+import os
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -34,8 +35,12 @@ from bank_statement_parser.modules.errors import (
 # Anchor: the bank_statement_parser package root (src/bank_statement_parser/).
 _BSP: Path = Path(__file__).parent.parent
 
-# The default project root bundled with the package.
-_DEFAULT_PROJECT_ROOT: Path = _BSP.joinpath("project")
+# The default project root.  Can be overridden via the BSP_DEFAULT_PROJECT_ROOT
+# environment variable.  This is essential when bsp is installed into a
+# read-only system prefix (e.g. a frozen cx_Freeze/PyInstaller application
+# under /usr/lib) where the package-relative path is not writable.
+# Set this env var *before* importing bank_statement_parser.
+_DEFAULT_PROJECT_ROOT: Path = Path(os.environ.get("BSP_DEFAULT_PROJECT_ROOT", str(_BSP.joinpath("project"))))
 
 # Root of the default project's config/ directory.
 BASE_CONFIG: Path = _DEFAULT_PROJECT_ROOT.joinpath("config")
@@ -405,8 +410,12 @@ class ProjectPaths:
 # ---------------------------------------------------------------------------
 # Ensure the default project structure exists on first import
 # ---------------------------------------------------------------------------
+# Skipped when BSP_SKIP_DEFAULT_PROJECT_INIT=1 — set this in frozen/installed
+# applications where the default project root is managed externally (e.g. by
+# the host application before importing bsp).
 
-ProjectPaths.resolve().ensure_dirs()
+if os.environ.get("BSP_SKIP_DEFAULT_PROJECT_INIT") != "1":
+    ProjectPaths.resolve().ensure_dirs()
 
 
 # ---------------------------------------------------------------------------
