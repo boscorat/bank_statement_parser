@@ -284,6 +284,16 @@ def _build_full_page_scramble_pairs(
     pairs: list[tuple[str, str]] = []
     seen: set[str] = set()
 
+    # Build a set of normalised protected phrases for fast substring-guard lookups.
+    # A word whose normalised form appears as a substring of any protected phrase
+    # must not be added to the scramble pairs, because _apply_string_scramble uses
+    # str.replace (substring matching), and a pair like ("J", scrambled_J) would
+    # corrupt "Jun" inside a Tj fragment such as "09 Jun 25".
+    _protected_phrases: frozenset[str] = config.words_to_not_scramble
+
+    def _is_substring_of_protected(normalised_word: str) -> bool:
+        return any(normalised_word in phrase for phrase in _protected_phrases)
+
     for w in words:
         text: str = w["text"].strip()
         if not text or text in seen:
@@ -293,6 +303,14 @@ def _build_full_page_scramble_pairs(
 
         # Protected word/phrase — skip entirely.
         if normalised in config.words_to_not_scramble:
+            seen.add(text)
+            continue
+
+        # Skip words whose normalised form is a substring of any protected phrase.
+        # Without this guard a short word such as "J" (a name initial) would produce
+        # a scramble pair that corrupts the "J" inside "Jun" when str.replace is
+        # applied to a Tj fragment like "09 Jun 25".
+        if _is_substring_of_protected(normalised):
             seen.add(text)
             continue
 
@@ -399,18 +417,26 @@ def _build_full_page_scramble_bytes_pairs(
         return []
 
     fragments: list[tuple[bytes, str]] = []
-    current_font: str = next(iter(forward_maps))
+    current_font: str = ""  # tracks the active font; may or may not be in forward_maps
 
     for operands, operator in instructions:
         op = str(operator)
         if op == "Tf" and operands:
             try:
-                candidate = str(operands[0])
-                if candidate in forward_maps:
-                    current_font = candidate
+                # Always update current_font, even for non-ToUnicode fonts.
+                # This prevents stale ToUnicode font names being used to decode
+                # Tj fragments that actually belong to a WinAnsiEncoding font
+                # (which is how HSBC statements are structured).
+                current_font = str(operands[0])
             except Exception:
                 pass
         elif op == "Tj" and operands:
+            # Only collect fragments for fonts that have a ToUnicode CMap.
+            # Skipping non-ToUnicode fonts (e.g. HSBC WinAnsiEncoding) ensures
+            # the fragment list is empty for those pages, causing the function
+            # to return [] and correctly fall back to the Latin-1 string path.
+            if current_font not in forward_maps:
+                continue
             try:
                 raw = bytes(operands[0])
                 if raw:
@@ -418,6 +444,8 @@ def _build_full_page_scramble_bytes_pairs(
             except Exception:
                 pass
         elif op == "TJ" and operands:
+            if current_font not in forward_maps:
+                continue
             try:
                 arr = operands[0]
                 for item in list(arr):  # type: ignore[arg-type]
