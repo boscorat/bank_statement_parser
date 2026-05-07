@@ -21,6 +21,8 @@ on:
     tags:
       - "v*"
 
+permissions: {}  # no workflow-level permissions; each job declares its own
+
 jobs:
   # ── Build wheel + sdist and publish to PyPI ─────────────────────────
   pypi-publish:
@@ -32,10 +34,14 @@ jobs:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86  # v5
+        with:
+          enable-cache: false
 
       - name: Install Python
         run: uv python install 3.14.2
@@ -67,7 +73,7 @@ jobs:
         run: uv publish
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: python-dists
           path: dist/
@@ -77,12 +83,18 @@ jobs:
     name: Build .deb and .rpm
     runs-on: ubuntu-24.04
     needs: pypi-publish
+    permissions:
+      contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86  # v5
+        with:
+          enable-cache: false
 
       - name: Install Python 3.14.2
         run: uv python install 3.14.2
@@ -152,12 +164,14 @@ jobs:
           chmod 755 /tmp/bsp-pkg/usr/bin/bsp
 
       - name: Build .deb
+        env:
+          PKG_VERSION: ${{ steps.version.outputs.version }}
         run: |
           fpm \
             -s dir \
             -t deb \
             -n uk-bank-statement-parser \
-            -v "${{ steps.version.outputs.version }}" \
+            -v "${PKG_VERSION}" \
             --description "Parse bank statement PDFs, extract transactions, persist to Parquet and SQLite." \
             --license "MIT" \
             --maintainer "Jason Farrar <farrar.jason1@gmail.com>" \
@@ -166,17 +180,19 @@ jobs:
             --category "utils" \
             --architecture all \
             --deb-no-default-config-files \
-            -p "uk-bank-statement-parser_${{ steps.version.outputs.version }}_all.deb" \
+            -p "uk-bank-statement-parser_${PKG_VERSION}_all.deb" \
             /tmp/bsp-venv/=/opt/uk-bank-statement-parser/ \
             /tmp/bsp-pkg/usr/bin/bsp=/usr/bin/bsp
 
       - name: Build .rpm
+        env:
+          PKG_VERSION: ${{ steps.version.outputs.version }}
         run: |
           fpm \
             -s dir \
             -t rpm \
             -n uk-bank-statement-parser \
-            -v "${{ steps.version.outputs.version }}" \
+            -v "${PKG_VERSION}" \
             --description "Parse bank statement PDFs, extract transactions, persist to Parquet and SQLite." \
             --license "MIT" \
             --maintainer "Jason Farrar <farrar.jason1@gmail.com>" \
@@ -185,12 +201,12 @@ jobs:
             --category "Utilities" \
             --architecture all \
             --rpm-os linux \
-            -p "uk-bank-statement-parser-${{ steps.version.outputs.version }}-1.noarch.rpm" \
+            -p "uk-bank-statement-parser-${PKG_VERSION}-1.noarch.rpm" \
             /tmp/bsp-venv/=/opt/uk-bank-statement-parser/ \
             /tmp/bsp-pkg/usr/bin/bsp=/usr/bin/bsp
 
       - name: Upload package artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: system-packages
           path: |
@@ -206,19 +222,19 @@ jobs:
       contents: write
     steps:
       - name: Download Python dists
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
         with:
           name: python-dists
           path: dist/
 
       - name: Download system packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
         with:
           name: system-packages
           path: packages/
 
       - name: Create release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65  # v2
         with:
           generate_release_notes: true
           files: |
