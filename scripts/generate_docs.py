@@ -713,7 +713,7 @@ def generate_bank_config() -> str:
     w("parse PDF statements from a new bank. The configuration is entirely TOML-based")
     w("and does not require writing any Python code.")
     w()
-    w("!!! note \"Not comfortable with TOML configuration?\"")
+    w('!!! note "Not comfortable with TOML configuration?"')
     w("    Adding a new bank is a technical process that requires understanding the")
     w("    PDF layout of your statements and writing structured configuration files.")
     w("    If you'd prefer to request support instead, open a")
