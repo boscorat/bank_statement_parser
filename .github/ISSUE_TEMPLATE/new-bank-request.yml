@@ -1,0 +1,78 @@
+name: "New bank request"
+description: "Request support for a bank or account type that isn't currently supported."
+title: "[New bank] "
+labels: ["new-bank"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to request a new bank. The more detail you can provide,
+        the easier it is to build and test the parser configuration.
+
+  - type: input
+    id: bank_name
+    attributes:
+      label: Bank name
+      description: The full name of the bank (e.g. "Lloyds Bank UK", "Barclays UK").
+      placeholder: e.g. Lloyds Bank UK
+    validations:
+      required: true
+
+  - type: input
+    id: account_type
+    attributes:
+      label: Account type(s)
+      description: >
+        The account type(s) whose statements you want parsed
+        (e.g. "Current account", "Cash ISA", "Credit card").
+      placeholder: e.g. Current account, Credit card
+    validations:
+      required: true
+
+  - type: textarea
+    id: statement_notes
+    attributes:
+      label: Statement format notes
+      description: >
+        Any details that might help — number of pages, whether transactions span
+        multiple lines, landscape layout, header/footer quirks, etc.
+      placeholder: e.g. "Statements are always two pages. Transactions can wrap to a second line. Running balance is in the rightmost column."
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ### Attaching an anonymised statement
+
+        > **You must anonymise your statement before attaching it.**
+        >
+        > An anonymised statement has all text scrambled so that no personal or financial
+        > information is readable, while preserving enough structure for the parser to work with.
+        >
+        > - Using **openstan**: use the built-in Anonymise PDF tool —
+        >   [openstan anonymisation guide](https://openstan.org/screens/anonymise/)
+        > - Using the **bsp CLI or Python API**: use `bsp anonymise` —
+        >   [bsp anonymisation guide](https://boscorat.github.io/bank_statement_parser/guides/anonymisation/)
+        >
+        > ⚠ **Statements that have not been anonymised will be removed without review.**
+
+  - type: textarea
+    id: statement_attachment
+    attributes:
+      label: Anonymised statement
+      description: >
+        Drag and drop your anonymised PDF here, or describe why you are unable to attach one.
+        GitHub accepts PDF attachments directly in this field.
+      placeholder: Drag and drop the anonymised PDF here.
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional context
+      description: Anything else that might be useful — links to the bank's online statement portal, known quirks, etc.
+    validations:
+      required: false

@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Ask a question / start a discussion
+    url: https://github.com/boscorat/bank_statement_parser/discussions
+    about: Use GitHub Discussions for questions, ideas, and general conversation.
