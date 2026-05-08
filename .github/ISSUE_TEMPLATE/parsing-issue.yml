@@ -1,0 +1,90 @@
+name: "Parsing issue"
+description: "Report a parsing error or unexpected result for a bank that is already supported."
+title: "[Parsing issue] <Bank name> — "
+labels: ["bug", "parsing"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Precise details and an anonymised statement make it
+        much faster to diagnose and fix parsing issues.
+
+  - type: input
+    id: bank_account
+    attributes:
+      label: Bank and account type
+      description: The bank name and account type that is failing to parse correctly.
+      placeholder: e.g. HSBC UK — Rewards Credit Card
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+      description: What did you expect to happen? (e.g. "All 34 transactions should have been imported.")
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+      description: >
+        What actually happened? If openstan showed a parsing error, paste the debug output
+        from the Import Results screen here. If using the CLI, paste the terminal output.
+      placeholder: Paste debug output or error message here.
+    validations:
+      required: true
+
+  - type: input
+    id: bsp_version
+    attributes:
+      label: bank_statement_parser version
+      description: >
+        Run `bsp --version` or check your `pyproject.toml` / `requirements.txt`.
+        In openstan, the version is shown on the About screen.
+      placeholder: e.g. 0.2.1b2
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ### Attaching an anonymised statement
+
+        > **You must anonymise your statement before attaching it.**
+        >
+        > An anonymised statement has all text scrambled so that no personal or financial
+        > information is readable, while preserving enough structure for the parser to work with.
+        >
+        > - Using **openstan**: use the built-in Anonymise PDF tool —
+        >   [openstan anonymisation guide](https://openstan.org/screens/anonymise/)
+        > - Using the **bsp CLI or Python API**: use `bsp anonymise` —
+        >   [bsp anonymisation guide](https://boscorat.github.io/bank_statement_parser/guides/anonymisation/)
+        >
+        > ⚠ **Statements that have not been anonymised will be removed without review.**
+
+  - type: textarea
+    id: statement_attachment
+    attributes:
+      label: Anonymised statement
+      description: >
+        Drag and drop your anonymised PDF here, or describe why you are unable to attach one.
+        GitHub accepts PDF attachments directly in this field.
+        Attaching the failing statement is strongly recommended — issues reported without one
+        may take significantly longer to investigate.
+      placeholder: Drag and drop the anonymised PDF here.
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional context
+      description: >
+        Anything else that might help — number of pages in the statement, whether it's a
+        downloaded PDF or a scanned copy, OS and Python version, etc.
+    validations:
+      required: false
