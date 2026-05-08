@@ -7,6 +7,14 @@ This guide walks through the process of configuring bank_statement_parser to
 parse PDF statements from a new bank. The configuration is entirely TOML-based
 and does not require writing any Python code.
 
+!!! note "Not comfortable with TOML configuration?"
+    Adding a new bank is a technical process that requires understanding the
+    PDF layout of your statements and writing structured configuration files.
+    If you'd prefer to request support instead, open a
+    [new bank request](https://github.com/boscorat/bank_statement_parser/issues/new?template=new-bank-request.yml)
+    on the issue tracker — please attach an anonymised statement to help us
+    build and test the configuration.
+
 ## Overview
 
 Adding support for a new bank involves creating and editing several TOML files
