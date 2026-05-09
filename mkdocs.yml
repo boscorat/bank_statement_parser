@@ -6,6 +6,7 @@ repo_name: boscorat/bank_statement_parser
 
 theme:
   name: material
+  custom_dir: docs/overrides
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
@@ -42,6 +43,9 @@ markdown_extensions:
   - tables
   - toc:
       permalink: true
+
+extra:
+  goatcounter_url: !ENV [GOATCOUNTER_URL, '']
 
 nav:
   - Home: index.md
