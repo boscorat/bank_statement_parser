@@ -43,6 +43,10 @@ _KNOWN_COMPUTED: frozenset[str] = frozenset({_COMPUTED_SIGNED_AMOUNT})
 # Columns in FlatTransaction that contain dates (need format conversion)
 _DATE_COLUMNS: frozenset[str] = frozenset({"transaction_date", "statement_date"})
 
+# Excel format strings for date/datetime columns.
+_EXCEL_DATE_FMT: str = "yyyy-mm-dd"
+_EXCEL_DATETIME_FMT: str = "yyyy-mm-dd hh:mm:ss"
+
 # Column used to partition rows when split_by_statement=True
 _SPLIT_ANCHOR = "id_statement"
 
@@ -352,24 +356,32 @@ def _apply_column_mapping(df: pl.LazyFrame, spec: ExportSpec) -> pl.LazyFrame:
 # ---------------------------------------------------------------------------
 
 
-def _apply_date_format(df: pl.LazyFrame, spec: ExportSpec) -> pl.LazyFrame:
-    """Cast and format date columns as strings using ``spec.date_format``.
+def _apply_date_format(df: pl.LazyFrame, spec: ExportSpec, *, keep_as_date: bool = False) -> pl.LazyFrame:
+    """Cast and format date columns using ``spec.date_format``.
 
     Any output column whose *source* in the spec maps to a known date column
-    (``transaction_date``, ``statement_date``) is cast to :class:`pl.Date`
-    and then formatted as a string.
+    (``transaction_date``, ``statement_date``) is cast to :class:`pl.Date`.
+    When *keep_as_date* is ``False`` (the default) the column is then formatted
+    as a string via :meth:`~polars.Expr.dt.strftime` — suitable for CSV output.
+    When *keep_as_date* is ``True`` the column is left as :class:`pl.Date` so
+    that Excel can render it as a native date cell via ``dtype_formats``.
 
     Args:
         df: :class:`pl.LazyFrame` after column mapping has been applied.
         spec: The loaded :class:`ExportSpec`.
+        keep_as_date: When ``True``, skip the string-formatting step and leave
+            columns as :class:`pl.Date`.  Defaults to ``False``.
 
     Returns:
-        The :class:`pl.LazyFrame` with date columns replaced by formatted strings.
+        The :class:`pl.LazyFrame` with date columns cast (and optionally
+        string-formatted).
     """
     # Identify output columns whose source was a date field
     date_output_cols: list[str] = [export_name for export_name, source in spec.columns.items() if source in _DATE_COLUMNS]
     if not date_output_cols:
         return df
+    if keep_as_date:
+        return df.with_columns([pl.col(col).cast(pl.Date).alias(col) for col in date_output_cols])
     return df.with_columns([pl.col(col).cast(pl.Date).dt.strftime(spec.date_format).alias(col) for col in date_output_cols])
 
 
@@ -502,6 +514,7 @@ def _write_frames(
                     table_name=re.sub(r"[^A-Za-z0-9_]", "_", stem),
                     table_style="Table Style Medium 4",
                     float_precision=spec.float_precision,
+                    dtype_formats={pl.Date: _EXCEL_DATE_FMT, pl.Datetime: _EXCEL_DATETIME_FMT},
                 )
             written.append(out_path)
     else:
@@ -606,7 +619,7 @@ def export_spec(
     # Query and transform
     lf = _build_frame(paths.project_db, loaded, account_key, date_from, date_to, statement_key)
     lf = _apply_column_mapping(lf, loaded)
-    lf = _apply_date_format(lf, loaded)
+    lf = _apply_date_format(lf, loaded, keep_as_date=(loaded.format == "xlsx"))
     lf = _apply_blank_zeros(lf, loaded)
     lf = _sanitise_strings(lf, loaded)
 
@@ -654,7 +667,7 @@ def export_spec(
                     stem = f"{account_key}_{date_str}"
                 partition = df_raw.filter(pl.col(_SPLIT_ANCHOR) == sid).lazy()
                 partition = _apply_column_mapping(partition, loaded)
-                partition = _apply_date_format(partition, loaded)
+                partition = _apply_date_format(partition, loaded, keep_as_date=(loaded.format == "xlsx"))
                 partition = _apply_blank_zeros(partition, loaded)
                 partition = _sanitise_strings(partition, loaded)
                 frames.append((stem, partition.collect()))
