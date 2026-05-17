@@ -122,9 +122,53 @@ def _read_data_filtered(db_path: Path, table_name: str, batch_table: str, batch_
         return pl.read_database(query, connection=conn, execute_options={"parameters": [batch_id]}, infer_schema_length=None).lazy()
 
 
-# Names of the numeric (float) tables in the full export — used by export_excel
-# to pass float_precision=2.
-_FLOAT_TABLES: frozenset[str] = frozenset({"transaction_measures", "daily_account_balances"})
+# Excel format strings for date/datetime columns cast from ISO strings.
+_EXCEL_DATE_FMT: str = "yyyy-mm-dd"
+_EXCEL_DATETIME_FMT: str = "yyyy-mm-dd hh:mm:ss"
+
+# Regex patterns used to detect ISO date/datetime strings in Utf8 columns.
+_ISO_DATE_RE: str = r"^\d{4}-\d{2}-\d{2}$"
+_ISO_DATETIME_RE: str = r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}"
+
+
+def _cast_date_columns(df: pl.DataFrame) -> pl.DataFrame:
+    """Cast ISO-format string columns to native date/datetime types for Excel export.
+
+    Inspects every ``Utf8`` column in *df*.  Columns whose non-null values all
+    match ``YYYY-MM-DD`` are cast to :class:`pl.Date`; columns whose non-null
+    values all match ``YYYY-MM-DDTHH:MM:SS…`` are cast to :class:`pl.Datetime`.
+    All other columns are left unchanged.
+
+    This allows :func:`export_excel` to pass ``dtype_formats`` hints to
+    ``write_excel`` so that Excel receives native date/datetime cells rather than
+    plain text strings.
+
+    Args:
+        df: The DataFrame to process.
+
+    Returns:
+        A new :class:`pl.DataFrame` with date/datetime columns cast appropriately.
+    """
+    date_cols: list[str] = []
+    datetime_cols: list[str] = []
+    for col in df.columns:
+        if df[col].dtype != pl.Utf8:
+            continue
+        non_null = df[col].drop_nulls()
+        if non_null.is_empty():
+            continue
+        if non_null.str.contains(_ISO_DATETIME_RE).all():
+            datetime_cols.append(col)
+        elif non_null.str.contains(_ISO_DATE_RE).all():
+            date_cols.append(col)
+    exprs: list[pl.Expr] = []
+    if date_cols:
+        exprs.extend(pl.col(c).cast(pl.Date) for c in date_cols)
+    if datetime_cols:
+        exprs.extend(pl.col(c).str.to_datetime(format="%Y-%m-%dT%H:%M:%S", strict=False) for c in datetime_cols)
+    if not exprs:
+        return df
+    return df.with_columns(exprs)
 
 
 def _ts() -> str:
@@ -307,13 +351,16 @@ def export_excel(
         path = path.parent / f"{path.stem}_{_ts()}{path.suffix}"
     with Workbook(str(path)) as wb:
         for name, df in _collect_report_frames(type, project_path, batch_id):
-            extra: dict = {"float_precision": 2} if name in _FLOAT_TABLES else {}
+            df = _cast_date_columns(df)
+            has_floats = any(df[col].dtype in (pl.Float32, pl.Float64) for col in df.columns)
+            extra: dict = {"float_precision": 2} if has_floats else {}
             df.write_excel(
                 workbook=wb,
                 worksheet=name,
                 autofit=False,
                 table_name=name,
                 table_style="Table Style Medium 4",
+                dtype_formats={pl.Date: _EXCEL_DATE_FMT, pl.Datetime: _EXCEL_DATETIME_FMT},
                 **extra,
             )
 
