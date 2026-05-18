@@ -8,10 +8,10 @@ locations = [
     {page_number=1, top_left = [30, 405], bottom_right = [300, 470], vertical_lines = [40, 200, 200, 280], dynamic_last_vertical_line = {image_id = 0, image_location_tag = "x1"}, allow_text_failover = true},
 ]
 fields = [
-    {field = 'opening_balance', cell = {row = 1, col = 1}, vital=true, type = 'currency', numeric_modifier = {suffix = "D", multiplier = -1}},
-    {field = 'payments_in', cell = {row = 2, col = 1}, vital=true, type = 'currency'},
-    {field = 'payments_out', cell = {row = 3, col = 1}, vital=true, type = 'currency'},
-    {field = 'closing_balance', cell = {row = 4, col = 1}, vital=true, type = 'currency', numeric_modifier = {suffix = "D", multiplier = -1}},
+    {field = 'opening_balance', cell = {row = 1, col = 1}, vital=true, type = 'currency', strip_characters_start = '[', strip_characters_end = ']', numeric_modifier = {suffix = "D", multiplier = -1}},
+    {field = 'payments_in', cell = {row = 2, col = 1}, vital=true, type = 'currency', strip_characters_start = '[', strip_characters_end = ']'},
+    {field = 'payments_out', cell = {row = 3, col = 1}, vital=true, type = 'currency', strip_characters_start = '[', strip_characters_end = ']'},
+    {field = 'closing_balance', cell = {row = 4, col = 1}, vital=true, type = 'currency', strip_characters_start = '[', strip_characters_end = ']', numeric_modifier = {suffix = "D", multiplier = -1}},
 ]
 
 [TSB_UK_CUR_ACCT_DET]
@@ -52,5 +52,5 @@ exclude_rows = [{field = 'details', pattern = '^STATEMENT[\S]?CLOSING[\S]?BALANC
 transaction_bookends = [
     {start_fields = ['date','£_balance','details'], min_non_empty_start = 3, end_fields = ['£_paid_out','£_paid_in'], min_non_empty_end = 1}
 ]
-fill_forward_fields = ['date','payment_type', '£_paid_out']
+fill_forward_fields = ['date','payment_type']
 merge_fields = {fields=['details'], separator=' | '}
