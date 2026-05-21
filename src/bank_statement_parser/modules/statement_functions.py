@@ -501,8 +501,10 @@ def extract_fields(
                             )
                         continue
                 # Pre-bookend row exclusion
+                # Derive row dtype from results to support both polars runtimes (UInt32 on Linux/macOS, UInt64 on Windows rt64)
+                row_dtype = results.schema["row"]
                 if statement_table.transaction_spec.exclude_rows:
-                    excluded_row_ids = pl.DataFrame(schema={"row": pl.UInt32})
+                    excluded_row_ids = pl.DataFrame(schema={"row": row_dtype})
                     for rule in statement_table.transaction_spec.exclude_rows:
                         matched = (
                             results.filter(pl.col("field") == rule.field).filter(pl.col("value").str.contains(rule.pattern)).select("row")
@@ -510,10 +512,10 @@ def extract_fields(
                         excluded_row_ids.extend(matched)
                     results = results.join(excluded_row_ids, on="row", how="anti")
                 # Transaction bookends
-                start_rows_all = pl.DataFrame(schema={"row": pl.UInt32, "transaction_start": pl.Boolean})
-                end_rows_all = pl.DataFrame(schema={"row": pl.UInt32, "transaction_end": pl.Boolean})
+                start_rows_all = pl.DataFrame(schema={"row": row_dtype, "transaction_start": pl.Boolean})
+                end_rows_all = pl.DataFrame(schema={"row": row_dtype, "transaction_end": pl.Boolean})
                 for bookends in statement_table.transaction_spec.transaction_bookends:
-                    excluded_rows = pl.DataFrame(schema={"row": pl.UInt32})
+                    excluded_rows = pl.DataFrame(schema={"row": row_dtype})
                     start_line = bookends.start_fields
                     end_line = bookends.end_fields
                     if bookends.extra_validation_start:
