@@ -8,6 +8,7 @@ Run with:
     pytest tests/test_forex.py -v
 """
 
+import json
 import sqlite3
 import warnings
 from pathlib import Path
@@ -159,8 +160,7 @@ class TestForwardFill:
 class TestProviderFrankfurter:
     def _mock_response(self, data: dict) -> MagicMock:
         resp = MagicMock()
-        resp.json.return_value = data
-        resp.raise_for_status = MagicMock()
+        resp.read.return_value = json.dumps(data).encode()
         return resp
 
     def test_converts_rates_to_usd_multiplier(self):
@@ -170,7 +170,8 @@ class TestProviderFrankfurter:
                 "2024-01-02": {"GBP": 0.7874},  # 1 USD = 0.7874 GBP → rate_USD = 1/0.7874 ≈ 1.2699
             }
         }
-        with patch("requests.get", return_value=self._mock_response(mock_data)):
+        with patch("bank_statement_parser.modules.forex.urlopen") as mock_urlopen:
+            mock_urlopen.return_value.__enter__.return_value = self._mock_response(mock_data)
             records = _provider_frankfurter(["GBP"], "2024-01-02", "2024-01-02", "")
 
         assert len(records) == 1
@@ -182,22 +183,24 @@ class TestProviderFrankfurter:
     def test_skips_unsupported_currencies(self):
         """AED and SAR are not supported by Frankfurter; they should be excluded from the request."""
         mock_data = {"rates": {"2024-01-02": {"GBP": 0.79}}}
-        with patch("requests.get", return_value=self._mock_response(mock_data)) as mock_get:
+        with patch("bank_statement_parser.modules.forex.urlopen") as mock_urlopen:
+            mock_urlopen.return_value.__enter__.return_value = self._mock_response(mock_data)
             _provider_frankfurter(["GBP", "AED", "SAR"], "2024-01-02", "2024-01-02", "")
-        called_url: str = mock_get.call_args[0][0]
+        called_url: str = mock_urlopen.call_args[0][0]
         assert "AED" not in called_url
         assert "SAR" not in called_url
         assert "GBP" in called_url
 
     def test_returns_empty_if_all_unsupported(self):
-        with patch("requests.get") as mock_get:
+        with patch("bank_statement_parser.modules.forex.urlopen") as mock_urlopen:
             records = _provider_frankfurter(["AED", "SAR"], "2024-01-02", "2024-01-02", "")
-        mock_get.assert_not_called()
+        mock_urlopen.assert_not_called()
         assert records == []
 
     def test_skips_zero_rate(self):
         mock_data = {"rates": {"2024-01-02": {"GBP": 0, "EUR": 1.08}}}
-        with patch("requests.get", return_value=self._mock_response(mock_data)):
+        with patch("bank_statement_parser.modules.forex.urlopen") as mock_urlopen:
+            mock_urlopen.return_value.__enter__.return_value = self._mock_response(mock_data)
             records = _provider_frankfurter(["GBP", "EUR"], "2024-01-02", "2024-01-02", "")
         currencies = [r[1] for r in records]
         assert "GBP" not in currencies
@@ -255,15 +258,15 @@ class TestGetExchangeRates:
         }
 
         mock_resp = MagicMock()
-        mock_resp.json.return_value = frankfurter_data
-        mock_resp.raise_for_status = MagicMock()
+        mock_resp.read.return_value = json.dumps(frankfurter_data).encode()
 
         with patch("bank_statement_parser.modules.forex.ProjectPaths.resolve") as mock_resolve:
             mock_paths = MagicMock()
             mock_paths.project_db = db_path
             mock_paths.forex_config = tmp_path / "config" / "forex_api_config.toml"
             mock_resolve.return_value = mock_paths
-            with patch("requests.get", return_value=mock_resp):
+            with patch("bank_statement_parser.modules.forex.urlopen") as mock_urlopen:
+                mock_urlopen.return_value.__enter__.return_value = mock_resp
                 get_exchange_rates(project_path=tmp_path, extra_currencies=None)
 
         conn = sqlite3.connect(db_path)
@@ -296,9 +299,9 @@ class TestGetExchangeRates:
             mock_paths.project_db = db_path
             mock_paths.forex_config = tmp_path / "config" / "forex_api_config.toml"
             mock_resolve.return_value = mock_paths
-            with patch("requests.get") as mock_get:
+            with patch("bank_statement_parser.modules.forex.urlopen") as mock_urlopen:
                 get_exchange_rates(project_path=tmp_path)
-            mock_get.assert_not_called()
+            mock_urlopen.assert_not_called()
 
     def test_warns_for_unsupported_currencies(self, tmp_path):
         """Currencies unsupported by Frankfurter and with no secondary provider should warn."""
@@ -311,10 +314,6 @@ class TestGetExchangeRates:
 
         frankfurter_data = {"rates": {}}  # AED not returned
 
-        mock_resp = MagicMock()
-        mock_resp.json.return_value = frankfurter_data
-        mock_resp.raise_for_status = MagicMock()
-
         with patch("bank_statement_parser.modules.forex.ProjectPaths.resolve") as mock_resolve:
             mock_paths = MagicMock()
             mock_paths.project_db = db_path
@@ -322,7 +321,10 @@ class TestGetExchangeRates:
             mock_resolve.return_value = mock_paths
             with warnings.catch_warnings(record=True) as caught:
                 warnings.simplefilter("always")
-                with patch("requests.get", return_value=mock_resp):
+                # AED is in _FRANKFURTER_UNSUPPORTED so urlopen is never reached;
+                # patch it anyway to guard against accidental network calls.
+                with patch("bank_statement_parser.modules.forex.urlopen") as mock_urlopen:
+                    mock_urlopen.return_value.__enter__.return_value = MagicMock(read=lambda: json.dumps(frankfurter_data).encode())
                     get_exchange_rates(project_path=tmp_path)
 
         messages = [str(w.message) for w in caught]
@@ -339,15 +341,15 @@ class TestGetExchangeRates:
 
         frankfurter_data = {"rates": {"2024-01-02": {"EUR": 1.09}}}
         mock_resp = MagicMock()
-        mock_resp.json.return_value = frankfurter_data
-        mock_resp.raise_for_status = MagicMock()
+        mock_resp.read.return_value = json.dumps(frankfurter_data).encode()
 
         with patch("bank_statement_parser.modules.forex.ProjectPaths.resolve") as mock_resolve:
             mock_paths = MagicMock()
             mock_paths.project_db = db_path
             mock_paths.forex_config = tmp_path / "config" / "forex_api_config.toml"
             mock_resolve.return_value = mock_paths
-            with patch("requests.get", return_value=mock_resp):
+            with patch("bank_statement_parser.modules.forex.urlopen") as mock_urlopen:
+                mock_urlopen.return_value.__enter__.return_value = mock_resp
                 get_exchange_rates(project_path=tmp_path, extra_currencies=["EUR"])
 
         conn = sqlite3.connect(db_path)
