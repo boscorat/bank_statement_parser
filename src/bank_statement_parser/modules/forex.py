@@ -23,13 +23,13 @@ in the ``DimTime`` range by propagating the most recent known rate forward
 across weekends and holidays.
 """
 
+import json
 import re
 import sqlite3
 import warnings
 from datetime import date, timedelta
 from pathlib import Path
-
-import requests
+from urllib.request import urlopen
 
 from bank_statement_parser.modules.data import ForexApiConfig
 from bank_statement_parser.modules.errors import ProjectDatabaseMissing
@@ -124,7 +124,7 @@ def _provider_frankfurter(
         is the multiplier to convert from *currency* to USD.
 
     Raises:
-        requests.HTTPError: If the Frankfurter API returns a non-2xx status.
+        urllib.error.HTTPError: If the Frankfurter API returns a non-2xx status.
     """
     supported = [c for c in currencies if c not in _FRANKFURTER_UNSUPPORTED]
     if not supported:
@@ -136,10 +136,8 @@ def _provider_frankfurter(
 
     symbols = ",".join(supported)
     url = f"{_FRANKFURTER_BASE_URL}/{date_from}..{date_to}?base=USD&symbols={symbols}"
-    response = requests.get(url, timeout=30)
-    response.raise_for_status()
-
-    data = response.json()
+    with urlopen(url, timeout=30) as response:
+        data = json.loads(response.read())
     records: list[tuple[str, str, float]] = []
 
     # Frankfurter returns rates as: how many units of each currency equal 1 USD.
@@ -284,7 +282,7 @@ def get_exchange_rates(
 
     Raises:
         ProjectDatabaseMissing: If the project database does not exist.
-        requests.HTTPError: If a provider returns a non-2xx response.
+        urllib.error.HTTPError: If a provider returns a non-2xx response.
     """
     paths = ProjectPaths.resolve(project_path)
     db_path = paths.project_db
