@@ -121,11 +121,12 @@ from bank_statement_parser.modules.paths import ProjectPaths, copy_project_folde
 # ---------------------------------------------------------------------------
 # PDF anonymisation utility
 # ---------------------------------------------------------------------------
-try:
-    from bank_statement_parser.modules.anonymise import anonymise_pdf
-    _HAS_ANONYMISE = True
-except ImportError:
-    _HAS_ANONYMISE = False
+import importlib.util
+
+_HAS_ANONYMISE = importlib.util.find_spec("bank_statement_anonymiser") is not None
+
+if _HAS_ANONYMISE:
+    from bank_statement_parser.modules.anonymise import anonymise_pdf  # noqa: F401
 
 # ---------------------------------------------------------------------------
 # Low-level PDF helpers
