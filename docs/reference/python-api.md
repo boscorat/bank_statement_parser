@@ -217,14 +217,6 @@ Create (or recreate) the raw SQLite database with all tables and indexes.
 
 Orphan-detection and cascaded-delete helper for the raw SQLite database.
 
-## PDF anonymisation
-
-### `bsp.anonymise_pdf()`
-
-*function* — `bank_statement_parser.modules.anonymise`
-
-Anonymise a single bank statement PDF.
-
 ## Forex / currency conversion
 
 ### `bsp.get_exchange_rates()`
