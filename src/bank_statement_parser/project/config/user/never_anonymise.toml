@@ -1,0 +1,29 @@
+# never_anonymise.toml — user-supplied protected phrases for uk-bank-statement-anonymiser.
+#
+# HOW IT WORKS
+# ------------
+# Phrases listed here are left exactly as-is during the scramble pass.
+# Matching is case-insensitive and whitespace-insensitive.
+#
+# This file supplements never_anonymise_system.toml (bundled with the library).
+# Entries from both files are merged (union); duplicates are dropped.
+#
+# FORMAT
+# ------
+#   exclude = ["phrase one", "phrase two", ...]
+#
+# IMPORTANT
+# ---------
+# This file is NOT committed to source control — it may contain bank-specific
+# phrases that identify the institution you are working with. Pass its path to
+# anonymise_pdf() via the never_anonymise_path argument, or to the CLI via
+# --never-anonymise.
+#
+# EXAMPLES (commented out):
+# exclude = [
+#     "My Bank Name",
+#     "My Employer Ltd",
+#     "Spend & Save Account",
+# ]
+
+exclude = []

@@ -121,7 +121,7 @@ from bank_statement_parser.modules.paths import ProjectPaths, copy_project_folde
 # ---------------------------------------------------------------------------
 # PDF anonymisation utility
 # ---------------------------------------------------------------------------
-from bank_statement_parser.modules.anonymise import anonymise_folder, anonymise_pdf
+from bank_statement_parser.modules.anonymise import anonymise_pdf
 
 # ---------------------------------------------------------------------------
 # Low-level PDF helpers
@@ -196,7 +196,6 @@ __all__ = [
     "Housekeeping",
     # PDF anonymisation
     "anonymise_pdf",
-    "anonymise_folder",
     # Forex / currency conversion
     "get_exchange_rates",
     "ForexApiConfig",
