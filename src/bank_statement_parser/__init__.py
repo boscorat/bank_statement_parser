@@ -121,7 +121,11 @@ from bank_statement_parser.modules.paths import ProjectPaths, copy_project_folde
 # ---------------------------------------------------------------------------
 # PDF anonymisation utility
 # ---------------------------------------------------------------------------
-from bank_statement_parser.modules.anonymise import anonymise_pdf
+try:
+    from bank_statement_parser.modules.anonymise import anonymise_pdf
+    _HAS_ANONYMISE = True
+except ImportError:
+    _HAS_ANONYMISE = False
 
 # ---------------------------------------------------------------------------
 # Low-level PDF helpers
@@ -194,8 +198,6 @@ __all__ = [
     "build_datamart",
     "create_db",
     "Housekeeping",
-    # PDF anonymisation
-    "anonymise_pdf",
     # Forex / currency conversion
     "get_exchange_rates",
     "ForexApiConfig",
@@ -203,3 +205,7 @@ __all__ = [
     "TestHarness",
     "TestGateFailure",
 ]
+
+# Conditionally add anonymise_pdf if uk-bank-statement-anonymiser is installed
+if _HAS_ANONYMISE:
+    __all__.append("anonymise_pdf")
