@@ -223,13 +223,7 @@ Orphan-detection and cascaded-delete helper for the raw SQLite database.
 
 *function* — `bank_statement_parser.modules.anonymise`
 
-Anonymise a single PDF using exclusion-based full-page letter scrambling.
-
-### `bsp.anonymise_folder()`
-
-*function* — `bank_statement_parser.modules.anonymise`
-
-Anonymise all PDFs matching *pattern* in *folder_path* using exclusion-based scrambling.
+Anonymise a single bank statement PDF.
 
 ## Forex / currency conversion
 

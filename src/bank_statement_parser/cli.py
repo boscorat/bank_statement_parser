@@ -6,7 +6,7 @@ Add new subcommands here.
 
 Current subcommands
 -------------------
-anonymise   Anonymise one PDF or all PDFs in a folder (exclusion-based full scrambling).
+anonymise   Anonymise a single PDF (requires the [anonymise] optional dependency).
 forex       Fetch daily USD-based exchange rates and persist them to the project database.
 process     Parse bank statement PDFs, persist data, and export reports.
 """
@@ -61,31 +61,33 @@ def _cmd_anonymise(args: argparse.Namespace) -> int:
     Returns:
         Exit code (0 = success, 1 = error).
     """
-    from bank_statement_parser.modules.anonymise import anonymise_folder, anonymise_pdf
+    from bank_statement_parser.modules.anonymise import anonymise_pdf
 
-    config_path: Path | None = Path(args.config) if args.config else None
+    target = Path(args.target)
+    if not target.is_file():
+        print(f"Error: '{target}' is not a file.", file=sys.stderr)
+        return 1
 
-    if args.folder:
-        target = Path(args.target)
-        if not target.is_dir():
-            print(f"Error: '{target}' is not a directory. Use --folder only with a directory path.", file=sys.stderr)
-            return 1
-        outputs = anonymise_folder(
-            folder_path=target,
-            pattern=args.pattern,
-            output_dir=Path(args.output_dir) if args.output_dir else None,
-            config_path=config_path,
+    always_path = Path(args.always_anonymise) if args.always_anonymise else None
+    never_path = Path(args.never_anonymise) if args.never_anonymise else None
+    output_path = Path(args.output) if args.output else None
+
+    try:
+        out = anonymise_pdf(
+            input_path=target,
+            output_path=output_path,
+            always_anonymise_path=always_path,
+            never_anonymise_path=never_path,
+            debug=args.debug,
         )
-        print(f"Done — {len(outputs)} file(s) anonymised.")
-    else:
-        target = Path(args.target)
-        if not target.is_file():
-            print(f"Error: '{target}' is not a file. Pass a PDF path or use --folder.", file=sys.stderr)
-            return 1
-        output_path = Path(args.output) if args.output else None
-        anonymise_pdf(input_path=target, output_path=output_path, config_path=config_path)
-        print("Done.")
+    except ImportError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
+    except Exception as exc:
+        print(f"Error: {type(exc).__name__}: {exc}", file=sys.stderr)
+        return 1
 
+    print(f"Done — anonymised PDF written to: {out}")
     return 0
 
 
@@ -214,50 +216,58 @@ def main() -> None:
     # ------------------------------------------------------------------
     anon = subparsers.add_parser(
         "anonymise",
-        help="Anonymise one PDF or all PDFs in a folder.",
+        help="Anonymise a single bank statement PDF.",
         description=(
-            "Start from a completely scrambled PDF (every letter replaced) and "
-            "use anonymise.toml to specify exclusions — text that should remain "
-            "readable (transaction type codes, account descriptions, etc.) and "
-            "numbers that should be scrambled. Driven by anonymise.toml in the "
-            "project config directory."
+            "Anonymise a single bank statement PDF by scrambling all personal data "
+            "while preserving document structure. Dates, payment codes, and numeric "
+            "identifiers (sort codes, account numbers, IBANs, card numbers) are "
+            "handled deterministically. "
+            "Requires:  pip install uk-bank-statement-parser[anonymise]"
         ),
     )
     anon.add_argument(
         "target",
-        metavar="PATH",
-        help="PDF file to anonymise, or a folder when --folder is set.",
-    )
-    anon.add_argument(
-        "--folder",
-        action="store_true",
-        default=False,
-        help="Treat PATH as a directory and anonymise all matching PDFs inside it.",
-    )
-    anon.add_argument(
-        "--pattern",
-        metavar="GLOB",
-        default="*.pdf",
-        help="Glob pattern for PDF discovery when --folder is used (default: '*.pdf').",
+        metavar="PDF",
+        help="Path to the PDF file to anonymise.",
     )
     anon.add_argument(
         "--output",
         metavar="OUT_FILE",
         default=None,
-        help="Output path for single-file mode (default: anonymised_<stem>.pdf alongside input).",
+        help=(
+            "Output path for the anonymised PDF "
+            "(default: anonymised_<stem>.pdf in the same directory as the input). "
+            "It is strongly recommended to supply an explicit output path that does "
+            "not contain any sensitive information."
+        ),
     )
     anon.add_argument(
-        "--output-dir",
-        metavar="OUT_DIR",
-        dest="output_dir",
+        "--always-anonymise",
+        metavar="TOML",
+        dest="always_anonymise",
         default=None,
-        help="Output directory for --folder mode (default: alongside each source file).",
+        help=(
+            "Path to a user always_anonymise.toml file. "
+            "Entries force specific strings to a known replacement value and take "
+            "priority over the bundled system file."
+        ),
     )
     anon.add_argument(
-        "--config",
-        metavar="CONFIG_TOML",
+        "--never-anonymise",
+        metavar="TOML",
+        dest="never_anonymise",
         default=None,
-        help="Path to a custom anonymise.toml (default: project config directory).",
+        help=(
+            "Path to a user never_anonymise.toml file. "
+            "Phrases listed here are preserved exactly as-is and are merged with "
+            "the bundled system file."
+        ),
+    )
+    anon.add_argument(
+        "--debug",
+        action="store_true",
+        default=False,
+        help="Print diagnostic information about config loading and scramble pairs.",
     )
 
     # ------------------------------------------------------------------
