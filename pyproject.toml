@@ -60,4 +60,5 @@ dev = [
 [tool.ruff]
 line-length = 140
 target-version = "py314"
+lint.ignore = ["E402"]  # Module-level imports intentionally organized by section with comments
 lint.unfixable = ["F401"]
