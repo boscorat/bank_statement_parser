@@ -1200,10 +1200,10 @@ def generate_cli_reference() -> str:
     w("bsp anonymise statement.pdf")
     w("```")
     w()
-    w("### Anonymise all PDFs in a folder")
+    w("### Anonymise with a safe output filename")
     w()
     w("```bash")
-    w("bsp anonymise ~/statements --folder")
+    w("bsp anonymise statement.pdf --output safe_output.pdf")
     w("```")
 
     return "\n".join(doc)
@@ -1476,8 +1476,7 @@ def generate_python_api() -> str:
 def generate_anonymisation_guide() -> str:
     """Generate the Anonymisation Guide from anonymise.py docstrings."""
     source = _ANONYMISE_PY.read_text(encoding="utf-8")
-    module_doc = _extract_module_docstring(source)
-    func_docs = _extract_function_docs(source, ["anonymise_pdf", "anonymise_folder"])
+    func_docs = _extract_function_docs(source, ["anonymise_pdf"])
 
     doc: list[str] = []
 
@@ -1489,90 +1488,60 @@ def generate_anonymisation_guide() -> str:
     w()
     w("# Anonymisation Guide")
     w()
-
-    # Parse the module docstring into sections
-    if module_doc:
-        sections: dict[str, list[str]] = {}
-        current_section = "intro"
-        sections[current_section] = []
-
-        for line in module_doc.splitlines():
-            # Detect RST section headers (line of dashes following a title)
-            stripped = line.strip()
-            if re.match(r"^-{3,}$", stripped):
-                continue
-            # Check if previous line was a section title
-            section_title_match = re.match(r"^(\w[\w\s/()``]+)$", stripped)
-            if section_title_match and stripped not in ("anonymise_pdf", "anonymise_folder"):
-                # Only treat as section if it looks like a header (not too long)
-                if len(stripped) < 60:
-                    current_section = stripped
-                    sections[current_section] = []
-                    continue
-
-            sections.setdefault(current_section, []).append(line)
-
-        # Render intro
-        if "intro" in sections:
-            intro_text = "\n".join(sections["intro"]).strip()
-            if intro_text:
-                w(intro_text)
-                w()
-
-        # Render Scrambling rules
-        if "Scrambling rules" in sections:
-            w("## Scrambling Rules")
-            w()
-            for line in sections["Scrambling rules"]:
-                stripped = line.strip()
-                if stripped.startswith("* "):
-                    w(f"- {stripped[2:]}")
-                elif stripped:
-                    w(stripped)
-                else:
-                    w()
-            w()
-
-        # Render Config file section
-        config_key = None
-        for key in sections:
-            if "Config file" in key or "anonymise.toml" in key:
-                config_key = key
-                break
-
-        if config_key:
-            w("## Configuration File (`anonymise.toml`)")
-            w()
-            current_subsection = ""
-            for line in sections[config_key]:
-                stripped = line.strip()
-                # Detect TOML section references
-                subsec_match = re.match(r"^``(\[[\w_]+\])``$", stripped)
-                if subsec_match:
-                    current_subsection = subsec_match.group(1)
-                    w(f"### `{current_subsection}`")
-                    w()
-                    continue
-                if stripped.startswith("``") and stripped.endswith("``"):
-                    # Inline code reference
-                    w(f"`{stripped.strip('`')}`")
-                elif stripped:
-                    w(stripped)
-                else:
-                    w()
-            w()
-
-        # Render Implementation note
-        if "Implementation note" in sections:
-            w("## Implementation Notes")
-            w()
-            for line in sections["Implementation note"]:
-                stripped = line.strip()
-                if stripped:
-                    w(stripped)
-                else:
-                    w()
-            w()
+    w("Anonymise a single bank statement PDF by scrambling all personal data")
+    w("while preserving the document's visual structure and layout.")
+    w()
+    w("Requires the optional `anonymise` dependency:")
+    w()
+    w("```bash")
+    w("pip install uk-bank-statement-parser[anonymise]")
+    w("```")
+    w()
+    w("## How it works")
+    w()
+    w("1. **Numeric ID detection** — a document-level scan identifies sort codes,")
+    w("   account numbers, IBANs, and card numbers. Each is replaced with a")
+    w("   deterministic fake value (last two digits tiled across the full length,")
+    w("   e.g. `40-37-28` → `28-28-28`). `always_anonymise` overrides take priority.")
+    w()
+    w("2. **Protected phrase detection** — fragments matching dates, payment type")
+    w("   codes, URLs, numeric values, or entries in `never_anonymise` configs are")
+    w("   marked as protected and left unchanged.")
+    w()
+    w("3. **Content stream rewrite** — pikepdf rewrites the PDF content streams")
+    w("   directly, substituting scrambled bytes for original text bytes. Font")
+    w("   encoding (Latin-1 and ToUnicode/CMap) is handled transparently, including")
+    w("   subset-embedded fonts.")
+    w()
+    w("## Configuration files")
+    w()
+    w("The library ships two *system* config files (bundled, not user-editable):")
+    w()
+    w("| File | Purpose |")
+    w("|---|---|")
+    w("| `always_anonymise_system.toml` | Force specific strings to a known replacement value |")
+    w("| `never_anonymise_system.toml` | Protect specific phrases from being scrambled |")
+    w()
+    w("You can supplement these with your own files:")
+    w()
+    w("**`always_anonymise.toml`** — force specific replacements:")
+    w("```toml")
+    w('"40-37-28" = "00-00-00"')
+    w('"12345678" = "00000000"')
+    w('"Jason Farrar" = "John Doe"')
+    w("```")
+    w()
+    w("**`never_anonymise.toml`** — protect additional phrases:")
+    w("```toml")
+    w("exclude = [")
+    w('    "My Bank",')
+    w('    "My Employer Ltd",')
+    w("]")
+    w("```")
+    w()
+    w("User config files should **not** be committed to source control — they will")
+    w("typically contain real account numbers or names.")
+    w()
 
     # Public API section from function docstrings
     w("## Public API")
@@ -1595,17 +1564,19 @@ def generate_anonymisation_guide() -> str:
     w("The `bsp anonymise` command wraps the Python API:")
     w()
     w("```bash")
-    w("# Anonymise a single PDF")
+    w("# Anonymise a single PDF (output written alongside input)")
     w("bsp anonymise statement.pdf")
     w()
-    w("# Anonymise all PDFs in a folder")
-    w("bsp anonymise ~/statements --folder")
-    w()
-    w("# Use a custom config file")
-    w("bsp anonymise statement.pdf --config anonymise.toml")
-    w()
-    w("# Specify output location")
+    w("# Specify a safe output filename")
     w("bsp anonymise statement.pdf --output ~/anonymised/output.pdf")
+    w()
+    w("# Supply user config files")
+    w("bsp anonymise statement.pdf \\")
+    w("    --always-anonymise my_always_anonymise.toml \\")
+    w("    --never-anonymise my_never_anonymise.toml")
+    w()
+    w("# Enable diagnostic output")
+    w("bsp anonymise statement.pdf --debug")
     w("```")
     w()
     w("See the [CLI Reference](../reference/cli.md) for all available options.")
@@ -1655,7 +1626,7 @@ def generate_project_structure() -> str:
     w("    TSB_UK/            #   (one per bank)")
     w("    account_types.toml #   Shared account type registry")
     w("    standard_fields.toml # Shared standard field mappings")
-    w("    anonymise.toml     #   Anonymisation exclusion rules")
+    w("    anonymise.toml     #   (user) Anonymisation config — see Anonymisation Guide")
     w("  parquet/             # Parquet data files (permanent + temporary)")
     w("  database/")
     w("    project.db         # SQLite database (star-schema mart)")

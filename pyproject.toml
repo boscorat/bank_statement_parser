@@ -24,10 +24,12 @@ classifiers = [
 dependencies = [
     "dacite>=1.9.2",
     "pdfplumber>=0.11.9",
-    "pikepdf>=10.3.0",
     "polars>=1.36.1",
     "xlsxwriter>=3.2.9",
 ]
+
+[project.optional-dependencies]
+anonymise = ["uk-bank-statement-anonymiser>=0.1.0"]
 
 [project.scripts]
 bsp = "bank_statement_parser.cli:main"
@@ -58,4 +60,5 @@ dev = [
 [tool.ruff]
 line-length = 140
 target-version = "py314"
+lint.ignore = ["E402"]  # Module-level imports intentionally organized by section with comments
 lint.unfixable = ["F401"]
