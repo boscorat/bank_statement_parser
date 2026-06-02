@@ -16,7 +16,7 @@ a set of bank statements.
     TSB_UK/            #   (one per bank)
     account_types.toml #   Shared account type registry
     standard_fields.toml # Shared standard field mappings
-    anonymise.toml     #   Anonymisation exclusion rules
+    anonymise.toml     #   (user) Anonymisation config — see Anonymisation Guide
   parquet/             # Parquet data files (permanent + temporary)
   database/
     project.db         # SQLite database (star-schema mart)

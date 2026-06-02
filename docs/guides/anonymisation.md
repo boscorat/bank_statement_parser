@@ -3,143 +3,117 @@
 
 # Anonymisation Guide
 
-anonymise — exclusion-based full-scramble PDF anonymisation utility.
+Anonymise a single bank statement PDF by scrambling all personal data
+while preserving the document's visual structure and layout.
 
-Unlike a traditional inclusion-based approach (where you specify what to redact),
-this module starts from a **completely scrambled PDF** — every *letter* on
-every page is replaced with a different random letter of the same case —
-and then uses ``anonymise.toml`` to specify what to keep unchanged and
-what numbers to scramble.
+Requires the optional `anonymise` dependency:
 
-## Scrambling Rules
+```bash
+pip install uk-bank-statement-parser[anonymise]
+```
 
-- Only **letters** (a-z, A-Z) are scrambled by default — digits, punctuation,
-symbols and whitespace are left exactly as they appear in the PDF.
-- Numbers listed under ``[numbers_to_scramble]`` are an opt-in exception:
-any Tj fragment whose decoded text *contains* a listed number has its
-digit characters scrambled (replaced by random different digits); all
-non-digit characters in that fragment are left unchanged.
-- Text listed under ``[words_to_not_scramble]`` (exact, case-insensitive)
-is never scrambled, regardless of its content.
+## How it works
 
-Config file (``anonymise.toml``)
-``[numbers_to_scramble]``
-``values = [...]`` — list of number strings (e.g. ``"11-22-33"``,
-``"12345678"``) whose digit characters should be scrambled wherever
-those strings appear as a substring of a Tj fragment's decoded text.
-Matching is substring-based and case-insensitive.  Only the digit
-characters inside the matching fragment are replaced; hyphens, spaces
-and other separators are preserved.
+1. **Numeric ID detection** — a document-level scan identifies sort codes,
+   account numbers, IBANs, and card numbers. Each is replaced with a
+   deterministic fake value (last two digits tiled across the full length,
+   e.g. `40-37-28` → `28-28-28`). `always_anonymise` overrides take priority.
 
-``[words_to_not_scramble]``
-``exclude = [...]`` — list of words or phrases (e.g. month names,
-transaction type codes, date conjunctions) that must appear unchanged
-in the output.  Matching is case-insensitive and ignores all whitespace
-(so multi-token phrases rendered as separate Tj calls are detected via
-a sliding-window accumulator).  Pre-populate with English month names,
-``"from"``, ``"to"``, and any bank-specific transaction type codes.
+2. **Protected phrase detection** — fragments matching dates, payment type
+   codes, URLs, numeric values, or entries in `never_anonymise` configs are
+   marked as protected and left unchanged.
 
-``[filename_replacements]``
-Key/value pairs applied to the output file stem before prepending the
-``anonymised_`` prefix.  Same format as the old ``[global_replacements]``
-section.
+3. **Content stream rewrite** — pikepdf rewrites the PDF content streams
+   directly, substituting scrambled bytes for original text bytes. Font
+   encoding (Latin-1 and ToUnicode/CMap) is handled transparently, including
+   subset-embedded fonts.
 
+## Configuration files
 
-## Implementation Notes
+The library ships two *system* config files (bundled, not user-editable):
 
-This module shares its low-level PDF engine with the shared helpers in
-:mod:`_anonymise_shared`.  The scramble-map builder, content-stream
-rewriter, and ToUnicode CMap parser live in that shared module and are
-imported here.
+| File | Purpose |
+|---|---|
+| `always_anonymise_system.toml` | Force specific strings to a known replacement value |
+| `never_anonymise_system.toml` | Protect specific phrases from being scrambled |
 
-The scope of scrambling is full-page: **every Tj fragment on every page**
-is scrambled by default, relying on the exclusion rules in the config file
-to protect text that must remain readable.
+You can supplement these with your own files:
 
+**`always_anonymise.toml`** — force specific replacements:
+```toml
+"40-37-28" = "00-00-00"
+"12345678" = "00000000"
+"Jason Farrar" = "John Doe"
+```
+
+**`never_anonymise.toml`** — protect additional phrases:
+```toml
+exclude = [
+    "My Bank",
+    "My Employer Ltd",
+]
+```
+
+User config files should **not** be committed to source control — they will
+typically contain real account numbers or names.
 
 ## Public API
 
 ### `anonymise_pdf()`
 
 ```python
-anonymise_pdf(input_path: Path, output_path: Path | None = None, config_path: Path | None = None) -> Path
+anonymise_pdf(input_path: str | Path, output_path: str | Path | None = None, always_anonymise_path: str | Path | None = None, never_anonymise_path: str | Path | None = None, debug: bool = False) -> Path
 ```
 
-Anonymise a single PDF using exclusion-based full-page letter scrambling.
+Anonymise a single bank statement PDF.
 
-Every letter on every page is scrambled.  Digits and symbols are left
-unchanged unless they match a ``[numbers_to_scramble]`` entry.  Text
-listed in ``[words_to_not_scramble]`` is preserved as-is.
+Delegates entirely to ``bank_statement_anonymiser.anonymise_pdf``.
 
+Parameters
+----------
+input_path:
+Path to the source PDF.
+output_path:
+Destination path for the anonymised PDF.  If omitted, the output is
+written to the same directory as the input with the filename prefix
+``anonymised_`` prepended.  It is strongly recommended to supply an
+explicit output path that does not contain any sensitive information
+(e.g. account numbers or names that may appear in the original filename).
+always_anonymise_path:
+Optional path to a user ``always_anonymise.toml`` file.  Entries here
+force specific strings to a known replacement value and take priority
+over the bundled system file.
+never_anonymise_path:
+Optional path to a user ``never_anonymise.toml`` file.  Phrases listed
+here are preserved exactly as-is during the scramble pass and are merged
+with the bundled system file.
+debug:
+When ``True``, print diagnostic information about config loading,
+fragment classification, and scramble pairs to stdout.
 
-**Args:**
-
-- `input_path` — Path to the source PDF to anonymise.
-- `output_path` — Destination path for the anonymised PDF.  When ``None``,
-  the output filename is derived from *input_path* by applying
-  ``filename_replacements`` from the config and prepending
-  ``anonymised_``.
-- `config_path` — Path to the ``anonymise.toml`` exclusion config.  When
-  ``None``, uses the default project config.
-
-
-**Returns:**
-
-Path to the anonymised output PDF.
-
-
-**Raises:**
-
-- `FileNotFoundError` — If *input_path* or the config file does not exist.
-
-### `anonymise_folder()`
-
-```python
-anonymise_folder(folder_path: Path, pattern: str = '*.pdf', output_dir: Path | None = None, config_path: Path | None = None) -> list[Path]
-```
-
-Anonymise all PDFs matching *pattern* in *folder_path* using exclusion-based scrambling.
-
-Skips any PDF whose stem already starts with ``anonymised_`` to avoid
-re-processing previously anonymised files.
-
-
-**Args:**
-
-- `folder_path` — Directory to search for PDFs.
-- `pattern` — Glob pattern used to find PDFs within *folder_path*.
-  Defaults to ``"*.pdf"``.
-- `output_dir` — Directory to write anonymised PDFs into.  When ``None``,
-  each output file is written alongside its source.
-- `config_path` — Path to the ``anonymise.toml`` config file.  When
-  ``None``, uses the default project config.
-
-
-**Returns:**
-
-List of paths to the anonymised output PDFs, in the order processed.
-
-
-**Raises:**
-
-- `FileNotFoundError` — If *folder_path* or the config file does not exist.
+Returns
+-------
+Path
+The path to the anonymised output file.
 
 ## CLI Usage
 
 The `bsp anonymise` command wraps the Python API:
 
 ```bash
-# Anonymise a single PDF
+# Anonymise a single PDF (output written alongside input)
 bsp anonymise statement.pdf
 
-# Anonymise all PDFs in a folder
-bsp anonymise ~/statements --folder
-
-# Use a custom config file
-bsp anonymise statement.pdf --config anonymise.toml
-
-# Specify output location
+# Specify a safe output filename
 bsp anonymise statement.pdf --output ~/anonymised/output.pdf
+
+# Supply user config files
+bsp anonymise statement.pdf \
+    --always-anonymise my_always_anonymise.toml \
+    --never-anonymise my_never_anonymise.toml
+
+# Enable diagnostic output
+bsp anonymise statement.pdf --debug
 ```
 
 See the [CLI Reference](../reference/cli.md) for all available options.

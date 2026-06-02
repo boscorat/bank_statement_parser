@@ -64,10 +64,14 @@ Errors
     bsp.ProjectConfigMissing    -- config/ absent or empty in an otherwise-valid project
 """
 
+import importlib.util
 from importlib.metadata import version as _pkg_version
 
 __app_name__ = "uk-bank-statement-parser"
 __version__ = _pkg_version(__app_name__)
+
+# Check if optional bank_statement_anonymiser is available
+_HAS_ANONYMISE = importlib.util.find_spec("bank_statement_anonymiser") is not None
 
 # ---------------------------------------------------------------------------
 # Namespaced report backend — import the sub-module so callers can do
@@ -121,7 +125,8 @@ from bank_statement_parser.modules.paths import ProjectPaths, copy_project_folde
 # ---------------------------------------------------------------------------
 # PDF anonymisation utility
 # ---------------------------------------------------------------------------
-from bank_statement_parser.modules.anonymise import anonymise_folder, anonymise_pdf
+if _HAS_ANONYMISE:
+    from bank_statement_parser.modules.anonymise import anonymise_pdf  # noqa: F401
 
 # ---------------------------------------------------------------------------
 # Low-level PDF helpers
@@ -194,9 +199,6 @@ __all__ = [
     "build_datamart",
     "create_db",
     "Housekeeping",
-    # PDF anonymisation
-    "anonymise_pdf",
-    "anonymise_folder",
     # Forex / currency conversion
     "get_exchange_rates",
     "ForexApiConfig",
@@ -204,3 +206,7 @@ __all__ = [
     "TestHarness",
     "TestGateFailure",
 ]
+
+# Conditionally add anonymise_pdf if uk-bank-statement-anonymiser is installed
+if _HAS_ANONYMISE:
+    __all__.append("anonymise_pdf")

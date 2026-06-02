@@ -28,27 +28,26 @@ bsp forex [--project PATH] [--currencies CODE] [--api-key KEY]
 
 ## `bsp anonymise`
 
-Start from a completely scrambled PDF (every letter replaced) and use anonymise.toml to specify exclusions — text that should remain readable (transaction type codes, account descriptions, etc.) and numbers that should be scrambled. Driven by anonymise.toml in the project config directory.
+Anonymise a single bank statement PDF by scrambling all personal data while preserving document structure. Dates, payment codes, and numeric identifiers (sort codes, account numbers, IBANs, card numbers) are handled deterministically. Requires:  pip install uk-bank-statement-parser[anonymise]
 
 ```
-bsp anonymise PATH [--folder] [--pattern GLOB] [--output OUT_FILE] [--output-dir OUT_DIR] [--config CONFIG_TOML]
+bsp anonymise PDF [--output OUT_FILE] [--always-anonymise TOML] [--never-anonymise TOML] [--debug]
 ```
 
 ### Positional arguments
 
 | Argument | Description |
 | --- | --- |
-| `PATH` | PDF file to anonymise, or a folder when --folder is set. |
+| `PDF` | Path to the PDF file to anonymise. |
 
 ### Options
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `--folder` | off | Treat PATH as a directory and anonymise all matching PDFs inside it. |
-| `--pattern` | `*.pdf` | Glob pattern for PDF discovery when --folder is used (default: '*.pdf'). |
-| `--output` | auto-detect | Output path for single-file mode (default: anonymised_<stem>.pdf alongside input). |
-| `--output-dir` | auto-detect | Output directory for --folder mode (default: alongside each source file). |
-| `--config` | auto-detect | Path to a custom anonymise.toml (default: project config directory). |
+| `--output` | auto-detect | Output path for the anonymised PDF (default: anonymised_<stem>.pdf in the same directory as the input). It is strongly recommended to supply an explicit output path that does not contain any sensitive information. |
+| `--always-anonymise` | auto-detect | Path to a user always_anonymise.toml file. Entries force specific strings to a known replacement value and take priority over the bundled system file. |
+| `--never-anonymise` | auto-detect | Path to a user never_anonymise.toml file. Phrases listed here are preserved exactly as-is and are merged with the bundled system file. |
+| `--debug` | off | Print diagnostic information about config loading and scramble pairs. |
 
 ## `bsp process`
 
@@ -102,8 +101,8 @@ bsp process --pdfs ~/statements --data database --no-export
 bsp anonymise statement.pdf
 ```
 
-### Anonymise all PDFs in a folder
+### Anonymise with a safe output filename
 
 ```bash
-bsp anonymise ~/statements --folder
+bsp anonymise statement.pdf --output safe_output.pdf
 ```

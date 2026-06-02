@@ -172,7 +172,7 @@ class TestProcessOptions:
 class TestAnonymiseOptions:
     """Validate the ``anonymise`` subcommand options."""
 
-    EXPECTED_FLAGS = {"--folder", "--pattern", "--output", "--output-dir", "--config"}
+    EXPECTED_FLAGS = {"--output", "--always-anonymise", "--never-anonymise", "--debug"}
 
     def test_all_expected_flags_exist(self) -> None:
         """Every expected --flag must be registered on the anonymise subparser."""
@@ -192,14 +192,14 @@ class TestAnonymiseOptions:
         for action in _get_optional_actions("anonymise"):
             assert action.help, f"anonymise option {action.option_strings} is missing help text"
 
-    def test_pattern_default(self) -> None:
-        """--pattern must default to '*.pdf'."""
-        action = _find_action("anonymise", "--pattern")
-        assert action.default == "*.pdf"
+    def test_output_default(self) -> None:
+        """--output must default to None (auto-generated filename)."""
+        action = _find_action("anonymise", "--output")
+        assert action.default is None
 
-    def test_folder_is_store_true(self) -> None:
-        """--folder must be a boolean flag (store_true)."""
-        action = _find_action("anonymise", "--folder")
+    def test_debug_is_store_true(self) -> None:
+        """--debug must be a boolean flag (store_true)."""
+        action = _find_action("anonymise", "--debug")
         assert action.const is True  # store_true sets const=True
 
 
