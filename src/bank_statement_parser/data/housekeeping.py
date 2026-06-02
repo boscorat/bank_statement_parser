@@ -32,29 +32,9 @@ class Housekeeping:
 
     # All table names and column names that are permitted in dynamically-constructed SQL.
     # Any identifier not in this set will raise ValueError, preventing SQL injection.
-    _ALLOWED_TABLES: frozenset[str] = frozenset(
-        [
-            rel[0]
-            for rel in [
-                ("checks_and_balances", "ID_BATCHLINE", "batch_lines", "ID_BATCHLINE"),
-                ("checks_and_balances", "ID_BATCH", "batch_heads", "ID_BATCH"),
-                ("statement_heads", "ID_BATCHLINE", "batch_lines", "ID_BATCHLINE"),
-                ("statement_lines", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
-                ("batch_lines", "ID_BATCH", "batch_heads", "ID_BATCH"),
-            ]
-        ]
-        + [
-            rel[2]
-            for rel in [
-                ("checks_and_balances", "ID_BATCHLINE", "batch_lines", "ID_BATCHLINE"),
-                ("checks_and_balances", "ID_BATCH", "batch_heads", "ID_BATCH"),
-                ("statement_heads", "ID_BATCHLINE", "batch_lines", "ID_BATCHLINE"),
-                ("statement_lines", "ID_STATEMENT", "statement_heads", "ID_STATEMENT"),
-                ("batch_lines", "ID_BATCH", "batch_heads", "ID_BATCH"),
-            ]
-        ]
-    )
-    _ALLOWED_COLUMNS: frozenset[str] = frozenset(["ID_STATEMENT", "ID_BATCH", "ID_BATCHLINE"])
+    # Automatically derived from FK_RELATIONSHIPS to prevent divergence.
+    _ALLOWED_TABLES: frozenset[str] = frozenset({rel[0] for rel in FK_RELATIONSHIPS} | {rel[2] for rel in FK_RELATIONSHIPS})
+    _ALLOWED_COLUMNS: frozenset[str] = frozenset({rel[1] for rel in FK_RELATIONSHIPS} | {rel[3] for rel in FK_RELATIONSHIPS})
 
     def __init__(self, db_path: Path):
         self.db_path = db_path

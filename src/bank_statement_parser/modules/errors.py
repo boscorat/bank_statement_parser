@@ -2,54 +2,64 @@ from pathlib import Path
 
 
 class StatementError(Exception):
-    def __init__(self, message):
-        Exception.__init__(self, message)
+    """Root exception for statement processing errors."""
+
+    pass
 
 
 class ConfigError(StatementError):
-    def __init__(self, message):
-        StatementError.__init__(self, message)
+    """Configuration error during setup."""
+
+    pass
 
 
 class ConfigFileError(ConfigError):
-    def __init__(self, config_file):
-        message = f"No User or Base Config File : {config_file}"
-        ConfigError.__init__(self, message)
+    """Configuration file not found."""
+
+    def __init__(self, config_file: Path) -> None:
+        super().__init__(f"No User or Base Config File : {config_file}")
 
 
 class NotAValidConfigFolder(ConfigError):
-    def __init__(self, config_path: Path, missing_files: list[str]):
+    """Config folder is missing required TOML files."""
+
+    def __init__(self, config_path: Path, missing_files: list[str]) -> None:
         message = f"Config folder '{config_path}' is missing required .toml files: {', '.join(missing_files)}"
-        ConfigError.__init__(self, message)
+        super().__init__(message)
 
 
 class ProjectError(StatementError):
-    def __init__(self, message: str):
-        StatementError.__init__(self, message)
+    """Project error during setup or operation."""
+
+    pass
 
 
 class ProjectFolderNotFound(ProjectError):
-    def __init__(self, project_path: Path):
-        message = f"Project folder not found: {project_path}"
-        ProjectError.__init__(self, message)
+    """Project folder not found at specified path."""
+
+    def __init__(self, project_path: Path) -> None:
+        super().__init__(f"Project folder not found: {project_path}")
 
 
 class ProjectSubFolderNotFound(ProjectError):
-    def __init__(self, expected_path: Path):
-        message = f"Project sub-folder not found: {expected_path}"
-        ProjectError.__init__(self, message)
+    """Required project subfolder not found."""
+
+    def __init__(self, expected_path: Path) -> None:
+        super().__init__(f"Project sub-folder not found: {expected_path}")
 
 
 class ProjectDatabaseMissing(ProjectError):
-    def __init__(self, db_path: Path):
-        message = f"Project database not found: {db_path}"
-        ProjectError.__init__(self, message)
+    """Project database file not found."""
+
+    def __init__(self, db_path: Path) -> None:
+        super().__init__(f"Project database not found: {db_path}")
 
 
 class ProjectConfigMissing(ProjectError):
-    def __init__(self, config_path: Path):
-        message = f"Project config folder not found or contains no .toml files: {config_path}"
-        ProjectError.__init__(self, message)
+    """Project config folder missing or empty."""
+
+    def __init__(self, config_path: Path) -> None:
+        super().__init__(f"Project config folder not found or contains no .toml files: {config_path}")
 
 
 class TestGateFailure(StatementError):
@@ -68,4 +78,4 @@ class TestGateFailure(StatementError):
         self.errors = errors
         self.output = output
         message = f"bsp test gate failed: {failed} failed, {errors} errors.\n{output}"
-        StatementError.__init__(self, message)
+        super().__init__(message)

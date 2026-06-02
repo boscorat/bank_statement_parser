@@ -377,7 +377,7 @@ class Statement:
                     if not self.checks_and_balances.is_empty():
                         self.std_payments_in = self.checks_and_balances["STD_PAYMENTS_IN"][0]
                         self.std_payments_out = self.checks_and_balances["STD_PAYMENTS_OUT"][0]
-        except Exception as e:
+        except (ValueError, KeyError, IndexError, AttributeError, TypeError) as e:
             self.error_message = f"** Configuration Failure **: {e}"
             self.error_detail = _build_error_detail(e)
             self.success = False
@@ -586,6 +586,34 @@ def _cab_detail(cab: pl.DataFrame) -> str:
     return (" | " + " | ".join(lines)) if lines else ""
 
 
+def _handle_parquet_write_error(
+    name: str,
+    batch_line: dict[str, object],
+    error_message_list: list[str],
+    pdf: Path,
+    exc: Exception,
+) -> None:
+    """Handle a Parquet write error by updating batch_line and logging.
+
+    Updates batch_line with error flags and messages, appends to error list,
+    prints diagnostic output, and logs the full exception traceback.
+
+    Args:
+        name: Human-readable name of the Parquet file (e.g., 'StatementHeads').
+        batch_line: Batch line record to update with error flags and messages.
+        error_message_list: List to accumulate error message strings.
+        pdf: Path to the PDF being processed (for logging context).
+        exc: The exception that occurred during Parquet write.
+    """
+    error_message = f"** Data Failure ({name}) **: {exc}"
+    batch_line["STD_ERROR_MESSAGE"] += error_message  # type: ignore[index]
+    batch_line["STD_SUCCESS"] = False  # type: ignore[index]
+    batch_line["ERROR_DATA"] = True  # type: ignore[index]
+    error_message_list.append(error_message)
+    print(f"[line {batch_line['STD_BATCH_LINE']}] {pdf.name}: {error_message}")
+    traceback.print_exc(file=sys.stderr)
+
+
 def process_pdf_statement(
     pdf: Path,
     batch_id: str,
@@ -728,15 +756,9 @@ def process_pdf_statement(
                 statement_heads_path = paths.statement_heads_temp(idx, batch_id)
                 pq_statement_heads.cleanup()
                 pq_statement_heads = None
-            except Exception as e:
-                parquet_error = f"** Data Failure (StatementHeads) **: {e}"
-                batch_line["STD_ERROR_MESSAGE"] += parquet_error
-                batch_line["STD_SUCCESS"] = False
+            except (IOError, OSError, ValueError) as e:
+                _handle_parquet_write_error("StatementHeads", batch_line, [error_message], pdf, e)
                 error_data = True
-                batch_line["ERROR_DATA"] = True
-                error_message += parquet_error
-                print(f"[line {batch_line['STD_BATCH_LINE']}] {pdf.name}: {parquet_error}")
-                traceback.print_exc(file=sys.stderr)
 
             try:
                 # Save extracted transaction line data
@@ -749,15 +771,9 @@ def process_pdf_statement(
                 statement_lines_path = paths.statement_lines_temp(idx, batch_id)
                 pq_statement_lines.cleanup()
                 pq_statement_lines = None
-            except Exception as e:
-                parquet_error = f"** Data Failure (StatementLines) **: {e}"
-                batch_line["STD_ERROR_MESSAGE"] += parquet_error
-                batch_line["STD_SUCCESS"] = False
+            except (IOError, OSError, ValueError) as e:
+                _handle_parquet_write_error("StatementLines", batch_line, [error_message], pdf, e)
                 error_data = True
-                batch_line["ERROR_DATA"] = True
-                error_message += parquet_error
-                print(f"[line {batch_line['STD_BATCH_LINE']}] {pdf.name}: {parquet_error}")
-                traceback.print_exc(file=sys.stderr)
 
             # Build StatementInfo from scalar summary slots populated by Statement.__init__.
             # Built for both SUCCESS and REVIEW paths; omitted only if a data write failed
@@ -798,22 +814,16 @@ def process_pdf_statement(
                 cab_path = paths.cab_temp(idx, batch_id)
                 pq_cab.cleanup()
                 pq_cab = None
-            except Exception as e:
-                cab_error = f"** Data Failure (ChecksAndBalances) **: {e}"
-                batch_line["STD_ERROR_MESSAGE"] += cab_error
-                batch_line["STD_SUCCESS"] = False
+            except (IOError, OSError, ValueError) as e:
+                _handle_parquet_write_error("ChecksAndBalances", batch_line, [error_message], pdf, e)
                 error_data = True
-                batch_line["ERROR_DATA"] = True
-                error_message += cab_error
-                print(f"[line {batch_line['STD_BATCH_LINE']}] {pdf.name}: {cab_error}")
-                traceback.print_exc(file=sys.stderr)
 
         stmt.cleanup()
         stmt = None
     except Exception as e:
-        # Last-resort guard — should not be reached under normal operation now that
-        # Statement.__init__ is non-raising, but kept to protect against unexpected
-        # failures outside the statement constructor (e.g. path resolution errors).
+        # Last-resort guard — intentionally broad to catch any unexpected failures outside
+        # the statement constructor (e.g. path resolution errors, import issues).
+        # All recoverable statement-level errors are caught by inner try/except blocks above.
         error_other = True
         batch_line["ERROR_CONFIG"] = True
         error_message = f"** Unexpected Failure **: {e}"
