@@ -131,13 +131,19 @@ Re-process all failing statements from a completed batch and write debug files.
 
 *class* — `bank_statement_parser.modules.errors`
 
+Root exception for statement processing errors.
+
 ### `bsp.ProjectDatabaseMissing`
 
 *class* — `bank_statement_parser.modules.errors`
 
+Project database file not found.
+
 ### `bsp.ProjectConfigMissing`
 
 *class* — `bank_statement_parser.modules.errors`
+
+Project config folder missing or empty.
 
 ## Config helpers
 

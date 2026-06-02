@@ -45,7 +45,7 @@ def _cmd_forex(args: argparse.Namespace) -> int:
             extra_currencies=extra,
             api_key=api_key,
         )
-    except Exception as exc:
+    except (ValueError, FileNotFoundError, KeyError) as exc:
         print(f"Error: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 1
 
@@ -83,7 +83,7 @@ def _cmd_anonymise(args: argparse.Namespace) -> int:
     except ImportError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
-    except Exception as exc:
+    except (ValueError, FileNotFoundError, IOError, OSError) as exc:
         print(f"Error: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 1
 

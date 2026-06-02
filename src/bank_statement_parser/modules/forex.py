@@ -443,5 +443,8 @@ def get_exchange_rates(
         print(f"[forex] Written {len(needed_filled)} rate row(s) to exchange_rates.")
 
     except Exception:
+        # Ensure database connection is closed before propagating any exception
+        # (e.g. fetch failure, insert failure, etc.). The caller is responsible for
+        # handling the specific exception type.
         conn.close()
         raise
