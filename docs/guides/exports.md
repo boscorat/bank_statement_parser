@@ -11,17 +11,17 @@ generated automatically by `bsp process` or can be triggered manually via the Py
 
 | Preset | Description |
 | --- | --- |
-| `simple` (default) | A single flat transactions table joining all dimensions. Best for spreadsheet analysis. |
-| `full` | Separate star-schema tables (accounts, calendar, statements, transactions, balances, gaps) for loading into an external database or BI tool. |
+| `single` (default) | A single flat transactions table joining all dimensions. Best for spreadsheet analysis. |
+| `multi` | Separate star-schema tables (accounts, calendar, statements, transactions, balances, gaps) for loading into an external database or BI tool. |
 
 ## CLI Usage
 
 ```bash
-# Default: export simple preset in both CSV and Excel from database
+# Default: export single preset in both CSV and Excel from database
 bsp process --pdfs ~/statements
 
-# Export full star-schema tables as CSV only
-bsp process --pdfs ~/statements --export-type full --export-format csv
+# Export multi star-schema tables as CSV only
+bsp process --pdfs ~/statements --export-type multi --export-format csv
 
 # Skip export entirely
 bsp process --pdfs ~/statements --no-export
@@ -29,7 +29,7 @@ bsp process --pdfs ~/statements --no-export
 
 | Option | Choices | Default | Description |
 | --- | --- | --- | --- |
-| `--export-type` | `simple`, `full` | `simple` | Export preset |
+| `--export-type` | `single`, `multi` | `single` | Export preset |
 | `--export-format` | `excel`, `csv`, `json`, `all`, `reporting` | `all` | Output file format |
 | `--no-export` | — | off | Skip the export step entirely |
 
@@ -216,11 +216,11 @@ to know about the full export machinery.
 ```python
 import bank_statement_parser as bsp
 
-# Export simple CSV from database backend (default project)
+# Export single CSV from database backend (default project)
 bsp.db.export_csv()
 
-# Export full star-schema tables to Excel
-bsp.db.export_excel(type='full')
+# Export multi star-schema tables to Excel
+bsp.db.export_excel(type='multi')
 
 # Export JSON
 bsp.db.export_json()
@@ -298,5 +298,5 @@ Gap detection report. Flags periods where the closing balance of one statement d
 
 | Preset | Path | Contents |
 | --- | --- | --- |
-| `simple` | `reporting/data/simple/transactions_table.csv` | Flat transaction table |
-| `full` | `reporting/data/full/` — `statement.csv`, `account.csv`, `calendar.csv`, `transactions.csv`, `balances.csv`, `gaps.csv` | Star-schema CSV feeds |
+| `single` | `reporting/data/single/transactions_table.csv` | Flat transaction table |
+| `multi` | `reporting/data/multi/` — `statement.csv`, `account.csv`, `calendar.csv`, `transactions.csv`, `balances.csv`, `gaps.csv` | Star-schema CSV feeds |
