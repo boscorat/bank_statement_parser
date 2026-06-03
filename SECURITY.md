@@ -1,137 +1,216 @@
-# Security Policy
+# Security & Privacy Guidelines
 
-## Reporting Security Issues
+This project uses test data from bank statements to validate parsing and anonymisation functionality. We maintain strict security practices to protect user data and prevent accidental commits of sensitive information.
 
-**Do not open GitHub issues for security concerns.** Instead, please email [security contact] with details.
+## Test Data Security
 
----
+### Synthetic vs. Anonymised Test PDFs
 
-## Handling Sensitive Bank Statements
+This repository uses two types of test PDFs:
 
-### The Problem
+1. **Synthetic PDFs** (safe to commit)
+   - Generated programmatically with fake data
+   - No real customer information
+   - Located in `tests/fixtures/pdfs/synthetic/`
+   - Used in public CI/CD workflows
+   - Fast and deterministic
 
-When reporting bugs or requesting new bank support, you may need to share your bank statement. However, **real (unanonymised) bank statements contain sensitive personal and financial information** that must never be stored in public repositories.
+2. **Anonymised PDFs** (private, fetched during CI)
+   - Real bank statements with sensitive information removed
+   - Stored in private repo (`bank-statement-data`)
+   - Fetched automatically during CI testing (if SSH key available)
+   - Never committed to public repositories
+   - Automatically cleaned up after tests
+   - Provides real-world format validation
 
-### The Solution
+### PDF Security Rules
 
-We ask users to **anonymise** statements before sharing them. An anonymised statement has:
-- ✅ All readable text scrambled (names, descriptions)
-- ✅ All numbers replaced (account numbers, sort codes, card numbers)
-- ✅ Layout and structure preserved (so parser still works)
-- ✅ No personal or financial information readable
+❌ **Never commit**:
+- Unanonymised PDFs (with real customer names, account numbers, etc.)
+- PDFs with identifiable information
+- PDFs from `tests/fixtures/pdfs/good/` or `pdfs/bad/` in public repos
+- Files from private `bank-statement-data` repository
 
-### Where to Submit Anonymised Statements
+✅ **Safe to commit**:
+- Synthetic PDFs in `tests/fixtures/pdfs/synthetic/`
+- Test code and configuration
+- Documentation
 
-You have two options:
+### Preventing Accidental PDF Commits
 
-#### Option 1: GitHub Issue (Easiest for Non-Technical Users)
+This repository includes protective measures:
 
-1. **Anonymise your statement** using the anonymiser tool (see below)
-2. **Open a GitHub issue** for your bug report or feature request
-3. **Attach the anonymised PDF** directly in the issue form
-4. **We'll review** and troubleshoot
+1. **`.gitignore` rules**:
+   ```gitignore
+   # Block all PDFs by default
+   *.pdf
+   
+   # Exception: Allow synthetic PDFs only
+   !tests/fixtures/pdfs/synthetic/
+   !tests/fixtures/pdfs/synthetic/**/*.pdf
+   ```
 
-**Note:** Anonymised PDFs attached to public issues are safe. The anonymiser ensures no sensitive data remains.
+2. **CI Cleanup**:
+   - Anonymised PDFs are fetched to temporary locations (`/tmp`)
+   - Automatically cleaned up after tests complete
+   - Never persisted in checked-out code
 
-#### Option 2: Direct Submission to Private Test Data Repo (For Advanced Users)
+3. **Git Protection**:
+   - Pre-commit hooks can be configured to block PDF commits
+   - Repository administrators review all contributions
 
-If you want your anonymised statement to be included in our test suite for ongoing testing:
+## Credential & Secret Handling
 
-1. **Anonymise your statement** (see below)
-2. **Create a fork** of the private test data repo: `github.com/boscorat/bank_statement_test_data`
-3. **Add your anonymised PDF** to the appropriate folder
-4. **Create a Pull Request** (don't worry if you're not familiar with PRs — see the guide below)
-5. **We'll review** and merge if it's suitable for testing
+### GitHub Secrets Used
 
----
+This project uses GitHub Secrets for sensitive configuration:
 
-## How to Anonymise Your Statement
+- `SSH_PRIVATE_KEY_TEST_DATA` - SSH key for cloning private `bank-statement-data` repo (CI only)
+  - Auto-masked in logs
+  - Automatically deleted after use
+  - Only available to administrators
 
-### Using OpenStan (Easiest)
+### Best Practices
 
-1. Open OpenStan
-2. Go to the **Anonymise PDF** tool (Screens → Anonymise PDF)
-3. Select your statement PDF
-4. Click **Anonymise**
-5. Review the output to ensure no personal info remains
-6. Attach the anonymised version to your GitHub issue
+✅ **Do**:
+- Use GitHub Secrets for sensitive configuration
+- Rotate credentials regularly
+- Review CI/CD logs for accidental exposure
 
-### Using the CLI
+❌ **Never**:
+- Hardcode credentials in source code
+- Commit `.env` files with secrets
+- Share SSH private keys
+- Include tokens in repository URLs
 
-```bash
-bsp anonymise /path/to/your/statement.pdf -o anonymised_statement.pdf
+## CI/CD Security
+
+### Anonymised PDF Fetch (CI Only)
+
+During CI testing, the workflow optionally fetches anonymised PDFs from the private repo:
+
+1. **Conditional fetch**: Only runs if `SSH_PRIVATE_KEY_TEST_DATA` secret is configured
+2. **Graceful fallback**: Tests continue with synthetic PDFs if fetch fails
+3. **Automatic cleanup**: PDFs are deleted after tests complete
+4. **Private logs**: GitHub Actions logs are visible only to administrators
+
+Example workflow step:
+```yaml
+- name: Fetch anonymised PDFs for testing (graceful fallback)
+  continue-on-error: true
+  if: secrets.SSH_PRIVATE_KEY_TEST_DATA != ''
+  run: |
+    # Clone with temporary SSH key
+    git clone --depth 1 --filter=blob:none --sparse \
+      git@github.com:boscorat/bank-statement-data.git /tmp/test_pdfs
+    
+    # Copy to tests/fixtures/pdfs
+    cp -r /tmp/test_pdfs/pdfs/* tests/fixtures/pdfs/
+    
+    # Cleanup
+    rm -rf /tmp/test_pdfs /root/.ssh/bank_statement_deploy_key
+
+- name: Clean up anonymised PDFs after tests (security)
+  if: always()
+  run: |
+    # Remove anonymised PDFs to prevent accidental commits
+    rm -rf tests/fixtures/pdfs/good tests/fixtures/pdfs/bad
 ```
 
-### Using Python API
+### Log Review
 
-```python
-from bank_statement_parser import anonymise_pdf
+GitHub Actions logs are private and visible only to repository administrators. To audit logs for security:
 
-anonymise_pdf(
-    input_path="my_statement.pdf",
-    output_path="anonymised_statement.pdf"
-)
-```
+1. Go to Actions → Select workflow run → View logs
+2. Check for:
+   - ❌ Unmasked SSH keys (should see `***`)
+   - ❌ Exposed file paths or repository URLs
+   - ❌ Error messages revealing sensitive data
 
----
+## User Data & Submissions
 
-## Verification Checklist
+### Using Private Test Data
 
-Before attaching **any** anonymised PDF, verify that:
+If you have access to the private `bank-statement-data` repository:
 
-- [ ] No readable names appear (all text should be scrambled)
-- [ ] No readable account numbers (should be replaced with fake ones)
-- [ ] No readable sort codes
-- [ ] No readable card numbers
-- [ ] No readable phone numbers or addresses
-- [ ] Layout and page structure are intact
-- [ ] All pages are processed (not blank or corrupted)
+1. **Setup local testing** (optional, for contributors with access):
+   ```bash
+   git clone git@github.com:boscorat/bank-statement-data.git ../bank-statement-data
+   ln -s ../bank-statement-data/pdfs tests/fixtures/pdfs/anonymised
+   ```
 
-If you're unsure whether your anonymised PDF is safe to share, **do not attach it**. Contact the maintainers for guidance.
+2. **Run tests with anonymised PDFs**:
+   ```bash
+   # All tests (including anonymised)
+   python test_runner.py all
+   
+   # Only anonymised PDFs (if available)
+   python test_runner.py anonymised
+   
+   # Only synthetic PDFs (public/safe)
+   python test_runner.py synthetic
+   ```
 
----
+3. **Results are private** - Don't commit the cloned PDFs
 
-## What We Do With Submitted Statements
+### Reporting Issues with Real Data
 
-### GitHub Issue Attachments
+If you discover parsing issues with real bank statements:
 
-- Used for **troubleshooting your specific issue only**
-- Not automatically added to test suite
-- Kept for **6 months** then deleted
+1. **Anonymise the statement** using guidelines from private repo
+2. **Submit via GitHub Issue** with anonymised attachment
+3. **Or** create a PR to the private repo with anonymised PDF
+4. Project maintainers will verify and add to test suite
 
-### Test Data Repo Submissions
+See the private repo's [`ANONYMISATION_CHECKLIST.md`](https://github.com/boscorat/bank-statement-data/blob/master/ANONYMISATION_CHECKLIST.md) for anonymisation guidelines.
 
-- Reviewed and verified by maintainers
-- Used for **ongoing testing** of new features
-- **Credited in documentation** (if you wish)
-- Kept indefinitely (with your permission)
+## Incident Response
 
----
+### If Sensitive Data is Accidentally Committed
 
-## Privacy & Security Guarantees
+1. **Do not push** if you haven't pushed yet
+2. **Amend the commit**:
+   ```bash
+   # Remove the sensitive file
+   git rm --cached <sensitive_file>
+   echo "<sensitive_file>" >> .gitignore
+   git add .gitignore
+   git commit --amend --no-edit
+   ```
 
-We take your privacy seriously:
+3. **If already pushed**:
+   - Contact repository maintainers immediately
+   - Use `BFG` or `git-filter-repo` to remove from history
+   - Force push is required (uses `--force`)
 
-1. **Anonymised PDFs are safe to share** — The anonymiser removes all sensitive data
-2. **Private test data repo is private** — Not publicly accessible
-3. **Audit trail** — All PDFs are tracked in git history with timestamps
-4. **No redistribution** — We never share test data outside the core team
-5. **Verification** — We manually verify each PDF before adding to test suite
-
----
+4. **For leaked credentials**:
+   - Revoke immediately
+   - Rotate secrets
+   - Notify all maintainers
 
 ## Questions?
 
-If you have concerns about privacy or security:
+- **Test data questions** → See [`TESTING.md`](TESTING.md)
+- **PDF anonymisation** → See private repo: [`bank-statement-data/ANONYMISATION_CHECKLIST.md`](https://github.com/boscorat/bank-statement-data)
+- **Security concerns** → Contact maintainers directly (not via Issues)
+- **General contribution** → See [`CONTRIBUTING.md`](CONTRIBUTING.md)
 
-- **General questions:** Open a GitHub Discussion
-- **Security concerns:** Email [security contact]
-- **Questions about your specific statement:** Comment on your GitHub issue
+## Summary
 
----
+✅ **Safe practices**:
+- Use synthetic PDFs for testing
+- `.gitignore` protects against accidental commits
+- CI automatically cleans up anonymised PDFs
+- GitHub Secrets protect credentials
 
-## Related Documentation
+❌ **Never**:
+- Commit unanonymised PDFs
+- Hardcode credentials
+- Skip anonymisation when submitting real data
+- Share SSH keys
 
-- [Anonymisation Guide](https://boscorat.github.io/bank_statement_parser/guides/anonymisation/)
-- [Contributing Guide](CONTRIBUTING.md)
-- [Bank Statement Test Data Repo](https://github.com/boscorat/bank_statement_test_data) (Private)
+🛡️ **Security-first approach**:
+- Multi-layer protection (`.gitignore` + CI cleanup + pre-commit checks)
+- Audit trail and transparency
+- Private repo for sensitive data
+- Graceful fallback to synthetic PDFs

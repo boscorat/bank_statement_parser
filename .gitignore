@@ -20,9 +20,11 @@ wheels/
 *.db*
 *.parquet
 *.log
+# Block all PDFs (security: no accidental sensitive data commits)
 *.pdf
-# allow anonymised test fixtures in tests/pdfs/ subdirectories
-# !tests/pdfs/**/anonymised_*.pdf
+# Exception: Allow synthetic PDFs only (generated, safe to commit)
+!tests/fixtures/pdfs/synthetic/
+!tests/fixtures/pdfs/synthetic/**/*.pdf
 !src/bank_statement_parser/test_data/pdfs/**/anonymised_*.pdf
 *.csv
 *.xlsx
