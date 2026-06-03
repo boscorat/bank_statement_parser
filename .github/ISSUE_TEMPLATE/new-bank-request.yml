@@ -3,11 +3,14 @@ description: "Request support for a bank or account type that isn't currently su
 title: "[New bank] "
 labels: ["new-bank"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Thanks for taking the time to request a new bank. The more detail you can provide,
-        the easier it is to build and test the parser configuration.
+   - type: markdown
+     attributes:
+       value: |
+         Thanks for taking the time to request a new bank! The more detail you can provide, the easier it is to build and test the parser configuration.
+         
+         ⚠️ **IMPORTANT: Do not attach your original statement.** Only attach anonymised PDFs (all personal/financial info scrambled).
+         
+         See [SECURITY.md](../../SECURITY.md) for how to safely anonymise and share statements.
 
   - type: input
     id: bank_name
@@ -40,34 +43,41 @@ body:
     validations:
       required: false
 
-  - type: markdown
-    attributes:
-      value: |
-        ---
-        ### Attaching an anonymised statement
+   - type: markdown
+     attributes:
+       value: |
+         ---
+         ### Attaching an Anonymised Statement
 
-        > **You must anonymise your statement before attaching it.**
-        >
-        > An anonymised statement has all text scrambled so that no personal or financial
-        > information is readable, while preserving enough structure for the parser to work with.
-        >
-        > - Using **openstan**: use the built-in Anonymise PDF tool —
-        >   [openstan anonymisation guide](https://openstan.org/screens/anonymise/)
-        > - Using the **bsp CLI or Python API**: use `bsp anonymise` —
-        >   [bsp anonymisation guide](https://boscorat.github.io/bank_statement_parser/guides/anonymisation/)
-        >
-        > ⚠ **Statements that have not been anonymised will be removed without review.**
+         > **You must anonymise your statement before attaching it.**
+         >
+         > An anonymised statement has all text scrambled so that no personal or financial
+         > information is readable, while preserving enough structure for the parser to work with.
+         >
+         > **How to anonymise:**
+         > - Using **openstan**: Screens → Anonymise PDF
+         > - Using **CLI**: `bsp anonymise your_statement.pdf`
+         > - Using **Python**: See [documentation](https://boscorat.github.io/bank_statement_parser/guides/anonymisation/)
+         >
+         > **After anonymising:**
+         > - Verify the output has NO readable names, numbers, or addresses
+         > - See [SECURITY.md](../../SECURITY.md) for verification checklist
+         > - Attach the anonymised version here (safe to share)
+         >
+         > ⚠️ **Statements that are not properly anonymised will be removed without review.**
 
-  - type: textarea
-    id: statement_attachment
-    attributes:
-      label: Anonymised statement
-      description: >
-        Drag and drop your anonymised PDF here, or describe why you are unable to attach one.
-        GitHub accepts PDF attachments directly in this field.
-      placeholder: Drag and drop the anonymised PDF here.
-    validations:
-      required: false
+   - type: textarea
+     id: statement_attachment
+     attributes:
+       label: Anonymised statement
+       description: >
+         Drag and drop your anonymised PDF here (not your original statement).
+         GitHub accepts PDF attachments directly in this field.
+         Attaching an anonymised sample is strongly recommended for faster development.
+         See [SECURITY.md](../../SECURITY.md) for details.
+       placeholder: Drag and drop the anonymised PDF here (safe to share after anonymisation).
+     validations:
+       required: false
 
   - type: textarea
     id: additional_context

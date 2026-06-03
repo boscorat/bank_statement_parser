@@ -57,6 +57,12 @@ dev = [
     "scalene>=2.0.1",
 ]
 
+[tool.pytest.ini_options]
+markers = [
+    "synthetic: tests using synthetic PDFs (safe for public CI)",
+    "anonymised: tests using anonymised real PDFs (requires private repo access)",
+]
+
 [tool.ruff]
 line-length = 140
 target-version = "py314"
