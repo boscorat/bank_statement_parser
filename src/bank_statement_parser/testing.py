@@ -61,21 +61,21 @@ def _clone_test_data() -> Path | None:
 
     Clones ``boscorat/bank-statement-data`` repo via SSH into ``~/.cache/bank_statement_data/``.
     Uses SSH for authentication (requires SSH key access to the private repo).
-    Extracts the ``pdf`` directory from the repo root.
+    Extracts the ``pdfs`` directory from the repo root.
 
     Returns:
-        Absolute :class:`~pathlib.Path` to the extracted ``pdf`` directory if successful.
+        Absolute :class:`~pathlib.Path` to the extracted ``pdfs`` directory if successful.
         ``None`` if the clone fails (missing SSH key, network error, etc.).
 
     Note:
         The clone is cached locally to avoid repeated downloads. Subsequent calls
         will reuse the existing cache if it already exists.
     """
-    pdf_cache = _CACHE_DIR / "pdf"
+    pdfs_cache = _CACHE_DIR / "pdfs"
 
     # If already cached, return immediately
-    if pdf_cache.is_dir():
-        return pdf_cache
+    if pdfs_cache.is_dir():
+        return pdfs_cache
 
     # Attempt to clone
     try:
@@ -92,18 +92,18 @@ def _clone_test_data() -> Path | None:
         if result.returncode != 0:
             return None
 
-        # Extract pdf directory from cloned repo
-        repo_pdf = repo_dir / "pdf"
-        if not repo_pdf.is_dir():
+        # Extract pdfs directory from cloned repo
+        repo_pdfs = repo_dir / "pdfs"
+        if not repo_pdfs.is_dir():
             return None
 
-        # Move pdf directory to cache location
-        repo_pdf.replace(pdf_cache)
+        # Move pdfs directory to cache location
+        repo_pdfs.replace(pdfs_cache)
         # Clean up the now-empty repo directory
         if repo_dir.exists():
             shutil.rmtree(repo_dir, ignore_errors=True)
 
-        return pdf_cache if pdf_cache.is_dir() else None
+        return pdfs_cache if pdfs_cache.is_dir() else None
     except FileNotFoundError, subprocess.TimeoutExpired:
         # FileNotFoundError: git not found
         # TimeoutExpired: clone took too long
