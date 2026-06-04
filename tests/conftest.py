@@ -8,10 +8,16 @@ Two project lifecycles are provided:
     fresh project at ``tests/test_project/``.  The project is fully populated
     (parquet + SQLite) before any test runs, and torn down afterwards.
 
+    Uses anonymised PDFs if symlinks are available (symlink setup), otherwise
+    falls back to synthetic PDFs or skips if neither available.
+
 ``bad_project``
     Processes all PDFs in the bundled ``test_data/pdfs/bad/`` directory into a
     fresh project at ``tests/test_project_bad/``.  Used to verify that bad PDFs
     are flagged as errors rather than processed successfully.
+
+    Uses anonymised PDFs if symlinks are available, otherwise falls back to
+    synthetic PDFs or skips if neither available.
 
 New fixtures for central PDF management:
 
@@ -42,10 +48,63 @@ from bank_statement_parser.modules.statements import StatementBatch
 from bank_statement_parser.testing import _pdf_dir
 
 _TESTS_DIR = Path(__file__).parent
-_GOOD_PDFS_DIR = _pdf_dir("good")
-_BAD_PDFS_DIR = _pdf_dir("bad")
+_TEST_DATA_DIR = Path(__file__).parent.parent / "src/bank_statement_parser/test_data/pdfs"
 _GOOD_PROJECT_DIR = _TESTS_DIR / "test_project"
 _BAD_PROJECT_DIR = _TESTS_DIR / "test_project_bad"
+
+# ============================================================================
+# PDF Mode Detection (Anonymised vs. Synthetic)
+# ============================================================================
+
+def _detect_pdf_mode() -> tuple[str, Path, Path]:
+    """
+    Detect which PDF set is available and return mode + paths.
+    
+    Returns:
+        Tuple of (mode, good_pdfs_dir, bad_pdfs_dir) where:
+        - mode: "anonymised" if symlinks exist, "synthetic" if stubs available, "none" if neither
+        - good_pdfs_dir: Path to good PDFs directory
+        - bad_pdfs_dir: Path to bad PDFs directory
+    """
+    # Check for anonymised symlinks (manual setup by developer)
+    anonymised_good = _TEST_DATA_DIR / "anonymised_good"
+    anonymised_bad = _TEST_DATA_DIR / "anonymised_bad"
+    
+    if anonymised_good.is_symlink() and anonymised_bad.is_symlink():
+        return ("anonymised", anonymised_good, anonymised_bad)
+    
+    # Check for synthetic PDFs (fallback)
+    synthetic_good = _TEST_DATA_DIR / "good"
+    synthetic_bad = _TEST_DATA_DIR / "bad"
+    
+    if list(synthetic_good.glob("synthetic_*.pdf")) or list(synthetic_bad.glob("synthetic_*.pdf")):
+        return ("synthetic", synthetic_good, synthetic_bad)
+    
+    # Check for any PDFs at all (fallback to _pdf_dir from installed package)
+    fallback_good = _pdf_dir("good")
+    fallback_bad = _pdf_dir("bad")
+    
+    if list(fallback_good.glob("*.pdf")) or list(fallback_bad.glob("*.pdf")):
+        return ("bundled", fallback_good, fallback_bad)
+    
+    return ("none", synthetic_good, synthetic_bad)
+
+
+# Initialize PDF mode at module load time
+PDF_MODE, _GOOD_PDFS_DIR, _BAD_PDFS_DIR = _detect_pdf_mode()
+
+# Output PDF mode to test session
+print(f"\n[PDF_FIXTURES] Mode: {PDF_MODE.upper()}")
+if PDF_MODE == "anonymised":
+    print(f"[PDF_FIXTURES] Using ANONYMISED PDFs (symlinks detected)")
+    print(f"[PDF_FIXTURES] Location: {_GOOD_PDFS_DIR}")
+elif PDF_MODE == "synthetic":
+    print(f"[PDF_FIXTURES] Using SYNTHETIC PDFs (symlinks not available)")
+    print(f"[PDF_FIXTURES] Location: {_GOOD_PDFS_DIR}")
+elif PDF_MODE == "bundled":
+    print(f"[PDF_FIXTURES] Using BUNDLED PDFs from installed package")
+else:
+    print(f"[PDF_FIXTURES] No PDFs available (tests requiring PDFs will skip)")
 
 
 @dataclass
@@ -62,7 +121,19 @@ def good_project() -> Generator[ProjectContext, None, None]:  # type: ignore[mis
     """
     Session fixture: scaffold a fresh project, process all good PDFs,
     populate parquet and SQLite, then yield.  Tears down on session end.
+    
+    Automatically detects and uses:
+    1. Anonymised PDFs if symlinks are set up
+    2. Synthetic PDFs if available
+    3. Bundled PDFs from installed package
+    4. Skips if no PDFs available
     """
+    if PDF_MODE == "none":
+        pytest.skip(
+            "No PDF fixtures available. Set up symlinks to anonymised PDFs "
+            "for comprehensive testing. See: bank-statement-data/SYMLINK_SETUP.md"
+        )
+    
     project_path = _GOOD_PROJECT_DIR
     project_path.mkdir(parents=True, exist_ok=True)
 
@@ -91,7 +162,19 @@ def bad_project() -> Generator[ProjectContext, None, None]:  # type: ignore[misc
     """
     Session fixture: scaffold a fresh project, process all bad PDFs,
     then yield.  Tears down on session end.
+    
+    Automatically detects and uses:
+    1. Anonymised PDFs if symlinks are set up
+    2. Synthetic PDFs if available
+    3. Bundled PDFs from installed package
+    4. Skips if no PDFs available
     """
+    if PDF_MODE == "none":
+        pytest.skip(
+            "No PDF fixtures available. Set up symlinks to anonymised PDFs "
+            "for comprehensive testing. See: bank-statement-data/SYMLINK_SETUP.md"
+        )
+    
     project_path = _BAD_PROJECT_DIR
     project_path.mkdir(parents=True, exist_ok=True)
 
