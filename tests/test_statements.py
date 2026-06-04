@@ -634,19 +634,18 @@ class TestPdfMetadataExpectations:
                 assert str(stmt_info.payments_out) == metadata["expected_payments_out"], \
                     f"{pdf_path.name}: payments_out mismatch"
 
-                # Check transaction count from parquet
-                # Note: parquet files may be deleted by delete_temp_files() depending on test order,
-                # so we only validate if the expected count is >0 (meaning we can expect the file to exist)
-                if metadata.get("expected_transaction_count", "0") != "0":
-                    try:
-                        parquet_df = pl.read_parquet(pdf_result.payload.parquet_files.statement_lines)
-                        actual_tx_count = str(parquet_df.height)
+                # Check transaction count from SQLite database
+                if "expected_transaction_count" in metadata:
+                    db_path = ProjectPaths.resolve(good_project.project_path).project_db
+                    with sqlite3.connect(db_path) as conn:
+                        cursor = conn.execute(
+                            "SELECT COUNT(*) FROM statement_lines WHERE ID_STATEMENT = ?",
+                            (stmt_info.id_statement,),
+                        )
+                        actual_tx_count = str(cursor.fetchone()[0])
                         expected_tx_count = metadata["expected_transaction_count"]
                         assert actual_tx_count == expected_tx_count, \
                             f"{pdf_path.name}: transaction count {actual_tx_count} != {expected_tx_count}"
-                    except FileNotFoundError:
-                        # Parquet files may have been cleaned up; skip this check
-                        pass
 
     def test_bad_pdfs_have_expected_status(self, bad_project):
         """Each bad PDF result has expected status (FAILURE or REVIEW) in metadata."""
@@ -660,3 +659,17 @@ class TestPdfMetadataExpectations:
             # Verify the outcome matches metadata
             assert pdf_result.outcome == metadata["expected_outcome"], \
                 f"{pdf_path.name}: expected outcome {metadata['expected_outcome']}, got {pdf_result.outcome}"
+
+            # If this is a REVIEW with transaction count, validate it
+            if isinstance(pdf_result.payload, Review) and "expected_transaction_count" in metadata:
+                stmt_info = pdf_result.payload.statement_info
+                db_path = ProjectPaths.resolve(bad_project.project_path).project_db
+                with sqlite3.connect(db_path) as conn:
+                    cursor = conn.execute(
+                        "SELECT COUNT(*) FROM statement_lines WHERE ID_STATEMENT = ?",
+                        (stmt_info.id_statement,),
+                    )
+                    actual_tx_count = str(cursor.fetchone()[0])
+                    expected_tx_count = metadata["expected_transaction_count"]
+                    assert actual_tx_count == expected_tx_count, \
+                        f"{pdf_path.name}: transaction count {actual_tx_count} != {expected_tx_count}"

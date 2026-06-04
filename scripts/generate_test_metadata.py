@@ -11,17 +11,19 @@ Usage:
 
 Output:
     One .json file per PDF, same directory, with expected result/outcome/figures.
+    Transaction counts are queried from the SQLite database after processing.
 """
 
 import argparse
 import json
 import shutil
+import sqlite3
 import sys
 from pathlib import Path
 
 import polars as pl
 
-from bank_statement_parser.modules.paths import validate_or_initialise_project
+from bank_statement_parser.modules.paths import ProjectPaths, validate_or_initialise_project
 from bank_statement_parser.modules.statements import StatementBatch
 from bank_statement_parser.testing import _pdf_dir
 
@@ -37,6 +39,31 @@ def _prepare_temp_project(project_dir: Path) -> None:
         shutil.rmtree(project_dir)
     project_dir.mkdir(parents=True, exist_ok=True)
     validate_or_initialise_project(project_dir)
+
+
+def _get_transaction_count(project_path: Path, id_statement: str) -> int:
+    """Query the SQLite database for transaction count of a statement.
+
+    Args:
+        project_path: Path to the project directory.
+        id_statement: Statement ID to count transactions for.
+
+    Returns:
+        Number of transactions in statement_lines table for the statement.
+        Returns 0 if query fails.
+    """
+    try:
+        db_path = ProjectPaths.resolve(project_path).project_db
+        with sqlite3.connect(db_path) as conn:
+            cursor = conn.execute(
+                "SELECT COUNT(*) FROM statement_lines WHERE ID_STATEMENT = ?",
+                (id_statement,),
+            )
+            count = cursor.fetchone()[0]
+            return count
+    except Exception as e:
+        print(f"    ⚠️  Could not query transaction count from database: {e}")
+        return 0
 
 
 def _generate_metadata_for_good_pdfs() -> int:
@@ -76,7 +103,7 @@ def _generate_metadata_for_good_pdfs() -> int:
                 "expected_outcome": pdf_result.outcome,
             }
 
-            # For SUCCESS or REVIEW, extract financial data
+            # For SUCCESS or REVIEW with statement_info, extract all financial data
             if hasattr(pdf_result.payload, "statement_info"):
                 stmt_info = pdf_result.payload.statement_info
                 metadata.update({
@@ -90,13 +117,9 @@ def _generate_metadata_for_good_pdfs() -> int:
                     "expected_payments_out": str(stmt_info.payments_out),
                 })
 
-                # Extract transaction count from parquet
-                try:
-                    parquet_df = pl.read_parquet(pdf_result.payload.parquet_files.statement_lines)
-                    metadata["expected_transaction_count"] = str(parquet_df.height)
-                except Exception as e:
-                    print(f"⚠️  {pdf_path.name}: could not read transaction count: {e}")
-                    metadata["expected_transaction_count"] = "0"
+                # Query transaction count from SQLite database
+                tx_count = _get_transaction_count(_TEMP_PROJECT_DIR_GOOD, stmt_info.id_statement)
+                metadata["expected_transaction_count"] = str(tx_count)
 
             metadata["description"] = "Auto-generated from successful processing"
 
@@ -149,12 +172,19 @@ def _generate_metadata_for_bad_pdfs() -> int:
 
             pdf_result = batch.processed_pdfs[0]
 
-            # For bad PDFs, just capture result and outcome
+            # For bad PDFs, capture result and outcome
             metadata = {
                 "expected_result": pdf_result.result,
                 "expected_outcome": pdf_result.outcome,
-                "description": "Auto-generated from test run - expected to fail gracefully",
             }
+
+            # If REVIEW status with statement_info, also capture transaction count
+            if hasattr(pdf_result.payload, "statement_info"):
+                stmt_info = pdf_result.payload.statement_info
+                tx_count = _get_transaction_count(_TEMP_PROJECT_DIR_BAD, stmt_info.id_statement)
+                metadata["expected_transaction_count"] = str(tx_count)
+
+            metadata["description"] = "Auto-generated from test run - expected to fail gracefully"
 
             # Write metadata sidecar
             metadata_path = pdf_path.with_suffix(".json")
