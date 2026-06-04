@@ -20,12 +20,11 @@ wheels/
 *.db*
 *.parquet
 *.log
-# Block all PDFs (security: no accidental sensitive data commits)
+# Block ALL PDFs by default (security: no accidental sensitive data commits)
 *.pdf
-# Exception: Allow synthetic PDFs only (generated, safe to commit)
-!tests/fixtures/pdfs/synthetic/
+# Exception: Allow ONLY synthetic PDFs (deterministic, no real data)
 !tests/fixtures/pdfs/synthetic/**/*.pdf
-!src/bank_statement_parser/test_data/pdfs/**/anonymised_*.pdf
+!src/bank_statement_parser/test_data/pdfs/**/synthetic_*.pdf
 *.csv
 *.xlsx
 *.json
