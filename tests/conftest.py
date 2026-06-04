@@ -9,6 +9,7 @@ Two project lifecycles are provided:
     project at ``tests/test_project/``.  The project is fully populated
     (parquet + SQLite) before any test runs, and torn down afterwards.
     Skipped if PDF fixtures are unavailable (e.g., no SSH access to private repo).
+    PDFs without corresponding .json metadata sidecars are skipped with a console warning.
 
 ``bad_project``
     Processes all PDFs in the ``test_data/pdfs/bad/`` directory (bundled or
@@ -16,8 +17,10 @@ Two project lifecycles are provided:
     project at ``tests/test_project_bad/``.  Used to verify that bad PDFs
     are flagged as errors rather than processed successfully.
     Skipped if PDF fixtures are unavailable (e.g., no SSH access to private repo).
+    PDFs without corresponding .json metadata sidecars are skipped with a console warning.
 """
 
+import json
 import shutil
 from collections.abc import Generator
 from dataclasses import dataclass
@@ -39,6 +42,25 @@ _BAD_PROJECT_DIR = _TESTS_DIR / "test_project_bad"
 _PDF_FIXTURES_AVAILABLE = _GOOD_PDFS_DIR is not None and _BAD_PDFS_DIR is not None
 
 
+def load_pdf_metadata(pdf_path: Path) -> dict | None:
+    """Load test expectations from a JSON sidecar file.
+
+    Args:
+        pdf_path: Path to a .pdf file.
+
+    Returns:
+        dict of metadata if .json sidecar exists, None if missing.
+
+    Raises:
+        json.JSONDecodeError if metadata file is malformed.
+    """
+    metadata_path = pdf_path.with_suffix(".json")
+    if not metadata_path.exists():
+        return None
+    with open(metadata_path) as f:
+        return json.load(f)
+
+
 @dataclass
 class ProjectContext:
     """Holds all state produced by a project lifecycle fixture."""
@@ -51,10 +73,11 @@ class ProjectContext:
 @pytest.fixture(scope="session", autouse=False)
 def good_project() -> Generator[ProjectContext, None, None]:  # type: ignore[misc]
     """
-    Session fixture: scaffold a fresh project, process all good PDFs,
+    Session fixture: scaffold a fresh project, process all good PDFs with metadata,
     populate parquet and SQLite, then yield.  Tears down on session end.
 
     Skipped if PDF fixtures are unavailable (e.g., no SSH access to private repo).
+    PDFs without .json metadata sidecars are logged as skipped.
     """
     if _GOOD_PDFS_DIR is None:
         pytest.skip("Good PDF fixtures unavailable (requires boscorat/bank-statement-data access)")
@@ -65,17 +88,29 @@ def good_project() -> Generator[ProjectContext, None, None]:  # type: ignore[mis
     try:
         validate_or_initialise_project(project_path)
 
-        pdfs = sorted(_GOOD_PDFS_DIR.glob("*.pdf"))
+        all_pdfs = sorted(_GOOD_PDFS_DIR.glob("*.pdf"))
+
+        # Filter to PDFs with metadata
+        pdfs_with_metadata = []
+        for pdf in all_pdfs:
+            metadata = load_pdf_metadata(pdf)
+            if metadata is None:
+                print(f"⚠️  METADATA MISSING: {pdf.name} - will not be tested")
+            else:
+                pdfs_with_metadata.append(pdf)
+
+        if not pdfs_with_metadata:
+            pytest.skip("No good PDFs with metadata sidecars found")
 
         batch = StatementBatch(
-            pdfs=pdfs,
+            pdfs=pdfs_with_metadata,
             turbo=True,
             project_path=project_path,
         )
         batch.update_data()
         batch.delete_temp_files()
 
-        yield ProjectContext(project_path=project_path, batch=batch, pdfs=pdfs)
+        yield ProjectContext(project_path=project_path, batch=batch, pdfs=pdfs_with_metadata)
 
     finally:
         if project_path.exists():
@@ -85,10 +120,11 @@ def good_project() -> Generator[ProjectContext, None, None]:  # type: ignore[mis
 @pytest.fixture(scope="session", autouse=False)
 def bad_project() -> Generator[ProjectContext, None, None]:  # type: ignore[misc]
     """
-    Session fixture: scaffold a fresh project, process all bad PDFs,
+    Session fixture: scaffold a fresh project, process all bad PDFs with metadata,
     then yield.  Tears down on session end.
 
     Skipped if PDF fixtures are unavailable (e.g., no SSH access to private repo).
+    PDFs without .json metadata sidecars are logged as skipped.
     """
     if _BAD_PDFS_DIR is None:
         pytest.skip("Bad PDF fixtures unavailable (requires boscorat/bank-statement-data access)")
@@ -99,15 +135,27 @@ def bad_project() -> Generator[ProjectContext, None, None]:  # type: ignore[misc
     try:
         validate_or_initialise_project(project_path)
 
-        pdfs = sorted(_BAD_PDFS_DIR.glob("*.pdf"))
+        all_pdfs = sorted(_BAD_PDFS_DIR.glob("*.pdf"))
+
+        # Filter to PDFs with metadata
+        pdfs_with_metadata = []
+        for pdf in all_pdfs:
+            metadata = load_pdf_metadata(pdf)
+            if metadata is None:
+                print(f"⚠️  METADATA MISSING: {pdf.name} - will not be tested")
+            else:
+                pdfs_with_metadata.append(pdf)
+
+        if not pdfs_with_metadata:
+            pytest.skip("No bad PDFs with metadata sidecars found")
 
         batch = StatementBatch(
-            pdfs=pdfs,
+            pdfs=pdfs_with_metadata,
             turbo=True,
             project_path=project_path,
         )
 
-        yield ProjectContext(project_path=project_path, batch=batch, pdfs=pdfs)
+        yield ProjectContext(project_path=project_path, batch=batch, pdfs=pdfs_with_metadata)
 
     finally:
         if project_path.exists():
