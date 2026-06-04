@@ -25,6 +25,11 @@ jobs:
       - name: Install dependencies
         run: uv sync --group dev
 
+      - name: Set up SSH for private repo access
+        uses: webfactory/ssh-agent@e83874834305fe9a4a2997156cb26c5de65a8555
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY_TEST_DATA }}
+
       - name: Ruff lint
         run: uv run ruff check .
 
