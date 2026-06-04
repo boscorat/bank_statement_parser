@@ -21,8 +21,6 @@ import sqlite3
 import sys
 from pathlib import Path
 
-import polars as pl
-
 from bank_statement_parser.modules.paths import ProjectPaths, validate_or_initialise_project
 from bank_statement_parser.modules.statements import StatementBatch
 from bank_statement_parser.testing import _pdf_dir
@@ -70,7 +68,7 @@ def _generate_metadata_for_good_pdfs() -> int:
     """Generate metadata for good PDFs. Returns count of successful generations."""
     pdf_dir = _pdf_dir("good")
     if pdf_dir is None or not pdf_dir.exists():
-        print(f"⚠️  Good PDF directory not found (requires access to boscorat/bank-statement-data)")
+        print("⚠️  Good PDF directory not found (requires access to boscorat/bank-statement-data)")
         return 0
 
     pdfs = sorted(pdf_dir.glob("*.pdf"))
@@ -106,16 +104,18 @@ def _generate_metadata_for_good_pdfs() -> int:
             # For SUCCESS or REVIEW with statement_info, extract all financial data
             if hasattr(pdf_result.payload, "statement_info"):
                 stmt_info = pdf_result.payload.statement_info
-                metadata.update({
-                    "expected_filename": stmt_info.filename_new,
-                    "expected_statement_date": stmt_info.statement_date.isoformat(),
-                    "expected_account": stmt_info.account,
-                    "expected_id_account": stmt_info.id_account,
-                    "expected_opening_balance": str(stmt_info.opening_balance),
-                    "expected_closing_balance": str(stmt_info.closing_balance),
-                    "expected_payments_in": str(stmt_info.payments_in),
-                    "expected_payments_out": str(stmt_info.payments_out),
-                })
+                metadata.update(
+                    {
+                        "expected_filename": stmt_info.filename_new,
+                        "expected_statement_date": stmt_info.statement_date.isoformat(),
+                        "expected_account": stmt_info.account,
+                        "expected_id_account": stmt_info.id_account,
+                        "expected_opening_balance": str(stmt_info.opening_balance),
+                        "expected_closing_balance": str(stmt_info.closing_balance),
+                        "expected_payments_in": str(stmt_info.payments_in),
+                        "expected_payments_out": str(stmt_info.payments_out),
+                    }
+                )
 
                 # Query transaction count from SQLite database
                 tx_count = _get_transaction_count(_TEMP_PROJECT_DIR_GOOD, stmt_info.id_statement)
@@ -145,7 +145,7 @@ def _generate_metadata_for_bad_pdfs() -> int:
     """Generate metadata for bad PDFs. Returns count of successful generations."""
     pdf_dir = _pdf_dir("bad")
     if pdf_dir is None or not pdf_dir.exists():
-        print(f"⚠️  Bad PDF directory not found (requires access to boscorat/bank-statement-data)")
+        print("⚠️  Bad PDF directory not found (requires access to boscorat/bank-statement-data)")
         return 0
 
     pdfs = sorted(pdf_dir.glob("*.pdf"))

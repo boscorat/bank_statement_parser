@@ -608,31 +608,28 @@ class TestPdfMetadataExpectations:
             metadata = self._load_metadata(pdf_path)
 
             # Check result status
-            assert pdf_result.result == metadata["expected_result"], \
+            assert pdf_result.result == metadata["expected_result"], (
                 f"{pdf_path.name}: expected result {metadata['expected_result']}, got {pdf_result.result}"
+            )
 
             # Check outcome
-            assert pdf_result.outcome == metadata["expected_outcome"], \
+            assert pdf_result.outcome == metadata["expected_outcome"], (
                 f"{pdf_path.name}: expected outcome {metadata['expected_outcome']}, got {pdf_result.outcome}"
+            )
 
             # For SUCCESS/REVIEW, check financial fields
             if isinstance(pdf_result.payload, (Success, Review)):
                 stmt_info = pdf_result.payload.statement_info
 
-                assert stmt_info.filename_new == metadata["expected_filename"], \
-                    f"{pdf_path.name}: filename mismatch"
+                assert stmt_info.filename_new == metadata["expected_filename"], f"{pdf_path.name}: filename mismatch"
 
-                assert str(stmt_info.opening_balance) == metadata["expected_opening_balance"], \
-                    f"{pdf_path.name}: opening_balance mismatch"
+                assert str(stmt_info.opening_balance) == metadata["expected_opening_balance"], f"{pdf_path.name}: opening_balance mismatch"
 
-                assert str(stmt_info.closing_balance) == metadata["expected_closing_balance"], \
-                    f"{pdf_path.name}: closing_balance mismatch"
+                assert str(stmt_info.closing_balance) == metadata["expected_closing_balance"], f"{pdf_path.name}: closing_balance mismatch"
 
-                assert str(stmt_info.payments_in) == metadata["expected_payments_in"], \
-                    f"{pdf_path.name}: payments_in mismatch"
+                assert str(stmt_info.payments_in) == metadata["expected_payments_in"], f"{pdf_path.name}: payments_in mismatch"
 
-                assert str(stmt_info.payments_out) == metadata["expected_payments_out"], \
-                    f"{pdf_path.name}: payments_out mismatch"
+                assert str(stmt_info.payments_out) == metadata["expected_payments_out"], f"{pdf_path.name}: payments_out mismatch"
 
                 # Check transaction count from SQLite database
                 if "expected_transaction_count" in metadata:
@@ -644,8 +641,9 @@ class TestPdfMetadataExpectations:
                         )
                         actual_tx_count = str(cursor.fetchone()[0])
                         expected_tx_count = metadata["expected_transaction_count"]
-                        assert actual_tx_count == expected_tx_count, \
+                        assert actual_tx_count == expected_tx_count, (
                             f"{pdf_path.name}: transaction count {actual_tx_count} != {expected_tx_count}"
+                        )
 
     def test_bad_pdfs_have_expected_status(self, bad_project):
         """Each bad PDF result has expected status (FAILURE or REVIEW) in metadata."""
@@ -653,12 +651,14 @@ class TestPdfMetadataExpectations:
             metadata = self._load_metadata(pdf_path)
 
             # For bad PDFs, verify the expected result (could be FAILURE or REVIEW)
-            assert pdf_result.result == metadata["expected_result"], \
+            assert pdf_result.result == metadata["expected_result"], (
                 f"{pdf_path.name}: expected result {metadata['expected_result']}, got {pdf_result.result}"
+            )
 
             # Verify the outcome matches metadata
-            assert pdf_result.outcome == metadata["expected_outcome"], \
+            assert pdf_result.outcome == metadata["expected_outcome"], (
                 f"{pdf_path.name}: expected outcome {metadata['expected_outcome']}, got {pdf_result.outcome}"
+            )
 
             # If this is a REVIEW with transaction count, validate it
             if isinstance(pdf_result.payload, Review) and "expected_transaction_count" in metadata:
@@ -671,5 +671,6 @@ class TestPdfMetadataExpectations:
                     )
                     actual_tx_count = str(cursor.fetchone()[0])
                     expected_tx_count = metadata["expected_transaction_count"]
-                    assert actual_tx_count == expected_tx_count, \
+                    assert actual_tx_count == expected_tx_count, (
                         f"{pdf_path.name}: transaction count {actual_tx_count} != {expected_tx_count}"
+                    )
