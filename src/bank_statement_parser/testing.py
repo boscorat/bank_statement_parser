@@ -4,7 +4,8 @@ testing.py — programmatic test harness for dependent projects.
 Exposes :class:`TestHarness`, which allows an external project (e.g. *openstan*)
 to:
 
-1. Build a fully-populated bsp project from the bundled anonymised PDFs.
+1. Build a fully-populated bsp project from anonymised PDFs (bundled or from
+   the private ``boscorat/bank-statement-data`` repo via SSH).
 2. Run bsp's own pytest suite as a quality gate.
 3. Obtain the path to the resulting SQLite database for direct comparison queries.
 4. Tear the temporary project down when finished.
@@ -25,7 +26,8 @@ Typical usage::
         compare_databases(h.db_path, openstan_db_path)
 
 Functions:
-    _pdf_dir: Returns the path to the bundled test PDFs for a given category.
+    _pdf_dir: Returns the path to test PDFs (bundled or cloned from private repo).
+    _clone_test_data: Clones test PDFs from private repo if not bundled.
     _tests_dir: Returns the path to the bsp pytest suite (dev/editable installs only).
 """
 
@@ -49,28 +51,99 @@ _PDFS_DIR: Path = _TEST_DATA_DIR / "pdfs"
 # Repo root is three levels up: src/bank_statement_parser/testing.py → repo root
 _REPO_ROOT: Path = Path(__file__).parent.parent.parent
 
+# Cache directory for cloned test data (cross-platform)
+_CACHE_DIR: Path = Path.home() / ".cache" / "bank_statement_data"
+_PRIVATE_REPO_URL: str = "git@github.com:boscorat/bank-statement-data.git"
 
-def _pdf_dir(category: str) -> Path:
-    """Return the bundled test-PDF directory for *category* (``"good"`` or ``"bad"``).
 
-    The PDFs live inside the installed package at
-    ``bank_statement_parser/test_data/pdfs/<category>/`` so this function works
-    from both editable and wheel installs.
+def _clone_test_data() -> Path | None:
+    """Attempt to clone test data from private repo into cache directory.
+
+    Clones ``boscorat/bank-statement-data`` repo via SSH into ``~/.cache/bank_statement_data/``.
+    Uses SSH for authentication (requires SSH key access to the private repo).
+    Extracts the ``pdf`` directory from the repo root.
+
+    Returns:
+        Absolute :class:`~pathlib.Path` to the extracted ``pdf`` directory if successful.
+        ``None`` if the clone fails (missing SSH key, network error, etc.).
+
+    Note:
+        The clone is cached locally to avoid repeated downloads. Subsequent calls
+        will reuse the existing cache if it already exists.
+    """
+    pdf_cache = _CACHE_DIR / "pdf"
+
+    # If already cached, return immediately
+    if pdf_cache.is_dir():
+        return pdf_cache
+
+    # Attempt to clone
+    try:
+        _CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        # Clone into a temporary subdirectory to avoid conflicts
+        repo_dir = _CACHE_DIR / "repo"
+
+        result = subprocess.run(
+            ["git", "clone", _PRIVATE_REPO_URL, str(repo_dir)],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        if result.returncode != 0:
+            return None
+
+        # Extract pdf directory from cloned repo
+        repo_pdf = repo_dir / "pdf"
+        if not repo_pdf.is_dir():
+            return None
+
+        # Move pdf directory to cache location
+        repo_pdf.replace(pdf_cache)
+        # Clean up the now-empty repo directory
+        if repo_dir.exists():
+            shutil.rmtree(repo_dir, ignore_errors=True)
+
+        return pdf_cache if pdf_cache.is_dir() else None
+    except FileNotFoundError, subprocess.TimeoutExpired:
+        # FileNotFoundError: git not found
+        # TimeoutExpired: clone took too long
+        return None
+
+
+def _pdf_dir(category: str) -> Path | None:
+    """Return the test-PDF directory for *category* (``"good"`` or ``"bad"``).
+
+    First attempts to use bundled PDFs in the installed package at
+    ``bank_statement_parser/test_data/pdfs/<category>/``.  If not found,
+    attempts to clone from the private repo ``boscorat/bank-statement-data``
+    via SSH, caching the result locally.
 
     Args:
         category: Either ``"good"`` (real, anonymised PDFs that parse cleanly)
             or ``"bad"`` (PDFs that are expected to produce errors).
 
     Returns:
-        Absolute :class:`~pathlib.Path` to the requested PDF directory.
+        Absolute :class:`~pathlib.Path` to the requested PDF directory if found.
+        ``None`` if neither bundled PDFs nor remote clone are available.
 
-    Raises:
-        FileNotFoundError: If the directory does not exist inside the package.
+    Note:
+        Returns ``None`` rather than raising an exception to allow graceful
+        test skipping when PDFs are unavailable (e.g., users without SSH access
+        to the private repo).
     """
-    path = _PDFS_DIR / category
-    if not path.is_dir():
-        raise FileNotFoundError(f"Bundled PDF directory not found: {path}")
-    return path
+    # Try bundled path first
+    bundled_path = _PDFS_DIR / category
+    if bundled_path.is_dir():
+        return bundled_path
+
+    # Try to clone from private repo
+    pdf_cache = _clone_test_data()
+    if pdf_cache is not None:
+        cached_path = pdf_cache / category
+        if cached_path.is_dir():
+            return cached_path
+
+    return None
 
 
 def _tests_dir() -> Path:

@@ -4,14 +4,18 @@ conftest.py — session-scoped fixtures for integration tests.
 Two project lifecycles are provided:
 
 ``good_project``
-    Processes all PDFs in the bundled ``test_data/pdfs/good/`` directory into a
-    fresh project at ``tests/test_project/``.  The project is fully populated
+    Processes all PDFs in the ``test_data/pdfs/good/`` directory (bundled or
+    cloned from the private ``boscorat/bank-statement-data`` repo) into a fresh
+    project at ``tests/test_project/``.  The project is fully populated
     (parquet + SQLite) before any test runs, and torn down afterwards.
+    Skipped if PDF fixtures are unavailable (e.g., no SSH access to private repo).
 
 ``bad_project``
-    Processes all PDFs in the bundled ``test_data/pdfs/bad/`` directory into a
-    fresh project at ``tests/test_project_bad/``.  Used to verify that bad PDFs
+    Processes all PDFs in the ``test_data/pdfs/bad/`` directory (bundled or
+    cloned from the private ``boscorat/bank-statement-data`` repo) into a fresh
+    project at ``tests/test_project_bad/``.  Used to verify that bad PDFs
     are flagged as errors rather than processed successfully.
+    Skipped if PDF fixtures are unavailable (e.g., no SSH access to private repo).
 """
 
 import shutil
@@ -31,6 +35,9 @@ _BAD_PDFS_DIR = _pdf_dir("bad")
 _GOOD_PROJECT_DIR = _TESTS_DIR / "test_project"
 _BAD_PROJECT_DIR = _TESTS_DIR / "test_project_bad"
 
+# Track whether PDF fixtures are available for session-end summary
+_PDF_FIXTURES_AVAILABLE = _GOOD_PDFS_DIR is not None and _BAD_PDFS_DIR is not None
+
 
 @dataclass
 class ProjectContext:
@@ -46,7 +53,12 @@ def good_project() -> Generator[ProjectContext, None, None]:  # type: ignore[mis
     """
     Session fixture: scaffold a fresh project, process all good PDFs,
     populate parquet and SQLite, then yield.  Tears down on session end.
+
+    Skipped if PDF fixtures are unavailable (e.g., no SSH access to private repo).
     """
+    if _GOOD_PDFS_DIR is None:
+        pytest.skip("Good PDF fixtures unavailable (requires boscorat/bank-statement-data access)")
+
     project_path = _GOOD_PROJECT_DIR
     project_path.mkdir(parents=True, exist_ok=True)
 
@@ -75,7 +87,12 @@ def bad_project() -> Generator[ProjectContext, None, None]:  # type: ignore[misc
     """
     Session fixture: scaffold a fresh project, process all bad PDFs,
     then yield.  Tears down on session end.
+
+    Skipped if PDF fixtures are unavailable (e.g., no SSH access to private repo).
     """
+    if _BAD_PDFS_DIR is None:
+        pytest.skip("Bad PDF fixtures unavailable (requires boscorat/bank-statement-data access)")
+
     project_path = _BAD_PROJECT_DIR
     project_path.mkdir(parents=True, exist_ok=True)
 
@@ -95,3 +112,22 @@ def bad_project() -> Generator[ProjectContext, None, None]:  # type: ignore[misc
     finally:
         if project_path.exists():
             shutil.rmtree(project_path)
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_sessionfinish(session: pytest.Session) -> None:
+    """Display session summary, including skipped PDF-dependent tests if applicable."""
+    if not _PDF_FIXTURES_AVAILABLE:
+        print("\n" + "=" * 70)
+        print("PDF-DEPENDENT TESTS SKIPPED")
+        print("=" * 70)
+        print(
+            "\nThese tests require anonymised bank statement PDFs from the private repo:\n"
+            "  boscorat/bank-statement-data\n"
+            "\nTo run these tests locally:\n"
+            "  1. Ensure you have SSH access to boscorat/bank-statement-data\n"
+            "  2. Set up your SSH key (~/.ssh/id_rsa or similar)\n"
+            "  3. Run pytest again\n"
+            "\nIn CI, these tests will run automatically with SSH secret access.\n"
+        )
+        print("=" * 70 + "\n")
