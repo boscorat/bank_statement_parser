@@ -1,7 +1,7 @@
 """
 test_statements.py — integration tests for bank_statement_parser.
 
-Tests are grouped into five classes:
+Tests are grouped into six classes:
 
 TestGoodStatements
     Verifies that all PDFs in ``tests/pdfs/good/`` process without error
@@ -26,19 +26,25 @@ TestCopyStatements
 TestBadStatements
     Verifies that each PDF in ``tests/pdfs/bad/`` is flagged as an error.
 
+TestPdfMetadataExpectations
+    Validates each processed PDF against its .json metadata sidecar,
+    verifying result status, balances, transaction counts, and failure outcomes.
+
 Run with:
     pytest tests/test_statements.py -v
 """
 
+import json
 import sqlite3
 import warnings
 from dataclasses import replace
 from datetime import timedelta
+from pathlib import Path
 
 import polars as pl
 
 from bank_statement_parser.modules import reports_db as db
-from bank_statement_parser.modules.data import PdfResult
+from bank_statement_parser.modules.data import PdfResult, Review, Success
 from bank_statement_parser.modules.paths import ProjectPaths
 from bank_statement_parser.modules.statements import copy_statements_to_project
 
@@ -580,3 +586,91 @@ class TestBadStatements:
     def test_bad_pdf_error_count_matches_pdf_count(self, bad_project):
         """At least one error is raised per bad PDF batch (some PDFs may be ambiguous)."""
         assert bad_project.batch.errors >= 1
+
+
+# ---------------------------------------------------------------------------
+# TestPdfMetadataExpectations
+# ---------------------------------------------------------------------------
+
+
+class TestPdfMetadataExpectations:
+    """Validate each processed PDF against its metadata sidecar expectations."""
+
+    def _load_metadata(self, pdf_path: Path) -> dict:
+        """Load test expectations from a JSON sidecar file."""
+        metadata_path = pdf_path.with_suffix(".json")
+        with open(metadata_path) as f:
+            return json.load(f)
+
+    def test_good_pdfs_match_metadata(self, good_project):
+        """Each good PDF result matches its expected metadata."""
+        for pdf_path, pdf_result in zip(good_project.pdfs, good_project.batch.processed_pdfs):
+            metadata = self._load_metadata(pdf_path)
+
+            # Check result status
+            assert pdf_result.result == metadata["expected_result"], (
+                f"{pdf_path.name}: expected result {metadata['expected_result']}, got {pdf_result.result}"
+            )
+
+            # Check outcome
+            assert pdf_result.outcome == metadata["expected_outcome"], (
+                f"{pdf_path.name}: expected outcome {metadata['expected_outcome']}, got {pdf_result.outcome}"
+            )
+
+            # For SUCCESS/REVIEW, check financial fields
+            if isinstance(pdf_result.payload, (Success, Review)):
+                stmt_info = pdf_result.payload.statement_info
+
+                assert stmt_info.filename_new == metadata["expected_filename"], f"{pdf_path.name}: filename mismatch"
+
+                assert str(stmt_info.opening_balance) == metadata["expected_opening_balance"], f"{pdf_path.name}: opening_balance mismatch"
+
+                assert str(stmt_info.closing_balance) == metadata["expected_closing_balance"], f"{pdf_path.name}: closing_balance mismatch"
+
+                assert str(stmt_info.payments_in) == metadata["expected_payments_in"], f"{pdf_path.name}: payments_in mismatch"
+
+                assert str(stmt_info.payments_out) == metadata["expected_payments_out"], f"{pdf_path.name}: payments_out mismatch"
+
+                # Check transaction count from SQLite database
+                if "expected_transaction_count" in metadata:
+                    db_path = ProjectPaths.resolve(good_project.project_path).project_db
+                    with sqlite3.connect(db_path) as conn:
+                        cursor = conn.execute(
+                            "SELECT COUNT(*) FROM statement_lines WHERE ID_STATEMENT = ?",
+                            (stmt_info.id_statement,),
+                        )
+                        actual_tx_count = str(cursor.fetchone()[0])
+                        expected_tx_count = metadata["expected_transaction_count"]
+                        assert actual_tx_count == expected_tx_count, (
+                            f"{pdf_path.name}: transaction count {actual_tx_count} != {expected_tx_count}"
+                        )
+
+    def test_bad_pdfs_have_expected_status(self, bad_project):
+        """Each bad PDF result has expected status (FAILURE or REVIEW) in metadata."""
+        for pdf_path, pdf_result in zip(bad_project.pdfs, bad_project.batch.processed_pdfs):
+            metadata = self._load_metadata(pdf_path)
+
+            # For bad PDFs, verify the expected result (could be FAILURE or REVIEW)
+            assert pdf_result.result == metadata["expected_result"], (
+                f"{pdf_path.name}: expected result {metadata['expected_result']}, got {pdf_result.result}"
+            )
+
+            # Verify the outcome matches metadata
+            assert pdf_result.outcome == metadata["expected_outcome"], (
+                f"{pdf_path.name}: expected outcome {metadata['expected_outcome']}, got {pdf_result.outcome}"
+            )
+
+            # If this is a REVIEW with transaction count, validate it
+            if isinstance(pdf_result.payload, Review) and "expected_transaction_count" in metadata:
+                stmt_info = pdf_result.payload.statement_info
+                db_path = ProjectPaths.resolve(bad_project.project_path).project_db
+                with sqlite3.connect(db_path) as conn:
+                    cursor = conn.execute(
+                        "SELECT COUNT(*) FROM statement_lines WHERE ID_STATEMENT = ?",
+                        (stmt_info.id_statement,),
+                    )
+                    actual_tx_count = str(cursor.fetchone()[0])
+                    expected_tx_count = metadata["expected_transaction_count"]
+                    assert actual_tx_count == expected_tx_count, (
+                        f"{pdf_path.name}: transaction count {actual_tx_count} != {expected_tx_count}"
+                    )

@@ -52,6 +52,12 @@ PDF files → StatementBatch (statements.py) → Statement (statements.py)
 
 `StatementBatch` uses `asyncio` + `ProcessPoolExecutor` for parallel mode (`turbo=True`). The worker is a module-level function (`process_pdf_statement`) — not a bound method — so it can be pickled for child processes. `ProcessPoolExecutor` is created with the `forkserver` multiprocessing context. Invoked via `asyncio.run(self.process_turbo(), debug=False)`.
 
+## Critical Dependencies & Constraints
+
+- **Test data is in a private repo** — tests require SSH access via `${{ secrets.SSH_PRIVATE_KEY_TEST_DATA }}` (see `.github/workflows/ci.yml`). PDFs are fetched from `test_data/pdfs/good/` and `test_data/pdfs/bad/` directories. If test data is missing locally, only `test_datamart.py` will run (it uses mock data); integration tests in `test_statements.py` will skip.
+- **`build_datamart.py` and `build_datamart.sql` must stay in sync** — the `.py` file is authoritative at runtime; the `.sql` file is for direct `sqlite3` CLI use.
+- **`from __future__ import annotations` is used in exactly five files** (`paths.py`, `anonymise.py`, `parquet.py`, `cli.py`, `_anonymise_shared.py`) where forward references are needed. It is **not** project-wide. Elsewhere, use quoted strings (e.g. `"ProjectPaths"`, `"Success | Review | Failure"`).
+
 ## Code Style
 
 ### Imports — absolute only, grouped: stdlib → third-party → local, separated by blank lines.
@@ -62,12 +68,10 @@ from pathlib import Path
 
 import polars as pl
 
-from bank_statement_parser.modules.config import ConfigManager
+from bank_statement_parser.modules.import_config import ImportConfigManager
 ```
 
 Deferred imports (inside function bodies, to break circular dependencies) are annotated with `# noqa: PLC0415`. This is the only accepted reason for a non-top-level import.
-
-`from __future__ import annotations` is used in exactly five files (`paths.py`, `anonymise.py`, `parquet.py`, `cli.py`, `_anonymise_shared.py`) where forward references are needed. It is **not** a project-wide convention. Elsewhere, forward references use quoted strings (e.g. `"ProjectPaths"`, `"Success | Review | Failure"`).
 
 ### Type Hints — required on all parameters and return values. Use `str | None` (not `Optional[str]`). Use `pl.LazyFrame` / `pl.DataFrame` for Polars types.
 
@@ -203,26 +207,29 @@ src/bank_statement_parser/
 │   └── mock_project_data.py    # generate_mock_data() — tests only
 ├── modules/
 │   ├── anonymise.py            # anonymise_pdf / anonymise_folder
-│   ├── config.py               # ConfigManager + copy_default_config
 │   ├── currency.py             # CurrencySpec definitions
 │   ├── data.py                 # All dataclasses
 │   ├── database.py             # update_db() → SQLite persistence
 │   ├── debug.py                # debug_pdf_statement / debug_statements
 │   ├── errors.py               # Exception hierarchy
+│   ├── export_spec.py          # ExportSpec + related export utilities
+│   ├── forex.py                # FX rate lookups (UserWarning on failure)
+│   ├── import_config.py        # ImportConfigManager + ConfigLoader
 │   ├── parquet.py              # Parquet read/write classes
 │   ├── paths.py                # ProjectPaths + project scaffold helpers
 │   ├── pdf_functions.py        # pdfplumber wrappers
 │   ├── reports_db.py           # Report classes backed by SQLite
-│   ├── reports_parquet.py      # Report classes backed by Parquet files
 │   ├── statement_functions.py  # Field extraction pipeline
 │   └── statements.py           # Statement + StatementBatch
 └── project/config/             # User TOML config overrides
 tests/
 ├── conftest.py                 # Session-scoped good_project / bad_project fixtures
-├── test_datamart.py            # Star-schema mart tests (mock data, self-contained DB)
-├── test_statements.py          # Integration tests (real PDFs, reports, exports)
 ├── test_cli.py                 # CLI subcommand tests (uses parametrize)
-└── test_docs.py                # Documentation/API surface tests (uses parametrize)
+├── test_datamart.py            # Star-schema mart tests (mock data, self-contained DB)
+├── test_docs.py                # Documentation/API surface tests (uses parametrize)
+├── test_export_spec.py         # ExportSpec export format and filtering tests
+├── test_forex.py               # FX rate lookup tests with fallback logic
+└── test_statements.py          # Integration tests (real PDFs, reports, exports)
 ```
 
 ## Development Notes
