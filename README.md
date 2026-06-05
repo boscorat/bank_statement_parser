@@ -162,11 +162,20 @@ Full documentation is available at
 
 ## Contributing
 
-Developer guidelines, architecture notes, code style rules, and test commands
-are documented in
-[AGENTS.md](https://github.com/boscorat/bank_statement_parser/blob/main/AGENTS.md).
+We welcome contributions! Whether you're adding a new bank, fixing bugs, improving documentation, or submitting test data, please see:
+
+- **[CONTRIBUTING.md](./CONTRIBUTING.md)** — Main entry point for all types of contributions
+- **[Adding a New Bank](./docs/guides/contributing-new-bank.md)** — Configure parser for a new bank (3 scenarios: new bank, new account type, fix existing)
+- **[Local Testing Guide](./docs/guides/local-testing.md)** — Test your config locally before submitting
+- **[Test Data Submission Guide](./docs/guides/test-data-submission.md)** — How to prepare anonymised PDFs and metadata
+- **[AGENTS.md](./AGENTS.md)** — Developer guidelines, architecture, code style, test commands
+
+### Quick Start for Development
 
 ```bash
+# Install dependencies
+uv sync
+
 # Run the test suite
 pytest -v
 
@@ -174,6 +183,18 @@ pytest -v
 ruff check .
 ruff format .
 ```
+
+### Contributing a New Bank Configuration
+
+If you want to add support for a bank not currently supported:
+
+1. Read [CONTRIBUTING.md](./CONTRIBUTING.md) to understand the workflow
+2. Follow [Adding a New Bank](./docs/guides/contributing-new-bank.md) for technical steps
+3. Test locally with [Local Testing Guide](./docs/guides/local-testing.md)
+4. Prepare 3+ anonymised test PDFs (see [Test Data Submission Guide](./docs/guides/test-data-submission.md))
+5. Submit a PR with your config files
+
+Your test PDFs will become permanent regression tests that protect your configuration against future changes.
 
 ### Releasing a new version
 

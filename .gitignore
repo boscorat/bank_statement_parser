@@ -27,6 +27,8 @@ wheels/
 *.csv
 *.xlsx
 *.json
+# Allow metadata JSON files in test submissions
+!.github/test-submissions/*.json
 *.xls
 
 # anonymise.toml contains real PII — never commit it
