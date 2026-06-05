@@ -351,4 +351,4 @@ A: No. The `bank-statement-data` repo is private. Only maintainers and authorize
 
 ## Questions?
 
-See [CONTRIBUTING.md](../CONTRIBUTING.md) for links to all guides and how to ask for help.
+See [CONTRIBUTING.md](../../CONTRIBUTING.md) for links to all guides and how to ask for help.

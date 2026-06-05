@@ -624,4 +624,4 @@ STD_STATEMENT_TYPE = "Standard"
 
 ## Questions?
 
-See [CONTRIBUTING.md](../CONTRIBUTING.md) for help resources.
+See [CONTRIBUTING.md](../../CONTRIBUTING.md) for help resources.

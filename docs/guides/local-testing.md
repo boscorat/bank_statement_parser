@@ -310,4 +310,4 @@ SELECT * FROM batch_lines WHERE STD_SUCCESS = 0;
 
 ## Questions?
 
-See [CONTRIBUTING.md](../CONTRIBUTING.md) for help resources and how to ask for assistance.
+See [CONTRIBUTING.md](../../CONTRIBUTING.md) for help resources and how to ask for assistance.
