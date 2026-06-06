@@ -29,6 +29,10 @@ workbooks or CSV files.
 - **Parallel processing** — async + multiprocess batch mode for large PDF sets.
 - **Cross-platform** — pure Python with no OS-specific dependencies.
 
+## Scope
+
+Bank Statement Parser focuses exclusively on UK bank statements. See [VISION.md](./VISION.md) for what we do and don't support. Planning to request a feature? Check the vision first to avoid out-of-scope requests.
+
 ## Installation
 
 ### Using uv (recommended)
