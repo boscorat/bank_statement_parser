@@ -29,6 +29,10 @@ workbooks or CSV files.
 - **Parallel processing** — async + multiprocess batch mode for large PDF sets.
 - **Cross-platform** — pure Python with no OS-specific dependencies.
 
+## Scope
+
+Bank Statement Parser focuses exclusively on UK bank statements. See [VISION.md](./VISION.md) for what we do and don't support. Planning to request a feature? Check the vision first to avoid out-of-scope requests.
+
 ## Installation
 
 ### Using uv (recommended)
@@ -165,6 +169,7 @@ Full documentation is available at
 We welcome contributions! Whether you're adding a new bank, fixing bugs, improving documentation, or submitting test data, please see:
 
 - **[CONTRIBUTING.md](./CONTRIBUTING.md)** — Main entry point for all types of contributions
+- **[SECURITY.md](./SECURITY.md)** — Security policy and vulnerability reporting
 - **[Adding a New Bank](./docs/guides/contributing-new-bank.md)** — Configure parser for a new bank (3 scenarios: new bank, new account type, fix existing)
 - **[Local Testing Guide](./docs/guides/local-testing.md)** — Test your config locally before submitting
 - **[Test Data Submission Guide](./docs/guides/test-data-submission.md)** — How to prepare anonymised PDFs and metadata

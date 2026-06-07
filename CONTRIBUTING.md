@@ -7,6 +7,7 @@ Thank you for your interest in contributing to Bank Statement Parser! We welcome
 ## Table of Contents
 
 - [Before You Start](#before-you-start)
+- [Response SLAs & Expectations](#response-slas--expectations)
 - [Types of Contributions](#types-of-contributions)
 - [Submission Workflow](#submission-workflow)
 - [Getting Help](#getting-help)
@@ -23,6 +24,39 @@ Please review our [AGENTS.md](./AGENTS.md) for architectural context and develop
 - **Code Style:** ruff (linting & formatting)
 - **Tests:** pytest (see [AGENTS.md](./AGENTS.md) for test commands)
 - **Architecture:** [AGENTS.md](./AGENTS.md)
+
+---
+
+## Response SLAs & Expectations
+
+Bank Statement Parser is actively maintained as a solo project. Here's what you can expect:
+
+### Standard Response Times
+
+| Request Type | Response SLA |
+|---|---|
+| **Bug reports** | 10 days (triage) |
+| **Security vulnerabilities** | 48 hours (see [SECURITY.md](./SECURITY.md)) |
+| **PRs from community** | 14 days (review) |
+| **Feature requests / ideas** | 10 days (acknowledge) |
+| **Bank configuration requests** | 10 days (acknowledge); implementation timeline varies |
+| **General questions** | 10 days (answer or redirect) |
+
+### Important Notes
+
+- **Out of scope:** Feature requests aligned with [VISION.md](./VISION.md) scope boundaries may be deprioritised or politely declined. Check [VISION.md](./VISION.md) before investing time in a feature request.
+- **Off-season:** I take ~2 weeks off per year. During those periods, responses may be slower.
+- **Accelerated security responses:** Security vulnerabilities receive priority; see [SECURITY.md](./SECURITY.md) for details.
+
+### What "Acknowledge" Means
+
+When we "acknowledge" a feature request or bank config request within 10 days, we will:
+- Confirm receipt of your request
+- Indicate whether it aligns with [VISION.md](./VISION.md) scope
+- If out of scope, explain why and suggest alternatives (e.g., opening a separate issue for discussion)
+- If in scope, provide next steps
+
+Implementation may take longer depending on complexity and priority.
 
 ---
 
