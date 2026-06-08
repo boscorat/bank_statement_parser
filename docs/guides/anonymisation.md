@@ -62,7 +62,13 @@ typically contain real account numbers or names.
 ### `anonymise_pdf()`
 
 ```python
-anonymise_pdf(input_path: str | Path, output_path: str | Path | None = None, always_anonymise_path: str | Path | None = None, never_anonymise_path: str | Path | None = None, debug: bool = False) -> Path
+anonymise_pdf(
+    input_path: str | Path,
+    output_path: str | Path | None = None,
+    always_anonymise_path: str | Path | None = None,
+    never_anonymise_path: str | Path | None = None,
+    debug: bool = False,
+) -> Path
 ```
 
 Anonymise a single bank statement PDF.
@@ -73,20 +79,24 @@ Parameters
 ----------
 input_path:
 Path to the source PDF.
+
 output_path:
 Destination path for the anonymised PDF.  If omitted, the output is
 written to the same directory as the input with the filename prefix
 ``anonymised_`` prepended.  It is strongly recommended to supply an
 explicit output path that does not contain any sensitive information
 (e.g. account numbers or names that may appear in the original filename).
+
 always_anonymise_path:
 Optional path to a user ``always_anonymise.toml`` file.  Entries here
 force specific strings to a known replacement value and take priority
 over the bundled system file.
+
 never_anonymise_path:
 Optional path to a user ``never_anonymise.toml`` file.  Phrases listed
 here are preserved exactly as-is during the scramble pass and are merged
 with the bundled system file.
+
 debug:
 When ``True``, print diagnostic information about config loading,
 fragment classification, and scramble pairs to stdout.

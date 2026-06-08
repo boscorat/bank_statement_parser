@@ -285,7 +285,13 @@ Available in `bsp.db`:
 #### `export_csv()`
 
 ```python
-export_csv(folder: Path | None = None, type: Literal['single', 'multi'] = 'single', project_path: Path | None = None, batch_id: str | None = None, filename_timestamp: bool = False) -> None
+export_csv(
+    folder: Path | None = None,
+    type: Literal['single', 'multi'] = 'single',
+    project_path: Path | None = None,
+    batch_id: str | None = None,
+    filename_timestamp: bool = False,
+) -> None
 ```
 
 Write report data to CSV files in *folder*.
@@ -329,7 +335,13 @@ original names, e.g. ``transactions.csv``.
 #### `export_excel()`
 
 ```python
-export_excel(path: Path | None = None, type: Literal['single', 'multi'] = 'single', project_path: Path | None = None, batch_id: str | None = None, filename_timestamp: bool = False) -> None
+export_excel(
+    path: Path | None = None,
+    type: Literal['single', 'multi'] = 'single',
+    project_path: Path | None = None,
+    batch_id: str | None = None,
+    filename_timestamp: bool = False,
+) -> None
 ```
 
 Write report data to an Excel workbook at *path*.
@@ -370,7 +382,13 @@ Worksheet names are never modified by the timestamp or type logic.
 #### `export_json()`
 
 ```python
-export_json(folder: Path | None = None, type: Literal['single', 'multi'] = 'single', project_path: Path | None = None, batch_id: str | None = None, filename_timestamp: bool = False) -> None
+export_json(
+    folder: Path | None = None,
+    type: Literal['single', 'multi'] = 'single',
+    project_path: Path | None = None,
+    batch_id: str | None = None,
+    filename_timestamp: bool = False,
+) -> None
 ```
 
 Write report data to JSON files in *folder*.
