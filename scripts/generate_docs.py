@@ -506,7 +506,7 @@ def _extract_function_docs(source: str, names: list[str]) -> list[FunctionDoc]:
 
 def _build_signature(node: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
     """Build a human-readable function signature from an AST FunctionDef.
-    
+
     Returns multi-line format (one parameter per line) if the signature
     would exceed 100 characters on a single line.
     """
@@ -535,15 +535,15 @@ def _build_signature(node: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
 
     # Build single-line version first to check length
     single_line = f"{node.name}({', '.join(parts)}){ret}"
-    
+
     # If it fits on one line (under 100 chars), use that; otherwise format multi-line
     if len(single_line) <= 100:
         return single_line
-    
+
     # Multi-line format: one parameter per line
     if not parts:
         return single_line
-    
+
     lines = [f"{node.name}("]
     for i, part in enumerate(parts):
         if i < len(parts) - 1:
