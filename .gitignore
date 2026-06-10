@@ -43,3 +43,6 @@ tests/test_project_bad/
 
 # MkDocs build output
 site/
+
+# Pending folder that may contain anonymised PDFs
+pending/
