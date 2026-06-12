@@ -57,57 +57,65 @@ _PRIVATE_REPO_URL: str = "git@github.com:boscorat/bank-statement-data.git"
 
 
 def _clone_test_data() -> Path | None:
-    """Attempt to clone test data from private repo into cache directory.
+    """Clone or update test data from private repo into cache directory.
 
     Clones ``boscorat/bank-statement-data`` repo via SSH into ``~/.cache/bank_statement_data/``.
     Uses SSH for authentication (requires SSH key access to the private repo).
-    Extracts the ``pdfs`` directory from the repo root.
+
+    On subsequent calls, pulls latest changes from the remote repo so that
+    newly added PDFs are picked up automatically.
 
     Returns:
-        Absolute :class:`~pathlib.Path` to the extracted ``pdfs`` directory if successful.
-        ``None`` if the clone fails (missing SSH key, network error, etc.).
+        Absolute :class:`~pathlib.Path` to the ``pdfs`` directory if successful.
+        ``None`` if the clone/pull fails (missing SSH key, network error, etc.).
 
     Note:
-        The clone is cached locally to avoid repeated downloads. Subsequent calls
-        will reuse the existing cache if it already exists.
+        The clone is cached locally to avoid repeated full downloads. The git
+        repo is retained so that ``git pull`` can fetch incremental updates.
     """
     pdfs_cache = _CACHE_DIR / "pdfs"
+    repo_dir = _CACHE_DIR / "repo"
 
-    # If already cached, return immediately
-    if pdfs_cache.is_dir():
-        return pdfs_cache
-
-    # Attempt to clone
     try:
         _CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        # Clone into a temporary subdirectory to avoid conflicts
-        repo_dir = _CACHE_DIR / "repo"
 
-        result = subprocess.run(
-            ["git", "clone", _PRIVATE_REPO_URL, str(repo_dir)],
-            capture_output=True,
-            text=True,
-            timeout=60,
-        )
-        if result.returncode != 0:
-            return None
+        if (repo_dir / ".git").is_dir():
+            # Repo already cloned — pull latest changes
+            result = subprocess.run(
+                ["git", "-C", str(repo_dir), "pull", "--ff-only"],
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+            if result.returncode != 0:
+                # Pull failed — return existing cache if available
+                return pdfs_cache if pdfs_cache.is_dir() else None
+        else:
+            # Fresh clone
+            result = subprocess.run(
+                ["git", "clone", _PRIVATE_REPO_URL, str(repo_dir)],
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+            if result.returncode != 0:
+                return None
 
-        # Extract pdfs directory from cloned repo
+        # Copy pdfs from repo to cache
         repo_pdfs = repo_dir / "pdfs"
         if not repo_pdfs.is_dir():
-            return None
+            return pdfs_cache if pdfs_cache.is_dir() else None
 
-        # Move pdfs directory to cache location
-        repo_pdfs.replace(pdfs_cache)
-        # Clean up the now-empty repo directory
-        if repo_dir.exists():
-            shutil.rmtree(repo_dir, ignore_errors=True)
+        # Replace cache with fresh copy from repo
+        if pdfs_cache.is_dir():
+            shutil.rmtree(pdfs_cache)
+        shutil.copytree(repo_pdfs, pdfs_cache)
 
         return pdfs_cache if pdfs_cache.is_dir() else None
-    except FileNotFoundError, subprocess.TimeoutExpired:
+    except (FileNotFoundError, subprocess.TimeoutExpired):
         # FileNotFoundError: git not found
-        # TimeoutExpired: clone took too long
-        return None
+        # TimeoutExpired: clone/pull took too long
+        return pdfs_cache if pdfs_cache.is_dir() else None
 
 
 def _pdf_dir(category: str) -> Path | None:

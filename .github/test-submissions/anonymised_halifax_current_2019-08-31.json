@@ -1,16 +1,14 @@
 {
   "expected_result": "SUCCESS",
-  "expected_outcome": "EXTRACTION_SUCCESS",
-  "expected_statement_info": {
-    "account": "Anonymised Current Account",
-    "company": "Halifax",
-    "statement_type": "Current",
-    "currency": "GBP",
-    "period_start": "2019-08-31",
-    "period_end": "2019-08-31"
-  },
-  "expected_transaction_count": 6,
-  "expected_checks_and_balances_pass": true,
-  "notes": "Halifax UK Current Account - August 2019 statement. Validates standard current account extraction with transaction table parsing.",
-  "min_bsp_version": null
+  "expected_outcome": "SUCCESS",
+  "expected_filename": "HALIFAX_UK_CUR_12121212_20190831.pdf",
+  "expected_statement_date": "2019-08-31",
+  "expected_account": "Current Account",
+  "expected_id_account": "HALIFAX_UK_CUR_12121212",
+  "expected_opening_balance": "2784.4200",
+  "expected_closing_balance": "5607.7700",
+  "expected_payments_in": "2823.3500",
+  "expected_payments_out": "0.0000",
+  "expected_transaction_count": "6",
+  "description": "Halifax UK Current Account - August 2019"
 }

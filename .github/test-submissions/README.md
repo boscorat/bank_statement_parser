@@ -35,19 +35,17 @@ Each metadata file documents one anonymised test PDF:
 ```json
 {
   "expected_result": "SUCCESS",
-  "expected_outcome": "EXTRACTION_SUCCESS",
-  "expected_statement_info": {
-    "account": "Anonymised Account",
-    "company": "HSBC",
-    "statement_type": "Credit Card",
-    "currency": "GBP",
-    "period_start": "2024-01-01",
-    "period_end": "2024-01-31"
-  },
-  "expected_transaction_count": 42,
-  "expected_checks_and_balances_pass": true,
-  "notes": "Test validates credit card multi-line transaction splitting and fee detection",
-  "min_bsp_version": null
+  "expected_outcome": "SUCCESS",
+  "expected_filename": "HALIFAX_UK_CUR_12121212_20220131.pdf",
+  "expected_statement_date": "2022-01-31",
+  "expected_account": "Current Account",
+  "expected_id_account": "HALIFAX_UK_CUR_12121212",
+  "expected_opening_balance": "2289.7200",
+  "expected_closing_balance": "2857.6800",
+  "expected_payments_in": "2874.7500",
+  "expected_payments_out": "2306.7900",
+  "expected_transaction_count": "10",
+  "description": "Halifax UK Current Account - January 2022"
 }
 ```
 
@@ -56,17 +54,17 @@ Each metadata file documents one anonymised test PDF:
 | Field | Type | Description |
 |---|---|---|
 | `expected_result` | `"SUCCESS"` \| `"REVIEW"` \| `"FAILURE"` | Parsing result expectation |
-| `expected_outcome` | `"EXTRACTION_SUCCESS"` \| `"EXTRACTION_FAILURE"` \| `"VALIDATION_FAILURE"` | What stage the result reached |
-| `expected_statement_info.account` | string | Anonymised account name (e.g., "Anonymised Account", "Test Current A/C") |
-| `expected_statement_info.company` | string | Bank/institution name |
-| `expected_statement_info.statement_type` | string | Account type (e.g., "Current", "Credit Card", "Business") |
-| `expected_statement_info.currency` | string | 3-letter ISO code (e.g., "GBP", "EUR", "USD") |
-| `expected_statement_info.period_start` | string | Statement start date (ISO format: YYYY-MM-DD) |
-| `expected_statement_info.period_end` | string | Statement end date (ISO format: YYYY-MM-DD) |
-| `expected_transaction_count` | integer | Number of transactions extracted from PDF |
-| `expected_checks_and_balances_pass` | boolean | Whether financial validation checks pass |
-| `notes` | string | What this test validates (e.g., edge cases, special formatting) |
-| `min_bsp_version` | `null` \| string | Minimum bsp version required; set by maintainers during private PR merge |
+| `expected_outcome` | `"SUCCESS"` \| `"REVIEW CAB"` \| `"FAILURE CONFIG"` \| `"FAILURE DATA"` \| `"FAILURE OTHER"` | What stage the result reached |
+| `expected_filename` | string | New filename assigned after processing (e.g., `"HSBC_UK_CUR_11111111_20190610.pdf"`) |
+| `expected_statement_date` | string | Statement date (ISO format: YYYY-MM-DD) |
+| `expected_account` | string | Account product name (e.g., "Current Account", "Credit Card") |
+| `expected_id_account` | string | Account ID (e.g., `"HALIFAX_UK_CUR_12121212"`) |
+| `expected_opening_balance` | string | Opening balance as decimal string (e.g., `"2289.7200"`) |
+| `expected_closing_balance` | string | Closing balance as decimal string |
+| `expected_payments_in` | string | Total credits as decimal string |
+| `expected_payments_out` | string | Total debits as decimal string |
+| `expected_transaction_count` | string | Number of transactions extracted from PDF (as string) |
+| `description` | string | Human-readable note about what this test covers |
 
 ## How to Create Metadata Files
 
