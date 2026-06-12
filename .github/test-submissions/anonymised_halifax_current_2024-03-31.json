@@ -1,0 +1,16 @@
+{
+  "expected_result": "SUCCESS",
+  "expected_outcome": "EXTRACTION_SUCCESS",
+  "expected_statement_info": {
+    "account": "Anonymised Current Account",
+    "company": "Halifax",
+    "statement_type": "Current",
+    "currency": "GBP",
+    "period_start": "2024-03-31",
+    "period_end": "2024-03-31"
+  },
+  "expected_transaction_count": 33,
+  "expected_checks_and_balances_pass": true,
+  "notes": "Halifax UK Current Account - March 2024 statement. Validates standard current account extraction with transaction table parsing.",
+  "min_bsp_version": null
+}
