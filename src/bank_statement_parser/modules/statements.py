@@ -133,6 +133,77 @@ def _build_error_detail(exc: BaseException) -> dict:
     }
 
 
+def _write_debug_json(stmt: "Statement", include_lines: bool = False) -> None:
+    """Write a debug.json diagnostic file for a non-successful Statement.
+
+    Collects all events accumulated in ``stmt._debug_collector`` during the
+    processing run, plus checks-and-balances data and error detail, and writes
+    them to::
+
+        <project>/log/debug/<pdf.parent.name>_<pdf.name>/debug.json
+
+    Any existing file at that path is overwritten.  Called automatically from
+    ``Statement.__init__()`` when ``debug=True`` and ``stmt.success`` is False.
+    Called unconditionally from ``StatementBatch.debug()`` for every non-SUCCESS
+    result so that parquet-write failures (where extraction may have succeeded)
+    are also captured.
+
+    Args:
+        stmt: The Statement whose ``_debug_collector`` should be written.
+        include_lines: When ``True``, the collected transaction lines are
+            serialised and appended to the payload under ``"transaction_lines"``.
+            Pass ``True`` only for ``REVIEW`` results where the extraction
+            succeeded but checks-and-balances failed — the transaction table
+            is the primary aid for diagnosing those discrepancies.
+    """
+    import json  # noqa: PLC0415
+    from datetime import datetime  # noqa: PLC0415
+
+    try:
+        paths = ProjectPaths.resolve(stmt.project_path)
+        folder_name = f"{stmt.file.parent.name}_{stmt.file.name}"
+        debug_dir = paths.log_debug_dir(folder_name)
+        debug_dir.mkdir(parents=True, exist_ok=True)
+        out_file = debug_dir / "debug.json"
+
+        cab_data: list[dict] = []
+        if not stmt.checks_and_balances.is_empty():
+            try:
+                cab_data = stmt.checks_and_balances.to_dicts()
+            except Exception:  # noqa: BLE001
+                cab_data = [{"error": "could not serialise checks_and_balances"}]
+
+        lines_data: list[dict] = []
+        if include_lines:
+            try:
+                lines_df = stmt.lines_results.collect()
+                if lines_df.height > 0:
+                    lines_data = lines_df.to_dicts()
+            except Exception:  # noqa: BLE001
+                lines_data = [{"error": "could not serialise lines_results"}]
+
+        payload: dict = {
+            "meta": {
+                "filename": stmt.file.name,
+                "filename_folder": str(stmt.file.parent),
+                "id_statement": stmt.ID_STATEMENT,
+                "id_batch": stmt.ID_BATCH or "",
+                "success": stmt.success,
+                "error_message": stmt.error_message,
+                "debug_timestamp": datetime.now().isoformat(timespec="seconds"),
+            },
+            "events": stmt._debug_collector or [],
+            "checks_and_balances": cab_data,
+            "error_detail": stmt.error_detail,
+        }
+        if lines_data:
+            payload["transaction_lines"] = lines_data
+
+        out_file.write_text(json.dumps(payload, indent=2, default=str), encoding="utf-8")
+    except Exception as write_exc:  # noqa: BLE001
+        print(f"[debug] failed to write debug.json for {stmt.file.name}: {write_exc}")
+
+
 class Statement:
     """
     Represents a single bank statement PDF with data extraction and validation.
@@ -197,6 +268,9 @@ class Statement:
         "std_payments_out",
         "std_opening_balance",
         "std_closing_balance",
+        # Debug support — populated when debug=True; None otherwise.
+        "debug",
+        "_debug_collector",
     )
 
     def __init__(
@@ -207,6 +281,7 @@ class Statement:
         ID_BATCH: str | None = None,
         project_path: Path | None = None,
         skip_project_validation: bool = False,
+        debug: bool = False,
     ):
         """
         Initialize a Statement object by parsing the PDF and extracting data.
@@ -224,6 +299,10 @@ class Statement:
                 step.  Pass ``True`` when constructing a ``Statement`` from inside a
                 ``StatementBatch``, which already ran validation once during its own
                 ``__init__``.
+            debug: If True, collect diagnostic events throughout processing and write a
+                ``debug.json`` file to ``<project>/log/debug/`` when the statement does
+                not pass all checks (i.e. when ``success`` is False).  Has no effect and
+                no overhead when False (the default).
 
         The constructor opens the PDF, loads the appropriate extraction config,
         extracts header and line data, performs validation checks, and determines
@@ -258,6 +337,8 @@ class Statement:
         self.ID_BATCH = ID_BATCH
         self.project_path = project_path
         self.skip_project_validation = skip_project_validation
+        self.debug: bool = debug
+        self._debug_collector: list | None = [] if debug else None
 
         # Safe defaults — ensure every slot is initialised before the processing
         # try block so that is_successfull() and cleanup() never hit an
@@ -287,6 +368,15 @@ class Statement:
         try:
             self.pdf = pdf_open(self.file_absolute, logs=self.logs)
             self.ID_STATEMENT = self.build_id()
+            if self._debug_collector is not None and self.pdf is not None:
+                for i, page in enumerate(self.pdf.pages):
+                    self._debug_collector.append(
+                        {
+                            "event": "page_text",
+                            "page": i + 1,
+                            "text": "".join(c["text"] for c in page.chars),
+                        }
+                    )
             if self.pdf:
                 self.config = self.get_config()
                 if self.config:
@@ -377,11 +467,24 @@ class Statement:
                     if not self.checks_and_balances.is_empty():
                         self.std_payments_in = self.checks_and_balances["STD_PAYMENTS_IN"][0]
                         self.std_payments_out = self.checks_and_balances["STD_PAYMENTS_OUT"][0]
-        except (ValueError, KeyError, IndexError, AttributeError, TypeError) as e:
+            if self._debug_collector is not None and not self.success:
+                _write_debug_json(self)
+        except (ValueError, KeyError, IndexError, AttributeError, TypeError, pl.exceptions.PolarsError) as e:
             self.error_message = f"** Configuration Failure **: {e}"
             self.error_detail = _build_error_detail(e)
             self.success = False
             traceback.print_exc(file=sys.stderr)
+            if self._debug_collector is not None:
+                self._debug_collector.append(
+                    {
+                        "event": "exception",
+                        "exception_type": type(e).__name__,
+                        "message": str(e),
+                        "traceback": self.error_detail["traceback"],
+                        "string_locals_by_frame": self.error_detail["string_locals_by_frame"],
+                    }
+                )
+                _write_debug_json(self)
 
     def build_id(self):
         """
@@ -464,6 +567,7 @@ class Statement:
                             file_path=self.file_absolute,
                             exclude_last_n_pages=self.config.exclude_last_n_pages,
                             account_currency=self.config.currency,
+                            debug_collector=self._debug_collector,
                         ),
                         in_place=True,
                     )
@@ -484,6 +588,7 @@ class Statement:
                             file_path=self.file_absolute,
                             exclude_last_n_pages=self.config.exclude_last_n_pages,
                             account_currency=self.config.currency,
+                            debug_collector=self._debug_collector,
                         ),
                         in_place=True,
                     )
@@ -756,7 +861,7 @@ def process_pdf_statement(
                 statement_heads_path = paths.statement_heads_temp(idx, batch_id)
                 pq_statement_heads.cleanup()
                 pq_statement_heads = None
-            except (IOError, OSError, ValueError) as e:
+            except (IOError, OSError, ValueError, pl.exceptions.PolarsError) as e:
                 _handle_parquet_write_error("StatementHeads", batch_line, [error_message], pdf, e)
                 error_data = True
 
@@ -771,7 +876,7 @@ def process_pdf_statement(
                 statement_lines_path = paths.statement_lines_temp(idx, batch_id)
                 pq_statement_lines.cleanup()
                 pq_statement_lines = None
-            except (IOError, OSError, ValueError) as e:
+            except (IOError, OSError, ValueError, pl.exceptions.PolarsError) as e:
                 _handle_parquet_write_error("StatementLines", batch_line, [error_message], pdf, e)
                 error_data = True
 
@@ -814,7 +919,7 @@ def process_pdf_statement(
                 cab_path = paths.cab_temp(idx, batch_id)
                 pq_cab.cleanup()
                 pq_cab = None
-            except (IOError, OSError, ValueError) as e:
+            except (IOError, OSError, ValueError, pl.exceptions.PolarsError) as e:
                 _handle_parquet_write_error("ChecksAndBalances", batch_line, [error_message], pdf, e)
                 error_data = True
 
@@ -1481,23 +1586,23 @@ class StatementBatch:
 
     def debug(self, project_path: Path | None = None) -> int:
         """
-        Re-process failing statements to collect diagnostic information.
+        Process failing statements with debug mode to collect diagnostic information.
 
-        For each statement that failed in the batch (either ``ERROR_CONFIG`` or
-        ``ERROR_CAB``), re-opens and re-processes the PDF to capture:
+        For each statement that did not succeed in the batch (result is ``"FAILURE"`` or
+        ``"REVIEW"``), re-creates a :class:`Statement` with ``debug=True`` to capture:
 
         - Raw page text for every page.
-        - Full extraction results including failing rows (``scope="all"``).
-        - The checks & balances DataFrame with per-check failure detail.
-        - The error message and error type.
+        - Extraction events (field extractions, table lookups) in chronological order.
+        - The checks & balances DataFrame.
+        - The error message and full traceback with frame-level string locals.
 
         Writes a single ``debug.json`` file per failing statement to::
 
             <project>/log/debug/<parent_dir>_<filename>/debug.json
 
         Any prior file at that path is overwritten.  No parquet or database
-        writes are performed.  The debug run is always sequential regardless
-        of whether the original batch used turbo mode.
+        writes are performed.  The run is always sequential regardless of
+        whether the original batch used turbo mode.
 
         Args:
             project_path: Optional project root directory.  If not provided,
@@ -1507,18 +1612,45 @@ class StatementBatch:
         Returns:
             int: Number of debug JSON files written.
         """
-        # Local import to break the circular dependency:
-        # statements.py → debug.py → statements.py
-        from bank_statement_parser.modules.debug import debug_statements
-
-        return debug_statements(
-            processed_pdfs=self.processed_pdfs,
-            pdfs=self.pdfs,
-            batch_id=self.ID_BATCH,
-            company_key=self.company_key,
-            account_key=self.account_key,
-            project_path=project_path if project_path is not None else self.project_path,
-        )
+        resolved = project_path if project_path is not None else self.project_path
+        paths = ProjectPaths.resolve(resolved)
+        count = 0
+        for entry, pdf_path in zip(self.processed_pdfs, self.pdfs):
+            if not isinstance(entry, PdfResult):
+                continue
+            if entry.result == "SUCCESS":
+                continue
+            stmt = Statement(
+                file=pdf_path,
+                company_key=self.company_key,
+                account_key=self.account_key,
+                ID_BATCH=self.ID_BATCH,
+                project_path=resolved,
+                skip_project_validation=True,
+                debug=True,
+            )
+            # Append the original batch failure to the events then write unconditionally.
+            # _write_debug_json is only called inside __init__ when stmt.success is False;
+            # when extraction succeeds but a later step fails (e.g. a parquet write error),
+            # no file would be written without this explicit call.
+            if stmt._debug_collector is not None:
+                original_message = entry.payload.message if isinstance(entry.payload, (Failure, Review)) else ""
+                stmt._debug_collector.append(
+                    {
+                        "event": "batch_result",
+                        "result": entry.result,
+                        "outcome": entry.outcome,
+                        "original_error": original_message,
+                    }
+                )
+                _write_debug_json(stmt, include_lines=(entry.result == "REVIEW"))
+            folder_name = f"{pdf_path.parent.name}_{pdf_path.name}"
+            debug_file = paths.log_debug_dir(folder_name) / "debug.json"
+            if debug_file.exists():
+                count += 1
+                print(f"[debug {entry.result}] written → {debug_file}")
+            stmt.cleanup()
+        return count
 
     def __del__(self):
         """Destructor to ensure temporary files are cleaned up."""
