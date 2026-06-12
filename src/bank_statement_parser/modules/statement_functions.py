@@ -113,9 +113,10 @@ def strip(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: str, 
             pl.col(f"value_{step}")
             .str.replace_many(spec.symbols, [""])
             .str.replace_many(spec.seperators_thousands, [""])
-            .str.replace_many([r"\s"], [""])
+            .str.replace_all(r"\s", "")
+            .str.replace_all(r"\.+$", "")
             .fill_null("")
-            .alias(f"value_{step}")  # always remove any whitespace
+            .alias(f"value_{step}")
         )
 
     data = data.with_columns(
@@ -255,12 +256,27 @@ def validate(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: st
 
 def cleanup(data: pl.LazyFrame, logs: pl.DataFrame, file_path: str) -> pl.LazyFrame:
     data = data.select(
-        "section", "location", "config", "row", "page", "field", "vital", "value", "success", "error", "hard_fail", "value_raw_offset"
+        "section",
+        "location",
+        "config",
+        "row",
+        "page",
+        "field",
+        "vital",
+        "value",
+        "success",
+        "error",
+        "hard_fail",
+        "value_raw_offset",
+        "value_raw",
+        "value_strip",
     )
     # replace zero length values with None
     data = data.with_columns(
         value=pl.when(pl.col("value").str.len_bytes() == 0).then(pl.lit(None)).otherwise(pl.col("value")),
         value_raw_offset=pl.when(pl.col("value_raw_offset").str.len_bytes() == 0).then(pl.lit(None)).otherwise(pl.col("value_raw_offset")),
+        value_raw=pl.when(pl.col("value_raw").str.len_bytes() == 0).then(pl.lit(None)).otherwise(pl.col("value_raw")),
+        value_strip=pl.when(pl.col("value_strip").str.len_bytes() == 0).then(pl.lit(None)).otherwise(pl.col("value_strip")),
     )
     return data
 
@@ -615,7 +631,27 @@ def get_results(
                 account_currency=account_currency,
                 debug_collector=debug_collector,
             )
+            if debug_collector is not None:
+                debug_collector.append(
+                    {
+                        "event": "extract_fields_result",
+                        "location_id": i,
+                        "page": location.page_number,
+                        "config": config.config,
+                        "rows": result.to_dicts(),
+                    }
+                )
             if result.height > 0:
+                if debug_collector is not None:
+                    debug_collector.append(
+                        {
+                            "event": "pre_vstack",
+                            "location_id": i,
+                            "page": location.page_number,
+                            "config": config.config,
+                            "rows_being_added": result.to_dicts(),
+                        }
+                    )
                 results.vstack(result, in_place=True)
 
     if statement_table := config.statement_table:
