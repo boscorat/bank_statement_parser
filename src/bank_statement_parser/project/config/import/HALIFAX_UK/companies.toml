@@ -1,0 +1,15 @@
+# Halifax Bank UK - Company Identification
+# Identifies Halifax-issued statements by distinctive footer element
+
+[HALIFAX_UK]
+company = 'Halifax Bank UK'
+[HALIFAX_UK.config]
+    config = 'Company Info'
+    # Footer region containing regulatory/company information
+    # Located at bottom of page 1 with Halifax company identifier
+    locations = [
+        {page_number = 1, top_left = [54, 760], bottom_right = [540, 805]},
+    ]
+    # Pattern matches the distinctive Halifax regulatory footer text
+    # Tested across statements from 2019-2026, highly distinctive identifier
+    field = {field = "footer", vital=true, type="string", string_pattern ="Halifax is a division"}
