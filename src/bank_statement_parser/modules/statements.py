@@ -161,7 +161,7 @@ def _write_debug_json(stmt: "Statement", include_lines: bool = False) -> None:
 
     try:
         paths = ProjectPaths.resolve(stmt.project_path)
-        folder_name = f"{stmt.file.parent.name}_{stmt.file.name}"
+        folder_name = f"{stmt.file.parent.name}_{stmt.file.stem}"
         debug_dir = paths.log_debug_dir(folder_name)
         debug_dir.mkdir(parents=True, exist_ok=True)
         out_file = debug_dir / "debug.json"
