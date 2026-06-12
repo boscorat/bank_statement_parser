@@ -21,6 +21,7 @@ Two project lifecycles are provided:
 """
 
 import json
+import re
 import shutil
 from collections.abc import Generator
 from dataclasses import dataclass
@@ -40,6 +41,11 @@ _BAD_PROJECT_DIR = _TESTS_DIR / "test_project_bad"
 
 # Track whether PDF fixtures are available for session-end summary
 _PDF_FIXTURES_AVAILABLE = _GOOD_PDFS_DIR is not None and _BAD_PDFS_DIR is not None
+
+# Populated by fixtures; read by pytest_sessionfinish for the summary line
+_good_pdf_count: int | None = None
+_bad_pdf_count: int | None = None
+_good_bank_counts: dict[str, int] | None = None
 
 
 def load_pdf_metadata(pdf_path: Path) -> dict | None:
@@ -102,6 +108,14 @@ def good_project() -> Generator[ProjectContext, None, None]:  # type: ignore[mis
         if not pdfs_with_metadata:
             pytest.skip("No good PDFs with metadata sidecars found")
 
+        # Count banks for session-end summary
+        global _good_bank_counts  # noqa: PLW0603
+        _good_bank_counts = {}
+        for pdf in pdfs_with_metadata:
+            match = re.match(r"anonymised_([A-Za-z]+)", pdf.name)
+            bank = match.group(1).upper() if match else "UNKNOWN"
+            _good_bank_counts[bank] = _good_bank_counts.get(bank, 0) + 1
+
         batch = StatementBatch(
             pdfs=pdfs_with_metadata,
             turbo=True,
@@ -109,6 +123,9 @@ def good_project() -> Generator[ProjectContext, None, None]:  # type: ignore[mis
         )
         batch.update_data()
         batch.delete_temp_files()
+
+        global _good_pdf_count  # noqa: PLW0603
+        _good_pdf_count = len(pdfs_with_metadata)
 
         yield ProjectContext(project_path=project_path, batch=batch, pdfs=pdfs_with_metadata)
 
@@ -155,6 +172,9 @@ def bad_project() -> Generator[ProjectContext, None, None]:  # type: ignore[misc
             project_path=project_path,
         )
 
+        global _bad_pdf_count  # noqa: PLW0603
+        _bad_pdf_count = len(pdfs_with_metadata)
+
         yield ProjectContext(project_path=project_path, batch=batch, pdfs=pdfs_with_metadata)
 
     finally:
@@ -165,7 +185,21 @@ def bad_project() -> Generator[ProjectContext, None, None]:  # type: ignore[misc
 @pytest.hookimpl(tryfirst=True)
 def pytest_sessionfinish(session: pytest.Session) -> None:
     """Display session summary, including skipped PDF-dependent tests if applicable."""
-    if not _PDF_FIXTURES_AVAILABLE:
+    if _PDF_FIXTURES_AVAILABLE:
+        parts: list[str] = []
+        if _good_pdf_count is not None and _good_bank_counts:
+            bank_str = ", ".join(f"{n} {b}" for b, n in sorted(_good_bank_counts.items()))
+            parts.append(f"Good PDFs processed: {_good_pdf_count} ({bank_str})")
+        if _bad_pdf_count is not None:
+            parts.append(f"Bad PDFs processed:  {_bad_pdf_count}")
+        if parts:
+            print("\n" + "=" * 50)
+            print("TEST DATA SUMMARY")
+            print("=" * 50)
+            for line in parts:
+                print(f"  {line}")
+            print("=" * 50 + "\n")
+    else:
         print("\n" + "=" * 70)
         print("PDF-DEPENDENT TESTS SKIPPED")
         print("=" * 70)

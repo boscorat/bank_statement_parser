@@ -119,25 +119,18 @@ For each anonymised PDF, create a `.json` sidecar file describing expected parsi
 
 ```json
 {
-  "pdf_name": "anonymised_hsbc_creditcard_20220111.pdf",
-  "comment": "HSBC Rewards Credit Card, January 2022 statement",
-  
   "expected_result": "SUCCESS",
-  "expected_outcome": "statement",
-  
-  "expected_statement_info": {
-    "account": "Rewards Credit Card",
-    "statement_date": "2022-01-11",
-    "opening_balance": -612.19,
-    "closing_balance": -1830.18,
-    "payments_in": 612.19,
-    "payments_out": 1830.18
-  },
-  
-  "expected_transaction_count": 39,
-  "expected_checks_and_balances_pass": true,
-  
-  "notes": "3-page statement with mix of UK and foreign transactions"
+  "expected_outcome": "SUCCESS",
+  "expected_filename": "HSBC_UK_CUR_11111111_20220111.pdf",
+  "expected_statement_date": "2022-01-11",
+  "expected_account": "Bank Account",
+  "expected_id_account": "HSBC_UK_CUR_11111111",
+  "expected_opening_balance": "612.1900",
+  "expected_closing_balance": "1830.1800",
+  "expected_payments_in": "612.1900",
+  "expected_payments_out": "1830.1800",
+  "expected_transaction_count": "39",
+  "description": "HSBC Rewards Credit Card, January 2022 statement"
 }
 ```
 
@@ -145,19 +138,18 @@ For each anonymised PDF, create a `.json` sidecar file describing expected parsi
 
 | Field | Type | Purpose | Example |
 |-------|------|---------|---------|
-| `pdf_name` | string | Filename of your anonymised PDF | `"anonymised_hsbc_creditcard_20220111.pdf"` |
-| `comment` | string | Human-readable note (not used by tests) | `"HSBC Rewards, Jan 2022"` |
 | `expected_result` | string | Expected result: `"SUCCESS"` / `"REVIEW"` / `"FAILURE"` | `"SUCCESS"` |
-| `expected_outcome` | string | Specific outcome. Usually: `"statement"` or error description | `"statement"` |
-| `expected_statement_info.account` | string | Account name from your config | `"Rewards Credit Card"` |
-| `expected_statement_info.statement_date` | string | ISO date (YYYY-MM-DD) | `"2022-01-11"` |
-| `expected_statement_info.opening_balance` | number | Opening balance (must match PDF) | `-612.19` |
-| `expected_statement_info.closing_balance` | number | Closing balance (must match PDF) | `-1830.18` |
-| `expected_statement_info.payments_in` | number | Total credits | `612.19` |
-| `expected_statement_info.payments_out` | number | Total debits | `1830.18` |
-| `expected_transaction_count` | number | Number of transactions expected | `39` |
-| `expected_checks_and_balances_pass` | boolean | Should CAB validation pass? | `true` |
-| `notes` | string | Why this PDF (edge cases tested) | `"Multi-page + foreign transactions"` |
+| `expected_outcome` | string | Specific outcome: `"SUCCESS"` / `"REVIEW CAB"` / `"FAILURE CONFIG"` / `"FAILURE DATA"` / `"FAILURE OTHER"` | `"SUCCESS"` |
+| `expected_filename` | string | New filename assigned after processing | `"HSBC_UK_CUR_11111111_20220111.pdf"` |
+| `expected_statement_date` | string | Statement date (ISO format: YYYY-MM-DD) | `"2022-01-11"` |
+| `expected_account` | string | Account product name | `"Bank Account"` |
+| `expected_id_account` | string | Account ID | `"HSBC_UK_CUR_11111111"` |
+| `expected_opening_balance` | string | Opening balance as decimal string (4 decimal places) | `"612.1900"` |
+| `expected_closing_balance` | string | Closing balance as decimal string | `"1830.1800"` |
+| `expected_payments_in` | string | Total credits as decimal string | `"612.1900"` |
+| `expected_payments_out` | string | Total debits as decimal string | `"1830.1800"` |
+| `expected_transaction_count` | string | Number of transactions extracted (as string) | `"39"` |
+| `description` | string | Human-readable note about what this test covers | `"HSBC Rewards, Jan 2022"` |
 
 #### How to Generate Values
 
@@ -177,7 +169,14 @@ SELECT account, statement_date, opening_balance, closing_balance,
        payments_in, payments_out FROM DimStatement LIMIT 1;
 ```
 
-Copy these values into your JSON file.
+Copy these values into your JSON file, formatting balances as strings with 4 decimal places (e.g., `"612.1900"`).
+
+**For the filename:**
+
+```bash
+# The expected_filename is the new name assigned after processing:
+SELECT filename_new FROM DimStatement LIMIT 1;
+```
 
 **For transaction count:**
 
@@ -306,7 +305,7 @@ Jan 2023: v1.0.0 released (breaking changes to parser)
 ### Can I Include PDFs with REVIEW Result?
 
 - Yes! REVIEW means extraction succeeded but checks-and-balances failed.
-- Set `"expected_result": "REVIEW"` and `"expected_checks_and_balances_pass": false`
+- Set `"expected_result": "REVIEW"` and `"expected_outcome": "REVIEW CAB"`.
 - Maintainers will review and may ask why (e.g., bank statement rounding issue) or accept it.
 
 ### How Long Until Tests Are Active?
