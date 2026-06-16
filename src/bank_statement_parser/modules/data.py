@@ -289,6 +289,10 @@ class StdRefs:
     # [ACTIVE] — Name of the raw extracted column to promote.  Set to None (or omit)
     # when a literal default value should be used instead of a column value.
 
+    concat_fields: Optional[list]
+    # [ACTIVE] — Name of the raw extracted columns to concatenate and promote.  Set to None (or omit)
+    # in order to revert to a single field and it's fallback
+
     format: Optional[str]
     # [ACTIVE] — strptime format string applied when StandardFields.type == "date"
     # (e.g. "%-d %B %Y").  Ignored for numeric and string types.
