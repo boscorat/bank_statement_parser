@@ -652,6 +652,7 @@ Mapping rule that promotes a raw extracted field to a standard output column.
 | --- | --- | --- | --- |
 | `statement_type` | `str` | ACTIVE | Key used to select this rule; matched against the statement type string of the PDF being processed (e.g. "HSBC UK Current Account"). |
 | `field` | `str` | ACTIVE | Name of the raw extracted column to promote.  Set to None (or omit) when a literal default value should be used instead of a column value. |
+| `concat_fields` | `list` | ACTIVE | Name of the raw extracted columns to concatenate and promote.  Set to None (or omit) in order to revert to a single field and it's fallback |
 | `format` | `str` | ACTIVE | strptime format string applied when StandardFields.type == "date" (e.g. "%-d %B %Y").  Ignored for numeric and string types. |
 | `default` | `str` | ACTIVE | Literal string value used as the output when ``field`` is None/absent. Useful for injecting constant metadata (e.g. transaction_type = "CC"). |
 | `multiplier` | `float` | ACTIVE | Scalar applied to the value after casting when StandardFields.type == "numeric".  Use -1 to invert sign (e.g. to convert a credit amount stored as positive into a negative figure). |
@@ -929,6 +930,7 @@ Mapping rule that promotes a raw extracted field to a standard output column.
 | --- | --- | --- | --- |
 | `statement_type` | `str` | ACTIVE | Key used to select this rule; matched against the statement type string of the PDF being processed (e.g. "HSBC UK Current Account"). |
 | `field` | `str` | ACTIVE | Name of the raw extracted column to promote.  Set to None (or omit) when a literal default value should be used instead of a column value. |
+| `concat_fields` | `list` | ACTIVE | Name of the raw extracted columns to concatenate and promote.  Set to None (or omit) in order to revert to a single field and it's fallback |
 | `format` | `str` | ACTIVE | strptime format string applied when StandardFields.type == "date" (e.g. "%-d %B %Y").  Ignored for numeric and string types. |
 | `default` | `str` | ACTIVE | Literal string value used as the output when ``field`` is None/absent. Useful for injecting constant metadata (e.g. transaction_type = "CC"). |
 | `multiplier` | `float` | ACTIVE | Scalar applied to the value after casting when StandardFields.type == "numeric".  Use -1 to invert sign (e.g. to convert a credit amount stored as positive into a negative figure). |
