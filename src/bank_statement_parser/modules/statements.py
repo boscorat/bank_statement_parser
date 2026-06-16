@@ -574,6 +574,7 @@ class Statement:
         A statement is considered successful if:
         - It has valid header and line results (unless it's a zero-transaction statement)
         - All checks and balances validations pass
+        - No transaction lines have null dates (critical for datamart integrity)
 
         Returns:
             bool: True if processing passed all validation checks, False otherwise.
@@ -595,6 +596,9 @@ class Statement:
         elif self.checks_and_balances.filter(~pl.col("BAL_MOVEMENT")).height > 0:
             return False
         elif self.checks_and_balances.filter(~pl.col("BAL_CLOSING")).height > 0:
+            return False
+        # Check that no transaction lines have null dates (datamart integrity)
+        elif self.checks_and_balances.filter(pl.col("TRANSACTION_LINES_WITH_NULL_DATE") > 0).height > 0:
             return False
         return True
 
@@ -734,6 +738,9 @@ def _cab_detail(cab: pl.DataFrame) -> str:
         return ""
     row = cab.row(0, named=True)
     lines: list[str] = []
+    # Check for null transaction dates (data integrity issue)
+    if row["TRANSACTION_LINES_WITH_NULL_DATE"] > 0:
+        lines.append(f"  NULL_DATES        transaction_lines={row['TRANSACTION_LINE_COUNT']}  with_null_date={row['TRANSACTION_LINES_WITH_NULL_DATE']}")
     if not row["BAL_PAYMENTS_IN"]:
         stated = row["STD_PAYMENTS_IN"]
         extracted = row["STD_PAYMENT_IN"]
