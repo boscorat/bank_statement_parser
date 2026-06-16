@@ -141,6 +141,8 @@ class ChecksAndBalances(Parquet):
                 "CHECK_PAYMENTS_OUT": pl.Boolean,
                 "CHECK_MOVEMENT": pl.Boolean,
                 "CHECK_CLOSING": pl.Boolean,
+                "TRANSACTION_LINE_COUNT": pl.UInt32,
+                "TRANSACTION_LINES_WITH_NULL_DATE": pl.UInt32,
             },
         )
         self.key = "ID_CAB"
@@ -400,7 +402,7 @@ def _build_checks_and_balances_data(
     Returns:
         A single-row DataFrame with the ChecksAndBalances columns.
     """
-    return checks_and_balances.select(
+    data = checks_and_balances.select(
         ID_CAB=pl.lit(id_batchline),
         ID_BATCHLINE=pl.lit(id_batchline),
         ID_BATCH=pl.lit(id_batch),
@@ -419,7 +421,10 @@ def _build_checks_and_balances_data(
         CHECK_PAYMENTS_OUT="BAL_PAYMENTS_OUT",
         CHECK_MOVEMENT="BAL_MOVEMENT",
         CHECK_CLOSING="BAL_CLOSING",
+        TRANSACTION_LINE_COUNT="TRANSACTION_LINE_COUNT",
+        TRANSACTION_LINES_WITH_NULL_DATE="TRANSACTION_LINES_WITH_NULL_DATE",
     )
+    return data
 
 
 def build_checks_and_balances_records(
