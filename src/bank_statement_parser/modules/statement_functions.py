@@ -157,7 +157,9 @@ def patmatch(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: st
         pl.lit(False).alias(f"success_{step}"),
         pl.lit(f"{step} error").alias(f"error_{step}"),
     )
-    data = data.with_columns(pl.col(f"value_{src}").str.extract(pattern, 0).fill_null("").alias(f"value_{step}"))
+    # Determine which capture group to extract (default to 0 for backward compatibility)
+    group_idx = field.regex_groups if field.regex_groups is not None else 0
+    data = data.with_columns(pl.col(f"value_{src}").str.extract(pattern, group_idx).fill_null("").alias(f"value_{step}"))
     data = data.with_columns(
         ((pl.col(f"value_{step}").is_not_null()) & (pl.col(f"value_{step}").str.len_bytes() > 0)).alias(f"success_{step}")
     ).with_columns(pl.when(pl.col(f"success_{step}")).then(None).otherwise(pl.col(f"error_{step}")).alias(f"error_{step}"))

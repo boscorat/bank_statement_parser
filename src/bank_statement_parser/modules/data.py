@@ -575,6 +575,15 @@ class Field:
     # column is still extracted normally; the offset column value replaces it in the
     # output.  See FieldOffset.
 
+    regex_groups: Optional[int] = None
+    # [ACTIVE] — When set, extracts the specified capture group (1-indexed) from the
+    # string_pattern regex match instead of the entire match (group 0). Useful for
+    # splitting a single PDF column into multiple fields via regex capture groups.
+    # Example: string_pattern = '^([A-Z ]+)\s+([A-Z0-9]+)$' with regex_groups = 1
+    # extracts group 1; regex_groups = 2 extracts group 2.
+    # When None, defaults to group 0 (entire match, backward compatible).
+    # Omit for standard extraction.
+
 
 @dataclass(frozen=True, slots=True)
 class Test:
