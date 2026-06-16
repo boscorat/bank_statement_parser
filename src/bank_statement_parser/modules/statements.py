@@ -499,8 +499,8 @@ class Statement:
                     .otherwise(pl.lit(0))
                 ).sum().item() or 0
                 self.checks_and_balances = self.checks_and_balances.with_columns(
-                    TRANSACTION_LINE_COUNT=pl.lit(transaction_line_count),
-                    TRANSACTION_LINES_WITH_NULL_DATE=pl.lit(null_date_count),
+                    TRANSACTION_LINE_COUNT=pl.lit(transaction_line_count, dtype=pl.UInt32),
+                    TRANSACTION_LINES_WITH_NULL_DATE=pl.lit(null_date_count, dtype=pl.UInt32),
                 )
             self.logs.rechunk()
             self.success = self.is_successfull()
