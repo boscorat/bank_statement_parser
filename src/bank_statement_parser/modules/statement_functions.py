@@ -695,11 +695,14 @@ def get_standard_fields(
             except IndexError:
                 ref = None
             if ref:
-                data = (
-                    data.with_columns(pl.col(ref.field).alias(std_field))
-                    if ref.field
-                    else data.with_columns(pl.lit(ref.default).alias(std_field))
-                )
+                if ref.concat_fields:
+                    data = data.with_columns(pl.concat_str([f"{field}" for field in ref.concat_fields]).alias(std_field))
+                else:
+                    data = (
+                        data.with_columns(pl.col(ref.field).alias(std_field))
+                        if ref.field
+                        else data.with_columns(pl.lit(ref.default).alias(std_field))
+                    )
                 if (
                     ref.terminator
                 ):  # sometimes there's some other info such as BALANCE CARRIED FORWARD that gets pulled into a standard field

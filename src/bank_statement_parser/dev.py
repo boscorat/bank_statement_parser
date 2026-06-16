@@ -10,7 +10,7 @@ def main():
     # bsp.anonymise_pdf(Path("/home/boscorat/Projects/tsb_spend_and_save_example_1.pdf"))
     # laptop
     # folder = Path("/Users/boscorat/Library/CloudStorage/OneDrive-Personal/OpenStan/Statements/HSBC/2024")
-    folder = Path("./pending/halifax/")
+    folder = Path("./pending/natwest/")
     # folder = Path("/home/boscorat/repos/bank_statement_parser/tests/pdfs/bad")
     include_subdirs = True  # set True to also include one level of subdirectories
 

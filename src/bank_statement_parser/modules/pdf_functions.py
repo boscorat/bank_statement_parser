@@ -172,7 +172,7 @@ def get_table_from_region(
                 dynamic_last_vertical_line,
                 try_shift_down,
             )
-        else:  # if that doens't work we've got adodgy table and we return None
+        else:  # if that doens't work we've got a dodgy table and we return None
             return None
 
     if table and remove_header and table[0]:
