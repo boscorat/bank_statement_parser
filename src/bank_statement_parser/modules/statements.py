@@ -489,6 +489,19 @@ class Statement:
                     .then(pl.lit(True))
                     .otherwise(pl.lit(False)),
                 )
+                # Add transaction-line level validation metrics
+                lines_collected = self.lines_results.collect()
+                transaction_line_count = lines_collected.height
+                # Count transaction lines with null or empty STD_TRANSACTION_DATE
+                null_date_count = lines_collected.select(
+                    pl.when(pl.col("STD_TRANSACTION_DATE").is_null())
+                    .then(pl.lit(1))
+                    .otherwise(pl.lit(0))
+                ).sum().item() or 0
+                self.checks_and_balances = self.checks_and_balances.with_columns(
+                    TRANSACTION_LINE_COUNT=pl.lit(transaction_line_count),
+                    TRANSACTION_LINES_WITH_NULL_DATE=pl.lit(null_date_count),
+                )
             self.logs.rechunk()
             self.success = self.is_successfull()
             if self.config:
