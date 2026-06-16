@@ -133,6 +133,48 @@ def _build_error_detail(exc: BaseException) -> dict:
     }
 
 
+def _write_debug_excel(
+    stmt: "Statement",
+    debug_dir: Path,
+    debug_dataframes: dict[str, list[pl.DataFrame]],
+) -> None:
+    """Write debug dataframes to an Excel workbook for diagnostic analysis.
+
+    Creates a workbook file ``debug_dataframes.xlsx`` in the debug directory
+    with one worksheet per collected dataframe. Sheets are named using the
+    section name with an incrementing counter for multiple dataframes in the
+    same section (e.g., ``Header``, ``Header1``, ``Header2``).
+
+    Args:
+        stmt: The Statement whose debug dataframes should be written.
+        debug_dir: The directory path where the Excel file will be created.
+        debug_dataframes: Dict mapping section names to lists of dataframes.
+    """
+    try:
+        from xlsxwriter import Workbook  # noqa: PLC0415
+
+        out_file = debug_dir / "debug_dataframes.xlsx"
+        wb = Workbook(str(out_file))
+
+        # Track sheet counter per section index
+        for section in sorted(debug_dataframes.keys()):
+            dataframes = debug_dataframes[section]
+            for df_idx, df in enumerate(dataframes):
+                # Generate sheet name with counter
+                if df_idx == 0:
+                    sheet_name = section.title()  # e.g., "Header", "Lines"
+                else:
+                    sheet_name = f"{section.title()}{df_idx}"
+
+                # Create worksheet and write dataframe
+                ws = wb.add_worksheet(sheet_name)
+                df.write_excel(workbook=wb, worksheet=ws)
+
+        wb.close()
+    except Exception as write_exc:  # noqa: BLE001
+        print(f"[debug] failed to write debug_dataframes.xlsx for {stmt.file.name}: {write_exc}")
+
+
 def _write_debug_json(stmt: "Statement", include_lines: bool = False) -> None:
     """Write a debug.json diagnostic file for a non-successful Statement.
 
@@ -140,7 +182,7 @@ def _write_debug_json(stmt: "Statement", include_lines: bool = False) -> None:
     processing run, plus checks-and-balances data and error detail, and writes
     them to::
 
-        <project>/log/debug/<pdf.parent.name>_<pdf.name>/debug.json
+        <project>/log/debug/<pdf.parent.name>_<pdf.stem>/debug.json
 
     Any existing file at that path is overwritten.  Called automatically from
     ``Statement.__init__()`` when ``debug=True`` and ``stmt.success`` is False.
@@ -200,6 +242,10 @@ def _write_debug_json(stmt: "Statement", include_lines: bool = False) -> None:
             payload["transaction_lines"] = lines_data
 
         out_file.write_text(json.dumps(payload, indent=2, default=str), encoding="utf-8")
+
+        # Write debug dataframes to Excel if available
+        if stmt._debug_dataframes:
+            _write_debug_excel(stmt, debug_dir, stmt._debug_dataframes)
     except Exception as write_exc:  # noqa: BLE001
         print(f"[debug] failed to write debug.json for {stmt.file.name}: {write_exc}")
 
@@ -271,6 +317,7 @@ class Statement:
         # Debug support — populated when debug=True; None otherwise.
         "debug",
         "_debug_collector",
+        "_debug_dataframes",
     )
 
     def __init__(
@@ -339,6 +386,7 @@ class Statement:
         self.skip_project_validation = skip_project_validation
         self.debug: bool = debug
         self._debug_collector: list | None = [] if debug else None
+        self._debug_dataframes: dict[str, list[pl.DataFrame]] = {} if debug else {}
 
         # Safe defaults — ensure every slot is initialised before the processing
         # try block so that is_successfull() and cleanup() never hit an
@@ -568,6 +616,7 @@ class Statement:
                             exclude_last_n_pages=self.config.exclude_last_n_pages,
                             account_currency=self.config.currency,
                             debug_collector=self._debug_collector,
+                            debug_dataframes=self._debug_dataframes,
                         ),
                         in_place=True,
                     )
@@ -589,6 +638,7 @@ class Statement:
                             exclude_last_n_pages=self.config.exclude_last_n_pages,
                             account_currency=self.config.currency,
                             debug_collector=self._debug_collector,
+                            debug_dataframes=self._debug_dataframes,
                         ),
                         in_place=True,
                     )
@@ -649,6 +699,7 @@ class Statement:
         self.lines_results = pl.LazyFrame()
         self.header_results = pl.LazyFrame()
         self.checks_and_balances: pl.DataFrame = pl.DataFrame()
+        self._debug_dataframes = {}
 
 
 def _cab_detail(cab: pl.DataFrame) -> str:
@@ -1613,43 +1664,46 @@ class StatementBatch:
             int: Number of debug JSON files written.
         """
         resolved = project_path if project_path is not None else self.project_path
-        paths = ProjectPaths.resolve(resolved)
         count = 0
         for entry, pdf_path in zip(self.processed_pdfs, self.pdfs):
             if not isinstance(entry, PdfResult):
                 continue
             if entry.result == "SUCCESS":
                 continue
-            stmt = Statement(
-                file=pdf_path,
-                company_key=self.company_key,
-                account_key=self.account_key,
-                ID_BATCH=self.ID_BATCH,
-                project_path=resolved,
-                skip_project_validation=True,
-                debug=True,
-            )
-            # Append the original batch failure to the events then write unconditionally.
-            # _write_debug_json is only called inside __init__ when stmt.success is False;
-            # when extraction succeeds but a later step fails (e.g. a parquet write error),
-            # no file would be written without this explicit call.
-            if stmt._debug_collector is not None:
-                original_message = entry.payload.message if isinstance(entry.payload, (Failure, Review)) else ""
-                stmt._debug_collector.append(
-                    {
-                        "event": "batch_result",
-                        "result": entry.result,
-                        "outcome": entry.outcome,
-                        "original_error": original_message,
-                    }
+            try:
+                stmt = Statement(
+                    file=pdf_path,
+                    company_key=self.company_key,
+                    account_key=self.account_key,
+                    ID_BATCH=self.ID_BATCH,
+                    project_path=resolved,
+                    skip_project_validation=True,
+                    debug=True,
                 )
-                _write_debug_json(stmt, include_lines=(entry.result == "REVIEW"))
-            folder_name = f"{pdf_path.parent.name}_{pdf_path.name}"
-            debug_file = paths.log_debug_dir(folder_name) / "debug.json"
-            if debug_file.exists():
-                count += 1
-                print(f"[debug {entry.result}] written → {debug_file}")
-            stmt.cleanup()
+                # Append the original batch failure to the events then write unconditionally.
+                # _write_debug_json is only called inside __init__ when stmt.success is False;
+                # when extraction succeeds but a later step fails (e.g. a parquet write error),
+                # no file would be written without this explicit call.
+                if stmt._debug_collector is not None:
+                    original_message = entry.payload.message if isinstance(entry.payload, (Failure, Review)) else ""
+                    stmt._debug_collector.append(
+                        {
+                            "event": "batch_result",
+                            "result": entry.result,
+                            "outcome": entry.outcome,
+                            "original_error": original_message,
+                        }
+                    )
+                    _write_debug_json(stmt, include_lines=(entry.result == "REVIEW"))
+                folder_name = f"{pdf_path.parent.name}_{pdf_path.stem}"
+                debug_file = ProjectPaths.resolve(resolved).log_debug_dir(folder_name) / "debug.json"
+                if debug_file.exists():
+                    count += 1
+                    print(f"[debug {entry.result}] written → {debug_file}")
+                stmt.cleanup()
+            except Exception as e:  # noqa: BLE001
+                print(f"[debug] failed to re-process {pdf_path.name}: {e}")
+                traceback.print_exc(file=sys.stderr)
         return count
 
     def __del__(self):

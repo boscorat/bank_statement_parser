@@ -112,7 +112,7 @@ def _clone_test_data() -> Path | None:
         shutil.copytree(repo_pdfs, pdfs_cache)
 
         return pdfs_cache if pdfs_cache.is_dir() else None
-    except FileNotFoundError, subprocess.TimeoutExpired:
+    except (FileNotFoundError, subprocess.TimeoutExpired):
         # FileNotFoundError: git not found
         # TimeoutExpired: clone/pull took too long
         return pdfs_cache if pdfs_cache.is_dir() else None
