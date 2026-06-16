@@ -493,11 +493,12 @@ class Statement:
                 lines_collected = self.lines_results.collect()
                 transaction_line_count = lines_collected.height
                 # Count transaction lines with null or empty STD_TRANSACTION_DATE
-                null_date_count = lines_collected.select(
-                    pl.when(pl.col("STD_TRANSACTION_DATE").is_null())
-                    .then(pl.lit(1))
-                    .otherwise(pl.lit(0))
-                ).sum().item() or 0
+                null_date_count = (
+                    lines_collected.select(pl.when(pl.col("STD_TRANSACTION_DATE").is_null()).then(pl.lit(1)).otherwise(pl.lit(0)))
+                    .sum()
+                    .item()
+                    or 0
+                )
                 self.checks_and_balances = self.checks_and_balances.with_columns(
                     TRANSACTION_LINE_COUNT=pl.lit(transaction_line_count, dtype=pl.UInt32),
                     TRANSACTION_LINES_WITH_NULL_DATE=pl.lit(null_date_count, dtype=pl.UInt32),
@@ -740,7 +741,9 @@ def _cab_detail(cab: pl.DataFrame) -> str:
     lines: list[str] = []
     # Check for null transaction dates (data integrity issue)
     if row["TRANSACTION_LINES_WITH_NULL_DATE"] > 0:
-        lines.append(f"  NULL_DATES        transaction_lines={row['TRANSACTION_LINE_COUNT']}  with_null_date={row['TRANSACTION_LINES_WITH_NULL_DATE']}")
+        lines.append(
+            f"  NULL_DATES        transaction_lines={row['TRANSACTION_LINE_COUNT']}  with_null_date={row['TRANSACTION_LINES_WITH_NULL_DATE']}"
+        )
     if not row["BAL_PAYMENTS_IN"]:
         stated = row["STD_PAYMENTS_IN"]
         extracted = row["STD_PAYMENT_IN"]

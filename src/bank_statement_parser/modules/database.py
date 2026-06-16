@@ -444,7 +444,7 @@ def update_db(
         conn.executemany(sql, rows)
 
     update_start = time()
-    
+
     # Write batch_lines first (before any statement data).
     # This ensures batch records are always persisted, even if statement data fails.
     batch_lines_dfs: list[pl.DataFrame] = []
@@ -458,12 +458,12 @@ def update_db(
                 df = pl.read_parquet(pdf.batch_lines)
                 batch_lines_dfs.append(df)
                 pdf.batch_lines.unlink()
-    
+
     # Insert all batch_lines and commit as separate transaction
     for df in batch_lines_dfs:
         _insert_df(df, "batch_lines")
     conn.commit()  # Commit batch_lines first
-    
+
     # Write statement and CAB data in main transaction.
     # If any statement data fails, batch_lines are already committed.
     for pdf in processed_pdfs:
@@ -486,7 +486,7 @@ def update_db(
                     pq_files.statement_lines.unlink()
 
     db_secs = time() - update_start
-    
+
     # Write batch metadata (batch_heads) last with final timing.
     # This ensures all batch records reflect the complete operation.
     batch_heads_df = pl.DataFrame(
