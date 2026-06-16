@@ -280,7 +280,7 @@ def cleanup(data: pl.LazyFrame, logs: pl.DataFrame, file_path: str) -> pl.LazyFr
         select_cols.append("location_bottom_right")
     if "statement_table_name" in schema:
         select_cols.append("statement_table_name")
-    
+
     data = data.select(*select_cols)
     # replace zero length values with None
     data = data.with_columns(
@@ -308,12 +308,12 @@ def extract_fields(
 ) -> pl.DataFrame:
     results: pl.DataFrame = pl.DataFrame()
     result: pl.LazyFrame = pl.LazyFrame()
-    
+
     # Prepare metadata columns for debug collection
     top_left_str = str(location.top_left) if location.top_left else None
     bottom_right_str = str(location.bottom_right) if location.bottom_right else None
     statement_table_name = "StatementTable" if statement_table is not None else None
-    
+
     region = get_region(location, pdf, logs, file_path)
     if debug_collector is not None:
         debug_collector.append(
@@ -604,16 +604,16 @@ def extract_fields(
                     .with_columns(
                         transaction_start=pl.col("transaction_start").fill_null(False),
                         transaction_end=pl.col("transaction_end").fill_null(False),
-                     )
+                    )
                 )
-    
+
     # Collect results dataframe for debug if enabled
     if debug_dataframes is not None and results.height > 0:
         section_key = section.lower()
         if section_key not in debug_dataframes:
             debug_dataframes[section_key] = []
         debug_dataframes[section_key].append(results.clone())
-    
+
     return results
 
 

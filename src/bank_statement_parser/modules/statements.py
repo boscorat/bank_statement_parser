@@ -242,7 +242,7 @@ def _write_debug_json(stmt: "Statement", include_lines: bool = False) -> None:
             payload["transaction_lines"] = lines_data
 
         out_file.write_text(json.dumps(payload, indent=2, default=str), encoding="utf-8")
-        
+
         # Write debug dataframes to Excel if available
         if stmt._debug_dataframes:
             _write_debug_excel(stmt, debug_dir, stmt._debug_dataframes)
