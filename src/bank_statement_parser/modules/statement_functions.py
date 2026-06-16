@@ -255,7 +255,8 @@ def validate(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: st
 
 
 def cleanup(data: pl.LazyFrame, logs: pl.DataFrame, file_path: str) -> pl.LazyFrame:
-    data = data.select(
+    # Build select list dynamically to handle optional debug columns
+    select_cols = [
         "section",
         "location",
         "config",
@@ -270,7 +271,17 @@ def cleanup(data: pl.LazyFrame, logs: pl.DataFrame, file_path: str) -> pl.LazyFr
         "value_raw_offset",
         "value_raw",
         "value_strip",
-    )
+    ]
+    # Add debug columns if they exist in the dataframe
+    schema = data.collect_schema()
+    if "location_top_left" in schema:
+        select_cols.append("location_top_left")
+    if "location_bottom_right" in schema:
+        select_cols.append("location_bottom_right")
+    if "statement_table_name" in schema:
+        select_cols.append("statement_table_name")
+    
+    data = data.select(*select_cols)
     # replace zero length values with None
     data = data.with_columns(
         value=pl.when(pl.col("value").str.len_bytes() == 0).then(pl.lit(None)).otherwise(pl.col("value")),
@@ -293,9 +304,16 @@ def extract_fields(
     file_path: str,
     account_currency: str | None = None,
     debug_collector: list | None = None,
+    debug_dataframes: dict[str, list[pl.DataFrame]] | None = None,
 ) -> pl.DataFrame:
     results: pl.DataFrame = pl.DataFrame()
     result: pl.LazyFrame = pl.LazyFrame()
+    
+    # Prepare metadata columns for debug collection
+    top_left_str = str(location.top_left) if location.top_left else None
+    bottom_right_str = str(location.bottom_right) if location.bottom_right else None
+    statement_table_name = "StatementTable" if statement_table is not None else None
+    
     region = get_region(location, pdf, logs, file_path)
     if debug_collector is not None:
         debug_collector.append(
@@ -354,6 +372,11 @@ def extract_fields(
                 .pipe(trim, config_field, logs, file_path)
                 .pipe(validate, config_field, logs, file_path)
                 .pipe(cleanup, logs, file_path)
+                .with_columns(
+                    location_top_left=pl.lit(top_left_str),
+                    location_bottom_right=pl.lit(bottom_right_str),
+                    statement_table_name=pl.lit(statement_table_name),
+                )
             )
             try:
                 results.vstack(result.collect(), in_place=True)
@@ -437,6 +460,11 @@ def extract_fields(
                         .pipe(trim, field, logs, file_path)
                         .pipe(validate, field, logs, file_path)
                         .pipe(cleanup, logs, file_path)
+                        .with_columns(
+                            location_top_left=pl.lit(top_left_str),
+                            location_bottom_right=pl.lit(bottom_right_str),
+                            statement_table_name=pl.lit(statement_table_name),
+                        )
                     )
                     try:
                         results.vstack(result.collect(), in_place=True)
@@ -509,7 +537,14 @@ def extract_fields(
                                 )
                                 result = result_vo
                     try:
-                        results.vstack(result.drop("value_raw_offset").collect(), in_place=True)
+                        # Add metadata columns before vstacking
+                        result_collected = result.collect() if isinstance(result, pl.LazyFrame) else result
+                        result_with_meta = result_collected.with_columns(
+                            location_top_left=pl.lit(top_left_str),
+                            location_bottom_right=pl.lit(bottom_right_str),
+                            statement_table_name=pl.lit(statement_table_name),
+                        )
+                        results.vstack(result_with_meta.drop("value_raw_offset"), in_place=True)
                     except pl.exceptions.ColumnNotFoundError as _exc:
                         if debug_collector is not None:
                             debug_collector.append(
@@ -569,8 +604,16 @@ def extract_fields(
                     .with_columns(
                         transaction_start=pl.col("transaction_start").fill_null(False),
                         transaction_end=pl.col("transaction_end").fill_null(False),
-                    )
+                     )
                 )
+    
+    # Collect results dataframe for debug if enabled
+    if debug_dataframes is not None and results.height > 0:
+        section_key = section.lower()
+        if section_key not in debug_dataframes:
+            debug_dataframes[section_key] = []
+        debug_dataframes[section_key].append(results.clone())
+    
     return results
 
 
@@ -611,6 +654,7 @@ def get_results(
     exclude_last_n_pages: int = 0,
     account_currency: str | None = None,
     debug_collector: list | None = None,
+    debug_dataframes: dict[str, list[pl.DataFrame]] | None = None,
 ) -> pl.DataFrame:  # scope can be all, success, fail, or hard_fail
     result: pl.DataFrame = pl.DataFrame()
     results: pl.DataFrame = pl.DataFrame()
@@ -630,6 +674,7 @@ def get_results(
                 file_path=file_path,
                 account_currency=account_currency,
                 debug_collector=debug_collector,
+                debug_dataframes=debug_dataframes,
             )
             if debug_collector is not None:
                 debug_collector.append(
