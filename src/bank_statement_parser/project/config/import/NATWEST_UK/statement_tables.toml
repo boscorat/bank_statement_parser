@@ -1,0 +1,88 @@
+# NATWEST Bank UK - Table Extraction Specifications
+# Defines physical table extraction rules (summary, account details, transactions)
+
+# Account Summary Table - Balance Information
+[NATWEST_UK_CUR_ACCT_SUM]
+type = "summary"
+statement_table = 'Account Summary'
+table_columns = 2
+# TODO: Adjust coordinates and vertical_lines to match actual balance summary table location and column boundaries
+# Typical location: center-right of page 1 header, above transaction table
+# vertical_lines: Pairs of x-coordinates defining column dividers. Duplicate values create forced column splits.
+# dynamic_last_vertical_line: Optional - use if rightmost boundary aligns with a logo/image edge
+# allow_text_failover: Retry with text-based column detection if explicit lines fail
+locations = [
+    {page_number=1, top_left = [333, 121], bottom_right = [536,236]},
+]
+fields = [
+    # Opening balance at start of period
+    {field = 'opening_balance', cell = {row = 4, col = 1}, vital=true, type = 'currency', strip_characters_end = "\n."},
+    # Total payments/deposits into account during period
+    {field = 'payments_in', cell = {row = 6, col = 1}, vital=true, type = 'currency', strip_characters_end = "\n."},
+    # Total payments/withdrawals out of account during period
+    {field = 'payments_out', cell = {row = 8, col = 1}, vital=true, type = 'currency', strip_characters_end = "\n."},
+    # Closing balance at end of period
+    {field = 'closing_balance', cell = {row = 10, col = 1}, vital=true, type = 'currency', strip_characters_end = "\n."},
+]
+
+# Account Details Table - Account Identification
+[NATWEST_UK_CUR_ACCT_DET]
+type = "detail"
+statement_table = 'Account Details'
+table_columns = 3
+# TODO: Adjust coordinates and vertical_lines to match actual account details table location
+# Typical location: left side of page 1 header, contains account name, sort code, account number
+locations = [
+    {page_number = 1, top_left = [230, 24], bottom_right = [380, 56]},
+]
+fields = [
+    # UK sort code in format NN-NN-NN
+    {field = 'sortcode', cell = {row = 1, col = 1}, vital=true, type = "string", string_pattern ='^[0-9]{2}-[0-9]{2}-[0-9]{2}$'},
+    # UK bank account number (typically 8 digits)
+    {field = 'account_number', cell = {row = 1, col = 0}, vital=true, type = "string", string_pattern ='^[0-9]{8}$'},
+]
+
+# Transaction Table - Individual Transaction Rows
+[NATWEST_UK_CUR_TRANSACTIONS]
+type = "transaction"
+statement_table = 'Transactions'
+table_columns = 7
+# TODO: Adjust vertical_lines to match actual transaction table column boundaries
+# Typically 5 columns: Date | Details | Amount Out | Amount In | Balance
+# vertical_lines format: [left1, right1, left2, right2, left3, right3, left4, right4, left5, right5]
+# Example: [50, 100, 100, 200, 200, 350, 350, 450, 450, 550]
+locations = [
+    {vertical_lines = [55, 68, 68, 87, 84, 107, 107, 337, 337, 396, 396, 455, 455, 520, 520], allow_text_failover = false},
+]
+fields = [
+    # Transaction date (format: DD MMM YY, e.g., "15 Jan 2024")
+    {field = 'date_day', column = 0, vital=true, type = "string", string_pattern ='^[0-3][0-9]$', strip_characters_end = "\n"},
+    {field = 'date_month', column = 1, vital=true, type = "string", string_pattern ='^[A-Z]{3}$', strip_characters_end = "\n"},
+    {field = 'date_year', column = 2, vital=true, type = "string", string_pattern ='^[0-9]{4}?$', strip_characters_end = "\n"},
+    # Transaction description/details
+    {field = 'description', column = 3, vital=true, type = "string", string_pattern ='^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+([A-Z0-9_\-/*.,&\s]+)$', regex_groups = 2, string_max_length = 100, strip_characters_end = "\n"},
+    {field = 'description_2', column = 3, vital=true, type = "string", string_pattern ='^([A-Z0-9_\-/*.,&\s]+)$', string_max_length = 100, strip_characters_end = "\n"},
+    # Optional: Payment type
+    {field = 'payment_type', column = 3, vital=true, type = "string", string_pattern ='^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+([A-Z0-9_\-/*.,&\s]+)$', regex_groups = 1, string_max_length = 20, strip_characters_end = "\n"},
+    # Amount paid out of account (debit)
+    {field = 'paid_in_£', column = 4, vital=false, type = "currency", strip_characters_end = "\n"},
+    # Amount paid into account (credit)
+    {field = 'paid_out_£', column = 5, vital=false, type = "currency", strip_characters_end = "\n"},
+    # Running account balance after transaction
+    {field = 'balance_£', column = 6, vital=true, type = "currency", strip_characters_end = "\n"},
+]
+# Data quality filters: delete rows that fail extraction or validation
+delete_success_false = true
+delete_cast_success_false = true
+delete_rows_with_missing_vital_fields = true
+
+[NATWEST_UK_CUR_TRANSACTIONS.transaction_spec]
+# Transaction bookends: Define how multi-row transactions are identified and merged
+# start_fields/end_fields: Column names marking transaction start/end
+# min_non_empty_start/end: Minimum non-empty fields required for transaction boundary
+# TODO: Adjust based on actual multi-row transaction patterns observed in PDF
+# Example: Transactions typically have date + details at start, and amounts at end
+transaction_bookends = [
+    {start_fields = ['date_year', 'payment_type'], min_non_empty_start = 1, end_fields = ['description', 'description_2', 'paid_in_£', 'paid_out_£', 'balance_£'], min_non_empty_end = 3}
+]
+fill_forward_fields = ['date_day', 'date_month', 'date_year', 'payment_type', 'description', 'description_2']
