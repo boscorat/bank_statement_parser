@@ -5,7 +5,6 @@ enabling splitting of single PDF columns into multiple extracted fields.
 """
 
 import polars as pl
-import pytest
 
 from bank_statement_parser.modules.data import Field
 from bank_statement_parser.modules.statement_functions import patmatch
@@ -92,9 +91,7 @@ class TestRegexGroups:
 
     def test_patmatch_regex_groups_backward_compatibility(self) -> None:
         """Test that fields without regex_groups default to group 0 (entire match)."""
-        data = pl.DataFrame(
-            {"value_strip": ["Card Transaction 0940 15JAN26 C WOODIES LEEDS GB"]}
-        ).lazy()
+        data = pl.DataFrame({"value_strip": ["Card Transaction 0940 15JAN26 C WOODIES LEEDS GB"]}).lazy()
 
         pattern = r".+"
 
@@ -166,9 +163,7 @@ class TestRegexGroups:
 
     def test_patmatch_regex_groups_rejects_brought_forward(self) -> None:
         """Test that row starting with 'BROUGHT FORWARD' doesn't match pattern."""
-        data = pl.DataFrame(
-            {"value_strip": ["BROUGHT FORWARD Card Transaction 0940 24TDS25C HJSVQX"]}
-        ).lazy()
+        data = pl.DataFrame({"value_strip": ["BROUGHT FORWARD Card Transaction 0940 24TDS25C HJSVQX"]}).lazy()
 
         pattern = r"^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+([A-Z0-9_\-/*.,&'\s]+)$"
 

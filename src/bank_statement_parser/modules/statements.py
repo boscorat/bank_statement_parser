@@ -501,9 +501,17 @@ class Statement:
                     .item()
                     or 0
                 )
+                # Count transaction lines with null or empty STD_TRANSACTION_DESCRIPTION
+                null_description_count = (
+                    lines_collected.select(pl.when(pl.col("STD_TRANSACTION_DESC").is_null()).then(pl.lit(1)).otherwise(pl.lit(0)))
+                    .sum()
+                    .item()
+                    or 0
+                )
                 self.checks_and_balances = self.checks_and_balances.with_columns(
                     TRANSACTION_LINE_COUNT=pl.lit(transaction_line_count, dtype=pl.UInt32),
                     TRANSACTION_LINES_WITH_NULL_DATE=pl.lit(null_date_count, dtype=pl.UInt32),
+                    TRANSACTION_LINES_WITH_NULL_DESC=pl.lit(null_description_count, dtype=pl.UInt32),
                 )
             self.logs.rechunk()
             self.success = self.is_successfull()
@@ -602,6 +610,9 @@ class Statement:
             return False
         # Check that no transaction lines have null dates (datamart integrity)
         elif self.checks_and_balances.filter(pl.col("TRANSACTION_LINES_WITH_NULL_DATE") > 0).height > 0:
+            return False
+        # Check that no transaction lines have null descriptions
+        elif self.checks_and_balances.filter(pl.col("TRANSACTION_LINES_WITH_NULL_DESC") > 0).height > 0:
             return False
         return True
 
@@ -745,6 +756,10 @@ def _cab_detail(cab: pl.DataFrame) -> str:
     if row["TRANSACTION_LINES_WITH_NULL_DATE"] > 0:
         lines.append(
             f"  NULL_DATES        transaction_lines={row['TRANSACTION_LINE_COUNT']}  with_null_date={row['TRANSACTION_LINES_WITH_NULL_DATE']}"
+        )
+    if row["TRANSACTION_LINES_WITH_NULL_DESC"] > 0:
+        lines.append(
+            f"  NULL_DESCRIPTIONS transaction_lines={row['TRANSACTION_LINE_COUNT']}  with_null_description={row['TRANSACTION_LINES_WITH_NULL_DESC']}"
         )
     if not row["BAL_PAYMENTS_IN"]:
         stated = row["STD_PAYMENTS_IN"]
