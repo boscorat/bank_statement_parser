@@ -40,6 +40,7 @@ from bank_statement_parser.modules.data import (
     Success,
 )
 from bank_statement_parser.modules.database import update_db
+from bank_statement_parser.modules.errors import ConfigError
 from bank_statement_parser.modules.import_config import ImportConfigManager
 from bank_statement_parser.modules.parquet import update_parquet
 from bank_statement_parser.modules.paths import ProjectPaths, validate_or_initialise_project
@@ -541,7 +542,7 @@ class Statement:
                         self.std_payments_out = self.checks_and_balances["STD_PAYMENTS_OUT"][0]
             if self._debug_collector is not None and not self.success:
                 _write_debug_json(self)
-        except (ValueError, KeyError, IndexError, AttributeError, TypeError, pl.exceptions.PolarsError) as e:
+        except (ValueError, KeyError, IndexError, AttributeError, TypeError, ConfigError, pl.exceptions.PolarsError) as e:
             self.error_message = f"** Configuration Failure **: {e}"
             self.error_detail = _build_error_detail(e)
             self.success = False
