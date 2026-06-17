@@ -607,40 +607,62 @@ def extract_fields(
                     )
                 )
 
-    # Collect results dataframe for debug if enabled
-    if debug_dataframes is not None and results.height > 0:
-        section_key = section.lower()
-        if section_key not in debug_dataframes:
-            debug_dataframes[section_key] = []
-        debug_dataframes[section_key].append(results.clone())
-
     return results
 
 
-def process_transactions(data: pl.DataFrame, transaction_spec: TransactionSpec, logs: pl.DataFrame, file_path: str) -> pl.DataFrame:
-    # print(data)
+def process_transactions(
+    data: pl.DataFrame,
+    transaction_spec: TransactionSpec,
+    logs: pl.DataFrame,
+    file_path: str,
+    debug_collector: list | None = None,
+    debug_dataframes: dict[str, list] | None = None,
+) -> pl.DataFrame:
+    # base_transactions
+    if debug_dataframes is not None:
+        if "transactions" not in debug_dataframes:
+            debug_dataframes["transactions"] = []
+        debug_dataframes["transactions"].append(("base_transactions", data.clone()))
+
     data = (
         data.pivot(values="value", index=["page", "row", "transaction_start", "transaction_end"], on="field").sort("page", "row")
         # pivot the data
     )
-    # print(data)
+    # pivoted_transactions
+    if debug_dataframes is not None:
+        debug_dataframes["transactions"].append(("pivoted_transactions", data.clone()))
+
     data = data.with_columns(transaction_number=pl.col("transaction_start").cum_sum()).filter(
         pl.col("transaction_number") > 0
     )  # number the transactions and remove rows before the 1st
-    # print(data)
+    # numbered_transactions
+    if debug_dataframes is not None:
+        debug_dataframes["transactions"].append(("numbered_transactions", data.clone()))
+
     if fffs := transaction_spec.fill_forward_fields:  # fill forward if there are any fields in the spec
         for fff in fffs:
             data = data.with_columns(
                 pl.col(fff).fill_null(strategy="forward").alias(fff),
             )
+    # fill_forward_transactions
+    if debug_dataframes is not None:
+        debug_dataframes["transactions"].append(("fill_forward_transactions", data.clone()))
+
     if mfs := transaction_spec.merge_fields:
         for mf in mfs.fields:
             data = data.with_columns(
                 pl.col(mf).str.join(delimiter=mfs.separator).over("transaction_number"),
             )
+    # merged_transactions
+    if debug_dataframes is not None:
+        debug_dataframes["transactions"].append(("merged_transactions", data.clone()))
+
     data = data.filter(pl.col("transaction_end")).drop("transaction_start", "transaction_end")
 
-    # print(data)
+    # final_transactions
+    if debug_dataframes is not None:
+        debug_dataframes["transactions"].append(("final_transactions", data.clone()))
+
     return data
 
 
@@ -702,7 +724,14 @@ def get_results(
     if statement_table := config.statement_table:
         # process transactions if there's a transaction spec
         if spec := statement_table.transaction_spec:
-            results = results.pipe(process_transactions, logs=logs, file_path=file_path, transaction_spec=spec)
+            results = results.pipe(
+                process_transactions,
+                transaction_spec=spec,
+                logs=logs,
+                file_path=file_path,
+                debug_collector=debug_collector,
+                debug_dataframes=debug_dataframes,
+            )
             return results
 
     if scope == "all":
