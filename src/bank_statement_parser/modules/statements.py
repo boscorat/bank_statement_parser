@@ -149,7 +149,7 @@ def _write_debug_excel(
         stmt: The Statement whose debug dataframes should be written.
         debug_dir: The directory path where the Excel file will be created.
         debug_dataframes: Dict mapping section names to lists of dataframes.
-     """
+    """
     try:
         from xlsxwriter import Workbook  # noqa: PLC0415
 
