@@ -80,7 +80,17 @@ def _clone_test_data() -> Path | None:
         _CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
         if (repo_dir / ".git").is_dir():
-            # Repo already cloned — pull latest changes
+            # Repo already cloned — discard any local modifications and pull latest changes.
+            # We reset to HEAD before pulling because test runs may have modified cached files,
+            # and those changes would block a clean pull. Since the cache is only for testing,
+            # we can safely discard any local modifications.
+            subprocess.run(
+                ["git", "-C", str(repo_dir), "reset", "--hard", "HEAD"],
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
+            # Now pull the latest changes
             result = subprocess.run(
                 ["git", "-C", str(repo_dir), "pull", "--ff-only"],
                 capture_output=True,
