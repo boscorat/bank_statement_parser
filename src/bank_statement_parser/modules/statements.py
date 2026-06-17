@@ -149,7 +149,7 @@ def _write_debug_excel(
         stmt: The Statement whose debug dataframes should be written.
         debug_dir: The directory path where the Excel file will be created.
         debug_dataframes: Dict mapping section names to lists of dataframes.
-    """
+     """
     try:
         from xlsxwriter import Workbook  # noqa: PLC0415
 
@@ -158,13 +158,15 @@ def _write_debug_excel(
 
         # Track sheet counter per section index
         for section in sorted(debug_dataframes.keys()):
-            dataframes = debug_dataframes[section]
-            for df_idx, df in enumerate(dataframes):
-                # Generate sheet name with counter
-                if df_idx == 0:
-                    sheet_name = section.title()  # e.g., "Header", "Lines"
+            items = debug_dataframes[section]
+            for item in items:
+                # Check if item is a tuple (transactions section with sheet name) or just a dataframe
+                if isinstance(item, tuple):
+                    sheet_name, df = item
                 else:
-                    sheet_name = f"{section.title()}{df_idx}"
+                    # Original logic for other sections (backward compatible)
+                    df_idx = items.index(item)
+                    sheet_name = section.title() if df_idx == 0 else f"{section.title()}{df_idx}"
 
                 # Create worksheet and write dataframe
                 ws = wb.add_worksheet(sheet_name)
