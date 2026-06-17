@@ -1,0 +1,17 @@
+# NatWest Bank UK - Account Product Definitions
+# Defines account product types and their statement types
+
+[NATWEST_UK_CUR_STD]
+account = "Select Account"
+company_key = 'NATWEST_UK'
+account_type_key = 'CUR'
+statement_type_key = 'NATWEST_UK_CUR'
+exclude_last_n_pages = 0
+currency = "GBP"
+    [NATWEST_UK_CUR_STD.config]
+    config = 'Account Info'
+    # TODO: Adjust coordinates to match account product name location on page 1
+    # Typical location: left side of header or account summary section
+     locations = [{page_number = 1, top_left = [322, 83], bottom_right = [407, 103]}]
+    # Pattern identifies "Current Account" or similar product name on the statement
+    field = {field = "account", vital=true, type = "string", string_pattern = "Select\\s+Account"}

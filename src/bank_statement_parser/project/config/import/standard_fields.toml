@@ -8,6 +8,7 @@
         {statement_type="HSBC UK Credit Card", field="statement_date", format = "%-d %B %Y"},
         {statement_type="TSB UK Current Account", field="statement_date", format = "%-d %B %Y"},
         {statement_type="Halifax UK Current Account", field="statement_date", format = "%d %B %Y"},
+        {statement_type="NatWest UK Current Account", field="statement_date", format = "%d %B %Y"},
     ]
 [STD_SORTCODE]
     section = "header"
@@ -18,6 +19,7 @@
         {statement_type="HSBC UK Saving Account", field="sortcode"},
         {statement_type="TSB UK Current Account", field="sortcode"},
         {statement_type="Halifax UK Current Account", field="sortcode"},
+        {statement_type="NatWest UK Current Account", field="sortcode"},
     ]
 [STD_ACCOUNT_NUMBER]
     section = "header"
@@ -29,6 +31,7 @@
         {statement_type="HSBC UK Credit Card", field="card_number"},
         {statement_type="TSB UK Current Account", field="account_number"},
         {statement_type="Halifax UK Current Account", field="account_number"},
+        {statement_type="NatWest UK Current Account", field="account_number"},
     ]
 [STD_ACCOUNT_HOLDER]
     section = "header"
@@ -39,6 +42,7 @@
         {statement_type="HSBC UK Saving Account", field="account_name"},
         {statement_type="HSBC UK Credit Card", field="account_name"},
         {statement_type="Halifax UK Current Account", field="account_name"},
+        {statement_type="NatWest UK Current Account", field="account_name"},
     ]
 [STD_OPENING_BALANCE]
     section = "header"
@@ -50,6 +54,7 @@
         {statement_type="HSBC UK Credit Card", field="previous_balance", multiplier=-1.0000},
         {statement_type="TSB UK Current Account", field="opening_balance"},
         {statement_type="Halifax UK Current Account", field="opening_balance"},
+        {statement_type="NatWest UK Current Account", field="opening_balance"},
     ]
 [STD_CLOSING_BALANCE]
     section = "header"
@@ -61,6 +66,7 @@
         {statement_type="HSBC UK Credit Card", field="new_balance", multiplier=-1.0000},
         {statement_type="TSB UK Current Account", field="closing_balance"},
         {statement_type="Halifax UK Current Account", field="closing_balance"},
+        {statement_type="NatWest UK Current Account", field="closing_balance"},
     ]
 [STD_PAYMENTS_IN]
     section = "header"
@@ -72,6 +78,7 @@
         {statement_type="HSBC UK Credit Card", field="credits"},
         {statement_type="TSB UK Current Account", field="payments_in"},
         {statement_type="Halifax UK Current Account", field="payments_in"},
+        {statement_type="NatWest UK Current Account", field="payments_in"},
     ]
 [STD_PAYMENTS_OUT]
     section = "header"
@@ -83,6 +90,7 @@
         {statement_type="HSBC UK Credit Card", field="debits"},
         {statement_type="TSB UK Current Account", field="payments_out"},
         {statement_type="Halifax UK Current Account", field="payments_out"},
+        {statement_type="NatWest UK Current Account", field="payments_out"},
     ]
 [STD_TRANSACTION_DATE]
     section = "lines"
@@ -94,6 +102,7 @@
         {statement_type="HSBC UK Credit Card", field="transaction_date", format = "%d %b %y"},
         {statement_type="TSB UK Current Account", field="date", format = "%d %b %y"},
         {statement_type="Halifax UK Current Account", field="date", format = "%d %b %y"},
+        {statement_type="NatWest UK Current Account", concat_fields=["date_day","date_month","date_year"], format = "%d %b %Y"},
     ]
 [STD_TRANSACTION_TYPE]
     section = 'lines'
@@ -105,6 +114,7 @@
         {statement_type="HSBC UK Credit Card", default="CC"},
         {statement_type="TSB UK Current Account", field="payment_type", format = "%d %b %y"},
         {statement_type="Halifax UK Current Account", field="payment_type"},
+        {statement_type="NatWest UK Current Account", field="payment_type"},
     ]
 [STD_TRANSACTION_DESC]
     section = "lines"
@@ -116,6 +126,7 @@
         {statement_type="HSBC UK Credit Card", field="details"},
         {statement_type="TSB UK Current Account", field="details"},
         {statement_type="Halifax UK Current Account", field="description"},
+        {statement_type="NatWest UK Current Account", concat_fields=["description","description_2"]},
     ]
 [STD_PAYMENT_IN]
     section = "lines"
@@ -127,6 +138,7 @@
         {statement_type="HSBC UK Credit Card", field="amount", exclude_positive_values=true, multiplier=-1.0000},
         {statement_type="TSB UK Current Account", field="£_paid_in"},
         {statement_type="Halifax UK Current Account", field="money_in_£"},
+        {statement_type="NatWest UK Current Account", field="paid_in_£"},
     ]
 [STD_PAYMENT_OUT]
     section = "lines"
@@ -138,4 +150,5 @@
         {statement_type="HSBC UK Credit Card", field="amount", exclude_negative_values=true},
         {statement_type="TSB UK Current Account", field="£_paid_out"},
         {statement_type="Halifax UK Current Account", field="money_out_£"},
+        {statement_type="NatWest UK Current Account", field="paid_out_£"},
     ]

@@ -1,0 +1,34 @@
+# NATWEST Bank UK - Statement Type Definitions
+# Defines the extraction workflow for NATWEST current account statements
+
+[NATWEST_UK_CUR]
+statement_type = 'NatWest UK Current Account'
+    [NATWEST_UK_CUR.header]
+        [[NATWEST_UK_CUR.header.configs]]
+            config = 'Statement Balances'
+            # Reference to summary table with opening/closing balances and payment totals
+            statement_table_key = 'NATWEST_UK_CUR_ACCT_SUM'
+
+        [[NATWEST_UK_CUR.header.configs]]
+            config = 'Statement Info'
+            # TODO: Adjust coordinates to match statement date location on page 1
+            # Typical location: top-right or center of header (e.g., "Statement from X to Y")
+            locations = [{page_number=1, top_left = [408, 122], bottom_right = [535, 135]}]
+            # Pattern matches date range like "01 January 2024 to 31 January 2024"
+            field = {field = "statement_date", vital=true, type = "string", string_pattern = "\\d{2}\\s+[A-Z]{3}+\\s+\\d{4}"}
+
+        [[NATWEST_UK_CUR.header.configs]]
+            config = 'Account Name'
+            locations = [{page_number=1, top_left = [50, 36], bottom_right = [215, 51]}]
+            field = {field = "account_name", vital=true, type = "string"}
+
+        [[NATWEST_UK_CUR.header.configs]]
+            config = 'Account Info'
+            # Reference to account details table with account name, sort code, and account number
+            statement_table_key = 'NATWEST_UK_CUR_ACCT_DET'
+
+    [NATWEST_UK_CUR.lines]
+        [[NATWEST_UK_CUR.lines.configs]]
+            config = 'Transaction Lines'
+            # Reference to transaction table extraction
+            statement_table_key = 'NATWEST_UK_CUR_TRANSACTIONS'

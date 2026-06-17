@@ -1,0 +1,14 @@
+{
+  "expected_result": "SUCCESS",
+  "expected_outcome": "SUCCESS",
+  "expected_filename": "NATWEST_UK_CUR_22112211_20251224.pdf",
+  "expected_statement_date": "2025-12-24",
+  "expected_account": "Select Account",
+  "expected_id_account": "NATWEST_UK_CUR_22112211",
+  "expected_opening_balance": "661.3800",
+  "expected_closing_balance": "1384.9700",
+  "expected_payments_in": "747.5000",
+  "expected_payments_out": "23.9100",
+  "expected_transaction_count": "5",
+  "description": "NatWest Select Account - December 2025"
+}
