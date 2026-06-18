@@ -507,9 +507,9 @@ def _build_fact_transaction(conn: sqlite3.Connection, verbose: bool) -> float:
             sl.STD_TRANSACTION_TYPE_CD,
             sl.STD_TRANSACTION_DESC,
             sl.STD_OPENING_BALANCE,
-            CAST(sl.STD_PAYMENTS_IN  AS REAL),
-            CAST(sl.STD_PAYMENTS_OUT AS REAL),
-            CAST(sl.STD_PAYMENTS_IN  AS REAL) - CAST(sl.STD_PAYMENTS_OUT AS REAL)
+            CAST(sl.STD_TRANSACTION_PAYMENTS_IN  AS REAL),
+            CAST(sl.STD_TRANSACTION_PAYMENTS_OUT AS REAL),
+            CAST(sl.STD_TRANSACTION_PAYMENTS_IN  AS REAL) - CAST(sl.STD_TRANSACTION_PAYMENTS_OUT AS REAL)
         FROM statement_lines sl
         INNER JOIN statement_heads sh ON sl.ID_STATEMENT  = sh.ID_STATEMENT
         INNER JOIN DimStatement    ds ON sh.ID_STATEMENT  = ds.id_statement

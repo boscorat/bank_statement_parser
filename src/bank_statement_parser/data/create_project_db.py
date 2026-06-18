@@ -37,6 +37,7 @@ SCHEMAS = {
         "CHECK_CLOSING": "INTEGER",
         "TRANSACTION_LINE_COUNT": "INTEGER",
         "TRANSACTION_LINES_WITH_NULL_DATE": "INTEGER",
+        "TRANSACTION_LINES_WITH_NULL_DESC": "INTEGER",
     },
     "statement_heads": {
         "ID_STATEMENT": "TEXT",
@@ -66,8 +67,8 @@ SCHEMAS = {
         "STD_TRANSACTION_TYPE_CD": "TEXT",
         "STD_TRANSACTION_DESC": "TEXT",
         "STD_OPENING_BALANCE": "REAL",
-        "STD_PAYMENTS_IN": "REAL",
-        "STD_PAYMENTS_OUT": "REAL",
+        "STD_TRANSACTION_PAYMENTS_IN": "REAL",
+        "STD_TRANSACTION_PAYMENTS_OUT": "REAL",
         "STD_CLOSING_BALANCE": "REAL",
     },
     "batch_heads": {

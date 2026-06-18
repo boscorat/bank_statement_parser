@@ -44,7 +44,11 @@ initialised via `validate_or_initialise_project()`. The decision table is:
 | Root exists; no config ``.toml`` files **and** no ``database/project.db`` | scaffold new project (create all dirs, copy default TOMLs, create empty ``project.db``) |
 | Root exists; config present; DB absent; root is the default bundled project | create ``project.db`` only (config is committed to source control; DB is excluded) |
 | Root exists; config present; DB absent (custom project path) | raise `ProjectDatabaseMissing` |
+| *project_path* does not exist | raise `ProjectFolderNotFound` |
+| Root exists; no config ``.toml`` files **and** no ``database/project.db`` | scaffold new project (create all dirs, copy default TOMLs, create empty ``project.db``) |
+| Root exists; config present; DB absent (any project) | create ``project.db`` only |
 | Root exists; DB present; config absent | raise `ProjectConfigMissing` |
+| Root exists; both config and DB present | no-op (valid project) |
 | Root exists; both config and DB present | no-op (valid project) |
 
 ## Python API
@@ -123,7 +127,18 @@ Decision table (evaluated top-to-bottom):
 | Root exists; config present; DB absent   | raise :exc:`ProjectDatabaseMissing`|
 | (custom project path)                    |                                   |
 +------------------------------------------+-----------------------------------+
+| *project_path* does not exist            | raise :exc:`ProjectFolderNotFound`|
++------------------------------------------+-----------------------------------+
+| Root exists; no config ``.toml`` files   | scaffold new project (create all  |
+| **and** no ``database/project.db``       | dirs, copy default TOMLs, create  |
+|                                          | empty ``project.db``)             |
++------------------------------------------+-----------------------------------+
+| Root exists; config present; DB absent   | create ``project.db`` only        |
+| (any project)                            |                                   |
++------------------------------------------+-----------------------------------+
 | Root exists; DB present; config absent   | raise :exc:`ProjectConfigMissing` |
++------------------------------------------+-----------------------------------+
+| Root exists; both config and DB present  | no-op (valid project)             |
 +------------------------------------------+-----------------------------------+
 | Root exists; both config and DB present  | no-op (valid project)             |
 +------------------------------------------+-----------------------------------+
@@ -137,9 +152,6 @@ Decision table (evaluated top-to-bottom):
 **Raises:**
 
 - `ProjectFolderNotFound` — If *project_path* does not exist.
-- `ProjectDatabaseMissing` — If the project looks like an existing project
-  (config present) but ``database/project.db`` is absent and the
-  project is not the default bundled project.
 - `ProjectConfigMissing` — If the project looks like an existing project
   (database present) but ``config/`` contains no ``.toml`` files.
 

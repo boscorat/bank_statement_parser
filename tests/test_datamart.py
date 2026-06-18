@@ -414,12 +414,12 @@ class TestFactTransaction:
         assert missing == 0
 
     def test_total_value_in_matches_raw(self, conn):
-        raw = _scalar(conn, "SELECT ROUND(SUM(CAST(STD_PAYMENTS_IN  AS REAL)), 4) FROM statement_lines")
+        raw = _scalar(conn, "SELECT ROUND(SUM(CAST(STD_TRANSACTION_PAYMENTS_IN  AS REAL)), 4) FROM statement_lines")
         mart = _scalar(conn, "SELECT ROUND(SUM(value_in),  4) FROM FactTransaction")
         assert abs(raw - mart) < FLOAT_TOL
 
     def test_total_value_out_matches_raw(self, conn):
-        raw = _scalar(conn, "SELECT ROUND(SUM(CAST(STD_PAYMENTS_OUT AS REAL)), 4) FROM statement_lines")
+        raw = _scalar(conn, "SELECT ROUND(SUM(CAST(STD_TRANSACTION_PAYMENTS_OUT AS REAL)), 4) FROM statement_lines")
         mart = _scalar(conn, "SELECT ROUND(SUM(value_out), 4) FROM FactTransaction")
         assert abs(raw - mart) < FLOAT_TOL
 
@@ -432,7 +432,7 @@ class TestFactTransaction:
     def test_value_in_per_account_matches_raw(self, conn):
         raw = dict(
             conn.execute("""
-            SELECT sh.ID_ACCOUNT, ROUND(SUM(CAST(sl.STD_PAYMENTS_IN AS REAL)), 4)
+            SELECT sh.ID_ACCOUNT, ROUND(SUM(CAST(sl.STD_TRANSACTION_PAYMENTS_IN AS REAL)), 4)
             FROM statement_lines sl
             JOIN statement_heads sh ON sl.ID_STATEMENT = sh.ID_STATEMENT
             GROUP BY sh.ID_ACCOUNT
@@ -453,7 +453,7 @@ class TestFactTransaction:
     def test_value_out_per_account_matches_raw(self, conn):
         raw = dict(
             conn.execute("""
-            SELECT sh.ID_ACCOUNT, ROUND(SUM(CAST(sl.STD_PAYMENTS_OUT AS REAL)), 4)
+            SELECT sh.ID_ACCOUNT, ROUND(SUM(CAST(sl.STD_TRANSACTION_PAYMENTS_OUT AS REAL)), 4)
             FROM statement_lines sl
             JOIN statement_heads sh ON sl.ID_STATEMENT = sh.ID_STATEMENT
             GROUP BY sh.ID_ACCOUNT

@@ -23,7 +23,6 @@ from pathlib import Path
 
 from bank_statement_parser.modules.errors import (
     ProjectConfigMissing,
-    ProjectDatabaseMissing,
     ProjectFolderNotFound,
     ProjectSubFolderNotFound,
 )
@@ -501,7 +500,18 @@ def validate_or_initialise_project(project_path: Path) -> None:
     | Root exists; config present; DB absent   | raise :exc:`ProjectDatabaseMissing`|
     | (custom project path)                    |                                   |
     +------------------------------------------+-----------------------------------+
+    | *project_path* does not exist            | raise :exc:`ProjectFolderNotFound`|
+    +------------------------------------------+-----------------------------------+
+    | Root exists; no config ``.toml`` files   | scaffold new project (create all  |
+    | **and** no ``database/project.db``       | dirs, copy default TOMLs, create  |
+    |                                          | empty ``project.db``)             |
+    +------------------------------------------+-----------------------------------+
+    | Root exists; config present; DB absent   | create ``project.db`` only        |
+    | (any project)                            |                                   |
+    +------------------------------------------+-----------------------------------+
     | Root exists; DB present; config absent   | raise :exc:`ProjectConfigMissing` |
+    +------------------------------------------+-----------------------------------+
+    | Root exists; both config and DB present  | no-op (valid project)             |
     +------------------------------------------+-----------------------------------+
     | Root exists; both config and DB present  | no-op (valid project)             |
     +------------------------------------------+-----------------------------------+
@@ -511,9 +521,6 @@ def validate_or_initialise_project(project_path: Path) -> None:
 
     Raises:
         ProjectFolderNotFound: If *project_path* does not exist.
-        ProjectDatabaseMissing: If the project looks like an existing project
-            (config present) but ``database/project.db`` is absent and the
-            project is not the default bundled project.
         ProjectConfigMissing: If the project looks like an existing project
             (database present) but ``config/`` contains no ``.toml`` files.
     """
@@ -533,13 +540,8 @@ def validate_or_initialise_project(project_path: Path) -> None:
 
     # Rule 3: config present but DB missing.
     if has_toml and not has_db:
-        # The default bundled project ships with config committed to source
-        # control but excludes project.db from version control.  Create it
-        # automatically rather than raising an error.
-        if project_path.resolve() == _DEFAULT_PROJECT_ROOT.resolve():
-            _create_project_db(paths)
-            return
-        raise ProjectDatabaseMissing(paths.project_db)
+        _create_project_db(paths)
+        return
 
     # Rule 4: DB present but config missing → corrupted/partial project.
     if has_db and not has_toml:
@@ -552,9 +554,8 @@ def _create_project_db(paths: ProjectPaths) -> None:
     """
     Create a new empty SQLite database for an existing project.
 
-    Used when the project directory and config are already in place (e.g. the
-    default bundled project on a fresh clone where ``project.db`` is excluded
-    from source control) but the database file itself is absent.
+    Used when the project directory and config are already in place but the
+    database file itself is absent.
 
     This is an internal helper called only by
     :func:`validate_or_initialise_project`.
@@ -566,6 +567,7 @@ def _create_project_db(paths: ProjectPaths) -> None:
     from bank_statement_parser.data.create_project_db import main as create_db  # noqa: PLC0415
 
     create_db(db_path=paths.project_db, with_fk=True)
+    print(f"[scaffold] created missing database: {paths.project_db}")
 
 
 def _scaffold_new_project(paths: ProjectPaths) -> None:
