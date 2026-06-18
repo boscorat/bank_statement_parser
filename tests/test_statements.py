@@ -137,18 +137,18 @@ class TestDbReports:
         assert flat_count == ft_count
 
     def test_statement_lines_db_value_in_matches_fact_transaction_db(self, good_project):
-        """SUM(STD_PAYMENTS_IN) from SQLite statement_lines equals DB FactTransaction value_in sum."""
+        """SUM(STD_TRANSACTION_PAYMENTS_IN) from SQLite statement_lines equals DB FactTransaction value_in sum."""
         paths = ProjectPaths.resolve(good_project.project_path)
         with sqlite3.connect(paths.project_db) as conn:
-            raw_sum = conn.execute("SELECT SUM(CAST(STD_PAYMENTS_IN AS REAL)) FROM statement_lines").fetchone()[0]
+            raw_sum = conn.execute("SELECT SUM(CAST(STD_TRANSACTION_PAYMENTS_IN AS REAL)) FROM statement_lines").fetchone()[0]
         ft_sum = db.FactTransaction(project_path=good_project.project_path).all.collect()["value_in"].sum()
         assert abs(raw_sum - ft_sum) < FLOAT_TOL, f"value_in mismatch: raw db={raw_sum}, db FactTransaction={ft_sum}"
 
     def test_statement_lines_db_value_out_matches_fact_transaction_db(self, good_project):
-        """SUM(STD_PAYMENTS_OUT) from SQLite statement_lines equals DB FactTransaction value_out sum."""
+        """SUM(STD_TRANSACTION_PAYMENTS_OUT) from SQLite statement_lines equals DB FactTransaction value_out sum."""
         paths = ProjectPaths.resolve(good_project.project_path)
         with sqlite3.connect(paths.project_db) as conn:
-            raw_sum = conn.execute("SELECT SUM(CAST(STD_PAYMENTS_OUT AS REAL)) FROM statement_lines").fetchone()[0]
+            raw_sum = conn.execute("SELECT SUM(CAST(STD_TRANSACTION_PAYMENTS_OUT AS REAL)) FROM statement_lines").fetchone()[0]
         ft_sum = db.FactTransaction(project_path=good_project.project_path).all.collect()["value_out"].sum()
         assert abs(raw_sum - ft_sum) < FLOAT_TOL, f"value_out mismatch: raw db={raw_sum}, db FactTransaction={ft_sum}"
 
