@@ -686,6 +686,9 @@ class Statement:
                 std_fields,
                 self.statement_type,
                 self.checks_and_balances,
+                debug=self.debug,
+                debug_collector=self._debug_collector,
+                debug_dataframes=self._debug_dataframes,
                 # self.logs,
                 # str(self.file.absolute()),
             )
