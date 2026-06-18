@@ -218,7 +218,10 @@ def generate_mock_data(db_path: Path, num_batches: int = 10, statements_per_batc
         batchline_id = batchline_ids[i]
         batch_idx = batch_assignment[i]
 
-        cursor.execute("SELECT SUM(STD_TRANSACTION_PAYMENTS_IN), SUM(STD_TRANSACTION_PAYMENTS_OUT) FROM statement_lines WHERE ID_STATEMENT = ?", (statement_id,))
+        cursor.execute(
+            "SELECT SUM(STD_TRANSACTION_PAYMENTS_IN), SUM(STD_TRANSACTION_PAYMENTS_OUT) FROM statement_lines WHERE ID_STATEMENT = ?",
+            (statement_id,),
+        )
         line_totals = cursor.fetchone()
 
         checks_and_balances_data.append(

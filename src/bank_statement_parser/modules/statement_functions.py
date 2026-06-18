@@ -869,9 +869,9 @@ def get_standard_fields(
     if section == "lines":
         data = data.with_columns(STD_TRANSACTION_NUMBER=pl.col("transaction_number"), STD_PAGE_NUMBER=pl.col("page"))
         data = data.join(checks_and_balances.select(pl.col("STD_OPENING_BALANCE").alias("STD_RUNNING_BALANCE")), how="cross")
-        data = data.with_columns(STD_TRANSACTION_MOVEMENT=pl.col("STD_TRANSACTION_PAYMENTS_IN").sub("STD_TRANSACTION_PAYMENTS_OUT")).with_columns(
-            STD_RUNNING_BALANCE=pl.col("STD_RUNNING_BALANCE").add(pl.col("STD_TRANSACTION_MOVEMENT").cum_sum())
-        )
+        data = data.with_columns(
+            STD_TRANSACTION_MOVEMENT=pl.col("STD_TRANSACTION_PAYMENTS_IN").sub("STD_TRANSACTION_PAYMENTS_OUT")
+        ).with_columns(STD_RUNNING_BALANCE=pl.col("STD_RUNNING_BALANCE").add(pl.col("STD_TRANSACTION_MOVEMENT").cum_sum()))
         data = data.with_columns(STD_CD=pl.when(pl.col("STD_TRANSACTION_MOVEMENT") > 0).then(pl.lit("C")).otherwise(pl.lit("D")))
     # Checks & Balances updates
     if section == "header":
@@ -887,7 +887,9 @@ def get_standard_fields(
         )
         checks_and_balances.hstack(new_columns, in_place=True)
     if section == "lines":
-        checks_and_balances.hstack(data.select("STD_TRANSACTION_PAYMENTS_IN", "STD_TRANSACTION_PAYMENTS_OUT", "STD_TRANSACTION_MOVEMENT").sum(), in_place=True)
+        checks_and_balances.hstack(
+            data.select("STD_TRANSACTION_PAYMENTS_IN", "STD_TRANSACTION_PAYMENTS_OUT", "STD_TRANSACTION_MOVEMENT").sum(), in_place=True
+        )
         checks_and_balances.hstack(data.select(pl.last("STD_RUNNING_BALANCE")), in_place=True)
 
     # Add dataframe snapshot to debug_dataframes if available

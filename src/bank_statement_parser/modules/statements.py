@@ -536,7 +536,7 @@ class Statement:
                     self.std_statement_date = stmt_date_raw
                     self.std_opening_balance = _hdr["STD_OPENING_BALANCE"][0]
                     self.std_closing_balance = _hdr["STD_CLOSING_BALANCE"][0]
-                     # Payments in/out come from checks_and_balances (already a DataFrame)
+                    # Payments in/out come from checks_and_balances (already a DataFrame)
                     if not self.checks_and_balances.is_empty():
                         self.std_payments_in = self.checks_and_balances["STD_PAYMENTS_IN"][0]
                         self.std_payments_out = self.checks_and_balances["STD_PAYMENTS_OUT"][0]
