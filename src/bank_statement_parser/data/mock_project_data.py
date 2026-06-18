@@ -208,7 +208,7 @@ def generate_mock_data(db_path: Path, num_batches: int = 10, statements_per_batc
             )
 
     cursor.executemany(
-        "INSERT INTO statement_lines (ID_TRANSACTION, ID_STATEMENT, STD_PAGE_NUMBER, STD_TRANSACTION_DATE, STD_TRANSACTION_NUMBER, STD_CD, STD_TRANSACTION_TYPE, STD_TRANSACTION_TYPE_CD, STD_TRANSACTION_DESC, STD_OPENING_BALANCE, STD_PAYMENTS_IN, STD_PAYMENTS_OUT, STD_CLOSING_BALANCE) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO statement_lines (ID_TRANSACTION, ID_STATEMENT, STD_PAGE_NUMBER, STD_TRANSACTION_DATE, STD_TRANSACTION_NUMBER, STD_CD, STD_TRANSACTION_TYPE, STD_TRANSACTION_TYPE_CD, STD_TRANSACTION_DESC, STD_OPENING_BALANCE, STD_TRANSACTION_PAYMENTS_IN, STD_TRANSACTION_PAYMENTS_OUT, STD_CLOSING_BALANCE) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         statement_lines_data,
     )
     print(f"Inserted {len(statement_lines_data)} statement_lines")
@@ -218,7 +218,7 @@ def generate_mock_data(db_path: Path, num_batches: int = 10, statements_per_batc
         batchline_id = batchline_ids[i]
         batch_idx = batch_assignment[i]
 
-        cursor.execute("SELECT SUM(STD_PAYMENTS_IN), SUM(STD_PAYMENTS_OUT) FROM statement_lines WHERE ID_STATEMENT = ?", (statement_id,))
+        cursor.execute("SELECT SUM(STD_TRANSACTION_PAYMENTS_IN), SUM(STD_TRANSACTION_PAYMENTS_OUT) FROM statement_lines WHERE ID_STATEMENT = ?", (statement_id,))
         line_totals = cursor.fetchone()
 
         checks_and_balances_data.append(

@@ -456,17 +456,17 @@ class Statement:
                 # Compares calculated totals against stated totals from the statement
                 self.checks_and_balances = self.checks_and_balances.with_columns(
                     # Verify payments in (deposits) match between extracted and stated values
-                    BAL_PAYMENTS_IN=pl.when(pl.col("STD_PAYMENTS_IN").sub(pl.col("STD_PAYMENT_IN")) == 0)
+                    BAL_PAYMENTS_IN=pl.when(pl.col("STD_PAYMENTS_IN").sub(pl.col("STD_TRANSACTION_PAYMENTS_IN")) == 0)
                     .then(pl.lit(True))
                     .otherwise(pl.lit(False)),
                     # Verify payments out (withdrawals) match between extracted and stated values
-                    BAL_PAYMENTS_OUT=pl.when(pl.col("STD_PAYMENTS_OUT").sub(pl.col("STD_PAYMENT_OUT")) == 0)
+                    BAL_PAYMENTS_OUT=pl.when(pl.col("STD_PAYMENTS_OUT").sub(pl.col("STD_TRANSACTION_PAYMENTS_OUT")) == 0)
                     .then(pl.lit(True))
                     .otherwise(pl.lit(False)),
                     # Verify net movement equals balance change and matches payments difference
                     BAL_MOVEMENT=pl.when(
-                        (pl.col("STD_STATEMENT_MOVEMENT").sub(pl.col("STD_MOVEMENT")) == 0)
-                        & (pl.col("STD_MOVEMENT").sub(pl.col("STD_BALANCE_OF_PAYMENTS")) == 0)
+                        (pl.col("STD_MOVEMENT").sub(pl.col("STD_TRANSACTION_MOVEMENT")) == 0)
+                        & (pl.col("STD_TRANSACTION_MOVEMENT").sub(pl.col("STD_BALANCE_OF_PAYMENTS")) == 0)
                     )
                     .then(pl.lit(True))
                     .otherwise(pl.lit(False)),
@@ -476,7 +476,7 @@ class Statement:
                         | (
                             pl.col("STD_PAYMENTS_IN")
                             .add(pl.col("STD_PAYMENTS_OUT"))
-                            .add(pl.col("STD_PAYMENT_IN").add(pl.col("STD_PAYMENT_OUT")))
+                            .add(pl.col("STD_TRANSACTION_PAYMENTS_IN").add(pl.col("STD_TRANSACTION_PAYMENTS_OUT")))
                             == 0
                         )
                     )
@@ -486,7 +486,7 @@ class Statement:
                     ZERO_TRANSACTION_STATEMENT=pl.when(
                         pl.col("STD_PAYMENTS_IN")
                         .add(pl.col("STD_PAYMENTS_OUT"))
-                        .add(pl.col("STD_PAYMENT_IN").add(pl.col("STD_PAYMENT_OUT")))
+                        .add(pl.col("STD_TRANSACTION_PAYMENTS_IN").add(pl.col("STD_TRANSACTION_PAYMENTS_OUT")))
                         == 0
                     )
                     .then(pl.lit(True))
@@ -536,7 +536,7 @@ class Statement:
                     self.std_statement_date = stmt_date_raw
                     self.std_opening_balance = _hdr["STD_OPENING_BALANCE"][0]
                     self.std_closing_balance = _hdr["STD_CLOSING_BALANCE"][0]
-                    # Payments in/out come from checks_and_balances (already a DataFrame)
+                     # Payments in/out come from checks_and_balances (already a DataFrame)
                     if not self.checks_and_balances.is_empty():
                         self.std_payments_in = self.checks_and_balances["STD_PAYMENTS_IN"][0]
                         self.std_payments_out = self.checks_and_balances["STD_PAYMENTS_OUT"][0]
@@ -767,16 +767,16 @@ def _cab_detail(cab: pl.DataFrame) -> str:
         )
     if not row["BAL_PAYMENTS_IN"]:
         stated = row["STD_PAYMENTS_IN"]
-        extracted = row["STD_PAYMENT_IN"]
+        extracted = row["STD_TRANSACTION_PAYMENTS_IN"]
         lines.append(f"  BAL_PAYMENTS_IN   stated={stated}  extracted={extracted}  delta={round(stated - extracted, 2)}")
     if not row["BAL_PAYMENTS_OUT"]:
         stated = row["STD_PAYMENTS_OUT"]
-        extracted = row["STD_PAYMENT_OUT"]
+        extracted = row["STD_TRANSACTION_PAYMENTS_OUT"]
         lines.append(f"  BAL_PAYMENTS_OUT  stated={stated}  extracted={extracted}  delta={round(stated - extracted, 2)}")
     if not row["BAL_MOVEMENT"]:
         lines.append(
-            f"  BAL_MOVEMENT      statement_movement={row['STD_STATEMENT_MOVEMENT']}"
-            f"  extracted_movement={row['STD_MOVEMENT']}"
+            f"  BAL_MOVEMENT      movement={row['STD_MOVEMENT']}"
+            f"  transaction_movement={row['STD_TRANSACTION_MOVEMENT']}"
             f"  balance_of_payments={row['STD_BALANCE_OF_PAYMENTS']}"
         )
     if not row["BAL_CLOSING"]:

@@ -128,7 +128,7 @@
         {statement_type="Halifax UK Current Account", field="description"},
         {statement_type="NatWest UK Current Account", concat_fields=["description","description_2"]},
     ]
-[STD_PAYMENT_IN]
+[STD_TRANSACTION_PAYMENTS_IN]
     section = "lines"
     type = "numeric"
     vital = true
@@ -140,7 +140,7 @@
         {statement_type="Halifax UK Current Account", field="money_in_£"},
         {statement_type="NatWest UK Current Account", field="paid_in_£"},
     ]
-[STD_PAYMENT_OUT]
+[STD_TRANSACTION_PAYMENTS_OUT]
     section = "lines"
     type = "numeric"
     vital = true

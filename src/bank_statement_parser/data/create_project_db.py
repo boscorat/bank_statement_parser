@@ -66,8 +66,8 @@ SCHEMAS = {
         "STD_TRANSACTION_TYPE_CD": "TEXT",
         "STD_TRANSACTION_DESC": "TEXT",
         "STD_OPENING_BALANCE": "REAL",
-        "STD_PAYMENTS_IN": "REAL",
-        "STD_PAYMENTS_OUT": "REAL",
+        "STD_TRANSACTION_PAYMENTS_IN": "REAL",
+        "STD_TRANSACTION_PAYMENTS_OUT": "REAL",
         "STD_CLOSING_BALANCE": "REAL",
     },
     "batch_heads": {

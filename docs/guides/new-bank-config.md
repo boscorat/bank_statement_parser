@@ -640,8 +640,8 @@ marked `vital = true` will raise a `ConfigError` if no mapping is found.
 | `STD_TRANSACTION_DATE` | lines | date | Yes | Individual transaction date |
 | `STD_TRANSACTION_TYPE` | lines | str | Yes | Payment type code |
 | `STD_TRANSACTION_DESC` | lines | string | Yes | Transaction description |
-| `STD_PAYMENT_IN` | lines | numeric | Yes | Credit amount per transaction |
-| `STD_PAYMENT_OUT` | lines | numeric | Yes | Debit amount per transaction |
+| `STD_TRANSACTION_PAYMENTS_IN` | lines | numeric | Yes | Credit amount per transaction |
+| `STD_TRANSACTION_PAYMENTS_OUT` | lines | numeric | Yes | Debit amount per transaction |
 
 ### `std_refs` entry options
 
