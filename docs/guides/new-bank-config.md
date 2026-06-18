@@ -619,6 +619,7 @@ name and the corresponding raw field name from your `statement_tables.toml`.
         {statement_type="TSB UK Current Account", field="opening_balance"},
         {statement_type="Halifax UK Current Account", field="opening_balance"},
         {statement_type="NatWest UK Current Account", field="opening_balance"},
+        {statement_type="NatWest UK Current Account Old", field="opening_balance"},
     ]
 ```
 

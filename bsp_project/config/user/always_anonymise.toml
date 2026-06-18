@@ -1,0 +1,28 @@
+# always_anonymise.toml — user-supplied forced replacement rules for uk-bank-statement-anonymiser.
+#
+# HOW IT WORKS
+# ------------
+# Entries here force an exact string to be replaced with a known value,
+# applied before the scramble pass. This is the right place for:
+#   - Sort codes and account numbers you want replaced with a specific fake value
+#   - Names you want replaced with a placeholder
+#
+# This file supplements always_anonymise_system.toml (bundled with the library).
+# If the same original string appears in both files, this file wins.
+#
+# FORMAT
+# ------
+#   "original text" = "replacement text"
+#
+# Both the key and value are exact strings (case-sensitive).
+#
+# IMPORTANT
+# ---------
+# This file is NOT committed to source control — it may contain real account
+# numbers, sort codes, or names. Pass its path to anonymise_pdf() via the
+# always_anonymise_path argument, or to the CLI via --always-anonymise.
+#
+# EXAMPLES (commented out):
+# "40-37-28" = "00-00-00"
+# "12345678" = "00000000"
+# "Jason Farrar" = "John Doe"
