@@ -37,6 +37,7 @@ SCHEMAS = {
         "CHECK_CLOSING": "INTEGER",
         "TRANSACTION_LINE_COUNT": "INTEGER",
         "TRANSACTION_LINES_WITH_NULL_DATE": "INTEGER",
+        "TRANSACTION_LINES_WITH_NULL_DESC": "INTEGER",
     },
     "statement_heads": {
         "ID_STATEMENT": "TEXT",

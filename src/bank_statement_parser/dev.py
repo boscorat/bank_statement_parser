@@ -6,7 +6,7 @@ from bank_statement_parser.modules import statements
 
 
 def main():
-    project_path = Path("/home/boscorat/Projects/bsp_project")
+    project_path = Path("/home/boscorat/Projects/NatWest_old")
     # bsp.anonymise_pdf(Path("/home/boscorat/Projects/tsb_spend_and_save_example_1.pdf"))
     # laptop
     # folder = Path("/Users/boscorat/Library/CloudStorage/OneDrive-Personal/OpenStan/Statements/HSBC/2024")

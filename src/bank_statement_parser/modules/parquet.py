@@ -143,6 +143,7 @@ class ChecksAndBalances(Parquet):
                 "CHECK_CLOSING": pl.Boolean,
                 "TRANSACTION_LINE_COUNT": pl.UInt32,
                 "TRANSACTION_LINES_WITH_NULL_DATE": pl.UInt32,
+                "TRANSACTION_LINES_WITH_NULL_DESC": pl.UInt32,
             },
         )
         self.key = "ID_CAB"
@@ -423,6 +424,7 @@ def _build_checks_and_balances_data(
         CHECK_CLOSING="BAL_CLOSING",
         TRANSACTION_LINE_COUNT="TRANSACTION_LINE_COUNT",
         TRANSACTION_LINES_WITH_NULL_DATE="TRANSACTION_LINES_WITH_NULL_DATE",
+        TRANSACTION_LINES_WITH_NULL_DESC="TRANSACTION_LINES_WITH_NULL_DESC",
     )
     return data
 
