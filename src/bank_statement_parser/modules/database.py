@@ -14,7 +14,6 @@ import polars as pl
 
 from bank_statement_parser.data.build_datamart import build_datamart, _ensure_mart_structure
 from bank_statement_parser.modules.data import PdfResult, Success
-from bank_statement_parser.modules.errors import ProjectDatabaseMissing
 from bank_statement_parser.modules.paths import ProjectPaths
 
 # Python 3.12+ deprecates the built-in date/datetime adapters for sqlite3.
@@ -25,16 +24,29 @@ sqlite3.register_adapter(datetime, lambda dt: dt.isoformat())
 
 
 def _require_db(db_path: Path) -> None:
-    """Raise ProjectDatabaseMissing if the database file does not exist.
+    """Ensure the database file exists, creating it if missing.
+
+    If the database file does not exist, scaffolds it with the complete schema
+    (all raw tables, indexes, and views). The project configuration must be
+    provided separately when processing PDFs.
 
     Args:
         db_path: Expected path to the SQLite database file.
 
     Raises:
-        ProjectDatabaseMissing: If *db_path* does not exist.
+        ProjectDatabaseMissing: If *db_path* parent directory does not exist
+            or cannot be created.
     """
     if not db_path.exists():
-        raise ProjectDatabaseMissing(db_path)
+        # Ensure parent directory exists
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Import here to avoid circular dependency at module level
+        # (database.py → data/__init__.py; data/__init__.py must not import database.py)
+        from bank_statement_parser.data import create_db  # noqa: PLC0415
+
+        create_db(db_path=db_path, with_fk=True)
+        print(f"[scaffold] created missing database: {db_path}")
 
 
 # Whitelists for migration identifier validation — prevents any future
