@@ -763,7 +763,19 @@ def get_standard_fields(
     config_standard_fields: dict,
     statement_type: str,
     checks_and_balances: pl.DataFrame,
+    debug: bool | None = None,
+    debug_collector: list | None = None,
+    debug_dataframes: dict[str, list] | None = None,
 ) -> pl.DataFrame:
+    # Log start of standard fields processing if debugging enabled
+    if debug and debug_collector is not None:
+        debug_collector.append({
+            "event": "standard_fields_processing_start",
+            "section": section,
+            "statement_type": statement_type,
+            "total_fields_to_process": len([f for f, c in config_standard_fields.items() if c.section == section]),
+        })
+
     for std_field, std_config in config_standard_fields.items():
         if std_config.section == section:
             try:
@@ -833,7 +845,19 @@ def get_standard_fields(
                     data = data.with_columns(pl.col(std_field).fill_null(strategy="forward"))
             else:
                 if std_config.vital:
-                    raise ConfigError("Standard field is vital but not specified for this statement type")
+                    if debug and debug_collector is not None:
+                        debug_collector.append({
+                            "event": "standard_field_mapping_vital_missing",
+                            "section": section,
+                            "statement_type": statement_type,
+                            "std_field": std_field,
+                            "config_type": std_config.type,
+                            "message": f"Standard field '{std_field}' (type={std_config.type}) is vital but not specified for statement type '{statement_type}'",
+                        })
+                    raise ConfigError(
+                        f"Standard field '{std_field}' (type={std_config.type}, vital={std_config.vital}) "
+                        f"is vital but not specified for statement type '{statement_type}'"
+                    )
                 else:
                     data = data.with_columns(pl.lit(None).alias(std_field))
     if section == "pages":
@@ -861,6 +885,23 @@ def get_standard_fields(
     if section == "lines":
         checks_and_balances.hstack(data.select("STD_PAYMENT_IN", "STD_PAYMENT_OUT", "STD_MOVEMENT").sum(), in_place=True)
         checks_and_balances.hstack(data.select(pl.last("STD_RUNNING_BALANCE")), in_place=True)
+
+    # Add dataframe snapshot to debug_dataframes if available
+    if debug_dataframes is not None:
+        try:
+            if "standard_fields" not in debug_dataframes:
+                debug_dataframes["standard_fields"] = []
+            debug_dataframes["standard_fields"].append((section, data.clone()))
+            if debug_collector is not None:
+                debug_collector.append({
+                    "event": "standard_fields_processing_complete",
+                    "section": section,
+                    "rows_processed": data.height,
+                    "snapshot_stored": True,
+                })
+        except Exception:  # noqa: BLE001
+            pass  # Silently fail if snapshot cannot be created
+
     # # add a GUID to each record
     # data = data.with_columns(STD_GUID=pl.lit(f"{uuid4()}"))
     return data
