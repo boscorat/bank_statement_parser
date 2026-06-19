@@ -1,0 +1,8 @@
+[TSB_UK]
+company = 'TSB Bank UK'
+[TSB_UK.config]
+    config = 'Company Info'
+    locations = [
+        {page_number = 1, top_left = [425,188], bottom_right = [525, 205]},
+    ]
+    field = {field = 'website', vital=true, type="string", string_pattern ='^www\.tsb\.co\.uk$'}

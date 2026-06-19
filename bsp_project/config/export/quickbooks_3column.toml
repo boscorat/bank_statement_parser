@@ -1,0 +1,44 @@
+# QuickBooks Online UK — 3-column bank upload format
+#
+# Accepted by QuickBooks Online (UK) when uploading bank transactions manually.
+# Uses a signed Amount column: positive = money in, negative = money out.
+#
+# Reference:
+#   https://quickbooks.intuit.com/learn-support/en-uk/help-article/bank-transactions/
+#   format-csv-files-excel-get-bank-transactions/L4BjLWckq_GB_en_GB
+#
+# Runtime parameters (passed to export_spec()):
+#   account_key        — required, matches DimAccount.id_account
+#   date_from          — optional date filter (inclusive)
+#   date_to            — optional date filter (inclusive)
+#   statement_key      — optional, restrict to a single statement
+#   split_by_statement — override spec default (false)
+#   invert_polarity    — override spec default (false); set true for credit cards
+#                        whose payments are stored as negative debits
+
+[meta]
+description   = "QuickBooks Online UK — 3-column bank upload format"
+source_table  = "FlatTransaction"
+
+[export]
+format             = "csv"
+split_by_statement = false
+
+# Column mapping: export column name = source column (or computed token)
+# Computed tokens:
+#   computed:signed_amount  — value_in minus value_out (negated if invert_polarity = true)
+[columns]
+Date        = "transaction_date"
+Description = "transaction_desc"
+Amount      = "computed:signed_amount"
+
+[format]
+date_format      = "%d/%m/%Y"
+float_precision  = 2
+invert_polarity  = false
+blank_zeros      = false
+
+[sanitise]
+# Characters stripped silently from all string fields before export.
+# QuickBooks rejects uploads containing these special characters.
+strip_chars = "!@#$%^&*(),.?\":{}|<>"
