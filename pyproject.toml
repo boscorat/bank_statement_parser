@@ -56,6 +56,8 @@ dev = [
     "ruff>=0.14.9",
     "scalene>=2.0.1",
     "mike>=2.0.0",
+    "mkdocs-material>=9.0.0",
+    "pymdown-extensions>=10.0.0",
 ]
 
 [tool.ruff]
