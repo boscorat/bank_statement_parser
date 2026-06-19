@@ -9,6 +9,6 @@
   "expected_closing_balance": "384.1900",
   "expected_payments_in": "100.0000",
   "expected_payments_out": "326.0500",
-  "expected_transaction_count": "1",
+  "expected_transaction_count": "4",
   "description": "NatWest Select Account, August 2019 statement - tests current account config enhancement"
 }
