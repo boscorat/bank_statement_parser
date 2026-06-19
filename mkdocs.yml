@@ -21,7 +21,7 @@ theme:
       accent: indigo
       toggle:
         icon: material/brightness-4
-        name: Switch to light mode
+        name: Switch to dark mode
   features:
     - navigation.sections
     - navigation.expand
@@ -44,7 +44,12 @@ markdown_extensions:
   - toc:
       permalink: true
 
+plugins:
+  - search
+
 extra:
+  version:
+    provider: mike
   goatcounter_url: !ENV [GOATCOUNTER_URL, '']
 
 nav:

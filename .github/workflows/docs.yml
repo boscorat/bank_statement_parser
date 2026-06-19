@@ -1,22 +1,12 @@
 name: Deploy Docs
 
 on:
-  push:
-    branches: [master]
-    paths:
-      - 'docs/**'
-      - 'mkdocs.yml'
-      - 'scripts/generate_docs.py'
-      - 'src/bank_statement_parser/__init__.py'
-      - 'src/bank_statement_parser/cli.py'
-      - 'src/bank_statement_parser/modules/anonymise.py'
-      - 'src/bank_statement_parser/modules/data.py'
-      - 'src/bank_statement_parser/modules/paths.py'
-      - 'src/bank_statement_parser/modules/reports_db.py'
-      - 'src/bank_statement_parser/modules/reports_parquet.py'
-      - 'src/bank_statement_parser/data/__init__.py'
-      - 'src/bank_statement_parser/project/config/**'
   workflow_dispatch:
+    inputs:
+      target_version:
+        description: "Version to regenerate (e.g., 'latest' or '0.2.1')"
+        required: false
+        default: "latest"
 
 permissions:
   contents: read
@@ -25,15 +15,13 @@ permissions:
 
 jobs:
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
-      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b  # v5
-
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
           persist-credentials: false
 
@@ -41,6 +29,9 @@ jobs:
         uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86  # v5
         with:
           enable-cache: false
+
+      - name: Install Python
+        run: uv python install 3.14.2
 
       - name: Install dependencies
         run: uv sync --group dev
@@ -53,9 +44,9 @@ jobs:
         env:
           GOATCOUNTER_URL: ${{ secrets.GOATCOUNTER_URL }}
 
-      - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b  # v4
-        with:
-          path: site
-
-      - uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e  # v4
-        id: deployment
+      - name: Deploy with mike
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          uv run mike deploy --push \
+            "${{ github.event.inputs.target_version || 'latest' }}"

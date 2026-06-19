@@ -22,10 +22,10 @@ Everything runs on your own computer. No data is sent anywhere.
 
 | Bank | Supported accounts |
 |---|---|
-| **HSBC UK** | Bank Account (Current), HSBC Advance, Flexible Saver, Online Bonus Saver, Rewards Credit Card |
-| **TSB UK** | Spend & Save (Current Account) |
-| **NatWest UK** | *(coming soon)* |
-
+| **HALIFAX UK** | Current Account |
+| **HSBC UK** | Rewards Credit Card, Flexible Saver, Bank Account, HSBC Advance, Online Bonus Saver |
+| **NATWEST UK** | Select Account |
+| **TSB UK** | Spend & Save |
 > Support for more banks can be added by creating configuration files. See the [Adding a New Bank](guides/new-bank-config.md) guide.
 
 ---

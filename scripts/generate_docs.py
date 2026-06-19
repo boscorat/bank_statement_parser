@@ -4,14 +4,17 @@ Extends the original single-page generator to produce six documentation pages,
 all auto-generated from source code using ``ast``, ``tokenize``, and regex
 parsing.  Every output file carries a ``DO NOT EDIT`` header.
 
+Also generates the "Supported banks and accounts" table from config files.
+
 Pages generated
 ---------------
-1. ``docs/guides/new-bank-config.md``   — Adding a New Bank (from data.py + TOML examples)
-2. ``docs/reference/cli.md``            — CLI Reference (from cli.py argparse definitions)
-3. ``docs/reference/python-api.md``     — Python API Reference (from __init__.py __all__ + docstrings)
-4. ``docs/guides/anonymisation.md``     — Anonymisation Guide (from anonymise.py module docstring + function docstrings)
-5. ``docs/guides/project-structure.md`` — Project Structure (from paths.py docstrings)
-6. ``docs/guides/exports.md``           — Export Options (from reports_db.py)
+1. ``docs/index.md`` (table only)         — Supported banks table (from config/import/)
+2. ``docs/guides/new-bank-config.md``   — Adding a New Bank (from data.py + TOML examples)
+3. ``docs/reference/cli.md``            — CLI Reference (from cli.py argparse definitions)
+4. ``docs/reference/python-api.md``     — Python API Reference (from __init__.py __all__ + docstrings)
+5. ``docs/guides/anonymisation.md``     — Anonymisation Guide (from anonymise.py module docstring + function docstrings)
+6. ``docs/guides/project-structure.md`` — Project Structure (from paths.py docstrings)
+7. ``docs/guides/exports.md``           — Export Options (from reports_db.py)
 
 Run from the repository root::
 
@@ -22,6 +25,7 @@ from __future__ import annotations
 
 import ast
 import re
+import tomllib
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -44,6 +48,7 @@ _HSBC_DIR = _CONFIG_DIR / "HSBC_UK"
 
 # Output paths
 _DOCS = _REPO_ROOT / "docs"
+_INDEX_MD = _DOCS / "index.md"
 _OUT_BANK_CONFIG = _DOCS / "guides" / "new-bank-config.md"
 _OUT_CLI = _DOCS / "reference" / "cli.md"
 _OUT_API = _DOCS / "reference" / "python-api.md"
@@ -1940,6 +1945,159 @@ def generate_exports_guide() -> str:
 
 
 # ---------------------------------------------------------------------------
+# Bank table generator (from config files)
+# ---------------------------------------------------------------------------
+
+
+def _extract_banks(config_dir: Path) -> list[tuple[str, list[str]]]:
+    """Extract bank names and account lists from config folder.
+
+    Scans config_dir for folders matching <BANK>_<COUNTRY> pattern.
+    For each folder, reads companies.toml (bank name) and accounts.toml
+    (account product names).
+
+    Args:
+        config_dir: Path to config/import/ directory.
+
+    Returns:
+        List of (bank_name, [account_names]) tuples, sorted by bank name.
+    """
+    banks: list[tuple[str, list[str]]] = []
+
+    # Find all bank config folders (directories named like HSBC_UK, TSB_UK, etc.)
+    for bank_folder in sorted(config_dir.iterdir()):
+        if not bank_folder.is_dir() or "_" not in bank_folder.name:
+            continue
+
+        # Skip non-bank folders (those without underscore pattern)
+        parts = bank_folder.name.split("_")
+        if len(parts) < 2:
+            continue
+
+        companies_file = bank_folder / "companies.toml"
+        accounts_file = bank_folder / "accounts.toml"
+
+        # Both files must exist
+        if not companies_file.exists() or not accounts_file.exists():
+            continue
+
+        # Extract bank name from companies.toml
+        try:
+            with open(companies_file, "rb") as f:
+                companies_data = tomllib.load(f)
+        except Exception:
+            continue
+
+        # Find the company name (first [[section]] in companies.toml)
+        bank_name = None
+        for section_name, section_data in companies_data.items():
+            if isinstance(section_data, dict) and "name" in section_data:
+                bank_name = section_data["name"]
+                break
+
+        if not bank_name:
+            # Fallback: use folder name with underscores as spaces
+            bank_name = bank_folder.name.replace("_", " ")
+
+        # Extract account names from accounts.toml
+        try:
+            with open(accounts_file, "rb") as f:
+                accounts_data = tomllib.load(f)
+        except Exception:
+            accounts = []
+        else:
+            accounts = []
+            for section_name, section_data in accounts_data.items():
+                if isinstance(section_data, dict) and "account" in section_data:
+                    account_name = section_data["account"]
+                    if account_name and account_name not in accounts:
+                        accounts.append(account_name)
+
+        if accounts or bank_name:
+            banks.append((bank_name, accounts))
+
+    return banks
+
+
+def _generate_banks_table(config_dir: Path) -> str:
+    """Generate Markdown table of supported banks and accounts.
+
+    Args:
+        config_dir: Path to config/import/ directory.
+
+    Returns:
+        Markdown table string (including header and separator rows).
+    """
+    banks = _extract_banks(config_dir)
+
+    if not banks:
+        return ""
+
+    lines: list[str] = [
+        "| Bank | Supported accounts |",
+        "|---|---|",
+    ]
+
+    for bank_name, accounts in banks:
+        # Bold the bank name, join accounts with commas
+        accounts_str = ", ".join(accounts) if accounts else "*(no accounts configured)*"
+        lines.append(f"| **{bank_name}** | {accounts_str} |")
+
+    return "\n".join(lines)
+
+
+def _update_index_md_table(index_path: Path, table: str) -> None:
+    """Replace the banks table in docs/index.md.
+
+    Finds the line "## Supported banks and accounts" and replaces
+    the Markdown table that follows it with the generated table.
+
+    Args:
+        index_path: Path to docs/index.md.
+        table: Generated Markdown table string.
+    """
+    if not index_path.exists():
+        raise FileNotFoundError(f"docs/index.md not found at {index_path}")
+
+    content = index_path.read_text(encoding="utf-8")
+    lines = content.splitlines(keepends=True)
+
+    # Find the section header
+    section_idx = None
+    for i, line in enumerate(lines):
+        if "## Supported banks and accounts" in line:
+            section_idx = i
+            break
+
+    if section_idx is None:
+        raise ValueError("Could not find '## Supported banks and accounts' section in docs/index.md")
+
+    # Find the start of the table (first | line after the section)
+    table_start = None
+    for i in range(section_idx + 1, len(lines)):
+        if lines[i].strip().startswith("|"):
+            table_start = i
+            break
+
+    if table_start is None:
+        raise ValueError("Could not find table start in docs/index.md")
+
+    # Find the end of the table (first non-table line after start)
+    table_end = None
+    for i in range(table_start, len(lines)):
+        if lines[i].strip() and not lines[i].strip().startswith("|"):
+            table_end = i
+            break
+
+    if table_end is None:
+        table_end = len(lines)
+
+    # Replace the table
+    new_lines = lines[:table_start] + [table + "\n"] + lines[table_end:]
+    index_path.write_text("".join(new_lines), encoding="utf-8")
+
+
+# ---------------------------------------------------------------------------
 # Main — write all pages
 # ---------------------------------------------------------------------------
 
@@ -1955,11 +2113,21 @@ _PAGES: list[tuple[Path, Callable[[], str]]] = [
 
 def main() -> None:
     """Generate all documentation pages."""
+    # Generate main doc pages
     for output_path, generator in _PAGES:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         content = generator()
         output_path.write_text(content, encoding="utf-8")
         print(f"Generated {output_path.relative_to(_REPO_ROOT)}")
+
+    # Update the banks table in index.md
+    try:
+        config_dir = _SRC / "project" / "config" / "import"
+        table = _generate_banks_table(config_dir)
+        _update_index_md_table(_INDEX_MD, table)
+        print(f"Updated banks table in {_INDEX_MD.relative_to(_REPO_ROOT)}")
+    except Exception as e:
+        print(f"Warning: Failed to update banks table: {e}")
 
 
 if __name__ == "__main__":

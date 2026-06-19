@@ -1,10 +1,11 @@
 # release.yml — build and publish on version tag push.
 #
-# Triggered by pushing a tag like "v0.1.0".  Three jobs run in sequence:
+# Triggered by pushing a tag like "v0.1.0".  Four jobs run in sequence:
 #
 #   1. pypi-publish    — build wheel + sdist, publish to PyPI via OIDC.
 #   2. system-packages — build .deb and .rpm via fpm.
 #   3. github-release  — create a GitHub Release with all assets attached.
+#   4. deploy-docs     — generate and deploy versioned docs to GitHub Pages.
 #
 # One-time setup required:
 #   - Create a "pypi" environment in GitHub repo Settings > Environments.
@@ -13,6 +14,8 @@
 #       Repository: bank_statement_parser
 #       Workflow: release.yml
 #       Environment: pypi
+#   - Enable GitHub Pages on gh-pages branch (Settings > Pages).
+#   - Configure Pages to deploy from gh-pages branch.
 
 name: Release
 
@@ -29,6 +32,8 @@ jobs:
     name: Build & publish to PyPI
     runs-on: ubuntu-latest
     environment: pypi
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     permissions:
       id-token: write
       contents: read
@@ -233,10 +238,85 @@ jobs:
           name: system-packages
           path: packages/
 
-      - name: Create release
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65  # v2
+       - name: Create release
+         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65  # v2
+         with:
+           generate_release_notes: true
+           files: |
+             dist/*
+             packages/*
+
+  # ── Generate and deploy docs to GitHub Pages ──────────────────────────
+  deploy-docs:
+    name: Generate & Deploy Docs
+    runs-on: ubuntu-latest
+    needs: [pypi-publish, github-release]
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
-          generate_release_notes: true
-          files: |
-            dist/*
-            packages/*
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86  # v5
+        with:
+          enable-cache: false
+
+      - name: Install Python
+        run: uv python install 3.14.2
+
+      - name: Install dependencies
+        run: uv sync --group dev
+
+      - name: Generate docs for this release
+        run: uv run python scripts/generate_docs.py
+
+      - name: Build site with mkdocs
+        run: uv run zensical build --clean
+        env:
+          GOATCOUNTER_URL: ${{ secrets.GOATCOUNTER_URL }}
+
+      - name: Deploy current version with mike
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          uv run mike deploy --push --update-aliases \
+            "${{ needs.pypi-publish.outputs.version }}" latest
+
+      - name: Fetch all tags for retroactive updates
+        run: git fetch --tags origin
+
+      - name: Retroactively update 2 prior versions
+        run: |
+          set -e
+          
+          # Get all tags sorted by version (newest first), then take 2nd and 3rd
+          TAGS=$(git tag --sort=-version:refname)
+          PRIOR_VERSIONS=$(echo "$TAGS" | head -3 | tail -2)
+          
+          for version in $PRIOR_VERSIONS; do
+            echo "Retroactively updating docs for $version with current bank configs..."
+            
+            # Stash any uncommitted changes
+            git stash || true
+            
+            # Checkout the old tag to get its docs state
+            git checkout "$version" -- docs/
+            
+            # Get the latest bank configs from master
+            git checkout origin/master -- src/bank_statement_parser/project/config/import/
+            
+            # Regenerate docs with new bank data
+            uv run python scripts/generate_docs.py
+            
+            # Deploy this version with updated bank table
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            uv run mike deploy --push --no-redirect "$version"
+          done
+
+      - name: Clean up
+        if: always()
+        run: git stash pop || true
