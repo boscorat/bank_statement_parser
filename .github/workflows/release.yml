@@ -278,6 +278,9 @@ jobs:
         env:
           GOATCOUNTER_URL: ${{ secrets.GOATCOUNTER_URL }}
 
+      - name: Fetch existing gh-pages to avoid orphan push rejection
+        run: git fetch origin gh-pages:gh-pages --depth=1 || true
+
       - name: Deploy current version with mike
         run: |
           git config user.name "github-actions[bot]"
@@ -285,7 +288,7 @@ jobs:
           uv run mike deploy --push --update-aliases \
             "${{ needs.pypi-publish.outputs.version }}" latest
 
-      - name: Fetch all tags and branches for retroactive updates
+      - name: Fetch all tags for retroactive updates
         run: git fetch origin --tags --prune
 
       - name: Retroactively update 2 prior versions
