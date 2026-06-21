@@ -285,11 +285,8 @@ jobs:
           uv run mike deploy --push --update-aliases \
             "${{ needs.pypi-publish.outputs.version }}" latest
 
-      - name: Fetch all tags for retroactive updates
-        run: git fetch --tags origin
-
-      - name: Fetch gh-pages for mike deploy
-        run: git fetch origin gh-pages:gh-pages
+      - name: Fetch all tags and branches for retroactive updates
+        run: git fetch origin --tags --prune
 
       - name: Retroactively update 2 prior versions
         run: |
