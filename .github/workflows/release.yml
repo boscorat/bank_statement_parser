@@ -288,6 +288,9 @@ jobs:
       - name: Fetch all tags for retroactive updates
         run: git fetch --tags origin
 
+      - name: Fetch gh-pages for mike deploy
+        run: git fetch origin gh-pages:gh-pages
+
       - name: Retroactively update 2 prior versions
         run: |
           set -e
