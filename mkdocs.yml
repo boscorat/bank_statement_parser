@@ -56,11 +56,11 @@ nav:
   - Home: index.md
   - Quick Start: guides/quick-start.md
   - Contributing:
-      - Contributing Overview: ../CONTRIBUTING.md
       - Adding a New Bank: guides/contributing-new-bank.md
       - Local Testing: guides/local-testing.md
       - Test Data Submission: guides/test-data-submission.md
   - Guides:
+      - New Bank Config Reference: guides/new-bank-config.md
       - Anonymisation: guides/anonymisation.md
       - Project Structure: guides/project-structure.md
       - Export Options: guides/exports.md
