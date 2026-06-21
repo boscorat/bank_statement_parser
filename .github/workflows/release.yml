@@ -311,14 +311,14 @@ jobs:
             # Regenerate docs with new bank data
             uv run python scripts/generate_docs.py
             
-            # Fetch latest gh-pages so mike can fast-forward push
-            git fetch origin gh-pages:gh-pages
-            
-            # Deploy this version with updated bank table
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            uv run mike deploy --push "$version"
+            # Deploy locally (no push) — mike creates a commit on local gh-pages
+            uv run mike deploy --update-aliases "$version" latest
           done
+
+          # Push all retroactive commits to remote in one go
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git push origin gh-pages
 
       - name: Clean up
         if: always()
