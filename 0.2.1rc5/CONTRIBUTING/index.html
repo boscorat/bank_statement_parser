@@ -1,0 +1,1441 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Documentation for the bank_statement_parser Python library — parse bank statement PDFs, extract structured transaction data, and persist to Parquet and SQLite.">
+      
+      
+      
+        <link rel="canonical" href="https://boscorat.github.io/bank_statement_parser/0.2.1rc5/CONTRIBUTING/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>CONTRIBUTING - Bank Statement Parser</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+  
+      
+
+    
+  
+
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#contributing-to-bank-statement-parser" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Bank Statement Parser" class="md-header__button md-logo" aria-label="Bank Statement Parser" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Bank Statement Parser
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              CONTRIBUTING
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/boscorat/bank_statement_parser" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    boscorat/bank_statement_parser
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Bank Statement Parser" class="md-nav__button md-logo" aria-label="Bank Statement Parser" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Bank Statement Parser
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/boscorat/bank_statement_parser" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    boscorat/bank_statement_parser
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/quick-start/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Contributing
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/contributing-new-bank/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding a New Bank
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/local-testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Local Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/test-data-submission/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test Data Submission
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/new-bank-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    New Bank Config Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/anonymisation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Anonymisation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/project-structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project Structure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/exports/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Export Options
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/python-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#table-of-contents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Table of Contents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#before-you-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Before You Start
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Before You Start">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#quick-links" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Links
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#response-slas-expectations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Response SLAs &amp; Expectations
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Response SLAs &amp; Expectations">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#standard-response-times" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Standard Response Times
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#important-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Important Notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-acknowledge-means" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What "Acknowledge" Means
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#types-of-contributions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Types of Contributions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Types of Contributions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-adding-a-new-bank-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Adding a New Bank Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-adding-a-new-account-type-to-an-existing-bank" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Adding a New Account Type to an Existing Bank
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-improving-an-existing-bank-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Improving an Existing Bank Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-bug-reports-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Bug Reports &amp; Issues
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-documentation-code-improvements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Documentation &amp; Code Improvements
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#submission-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Submission Workflow
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Submission Workflow">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#for-bank-configurations-new-bank-new-account-type-major-fixes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        For Bank Configurations (New Bank / New Account Type / Major Fixes)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#for-other-changes-bug-fixes-docs-code-improvements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        For Other Changes (Bug Fixes, Docs, Code Improvements)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#test-data-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test Data Requirements
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Test Data Requirements">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#minimum-requirements-per-submission" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Minimum Requirements Per Submission
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#anonymisation-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Anonymisation Requirements
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#filename-conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Filename Conventions
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metadata-json" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metadata JSON
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-help" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Getting Help
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Getting Help">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Documentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#questions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Questions?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#feedback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feedback
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#code-of-conduct" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Code of Conduct
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#license" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        License
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<!-- markdownlint-disable MD003 MD007 -->
+
+<h1 id="contributing-to-bank-statement-parser">Contributing to Bank Statement Parser<a class="headerlink" href="#contributing-to-bank-statement-parser" title="Permanent link">&para;</a></h1>
+<p>Thank you for your interest in contributing to Bank Statement Parser! We welcome contributions of all kinds — new bank configurations, bug fixes, documentation improvements, and more.</p>
+<h2 id="table-of-contents">Table of Contents<a class="headerlink" href="#table-of-contents" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="#before-you-start">Before You Start</a></li>
+<li><a href="#response-slas--expectations">Response SLAs &amp; Expectations</a></li>
+<li><a href="#types-of-contributions">Types of Contributions</a></li>
+<li><a href="#submission-workflow">Submission Workflow</a></li>
+<li><a href="#getting-help">Getting Help</a></li>
+</ul>
+<hr />
+<h2 id="before-you-start">Before You Start<a class="headerlink" href="#before-you-start" title="Permanent link">&para;</a></h2>
+<p>Please review our <a href="./AGENTS.md">AGENTS.md</a> for architectural context and development guidelines. All contributions should follow the project's code style and testing requirements.</p>
+<h3 id="quick-links">Quick Links<a class="headerlink" href="#quick-links" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Development Setup:</strong> <a href="./AGENTS.md">AGENTS.md</a></li>
+<li><strong>Code Style:</strong> ruff (linting &amp; formatting)</li>
+<li><strong>Tests:</strong> pytest (see <a href="./AGENTS.md">AGENTS.md</a> for test commands)</li>
+<li><strong>Architecture:</strong> <a href="./AGENTS.md">AGENTS.md</a></li>
+</ul>
+<hr />
+<h2 id="response-slas-expectations">Response SLAs &amp; Expectations<a class="headerlink" href="#response-slas-expectations" title="Permanent link">&para;</a></h2>
+<p>Bank Statement Parser is actively maintained as a solo project. Here's what you can expect:</p>
+<h3 id="standard-response-times">Standard Response Times<a class="headerlink" href="#standard-response-times" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Request Type</th>
+<th>Response SLA</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Bug reports</strong></td>
+<td>10 days (triage)</td>
+</tr>
+<tr>
+<td><strong>Security vulnerabilities</strong></td>
+<td>48 hours (see <a href="./SECURITY.md">SECURITY.md</a>)</td>
+</tr>
+<tr>
+<td><strong>PRs from community</strong></td>
+<td>14 days (review)</td>
+</tr>
+<tr>
+<td><strong>Feature requests / ideas</strong></td>
+<td>10 days (acknowledge)</td>
+</tr>
+<tr>
+<td><strong>Bank configuration requests</strong></td>
+<td>10 days (acknowledge); implementation timeline varies</td>
+</tr>
+<tr>
+<td><strong>General questions</strong></td>
+<td>10 days (answer or redirect)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="important-notes">Important Notes<a class="headerlink" href="#important-notes" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Out of scope:</strong> Feature requests aligned with <a href="./VISION.md">VISION.md</a> scope boundaries may be deprioritised or politely declined. Check <a href="./VISION.md">VISION.md</a> before investing time in a feature request.</li>
+<li><strong>Off-season:</strong> I take ~2 weeks off per year. During those periods, responses may be slower.</li>
+<li><strong>Accelerated security responses:</strong> Security vulnerabilities receive priority; see <a href="./SECURITY.md">SECURITY.md</a> for details.</li>
+</ul>
+<h3 id="what-acknowledge-means">What "Acknowledge" Means<a class="headerlink" href="#what-acknowledge-means" title="Permanent link">&para;</a></h3>
+<p>When we "acknowledge" a feature request or bank config request within 10 days, we will:
+- Confirm receipt of your request
+- Indicate whether it aligns with <a href="./VISION.md">VISION.md</a> scope
+- If out of scope, explain why and suggest alternatives (e.g., opening a separate issue for discussion)
+- If in scope, provide next steps</p>
+<p>Implementation may take longer depending on complexity and priority.</p>
+<hr />
+<h2 id="types-of-contributions">Types of Contributions<a class="headerlink" href="#types-of-contributions" title="Permanent link">&para;</a></h2>
+<h3 id="1-adding-a-new-bank-configuration">1. Adding a New Bank Configuration<a class="headerlink" href="#1-adding-a-new-bank-configuration" title="Permanent link">&para;</a></h3>
+<p><strong>What:</strong> Configure Bank Statement Parser to extract transactions from a bank that isn't currently supported.</p>
+<p><strong>Effort:</strong> 2–4 hours (medium–high difficulty)</p>
+<p><strong>Requirements:</strong>
+- Anonymised test PDFs (3+ different statements from the bank/account type)
+- Corresponding metadata JSON files describing expected parsing outcomes
+- New <code>.toml</code> configuration files</p>
+<p><strong>Start Here:</strong> <a href="./docs/guides/contributing-new-bank.md">Contributing: Adding a New Bank</a></p>
+<p><strong>Then:</strong> <a href="./docs/guides/test-data-submission.md">Test Data Submission Workflow</a></p>
+<hr />
+<h3 id="2-adding-a-new-account-type-to-an-existing-bank">2. Adding a New Account Type to an Existing Bank<a class="headerlink" href="#2-adding-a-new-account-type-to-an-existing-bank" title="Permanent link">&para;</a></h3>
+<p><strong>What:</strong> HSBC current accounts are supported; you want to add HSBC savings accounts.</p>
+<p><strong>Effort:</strong> 1–2 hours (medium difficulty)</p>
+<p><strong>Requirements:</strong>
+- Anonymised test PDFs (3+ statements for the new account type)
+- Corresponding metadata JSON files
+- Modified <code>.toml</code> configuration files (changes to <code>accounts.toml</code>, possibly others)</p>
+<p><strong>Start Here:</strong> <a href="./docs/guides/contributing-new-bank.md">Contributing: Adding a New Bank</a> — Choose Scenario B</p>
+<p><strong>Then:</strong> <a href="./docs/guides/test-data-submission.md">Test Data Submission Workflow</a></p>
+<hr />
+<h3 id="3-improving-an-existing-bank-configuration">3. Improving an Existing Bank Configuration<a class="headerlink" href="#3-improving-an-existing-bank-configuration" title="Permanent link">&para;</a></h3>
+<p><strong>What:</strong> A bank's configuration has a bug, or you want to enhance it (better transaction extraction, support for new transaction types, etc.).</p>
+<p><strong>Effort:</strong> 30 mins–1 hour (low–medium difficulty)</p>
+<p><strong>Requirements:</strong>
+- If config changes: Anonymised test PDFs (3+ statements) + metadata JSON
+- PR description explaining the fix/improvement</p>
+<p><strong>Start Here:</strong> <a href="./docs/guides/contributing-new-bank.md">Contributing: Adding a New Bank</a> — Choose Scenario C</p>
+<p><strong>Then (if needed):</strong> <a href="./docs/guides/test-data-submission.md">Test Data Submission Workflow</a></p>
+<hr />
+<h3 id="4-bug-reports-issues">4. Bug Reports &amp; Issues<a class="headerlink" href="#4-bug-reports-issues" title="Permanent link">&para;</a></h3>
+<p><strong>What:</strong> You found a bug or have a feature request.</p>
+<p><strong>How:</strong>
+1. Check <a href="https://github.com/boscorat/bank_statement_parser/issues">existing issues</a> to avoid duplicates
+2. Open a <a href="https://github.com/boscorat/bank_statement_parser/issues/new">new issue</a> with:
+   - Clear description of the problem
+   - Steps to reproduce (if applicable)
+   - Expected vs. actual behavior
+   - Your environment (OS, Python version)</p>
+<p><strong>Note:</strong> If you're reporting a parsing issue with a bank, please include an anonymised PDF for context.</p>
+<hr />
+<h3 id="5-documentation-code-improvements">5. Documentation &amp; Code Improvements<a class="headerlink" href="#5-documentation-code-improvements" title="Permanent link">&para;</a></h3>
+<p><strong>What:</strong> Improve existing docs, fix typos, refactor code, add tests, etc.</p>
+<p><strong>How:</strong>
+1. Open a PR with your changes
+2. Reference any related issues
+3. Ensure all tests pass: <code>pytest tests/</code>
+4. Ensure linting passes: <code>ruff check .</code></p>
+<hr />
+<h2 id="submission-workflow">Submission Workflow<a class="headerlink" href="#submission-workflow" title="Permanent link">&para;</a></h2>
+<h3 id="for-bank-configurations-new-bank-new-account-type-major-fixes">For Bank Configurations (New Bank / New Account Type / Major Fixes)<a class="headerlink" href="#for-bank-configurations-new-bank-new-account-type-major-fixes" title="Permanent link">&para;</a></h3>
+<p><strong>Step 1: Prepare Locally</strong> (Your Work)
+- Create TOML configuration files
+- Test with real anonymised PDFs from the bank
+- Generate metadata JSON describing expected outcomes
+- See: <a href="./docs/guides/local-testing.md">Local Testing Guide</a></p>
+<p><strong>Step 2: Submit Public PR</strong> (Your Work)
+- Create PR to <code>bank_statement_parser</code> repo with:
+  - New/modified <code>.toml</code> config files
+  - <strong>No anonymised PDFs</strong> (don't commit them!)
+  - PR description explains: bank name, account types, any known limitations
+  - Note mentioning: "Test data available; ready to send upon request"</p>
+<p><strong>Step 3: Maintainer Review</strong> (Our Work)
+- We review your configuration files
+- We contact you privately (email/DM) to request anonymised PDFs + metadata JSON
+- We validate locally against your test data</p>
+<p><strong>Step 4: Merge &amp; Release</strong> (Our Work)
+- If approved, we merge your public PR
+- We release a new version (e.g., v0.5.0) with your configuration
+- Users can download and use it immediately</p>
+<p><strong>Step 5: Private Test Data Integration</strong> (Our Work)
+- We create a PR on the private <code>bank-statement-data</code> repo
+- We add your anonymised PDFs + metadata JSON
+- We tag the test data with <code>min_bsp_version: 0.5.0</code> (or current release)
+- We merge the private PR
+- Your test PDFs now become permanent regression tests (run on all future PRs)</p>
+<p><strong>Step 6: Your Tests Protect Future Changes</strong> (Automatic)
+- Every future PR to this repo will run tests against your PDFs
+- If a future change breaks your config, tests fail immediately
+- Your contribution stays protected against regression ✅</p>
+<hr />
+<h3 id="for-other-changes-bug-fixes-docs-code-improvements">For Other Changes (Bug Fixes, Docs, Code Improvements)<a class="headerlink" href="#for-other-changes-bug-fixes-docs-code-improvements" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Create a PR with your changes</li>
+<li>Reference any related issues</li>
+<li>Ensure tests pass: <code>pytest tests/</code></li>
+<li>Ensure linting passes: <code>ruff check .</code> and <code>ruff format .</code></li>
+<li>We review and merge</li>
+</ol>
+<hr />
+<h2 id="test-data-requirements">Test Data Requirements<a class="headerlink" href="#test-data-requirements" title="Permanent link">&para;</a></h2>
+<h3 id="minimum-requirements-per-submission">Minimum Requirements Per Submission<a class="headerlink" href="#minimum-requirements-per-submission" title="Permanent link">&para;</a></h3>
+<p>For <strong>new bank configurations</strong> or <strong>new account types</strong>, you must provide:
+- ✅ <strong>3+ anonymised PDFs</strong> (different statements from the bank/account type)
+- ✅ <strong>Corresponding <code>.json</code> metadata files</strong> (one per PDF)
+- ✅ <strong>Safe filenames</strong> (no account numbers, sort codes, names)</p>
+<p><strong>Why 3+?</strong> One PDF might hit a parsing edge case. Three PDFs prove the config works across different dates, balances, and transaction patterns.</p>
+<h3 id="anonymisation-requirements">Anonymisation Requirements<a class="headerlink" href="#anonymisation-requirements" title="Permanent link">&para;</a></h3>
+<p>Your PDFs must have <strong>no personally identifiable information (PII)</strong>:
+- ❌ Account numbers
+- ❌ Sort codes
+- ❌ Names (account holder, merchants)
+- ❌ Email addresses
+- ❌ Phone numbers
+- ✅ Dates (statement dates, transaction dates)
+- ✅ Amounts (proves config extracts correctly)
+- ✅ Transaction types (DD, FT, CHQ, etc.)
+- ✅ Running balances (proves checks-and-balances validation)</p>
+<p><strong>Tool:</strong> Use <code>bsp anonymise</code> command:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>bsp<span class="w"> </span>anonymise<span class="w"> </span>statement_original.pdf<span class="w"> </span>--output<span class="w"> </span>anonymised_hsbc_creditcard_20220111.pdf
+</code></pre></div></p>
+<h3 id="filename-conventions">Filename Conventions<a class="headerlink" href="#filename-conventions" title="Permanent link">&para;</a></h3>
+<p>⚠️ <strong>CRITICAL:</strong> Do NOT put PII in filenames.</p>
+<p><strong>Pattern:</strong> <code>anonymised_{BANK}_{ACCOUNT_TYPE}_{STATEMENT_DATE}.pdf</code></p>
+<p><strong>Good Examples:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>anonymised_hsbc_creditcard_20220111.pdf
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>anonymised_tsb_current_20220111.pdf
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>anonymised_natwest_savings_20220111.pdf
+</code></pre></div></p>
+<p><strong>Bad Examples (Don't Do This):</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>john_smith_account_40_37_28_20220111.pdf      ❌ (account number)
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>hsbc_j.farrar_20220111.pdf                    ❌ (name)
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>20220111_chase_5432_savings.pdf               ❌ (last 4 digits)
+</code></pre></div></p>
+<hr />
+<h2 id="metadata-json">Metadata JSON<a class="headerlink" href="#metadata-json" title="Permanent link">&para;</a></h2>
+<p>For each anonymised PDF, create a <code>.json</code> sidecar file describing expected parsing outcomes.</p>
+<p><strong>Example structure:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">&quot;pdf_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;anonymised_hsbc_creditcard_20220111.pdf&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">&quot;comment&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;HSBC Rewards Credit Card, January 2022&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">&quot;expected_result&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;SUCCESS&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="nt">&quot;expected_outcome&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;statement&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span><span class="nt">&quot;expected_statement_info&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="nt">&quot;account&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Rewards Credit Card&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">    </span><span class="nt">&quot;statement_date&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2022-01-11&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">    </span><span class="nt">&quot;opening_balance&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1234.56</span><span class="p">,</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">    </span><span class="nt">&quot;closing_balance&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">2345.67</span><span class="p">,</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">    </span><span class="nt">&quot;payments_in&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">5000.00</span><span class="p">,</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">    </span><span class="nt">&quot;payments_out&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">3888.89</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="w">  </span><span class="p">},</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="w">  </span><span class="nt">&quot;expected_transaction_count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">47</span><span class="p">,</span>
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a><span class="w">  </span><span class="nt">&quot;expected_checks_and_balances_pass&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="w">  </span><span class="nt">&quot;notes&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Tests multi-page statement with foreign transactions&quot;</span>
+<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="p">}</span>
+</code></pre></div></p>
+<p><strong>How to generate:</strong> Run the parser locally and copy the extracted values.</p>
+<p><strong>Full documentation:</strong> <a href="./docs/guides/test-data-submission.md">Test Data Submission Workflow</a></p>
+<hr />
+<h2 id="getting-help">Getting Help<a class="headerlink" href="#getting-help" title="Permanent link">&para;</a></h2>
+<h3 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Quick Start:</strong> <a href="./docs/guides/quick-start.md">Getting Started</a></li>
+<li><strong>Adding a New Bank:</strong> <a href="./docs/guides/contributing-new-bank.md">Contributing: Adding a New Bank</a></li>
+<li><strong>Local Testing:</strong> <a href="./docs/guides/local-testing.md">Testing Your Config Locally</a></li>
+<li><strong>Test Data Submission:</strong> <a href="./docs/guides/test-data-submission.md">Test Data Submission Workflow</a></li>
+<li><strong>Developer Architecture:</strong> <a href="./AGENTS.md">AGENTS.md</a></li>
+</ul>
+<h3 id="questions">Questions?<a class="headerlink" href="#questions" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Check existing <a href="https://github.com/boscorat/bank_statement_parser/issues">GitHub Issues</a></li>
+<li>Open a <a href="https://github.com/boscorat/bank_statement_parser/issues/new">new issue</a> with your question (we'll tag it as <code>question</code>)</li>
+<li>Discussions (if enabled on the repo)</li>
+</ul>
+<h3 id="feedback">Feedback<a class="headerlink" href="#feedback" title="Permanent link">&para;</a></h3>
+<p>We welcome feedback on the contribution process itself! If something is unclear or could be improved, please let us know:
+- Open an issue with tag <code>documentation</code>
+- Or mention it in your PR</p>
+<hr />
+<h2 id="code-of-conduct">Code of Conduct<a class="headerlink" href="#code-of-conduct" title="Permanent link">&para;</a></h2>
+<p>We are committed to providing a welcoming and inclusive environment. Please treat all contributors with respect. Harassment or discrimination of any kind will not be tolerated.</p>
+<hr />
+<h2 id="license">License<a class="headerlink" href="#license" title="Permanent link">&para;</a></h2>
+<p>By contributing to this project, you agree that your contributions will be licensed under the same license as the project (see LICENSE file).</p>
+<hr />
+<p>Thank you for contributing! 🙏</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
