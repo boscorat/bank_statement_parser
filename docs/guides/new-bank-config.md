@@ -151,7 +151,7 @@ A single extraction step: one table (or one standalone field) from one location.
 | `config` | `str` | ACTIVE | Human-readable label for this extraction step (e.g. "Statement Balances").  Written into the "config" column of the long-format results DataFrame for traceability. |
 | `statement_table_key` | `str` | ACTIVE | Key into statement_tables.toml that identifies the StatementTable to use.  Resolved to statement_table at load time.  Set to None for inline single-field configs. |
 | `statement_table` | `StatementTable` | ACTIVE | Resolved at load time from statement_table_key.  The StatementTable object used during extraction.  Not set directly in TOML. |
-| `locations` | `list[Location` | ACTIVE | Used only for inline single-field configs (where statement_table is None).  Defines where on the page to find the field value. |
+| `locations` | `list&#91;Location` | ACTIVE | Used only for inline single-field configs (where statement_table is None).  Defines where on the page to find the field value. |
 | `field` | `Field` | ACTIVE | Used only for inline single-field configs.  Defines the extraction spec for the single value to read from the location. |
 
 #### `Location`
@@ -161,12 +161,12 @@ Describes a rectangular region on a PDF page from which a table or text is extra
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
 | `page_number` | `int` | ACTIVE | 1-based page number.  When set the location is used only on that page.  When None the location is cloned for every page (spawn_locations()). |
-| `top_left` | `list[int` | ACTIVE | [x, y] coordinates of the top-left corner of the crop rectangle. Must be set together with bottom_right.  When both are None the full page is used. |
-| `bottom_right` | `list[int` | ACTIVE | [x, y] coordinates of the bottom-right corner of the crop rectangle.  Must be set together with top_left. |
-| `vertical_lines` | `list[int` | ACTIVE | Explicit x-coordinates of vertical column dividers supplied to pdfplumber as explicit_vertical_lines.  Pairs of identical values create a zero-width gap that forces a column boundary (e.g. [100, 100, 200, 200]). When set, pdfplumber's automatic column detection is disabled for this region. |
+| `top_left` | `list&#91;int` | ACTIVE | &#91;x, y&#93; coordinates of the top-left corner of the crop rectangle. Must be set together with bottom_right.  When both are None the full page is used. |
+| `bottom_right` | `list&#91;int` | ACTIVE | &#91;x, y&#93; coordinates of the bottom-right corner of the crop rectangle.  Must be set together with top_left. |
+| `vertical_lines` | `list&#91;int` | ACTIVE | Explicit x-coordinates of vertical column dividers supplied to pdfplumber as explicit_vertical_lines.  Pairs of identical values create a zero-width gap that forces a column boundary (e.g. &#91;100, 100, 200, 200&#93;). When set, pdfplumber's automatic column detection is disabled for this region. |
 | `dynamic_last_vertical_line` | `DynamicLineSpec` | ACTIVE | When set, the final value in vertical_lines is replaced at runtime with an x-coordinate derived from a PDF image's bounding box.  See DynamicLineSpec.  Used where the rightmost column boundary floats with a logo. |
 | `allow_text_failover` | `bool` | ACTIVE | When True and the extracted table has the wrong number of columns, the extraction is retried without vertical_lines, falling back to pdfplumber's text-based column detection.  Useful as a safety net for pages where the explicit dividers produce a malformed table. |
-| `try_shift_down` | `int` | ACTIVE | Number of PDF points to shift the crop rectangle downward (applied to both top_left[1] and bottom_right[1]) when the initial extraction returns an empty region.  Handles statements where the table top boundary varies slightly between pages. |
+| `try_shift_down` | `int` | ACTIVE | Number of PDF points to shift the crop rectangle downward (applied to both top_left&#91;1&#93; and bottom_right&#91;1&#93;) when the initial extraction returns an empty region.  Handles statements where the table top boundary varies slightly between pages. |
 
 #### `Field`
 
@@ -187,7 +187,7 @@ Extraction specification for a single column or cell within a PDF table.
 | `string_max_length` | `int` | ACTIVE | Maximum character length for string values; longer strings are truncated via str.head().  Useful for capping free-text description fields. Defaults to 999 if not set. |
 | `date_format` | `str` | STUB | Intended strptime format for date parsing at the Field level. Declared but never read by the pipeline; date format parsing is handled via StdRefs.format in get_standard_fields() instead. |
 | `value_offset` | `'FieldOffset'` | ACTIVE | When set, reads the field's value from an adjacent column (Field.column + FieldOffset.cols_offset) using the type and currency rules defined in the FieldOffset rather than those on this Field.  The primary field column is still extracted normally; the offset column value replaces it in the output.  See FieldOffset. |
-| `regex_groups` | `int` | ACTIVE | When set, extracts the specified capture group (1-indexed) from the string_pattern regex match instead of the entire match (group 0). Useful for splitting a single PDF column into multiple fields via regex capture groups. Example: string_pattern = '^([A-Z ]+)\s+([A-Z0-9]+)$' with regex_groups = 1 extracts group 1; regex_groups = 2 extracts group 2. When None, defaults to group 0 (entire match, backward compatible). Omit for standard extraction. |
+| `regex_groups` | `int` | ACTIVE | When set, extracts the specified capture group (1-indexed) from the string_pattern regex match instead of the entire match (group 0). Useful for splitting a single PDF column into multiple fields via regex capture groups. Example: string_pattern = '^(&#91;A-Z &#93;+)\s+(&#91;A-Z0-9&#93;+)$' with regex_groups = 1 extracts group 1; regex_groups = 2 extracts group 2. When None, defaults to group 0 (entire match, backward compatible). Omit for standard extraction. |
 
 ## Step 4: Define Statement Tables
 
@@ -279,12 +279,12 @@ Full configuration for extracting one table from a PDF statement.
 | `statement_table` | `str` | STUB | Human-readable table label (e.g. "Transactions", "Account Summary"). Loaded from TOML for documentation purposes but not consumed by the pipeline. |
 | `header_text` | `str` | ACTIVE | When set, the first table row whose text matches this string is stripped before extraction.  Use when pdfplumber includes the column header row in the extracted data. |
 | `remove_header` | `bool` | ACTIVE | When True the first table row is unconditionally stripped.  Use when the header row is always present but its text varies (making header_text impractical). |
-| `locations` | `list[Location]` | ACTIVE | One or more Location entries describing where on the page to find this table.  Locations without a page_number are cloned for every page. |
-| `fields` | `list[Field]` | ACTIVE | Ordered list of field extraction specs.  For transaction tables each field must have a column; for summary/detail tables each field must have a cell. |
+| `locations` | `list&#91;Location&#93;` | ACTIVE | One or more Location entries describing where on the page to find this table.  Locations without a page_number are cloned for every page. |
+| `fields` | `list&#91;Field&#93;` | ACTIVE | Ordered list of field extraction specs.  For transaction tables each field must have a column; for summary/detail tables each field must have a cell. |
 | `table_columns` | `int` | ACTIVE | Expected minimum number of columns in the extracted table.  Passed to pdfplumber as min_words_horizontal and used to validate column count after extraction.  Also triggers allow_text_failover retry logic. |
 | `table_rows` | `int` | ACTIVE | Expected minimum number of rows in the extracted table.  Passed to pdfplumber as min_words_vertical. |
 | `row_spacing` | `int` | ACTIVE | pdfplumber snap_y_tolerance in PDF points.  Rows whose top edges fall within this distance of each other are merged into the same table row. Increase if the statement uses tight line spacing that splits a single visual row across multiple pdfplumber rows. |
-| `tests` | `list[Test` | STUB | Declarative post-extraction assertions.  Declared and accepted in TOML but no pipeline code evaluates them.  Reserved for a future config validation pass. |
+| `tests` | `list&#91;Test` | STUB | Declarative post-extraction assertions.  Declared and accepted in TOML but no pipeline code evaluates them.  Reserved for a future config validation pass. |
 | `delete_success_false` | `bool` | STUB | Intended to drop rows where any field extraction returned success = False.  Declared and set in TOML (typically True) but no pipeline code currently reads or acts on this flag. |
 | `delete_cast_success_false` | `bool` | STUB | Intended to drop rows where numeric casting failed.  Declared and set in TOML (typically True) but no pipeline code currently reads or acts on this flag. |
 | `delete_rows_with_missing_vital_fields` | `bool` | STUB | Intended to drop rows where any vital field is missing after extraction.  Declared and set in TOML (typically True) but no pipeline code currently reads or acts on this flag.  Note: vital-field hard-failure logic exists in validate() but is separate from this flag. |
@@ -297,12 +297,12 @@ Describes a rectangular region on a PDF page from which a table or text is extra
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
 | `page_number` | `int` | ACTIVE | 1-based page number.  When set the location is used only on that page.  When None the location is cloned for every page (spawn_locations()). |
-| `top_left` | `list[int` | ACTIVE | [x, y] coordinates of the top-left corner of the crop rectangle. Must be set together with bottom_right.  When both are None the full page is used. |
-| `bottom_right` | `list[int` | ACTIVE | [x, y] coordinates of the bottom-right corner of the crop rectangle.  Must be set together with top_left. |
-| `vertical_lines` | `list[int` | ACTIVE | Explicit x-coordinates of vertical column dividers supplied to pdfplumber as explicit_vertical_lines.  Pairs of identical values create a zero-width gap that forces a column boundary (e.g. [100, 100, 200, 200]). When set, pdfplumber's automatic column detection is disabled for this region. |
+| `top_left` | `list&#91;int` | ACTIVE | &#91;x, y&#93; coordinates of the top-left corner of the crop rectangle. Must be set together with bottom_right.  When both are None the full page is used. |
+| `bottom_right` | `list&#91;int` | ACTIVE | &#91;x, y&#93; coordinates of the bottom-right corner of the crop rectangle.  Must be set together with top_left. |
+| `vertical_lines` | `list&#91;int` | ACTIVE | Explicit x-coordinates of vertical column dividers supplied to pdfplumber as explicit_vertical_lines.  Pairs of identical values create a zero-width gap that forces a column boundary (e.g. &#91;100, 100, 200, 200&#93;). When set, pdfplumber's automatic column detection is disabled for this region. |
 | `dynamic_last_vertical_line` | `DynamicLineSpec` | ACTIVE | When set, the final value in vertical_lines is replaced at runtime with an x-coordinate derived from a PDF image's bounding box.  See DynamicLineSpec.  Used where the rightmost column boundary floats with a logo. |
 | `allow_text_failover` | `bool` | ACTIVE | When True and the extracted table has the wrong number of columns, the extraction is retried without vertical_lines, falling back to pdfplumber's text-based column detection.  Useful as a safety net for pages where the explicit dividers produce a malformed table. |
-| `try_shift_down` | `int` | ACTIVE | Number of PDF points to shift the crop rectangle downward (applied to both top_left[1] and bottom_right[1]) when the initial extraction returns an empty region.  Handles statements where the table top boundary varies slightly between pages. |
+| `try_shift_down` | `int` | ACTIVE | Number of PDF points to shift the crop rectangle downward (applied to both top_left&#91;1&#93; and bottom_right&#91;1&#93;) when the initial extraction returns an empty region.  Handles statements where the table top boundary varies slightly between pages. |
 
 #### `DynamicLineSpec`
 
@@ -332,7 +332,7 @@ Extraction specification for a single column or cell within a PDF table.
 | `string_max_length` | `int` | ACTIVE | Maximum character length for string values; longer strings are truncated via str.head().  Useful for capping free-text description fields. Defaults to 999 if not set. |
 | `date_format` | `str` | STUB | Intended strptime format for date parsing at the Field level. Declared but never read by the pipeline; date format parsing is handled via StdRefs.format in get_standard_fields() instead. |
 | `value_offset` | `'FieldOffset'` | ACTIVE | When set, reads the field's value from an adjacent column (Field.column + FieldOffset.cols_offset) using the type and currency rules defined in the FieldOffset rather than those on this Field.  The primary field column is still extracted normally; the offset column value replaces it in the output.  See FieldOffset. |
-| `regex_groups` | `int` | ACTIVE | When set, extracts the specified capture group (1-indexed) from the string_pattern regex match instead of the entire match (group 0). Useful for splitting a single PDF column into multiple fields via regex capture groups. Example: string_pattern = '^([A-Z ]+)\s+([A-Z0-9]+)$' with regex_groups = 1 extracts group 1; regex_groups = 2 extracts group 2. When None, defaults to group 0 (entire match, backward compatible). Omit for standard extraction. |
+| `regex_groups` | `int` | ACTIVE | When set, extracts the specified capture group (1-indexed) from the string_pattern regex match instead of the entire match (group 0). Useful for splitting a single PDF column into multiple fields via regex capture groups. Example: string_pattern = '^(&#91;A-Z &#93;+)\s+(&#91;A-Z0-9&#93;+)$' with regex_groups = 1 extracts group 1; regex_groups = 2 extracts group 2. When None, defaults to group 0 (entire match, backward compatible). Omit for standard extraction. |
 
 #### `Cell`
 
@@ -375,9 +375,9 @@ Currency formatting rules used to strip symbols and separators before numeric ca
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
 | `name` | `str` | ACTIVE | Human-readable currency name (e.g. "British Pound Sterling"). |
-| `symbols` | `list[str]` | ACTIVE | List of currency symbol strings to strip from the raw value before casting (e.g. ["£", "$"]).  Replaced with empty string via str.replace_many(). |
+| `symbols` | `list&#91;str&#93;` | ACTIVE | List of currency symbol strings to strip from the raw value before casting (e.g. &#91;"£", "$"&#93;).  Replaced with empty string via str.replace_many(). |
 | `seperator_decimal` | `str` | STUB | Intended decimal separator character (e.g. ".").  Declared but never read by the pipeline; decimal handling is implicit after symbols and thousands separators are stripped. |
-| `seperators_thousands` | `list[str]` | ACTIVE | List of thousands-separator strings to strip (e.g. [","]). Replaced with empty string via str.replace_many() before casting. |
+| `seperators_thousands` | `list&#91;str&#93;` | ACTIVE | List of thousands-separator strings to strip (e.g. &#91;","&#93;). Replaced with empty string via str.replace_many() before casting. |
 | `round_decimals` | `int` | STUB | Intended rounding precision after casting.  Declared but never read by the pipeline; no rounding is currently applied. |
 | `pattern` | `str` | ACTIVE | Regex pattern used to extract the numeric substring from the raw cell text before symbol/separator stripping.  Passed to patmatch() via build_pattern(). |
 
@@ -387,10 +387,10 @@ Full specification for extracting transactions from a transaction-type table.
 
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
-| `transaction_bookends` | `list[TransactionBookend]` | ACTIVE | One or more bookend definitions that identify transaction boundaries.  Evaluated in order; a row matched by an earlier bookend is not re-matched by a later one.  At least one bookend is required. |
-| `fill_forward_fields` | `list[str` | ACTIVE | Field names whose null values should be forward-filled across rows within the same page after pivot.  Use for sparse columns where a value (e.g. a date or payment type) appears only on the first row of a multi-row block and needs propagating to the end row. |
+| `transaction_bookends` | `list&#91;TransactionBookend&#93;` | ACTIVE | One or more bookend definitions that identify transaction boundaries.  Evaluated in order; a row matched by an earlier bookend is not re-matched by a later one.  At least one bookend is required. |
+| `fill_forward_fields` | `list&#91;str` | ACTIVE | Field names whose null values should be forward-filled across rows within the same page after pivot.  Use for sparse columns where a value (e.g. a date or payment type) appears only on the first row of a multi-row block and needs propagating to the end row. |
 | `merge_fields` | `MergeFields` | ACTIVE | When set, collapses multi-row text fields within each transaction into a single joined string.  See MergeFields. |
-| `exclude_rows` | `list[FieldValidation` | ACTIVE | Rows where any rule's field value matches its pattern are removed from the results before bookend detection runs.  Use to suppress known non-transaction rows (e.g. a closing balance summary line) that would otherwise interfere with transaction counting or checks & balances. Each rule is a {field, pattern} pair; a row is excluded if any rule matches. |
+| `exclude_rows` | `list&#91;FieldValidation` | ACTIVE | Rows where any rule's field value matches its pattern are removed from the results before bookend detection runs.  Use to suppress known non-transaction rows (e.g. a closing balance summary line) that would otherwise interfere with transaction counting or checks & balances. Each rule is a {field, pattern} pair; a row is excluded if any rule matches. |
 
 #### `TransactionBookend`
 
@@ -398,13 +398,13 @@ Defines how the start and end of a single transaction are detected within a tabl
 
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
-| `start_fields` | `list[str]` | ACTIVE | Field names that are checked to identify the first row of a transaction.  A row qualifies as a start row when at least min_non_empty_start of these fields extracted successfully (success = True). |
+| `start_fields` | `list&#91;str&#93;` | ACTIVE | Field names that are checked to identify the first row of a transaction.  A row qualifies as a start row when at least min_non_empty_start of these fields extracted successfully (success = True). |
 | `min_non_empty_start` | `int` | ACTIVE | Minimum number of start_fields that must have extracted successfully for a row to be flagged as transaction_start = True. |
-| `end_fields` | `list[str]` | ACTIVE | Field names checked to identify the last row of a transaction. A row qualifies as an end row when at least min_non_empty_end of these fields extracted successfully. |
+| `end_fields` | `list&#91;str&#93;` | ACTIVE | Field names checked to identify the last row of a transaction. A row qualifies as an end row when at least min_non_empty_end of these fields extracted successfully. |
 | `min_non_empty_end` | `int` | ACTIVE | Minimum number of end_fields that must have extracted successfully for a row to be flagged as transaction_end = True. |
 | `extra_validation_start` | `FieldValidation` | ACTIVE | When set, any row where the named field's value does NOT match the pattern is excluded from being a start-bookend candidate for this bookend. Rows excluded here may still be captured by another bookend in the list. Useful for bookends that should only trigger on a specific row shape (e.g. an interest charge line identified by its details text). |
 | `extra_validation_end` | `FieldValidation` | STUB | Symmetric counterpart to extra_validation_start for end rows. Declared but not yet implemented in the pipeline; no code currently reads this field.  Reserved for future use. |
-| `sticky_fields` | `list[str` | STUB | Intended to forward-fill named fields from the start row of a transaction down to its end row, scoped within a single transaction (as opposed to fill_forward_fields which fills across transactions).  Declared but not implemented; no pipeline code reads this field. |
+| `sticky_fields` | `list&#91;str` | STUB | Intended to forward-fill named fields from the start row of a transaction down to its end row, scoped within a single transaction (as opposed to fill_forward_fields which fills across transactions).  Declared but not implemented; no pipeline code reads this field. |
 
 #### `FieldValidation`
 
@@ -421,7 +421,7 @@ Specifies how multi-row text fields are collapsed into a single output value.
 
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
-| `fields` | `list[str]` | ACTIVE | Names of the fields whose per-row values should be joined. |
+| `fields` | `list&#91;str&#93;` | ACTIVE | Names of the fields whose per-row values should be joined. |
 | `separator` | `str` | ACTIVE | Delimiter inserted between joined values (e.g. " \| "). |
 
 ## Step 5: Define Statement Types
@@ -531,7 +531,7 @@ An ordered list of Config extraction steps for one pipeline section.
 
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
-| `configs` | `list[Config` | ACTIVE | Ordered list of Config steps.  Executed in sequence during extraction; results are stacked into the section's results DataFrame. |
+| `configs` | `list&#91;Config` | ACTIVE | Ordered list of Config steps.  Executed in sequence during extraction; results are stacked into the section's results DataFrame. |
 
 #### `Config`
 
@@ -542,7 +542,7 @@ A single extraction step: one table (or one standalone field) from one location.
 | `config` | `str` | ACTIVE | Human-readable label for this extraction step (e.g. "Statement Balances").  Written into the "config" column of the long-format results DataFrame for traceability. |
 | `statement_table_key` | `str` | ACTIVE | Key into statement_tables.toml that identifies the StatementTable to use.  Resolved to statement_table at load time.  Set to None for inline single-field configs. |
 | `statement_table` | `StatementTable` | ACTIVE | Resolved at load time from statement_table_key.  The StatementTable object used during extraction.  Not set directly in TOML. |
-| `locations` | `list[Location` | ACTIVE | Used only for inline single-field configs (where statement_table is None).  Defines where on the page to find the field value. |
+| `locations` | `list&#91;Location` | ACTIVE | Used only for inline single-field configs (where statement_table is None).  Defines where on the page to find the field value. |
 | `field` | `Field` | ACTIVE | Used only for inline single-field configs.  Defines the extraction spec for the single value to read from the location. |
 
 ## Step 6: Define Accounts
@@ -592,7 +592,7 @@ Full runtime configuration for one bank account.
 | `statement_type` | `StatementType` | ACTIVE | Resolved at load time from statement_type_key.  Provides the header and lines ConfigGroups used during extraction. |
 | `exclude_last_n_pages` | `int` | ACTIVE | Number of trailing pages to skip when cloning per-page locations. Set to 1 (or more) when the final page(s) contain terms & conditions or other non-transaction content that would otherwise be passed to the extraction pipeline. |
 | `currency` | `str` | ACTIVE | ISO 4217 currency code for all monetary fields on this account (e.g. "GBP", "USD", "PHP").  Must be a key in ``currency_spec`` in ``currency.py``; validated at config load time.  Used by the extraction pipeline to resolve the CurrencySpec for fields of type "currency". |
-| `config` | `Config` | ACTIVE | Account-level identification config.  A lightweight extraction step run to confirm a PDF belongs to this account before the full extraction pass. Defined inline under ``[ACCOUNT_KEY.config]`` in accounts.toml. |
+| `config` | `Config` | ACTIVE | Account-level identification config.  A lightweight extraction step run to confirm a PDF belongs to this account before the full extraction pass. Defined inline under ``&#91;ACCOUNT_KEY.config&#93;`` in accounts.toml. |
 
 ## Step 7: Register Standard Field Mappings
 
@@ -673,7 +673,7 @@ Declaration of a single standard output column and how to derive it.
 | `section` | `str` | ACTIVE | Pipeline section this field belongs to: "header" (statement-level metadata extracted once per statement) or "lines" (per-transaction data). Used to dispatch the field to the correct extraction pass. |
 | `type` | `str` | ACTIVE | Data type of the standard column: "string", "numeric", or "date". Controls casting, multiplier application, and date parsing in get_standard_fields(). |
 | `vital` | `bool` | ACTIVE | When True a ConfigError is raised if no matching StdRefs entry is found for the current statement type, halting processing.  Set False for optional fields that not all statement types provide. |
-| `std_refs` | `list[StdRefs]` | ACTIVE | One entry per supported statement type.  The correct entry is selected at runtime by matching StdRefs.statement_type. |
+| `std_refs` | `list&#91;StdRefs&#93;` | ACTIVE | One entry per supported statement type.  The correct entry is selected at runtime by matching StdRefs.statement_type. |
 
 
 ## Configuration Checklist
@@ -721,7 +721,7 @@ Full runtime configuration for one bank account.
 | `statement_type` | `StatementType` | ACTIVE | Resolved at load time from statement_type_key.  Provides the header and lines ConfigGroups used during extraction. |
 | `exclude_last_n_pages` | `int` | ACTIVE | Number of trailing pages to skip when cloning per-page locations. Set to 1 (or more) when the final page(s) contain terms & conditions or other non-transaction content that would otherwise be passed to the extraction pipeline. |
 | `currency` | `str` | ACTIVE | ISO 4217 currency code for all monetary fields on this account (e.g. "GBP", "USD", "PHP").  Must be a key in ``currency_spec`` in ``currency.py``; validated at config load time.  Used by the extraction pipeline to resolve the CurrencySpec for fields of type "currency". |
-| `config` | `Config` | ACTIVE | Account-level identification config.  A lightweight extraction step run to confirm a PDF belongs to this account before the full extraction pass. Defined inline under ``[ACCOUNT_KEY.config]`` in accounts.toml. |
+| `config` | `Config` | ACTIVE | Account-level identification config.  A lightweight extraction step run to confirm a PDF belongs to this account before the full extraction pass. Defined inline under ``&#91;ACCOUNT_KEY.config&#93;`` in accounts.toml. |
 
 ### `AccountType`
 
@@ -747,7 +747,7 @@ An ordered list of Config extraction steps for one pipeline section.
 
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
-| `configs` | `list[Config` | ACTIVE | Ordered list of Config steps.  Executed in sequence during extraction; results are stacked into the section's results DataFrame. |
+| `configs` | `list&#91;Config` | ACTIVE | Ordered list of Config steps.  Executed in sequence during extraction; results are stacked into the section's results DataFrame. |
 
 ### `Config`
 
@@ -758,7 +758,7 @@ A single extraction step: one table (or one standalone field) from one location.
 | `config` | `str` | ACTIVE | Human-readable label for this extraction step (e.g. "Statement Balances").  Written into the "config" column of the long-format results DataFrame for traceability. |
 | `statement_table_key` | `str` | ACTIVE | Key into statement_tables.toml that identifies the StatementTable to use.  Resolved to statement_table at load time.  Set to None for inline single-field configs. |
 | `statement_table` | `StatementTable` | ACTIVE | Resolved at load time from statement_table_key.  The StatementTable object used during extraction.  Not set directly in TOML. |
-| `locations` | `list[Location` | ACTIVE | Used only for inline single-field configs (where statement_table is None).  Defines where on the page to find the field value. |
+| `locations` | `list&#91;Location` | ACTIVE | Used only for inline single-field configs (where statement_table is None).  Defines where on the page to find the field value. |
 | `field` | `Field` | ACTIVE | Used only for inline single-field configs.  Defines the extraction spec for the single value to read from the location. |
 
 ### `StatementTable`
@@ -771,12 +771,12 @@ Full configuration for extracting one table from a PDF statement.
 | `statement_table` | `str` | STUB | Human-readable table label (e.g. "Transactions", "Account Summary"). Loaded from TOML for documentation purposes but not consumed by the pipeline. |
 | `header_text` | `str` | ACTIVE | When set, the first table row whose text matches this string is stripped before extraction.  Use when pdfplumber includes the column header row in the extracted data. |
 | `remove_header` | `bool` | ACTIVE | When True the first table row is unconditionally stripped.  Use when the header row is always present but its text varies (making header_text impractical). |
-| `locations` | `list[Location]` | ACTIVE | One or more Location entries describing where on the page to find this table.  Locations without a page_number are cloned for every page. |
-| `fields` | `list[Field]` | ACTIVE | Ordered list of field extraction specs.  For transaction tables each field must have a column; for summary/detail tables each field must have a cell. |
+| `locations` | `list&#91;Location&#93;` | ACTIVE | One or more Location entries describing where on the page to find this table.  Locations without a page_number are cloned for every page. |
+| `fields` | `list&#91;Field&#93;` | ACTIVE | Ordered list of field extraction specs.  For transaction tables each field must have a column; for summary/detail tables each field must have a cell. |
 | `table_columns` | `int` | ACTIVE | Expected minimum number of columns in the extracted table.  Passed to pdfplumber as min_words_horizontal and used to validate column count after extraction.  Also triggers allow_text_failover retry logic. |
 | `table_rows` | `int` | ACTIVE | Expected minimum number of rows in the extracted table.  Passed to pdfplumber as min_words_vertical. |
 | `row_spacing` | `int` | ACTIVE | pdfplumber snap_y_tolerance in PDF points.  Rows whose top edges fall within this distance of each other are merged into the same table row. Increase if the statement uses tight line spacing that splits a single visual row across multiple pdfplumber rows. |
-| `tests` | `list[Test` | STUB | Declarative post-extraction assertions.  Declared and accepted in TOML but no pipeline code evaluates them.  Reserved for a future config validation pass. |
+| `tests` | `list&#91;Test` | STUB | Declarative post-extraction assertions.  Declared and accepted in TOML but no pipeline code evaluates them.  Reserved for a future config validation pass. |
 | `delete_success_false` | `bool` | STUB | Intended to drop rows where any field extraction returned success = False.  Declared and set in TOML (typically True) but no pipeline code currently reads or acts on this flag. |
 | `delete_cast_success_false` | `bool` | STUB | Intended to drop rows where numeric casting failed.  Declared and set in TOML (typically True) but no pipeline code currently reads or acts on this flag. |
 | `delete_rows_with_missing_vital_fields` | `bool` | STUB | Intended to drop rows where any vital field is missing after extraction.  Declared and set in TOML (typically True) but no pipeline code currently reads or acts on this flag.  Note: vital-field hard-failure logic exists in validate() but is separate from this flag. |
@@ -789,12 +789,12 @@ Describes a rectangular region on a PDF page from which a table or text is extra
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
 | `page_number` | `int` | ACTIVE | 1-based page number.  When set the location is used only on that page.  When None the location is cloned for every page (spawn_locations()). |
-| `top_left` | `list[int` | ACTIVE | [x, y] coordinates of the top-left corner of the crop rectangle. Must be set together with bottom_right.  When both are None the full page is used. |
-| `bottom_right` | `list[int` | ACTIVE | [x, y] coordinates of the bottom-right corner of the crop rectangle.  Must be set together with top_left. |
-| `vertical_lines` | `list[int` | ACTIVE | Explicit x-coordinates of vertical column dividers supplied to pdfplumber as explicit_vertical_lines.  Pairs of identical values create a zero-width gap that forces a column boundary (e.g. [100, 100, 200, 200]). When set, pdfplumber's automatic column detection is disabled for this region. |
+| `top_left` | `list&#91;int` | ACTIVE | &#91;x, y&#93; coordinates of the top-left corner of the crop rectangle. Must be set together with bottom_right.  When both are None the full page is used. |
+| `bottom_right` | `list&#91;int` | ACTIVE | &#91;x, y&#93; coordinates of the bottom-right corner of the crop rectangle.  Must be set together with top_left. |
+| `vertical_lines` | `list&#91;int` | ACTIVE | Explicit x-coordinates of vertical column dividers supplied to pdfplumber as explicit_vertical_lines.  Pairs of identical values create a zero-width gap that forces a column boundary (e.g. &#91;100, 100, 200, 200&#93;). When set, pdfplumber's automatic column detection is disabled for this region. |
 | `dynamic_last_vertical_line` | `DynamicLineSpec` | ACTIVE | When set, the final value in vertical_lines is replaced at runtime with an x-coordinate derived from a PDF image's bounding box.  See DynamicLineSpec.  Used where the rightmost column boundary floats with a logo. |
 | `allow_text_failover` | `bool` | ACTIVE | When True and the extracted table has the wrong number of columns, the extraction is retried without vertical_lines, falling back to pdfplumber's text-based column detection.  Useful as a safety net for pages where the explicit dividers produce a malformed table. |
-| `try_shift_down` | `int` | ACTIVE | Number of PDF points to shift the crop rectangle downward (applied to both top_left[1] and bottom_right[1]) when the initial extraction returns an empty region.  Handles statements where the table top boundary varies slightly between pages. |
+| `try_shift_down` | `int` | ACTIVE | Number of PDF points to shift the crop rectangle downward (applied to both top_left&#91;1&#93; and bottom_right&#91;1&#93;) when the initial extraction returns an empty region.  Handles statements where the table top boundary varies slightly between pages. |
 
 ### `DynamicLineSpec`
 
@@ -824,7 +824,7 @@ Extraction specification for a single column or cell within a PDF table.
 | `string_max_length` | `int` | ACTIVE | Maximum character length for string values; longer strings are truncated via str.head().  Useful for capping free-text description fields. Defaults to 999 if not set. |
 | `date_format` | `str` | STUB | Intended strptime format for date parsing at the Field level. Declared but never read by the pipeline; date format parsing is handled via StdRefs.format in get_standard_fields() instead. |
 | `value_offset` | `'FieldOffset'` | ACTIVE | When set, reads the field's value from an adjacent column (Field.column + FieldOffset.cols_offset) using the type and currency rules defined in the FieldOffset rather than those on this Field.  The primary field column is still extracted normally; the offset column value replaces it in the output.  See FieldOffset. |
-| `regex_groups` | `int` | ACTIVE | When set, extracts the specified capture group (1-indexed) from the string_pattern regex match instead of the entire match (group 0). Useful for splitting a single PDF column into multiple fields via regex capture groups. Example: string_pattern = '^([A-Z ]+)\s+([A-Z0-9]+)$' with regex_groups = 1 extracts group 1; regex_groups = 2 extracts group 2. When None, defaults to group 0 (entire match, backward compatible). Omit for standard extraction. |
+| `regex_groups` | `int` | ACTIVE | When set, extracts the specified capture group (1-indexed) from the string_pattern regex match instead of the entire match (group 0). Useful for splitting a single PDF column into multiple fields via regex capture groups. Example: string_pattern = '^(&#91;A-Z &#93;+)\s+(&#91;A-Z0-9&#93;+)$' with regex_groups = 1 extracts group 1; regex_groups = 2 extracts group 2. When None, defaults to group 0 (entire match, backward compatible). Omit for standard extraction. |
 
 ### `Cell`
 
@@ -867,9 +867,9 @@ Currency formatting rules used to strip symbols and separators before numeric ca
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
 | `name` | `str` | ACTIVE | Human-readable currency name (e.g. "British Pound Sterling"). |
-| `symbols` | `list[str]` | ACTIVE | List of currency symbol strings to strip from the raw value before casting (e.g. ["£", "$"]).  Replaced with empty string via str.replace_many(). |
+| `symbols` | `list&#91;str&#93;` | ACTIVE | List of currency symbol strings to strip from the raw value before casting (e.g. &#91;"£", "$"&#93;).  Replaced with empty string via str.replace_many(). |
 | `seperator_decimal` | `str` | STUB | Intended decimal separator character (e.g. ".").  Declared but never read by the pipeline; decimal handling is implicit after symbols and thousands separators are stripped. |
-| `seperators_thousands` | `list[str]` | ACTIVE | List of thousands-separator strings to strip (e.g. [","]). Replaced with empty string via str.replace_many() before casting. |
+| `seperators_thousands` | `list&#91;str&#93;` | ACTIVE | List of thousands-separator strings to strip (e.g. &#91;","&#93;). Replaced with empty string via str.replace_many() before casting. |
 | `round_decimals` | `int` | STUB | Intended rounding precision after casting.  Declared but never read by the pipeline; no rounding is currently applied. |
 | `pattern` | `str` | ACTIVE | Regex pattern used to extract the numeric substring from the raw cell text before symbol/separator stripping.  Passed to patmatch() via build_pattern(). |
 
@@ -879,10 +879,10 @@ Full specification for extracting transactions from a transaction-type table.
 
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
-| `transaction_bookends` | `list[TransactionBookend]` | ACTIVE | One or more bookend definitions that identify transaction boundaries.  Evaluated in order; a row matched by an earlier bookend is not re-matched by a later one.  At least one bookend is required. |
-| `fill_forward_fields` | `list[str` | ACTIVE | Field names whose null values should be forward-filled across rows within the same page after pivot.  Use for sparse columns where a value (e.g. a date or payment type) appears only on the first row of a multi-row block and needs propagating to the end row. |
+| `transaction_bookends` | `list&#91;TransactionBookend&#93;` | ACTIVE | One or more bookend definitions that identify transaction boundaries.  Evaluated in order; a row matched by an earlier bookend is not re-matched by a later one.  At least one bookend is required. |
+| `fill_forward_fields` | `list&#91;str` | ACTIVE | Field names whose null values should be forward-filled across rows within the same page after pivot.  Use for sparse columns where a value (e.g. a date or payment type) appears only on the first row of a multi-row block and needs propagating to the end row. |
 | `merge_fields` | `MergeFields` | ACTIVE | When set, collapses multi-row text fields within each transaction into a single joined string.  See MergeFields. |
-| `exclude_rows` | `list[FieldValidation` | ACTIVE | Rows where any rule's field value matches its pattern are removed from the results before bookend detection runs.  Use to suppress known non-transaction rows (e.g. a closing balance summary line) that would otherwise interfere with transaction counting or checks & balances. Each rule is a {field, pattern} pair; a row is excluded if any rule matches. |
+| `exclude_rows` | `list&#91;FieldValidation` | ACTIVE | Rows where any rule's field value matches its pattern are removed from the results before bookend detection runs.  Use to suppress known non-transaction rows (e.g. a closing balance summary line) that would otherwise interfere with transaction counting or checks & balances. Each rule is a {field, pattern} pair; a row is excluded if any rule matches. |
 
 ### `TransactionBookend`
 
@@ -890,13 +890,13 @@ Defines how the start and end of a single transaction are detected within a tabl
 
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
-| `start_fields` | `list[str]` | ACTIVE | Field names that are checked to identify the first row of a transaction.  A row qualifies as a start row when at least min_non_empty_start of these fields extracted successfully (success = True). |
+| `start_fields` | `list&#91;str&#93;` | ACTIVE | Field names that are checked to identify the first row of a transaction.  A row qualifies as a start row when at least min_non_empty_start of these fields extracted successfully (success = True). |
 | `min_non_empty_start` | `int` | ACTIVE | Minimum number of start_fields that must have extracted successfully for a row to be flagged as transaction_start = True. |
-| `end_fields` | `list[str]` | ACTIVE | Field names checked to identify the last row of a transaction. A row qualifies as an end row when at least min_non_empty_end of these fields extracted successfully. |
+| `end_fields` | `list&#91;str&#93;` | ACTIVE | Field names checked to identify the last row of a transaction. A row qualifies as an end row when at least min_non_empty_end of these fields extracted successfully. |
 | `min_non_empty_end` | `int` | ACTIVE | Minimum number of end_fields that must have extracted successfully for a row to be flagged as transaction_end = True. |
 | `extra_validation_start` | `FieldValidation` | ACTIVE | When set, any row where the named field's value does NOT match the pattern is excluded from being a start-bookend candidate for this bookend. Rows excluded here may still be captured by another bookend in the list. Useful for bookends that should only trigger on a specific row shape (e.g. an interest charge line identified by its details text). |
 | `extra_validation_end` | `FieldValidation` | STUB | Symmetric counterpart to extra_validation_start for end rows. Declared but not yet implemented in the pipeline; no code currently reads this field.  Reserved for future use. |
-| `sticky_fields` | `list[str` | STUB | Intended to forward-fill named fields from the start row of a transaction down to its end row, scoped within a single transaction (as opposed to fill_forward_fields which fills across transactions).  Declared but not implemented; no pipeline code reads this field. |
+| `sticky_fields` | `list&#91;str` | STUB | Intended to forward-fill named fields from the start row of a transaction down to its end row, scoped within a single transaction (as opposed to fill_forward_fields which fills across transactions).  Declared but not implemented; no pipeline code reads this field. |
 
 ### `FieldValidation`
 
@@ -913,7 +913,7 @@ Specifies how multi-row text fields are collapsed into a single output value.
 
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
-| `fields` | `list[str]` | ACTIVE | Names of the fields whose per-row values should be joined. |
+| `fields` | `list&#91;str&#93;` | ACTIVE | Names of the fields whose per-row values should be joined. |
 | `separator` | `str` | ACTIVE | Delimiter inserted between joined values (e.g. " \| "). |
 
 ### `StandardFields`
@@ -925,7 +925,7 @@ Declaration of a single standard output column and how to derive it.
 | `section` | `str` | ACTIVE | Pipeline section this field belongs to: "header" (statement-level metadata extracted once per statement) or "lines" (per-transaction data). Used to dispatch the field to the correct extraction pass. |
 | `type` | `str` | ACTIVE | Data type of the standard column: "string", "numeric", or "date". Controls casting, multiplier application, and date parsing in get_standard_fields(). |
 | `vital` | `bool` | ACTIVE | When True a ConfigError is raised if no matching StdRefs entry is found for the current statement type, halting processing.  Set False for optional fields that not all statement types provide. |
-| `std_refs` | `list[StdRefs]` | ACTIVE | One entry per supported statement type.  The correct entry is selected at runtime by matching StdRefs.statement_type. |
+| `std_refs` | `list&#91;StdRefs&#93;` | ACTIVE | One entry per supported statement type.  The correct entry is selected at runtime by matching StdRefs.statement_type. |
 
 ### `StdRefs`
 

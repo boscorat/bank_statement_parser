@@ -28,7 +28,7 @@ bsp forex [--project PATH] [--currencies CODE] [--api-key KEY]
 
 ## `bsp anonymise`
 
-Anonymise a single bank statement PDF by scrambling all personal data while preserving document structure. Dates, payment codes, and numeric identifiers (sort codes, account numbers, IBANs, card numbers) are handled deterministically. Requires:  pip install uk-bank-statement-parser[anonymise]
+Anonymise a single bank statement PDF by scrambling all personal data while preserving document structure. Dates, payment codes, and numeric identifiers (sort codes, account numbers, IBANs, card numbers) are handled deterministically. Requires:  pip install uk-bank-statement-parser&#91;anonymise&#93;
 
 ```
 bsp anonymise PDF [--output OUT_FILE] [--always-anonymise TOML] [--never-anonymise TOML] [--debug]
