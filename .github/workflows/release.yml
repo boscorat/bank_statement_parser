@@ -311,10 +311,10 @@ jobs:
             # Regenerate docs with new bank data
             uv run python scripts/generate_docs.py
             
-            # Deploy this version with updated bank table
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            uv run mike deploy --push --no-redirect "$version"
+             # Deploy this version with updated bank table
+             git config user.name "github-actions[bot]"
+             git config user.email "github-actions[bot]@users.noreply.github.com"
+             uv run mike deploy --push "$version"
           done
 
       - name: Clean up

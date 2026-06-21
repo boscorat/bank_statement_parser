@@ -350,4 +350,4 @@ A: No. The `bank-statement-data` repo is private. Only maintainers and authorize
 
 ## Questions?
 
-See [CONTRIBUTING.md](../../CONTRIBUTING.md) for links to all guides and how to ask for help.
+See the [CONTRIBUTING.md](https://github.com/boscorat/bank_statement_parser/blob/master/CONTRIBUTING.md) guide on GitHub for links to all guides and how to ask for help.

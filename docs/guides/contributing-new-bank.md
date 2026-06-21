@@ -624,4 +624,4 @@ STD_STATEMENT_TYPE = "Standard"
 
 ## Questions?
 
-See [CONTRIBUTING.md](../../CONTRIBUTING.md) for help resources.
+See the [CONTRIBUTING.md](https://github.com/boscorat/bank_statement_parser/blob/master/CONTRIBUTING.md) guide on GitHub for help resources.
