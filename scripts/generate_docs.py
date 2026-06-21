@@ -609,9 +609,12 @@ def _field_table(fields: list[FieldInfo]) -> str:
     """Render a list of FieldInfo as a Markdown table."""
     rows = ["| Field | Type | Status | Description |", "| --- | --- | --- | --- |"]
     for f in fields:
-        esc_desc = f.description.replace("|", "\\|")
+        # Escape brackets using HTML entities to prevent mkdocs treating them as link refs
+        # (link ref detection runs before code spans, so backslash escaping doesn't work)
+        esc_desc = f.description.replace("|", "\\|").replace("[", "&#91;").replace("]", "&#93;")
+        esc_type = f.type_annotation.replace("[", "&#91;").replace("]", "&#93;")
         status_badge = f.status
-        rows.append(f"| `{f.name}` | `{f.type_annotation}` | {status_badge} | {esc_desc} |")
+        rows.append(f"| `{f.name}` | `{esc_type}` | {status_badge} | {esc_desc} |")
     return "\n".join(rows)
 
 
@@ -1114,6 +1117,15 @@ def generate_bank_config() -> str:
 # ===================================================================
 
 
+def _escape_brackets(text: str) -> str:
+    """Escape square brackets in text to prevent mkdocs treating them as link refs.
+    
+    Uses HTML entities because mkdocs link reference detection runs before
+    code span processing, so backslash escaping inside backticks doesn't work.
+    """
+    return text.replace("[", "&#91;").replace("]", "&#93;")
+
+
 def generate_cli_reference() -> str:
     """Generate the CLI Reference page from cli.py argparse definitions."""
     source = _CLI_PY.read_text(encoding="utf-8")
@@ -1142,10 +1154,10 @@ def generate_cli_reference() -> str:
         w()
         if cmd.description:
             # Wrap long description text
-            w(cmd.description)
+            w(_escape_brackets(cmd.description))
             w()
         elif cmd.help_text:
-            w(cmd.help_text)
+            w(_escape_brackets(cmd.help_text))
             w()
 
         # Usage line
@@ -1177,7 +1189,7 @@ def generate_cli_reference() -> str:
             w("| --- | --- |")
             for arg in cmd.arguments:
                 if arg.is_positional:
-                    w(f"| `{arg.metavar or arg.name}` | {arg.help_text} |")
+                    w(f"| `{arg.metavar or arg.name}` | {_escape_brackets(arg.help_text)} |")
             w()
 
         if has_optional:
@@ -1194,9 +1206,9 @@ def generate_cli_reference() -> str:
                     default_str = default_str.replace("None", "auto-detect").replace("'", "`")
                     if arg.choices:
                         choice_str = ", ".join(f"`{c}`" for c in arg.choices)
-                        desc = f"{arg.help_text} Choices: {choice_str}."
+                        desc = f"{_escape_brackets(arg.help_text)} Choices: {choice_str}."
                     else:
-                        desc = arg.help_text
+                        desc = _escape_brackets(arg.help_text)
                     w(f"| `{arg.name}` | {default_str} | {desc} |")
             w()
 

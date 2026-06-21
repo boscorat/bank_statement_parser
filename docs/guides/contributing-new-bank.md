@@ -402,8 +402,8 @@ Specifies a rectangular region on a PDF page (in points).
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
 | `page_number` | `int` | ACTIVE | Page number (1-indexed; 1 = first page) |
-| `top_left` | `list[int]` | ACTIVE | [x, y] coordinates of top-left corner in PDF points |
-| `bottom_right` | `list[int]` | ACTIVE | [x, y] coordinates of bottom-right corner in PDF points |
+| `top_left` | `list&#91;int&#93;` | ACTIVE | &#91;x, y&#93; coordinates of top-left corner in PDF points |
+| `bottom_right` | `list&#91;int&#93;` | ACTIVE | &#91;x, y&#93; coordinates of bottom-right corner in PDF points |
 
 ### `ConfigField`
 
