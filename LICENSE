@@ -1,21 +1,211 @@
-MIT License
+                   GNU LESSER GENERAL PUBLIC LICENSE
+                       Version 3, 29 June 2007
 
-Copyright (c) 2026 Jason Farrar
+ Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>
+ Everyone is permitted to copy and distribute verbatim copies
+ of this license document, but changing it is not allowed.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+  This version of the GNU Lesser General Public License incorporates
+the terms and conditions of version 3 of the GNU General Public
+License, supplemented by the additional permissions listed below.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+  0. Additional Definitions.
+
+  As used herein, "this License" refers to version 3 of the GNU Lesser
+General Public License, and the "GNU GPL" refers to version 3 of the GNU
+General Public License.
+
+  "The Library" refers to a covered work governed by this License,
+other than an Application or a Combined Work as defined below.
+
+  An "Application" is any work that makes use of an interface provided
+by the Library, but which is not otherwise based on the Library.
+Defining a subclass of a class defined by the Library is deemed a mode
+of using an interface provided by the Library.
+
+  A "Combined Work" is a work produced by combining or linking an
+Application with the Library.  The particular version of the Library
+with which the Combined Work was made is also called the "Linked
+Version".
+
+  The "Minimal Corresponding Source" for a Combined Work means the
+Corresponding Source for the Combined Work, excluding any source code
+for portions of the Combined Work that, based on their experience,
+are not included in the Library.
+
+  The "Corresponding Application Code" for a Combined Work means the
+object code and/or source code for the Application, including any data
+and utility programs needed for reproducing the Combined Work from the
+Application, but excluding the System Libraries of the Combined Work.
+
+  1. Exception to Section 3 of the GNU GPL.
+
+  You may convey a combined work under terms of your choice that,
+taken together, effectively do not restrict modification of the
+portions of the Library contained in the Combined Work and reverse
+engineering for debugging such modifications, if you also do each of
+the following:
+
+  a) Give prominent notice with each copy of the Combined Work that
+  the Library is used under this License and that the Library
+  excluded from this Combined Work is not covered by this License.
+
+  b) Provide the Combined Work as a whole under this License to the
+  extent that portions thereof can be considered independent and separate
+  works, each under this License, and that portions of the Combined Work
+  are not Library content as defined in this License.
+
+  2. Conveying Under-Modified Versions of the Library.
+
+  You may convey a modified version of the Library, with the Library
+receiving a copy of your modifications, under the terms of this License,
+provided that you also meet all of these conditions:
+
+  a) The modified work must itself be a library.
+
+  b) You must cause the files modified to carry prominent notices
+  stating that you changed the files and the date of any change.
+
+  c) You must cause the whole of the work to be licensed at no
+  charge to all third parties under the terms of this License.
+
+  d) If a facility in the modified Library refers to a function or a
+  table of data to be supplied by an Application that uses the facility
+  (other than as an argument passed when the facility is invoked), then
+  you must make a good faith effort to ensure that, in the event an
+  Application does not supply such function or table, the facility still
+  operates, and performs whatever part of its purpose remains meaningful.
+
+  (For example, a function in a library to compute square roots has a
+  purpose that is entirely well-defined to the community.  Therefore,
+  Subsection 2d requires that any application-supplied function or table
+  used by this function must be optional: if the application does not
+  supply it, the square root function must still compute square roots.)
+
+  These requirements apply to the modified work as a whole.  If
+identifiable sections of that work are not derived from the Library,
+and can be reasonably considered independent and separate works in
+themselves, then this License, and its terms, do not apply to those
+sections when you distribute them as separate works.  But when you
+distribute the same sections as part of a whole which is a work based
+on the Library, the distribution of the whole must be on the terms of
+this License, whose permissions for other licensees extend to the
+whole and thus to each and every part regardless of who wrote it.
+
+Thus, it is not the intent of this section to claim rights or contest
+your rights to work written entirely by you; rather, the intent is to
+exercise the right to control the distribution of derivative or
+collective works based on the Library.
+
+In addition, mere aggregation of another work not based on the Library
+with the Library (or with a work based on the Library) on a volume of
+a storage or distribution medium does not bring the other work under
+the scope of this License.
+
+  3. Conveying Non-Standard Versions of the Library.
+
+  You may choose to convey, and to combine a work with other works
+licensed under terms of your choosing, a copy of the Library whose
+contents are subject to the modifications listed above, provided that
+you comply with all other terms of this License for the whole of the
+Library.  However, if you satisfy all of these conditions for each
+separate work, then you may convey that Library as part of a combined
+work that you choose, under terms of your choice, provided that you
+also comply with the terms of this License for the Combined Work.
+
+  4. Incompatibility With Additional Licenses.
+
+  You may place additional permissions on modified versions of the
+Library.  You may use such modified versions as the Linked Version
+of a Combined Work, provided that you comply with the terms of this
+License for the whole of the Library, as modified under those
+additional permissions.
+
+  5. Application of This Library.
+
+  You may apply the terms of this Library to any program, library, or
+other work which contains a notice placed by the copyright holder
+saying it may be distributed under the terms of this Library, provided
+that such program is not itself covered by this License.
+
+  6. Versions of the Library.
+
+  The Free Software Foundation may publish revised and/or new versions
+of the GNU Lesser General Public License from time to time.  Such new
+versions will be similar in spirit to the present version, but may
+differ in detail to address new problems or concerns.
+
+  Each version is given a distinguishing version number.  If the
+Library specifies that a certain numbered version of the GNU Lesser
+General Public License "or any later version" applies to it, you have
+the option of following the terms and conditions either of that
+specified version or of any later version published by the Free
+Software Foundation.  If the Library does not specify a version number
+of the GNU Lesser General Public License, you may choose any version
+ever published by the Free Software Foundation.
+
+  If the Library specifies that a proxy can decide whether future
+versions of the GNU Lesser General Public License shall apply, that
+proxy's public statement of acceptance of any version is permanent
+authorization for you to choose that version for the Library.
+
+  7. Disclaimer of Warranty.
+
+  There is no warranty for the Library, except as granted by applicable
+law.  The Library is provided on an "AS IS" BASIS, WITHOUT WARRANTIES
+OR CONDITIONS OF ANY KIND, either express or implied.  See the GNU
+Lesser General Public License for more details.
+
+  8. Limitation of Liability.
+
+  In no event shall the copyright holder or contributors be liable
+for any damages arising from the use of the Library, even if the
+copyright holder or a contributor has been advised of the possibility
+of such damage.
+
+  9. Acceptance of Warranty or Additional Liability.
+
+  By redistributing the Library, you may choose to accept, in addition
+to your obligations under this License, a fee for guaranteeing the
+full performance of the Library, or a fee under additional terms,
+including a warranty clause.  Accepting such obligations is entirely
+optional and at your sole discretion.
+
+                     How to Apply These Terms to Your New Libraries
+
+  If you develop a new library, and you want it to be of the greatest
+possible use to the public, we recommend making it free software that
+everyone can redistribute and change.  You can do so by permitting
+redistribution under these terms (or, alternatively, under the terms
+of the GNU General Public License).
+
+  To apply these terms, attach the following notices to the library.
+It is safest to attach them to the start of each source file to most
+effectively convey the exclusion of warranty; and each file should
+have at least the "copyright" line and a pointer to where the full
+notice is found.
+
+    <one line to give the library's name and a brief idea of what it does.>
+    Copyright (C) <year>  <name of author>
+
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 3 of the License, or (at your option) any later version.
+
+    This library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+
+Also add information on how to contact you by electronic and paper mail.
+
+You should also get your employer (if you work as a programmer) or school,
+if any, to sign a "copyright disclaimer" for the library, if necessary.
+For more information on this, and how to apply and follow the GNU LGPL, see
+<https://www.gnu.org/licenses/>.

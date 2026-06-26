@@ -3,7 +3,7 @@ name = "uk-bank-statement-parser"
 version = "0.2.1rc13"
 description = "Parse bank statement PDFs, extract transactions, and persist to Parquet and SQLite."
 readme = "README.md"
-license = "MIT"
+license = "LGPL-3.0-or-later"
 authors = [
     { name = "Jason Farrar", email = "farrar.jason1@gmail.com" }
 ]
@@ -13,7 +13,7 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Intended Audience :: Financial and Insurance Industry",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",

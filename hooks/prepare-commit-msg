@@ -1,0 +1,11 @@
+#!/bin/sh
+# Automatically append DCO signoff to commit messages.
+# Install: git config core.hooksPath hooks
+
+COMMIT_MSG_FILE="$1"
+
+SIGNOFF="Signed-off-by: $(git var GIT_AUTHOR_IDENT | sed -n 's/^\(.*>\).*$/\1/p')"
+
+if ! grep -qs "^$SIGNOFF" "$COMMIT_MSG_FILE"; then
+    printf '\n%s\n' "$SIGNOFF" >> "$COMMIT_MSG_FILE"
+fi
