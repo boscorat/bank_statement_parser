@@ -1337,6 +1337,7 @@ class StatementBatch:
             self.process()
             self.process_secs = time() - self.timer_start
             self.duration_secs += self.process_secs
+        print(f"[TIMING] process: {self.process_secs:.2f}s | pdfs: {self.pdf_count} | errors: {self.errors} | reviews: {self.reviews}")
 
     def process(self):
         """
@@ -1533,6 +1534,7 @@ class StatementBatch:
                 project_path=resolved,
             )
             self.duration_secs += self.db_secs
+        print(f"[TIMING] parquet: {self.parquet_secs:.2f}s | db: {self.db_secs:.2f}s | total: {self.duration_secs:.2f}s")
 
     def copy_statements_to_project(self, project_path: Path | None = None) -> list[Path]:
         """

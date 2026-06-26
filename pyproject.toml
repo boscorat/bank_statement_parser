@@ -7,7 +7,7 @@ license = "MIT"
 authors = [
     { name = "Jason Farrar", email = "farrar.jason1@gmail.com" }
 ]
-requires-python = ">=3.14"
+requires-python = ">=3.11"
 keywords = ["bank-statement", "pdf", "parser", "transactions", "polars", "sqlite", "parquet"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -16,7 +16,7 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.11",
     "Topic :: Office/Business :: Financial",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Typing :: Typed",
@@ -29,7 +29,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-anonymise = ["uk-bank-statement-anonymiser>=0.1.0"]
+anonymise = ["uk-bank-statement-anonymiser>=0.1.0; python_version >= '3.14'"]
 
 [project.scripts]
 bsp = "bank_statement_parser.cli:main"
@@ -62,6 +62,6 @@ dev = [
 
 [tool.ruff]
 line-length = 140
-target-version = "py314"
+target-version = "py311"
 lint.ignore = ["E402"]  # Module-level imports intentionally organized by section with comments
 lint.unfixable = ["F401"]
