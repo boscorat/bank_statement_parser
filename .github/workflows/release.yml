@@ -299,14 +299,15 @@ jobs:
           TAGS=$(git tag --sort=-version:refname)
           PRIOR_VERSIONS=$(echo "$TAGS" | head -3 | tail -2)
           
-          for version in $PRIOR_VERSIONS; do
+          for tag in $PRIOR_VERSIONS; do
+            version="${tag#v}"
             echo "Retroactively updating docs for $version with current bank configs..."
             
             # Stash any uncommitted changes
             git stash || true
             
-            # Checkout the old tag to get its docs state
-            git checkout "$version" -- docs/
+            # Checkout the old tag to get its docs state (tag has v prefix)
+            git checkout "$tag" -- docs/
             
             # Get the latest bank configs from master
             git checkout origin/master -- src/bank_statement_parser/project/config/import/
