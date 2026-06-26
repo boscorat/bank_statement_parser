@@ -305,7 +305,53 @@ We are committed to providing a welcoming and inclusive environment. Please trea
 
 ## License
 
-By contributing to this project, you agree that your contributions will be licensed under the same license as the project (see LICENSE file).
+By contributing to this project, you agree that your contributions will be licensed under the [LGPL-3.0-or-later](LICENSE) license (see LICENSE file).
+
+---
+
+## Developer Certificate of Origin (DCO)
+
+This project uses the [Developer Certificate of Origin (DCO)](DCO) to certify that contributors have the right to submit code under the project's license.
+
+### How to sign off your commits
+
+Add a `Signed-off-by` line to every commit message using the `-s` flag:
+
+```bash
+git commit -s -m "Your commit message"
+```
+
+This appends the following to your commit message:
+
+```
+Signed-off-by: Your Name <your.email@example.com>
+```
+
+Ensure `git config user.name` and `git config user.email` are set correctly.
+
+### Fixing unsigned commits
+
+If you forgot to sign off, you can amend the last commit:
+
+```bash
+git commit --amend -s
+```
+
+To sign off all commits in a branch during rebase:
+
+```bash
+git rebase --signoff upstream/main
+```
+
+### Installing the auto-signoff hook (optional)
+
+This repository includes a `prepare-commit-msg` hook that automatically adds the `Signed-off-by` line to your commit messages. To install it:
+
+```bash
+git config core.hooksPath hooks
+```
+
+This is optional — you can always use `git commit -s` manually instead.
 
 ---
 

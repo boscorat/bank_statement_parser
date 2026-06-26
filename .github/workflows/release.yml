@@ -178,7 +178,7 @@ jobs:
             -n uk-bank-statement-parser \
             -v "${PKG_VERSION}" \
             --description "Parse bank statement PDFs, extract transactions, persist to Parquet and SQLite." \
-            --license "MIT" \
+            --license "LGPL-3.0-or-later" \
             --maintainer "Jason Farrar <farrar.jason1@gmail.com>" \
             --url "https://github.com/boscorat/bank_statement_parser" \
             --vendor "boscorat" \
@@ -199,7 +199,7 @@ jobs:
             -n uk-bank-statement-parser \
             -v "${PKG_VERSION}" \
             --description "Parse bank statement PDFs, extract transactions, persist to Parquet and SQLite." \
-            --license "MIT" \
+            --license "LGPL-3.0-or-later" \
             --maintainer "Jason Farrar <farrar.jason1@gmail.com>" \
             --url "https://github.com/boscorat/bank_statement_parser" \
             --vendor "boscorat" \
