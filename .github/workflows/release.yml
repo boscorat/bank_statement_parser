@@ -315,8 +315,11 @@ jobs:
             uv run python scripts/generate_docs.py
             
             # Deploy locally (no push) — mike creates a commit on local gh-pages
-            uv run mike deploy --update-aliases "$version" latest
+            uv run mike deploy "$version"
           done
+
+          # Create root index.html that redirects to latest/
+          uv run mike set-default latest
 
           # Push all retroactive commits to remote in one go
           git config user.name "github-actions[bot]"
