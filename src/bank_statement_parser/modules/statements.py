@@ -1,3 +1,20 @@
+# This file is part of bank_statement_parser.
+#
+# Copyright (c) 2026 Jason Farrar
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 """
 Bank statement parsing and processing module.
 
@@ -15,6 +32,7 @@ import getpass
 import hashlib
 import multiprocessing
 import os
+import shutil
 import sys
 import traceback
 import warnings
@@ -1201,7 +1219,7 @@ def copy_statements_to_project(
         dest_dir = paths.statements
         dest_dir.mkdir(parents=True, exist_ok=True)
         dest_path = dest_dir / info.filename_new
-        Path(pdf_path).copy(dest_path)
+        shutil.copy2(pdf_path, dest_path)
         copied.append(dest_path)
     return copied
 
