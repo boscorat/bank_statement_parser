@@ -29,7 +29,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-anonymise = ["uk-bank-statement-anonymiser>=0.1.0; python_version >= '3.14'"]
+anonymise = ["uk-bank-statement-anonymiser>=0.1.0; python_version >= '3.11'"]
 
 [project.scripts]
 bsp = "bank_statement_parser.cli:main"
