@@ -104,7 +104,7 @@ class TestDbReports:
     def test_dim_time_contiguous(self, good_project):
         """DB DimTime date spine contains no gaps."""
         df = db.DimTime(project_path=good_project.project_path).all.collect()
-        dates = df["id_date"].cast(pl.Date).sort()
+        dates = df["id_date"].str.to_date().sort()
         diffs = dates.diff().drop_nulls()
         assert (diffs == timedelta(days=1)).all(), "Date spine has gaps in DimTime (db)"
 
@@ -350,22 +350,16 @@ class TestExports:
             assert f.stat().st_size > 0, f"Empty JSON after filetype='all': multi/{stem}.json"
 
     # ------------------------------------------------------------------
-    # StatementBatch.export() — filetype="both" deprecated alias
+    # StatementBatch.export() — no deprecation warnings
     # ------------------------------------------------------------------
 
-    def test_batch_export_both_deprecated(self, good_project):
-        """filetype='both' emits a DeprecationWarning and still produces output."""
+    def test_export_produces_no_deprecation_warnings(self, good_project):
+        """Export operations should not emit any DeprecationWarnings."""
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always")
-            good_project.batch.export(filetype="both", type="single")
+            good_project.batch.export(filetype="all", type="single")
         dep_warnings = [w for w in caught if issubclass(w.category, DeprecationWarning)]
-        assert len(dep_warnings) == 1, "Expected exactly one DeprecationWarning for filetype='both'"
-        assert "filetype='both'" in str(dep_warnings[0].message)
-        # Output should still be written (all three formats, single preset)
-        paths = ProjectPaths.resolve(good_project.project_path)
-        assert (paths.excel / "transactions.xlsx").exists()
-        assert (paths.csv / "transactions.csv").exists()
-        assert (paths.json / "transactions.json").exists()
+        assert len(dep_warnings) == 0, f"Unexpected DeprecationWarnings: {dep_warnings}"
 
     # ------------------------------------------------------------------
     # DB backend — export_reporting_data existence

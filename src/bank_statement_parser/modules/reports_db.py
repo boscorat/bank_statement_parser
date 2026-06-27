@@ -163,7 +163,7 @@ def _cast_date_columns(df: pl.DataFrame) -> pl.DataFrame:
             date_cols.append(col)
     exprs: list[pl.Expr] = []
     if date_cols:
-        exprs.extend(pl.col(c).cast(pl.Date) for c in date_cols)
+        exprs.extend(pl.col(c).str.to_date() for c in date_cols)
     if datetime_cols:
         exprs.extend(pl.col(c).str.to_datetime(format="%Y-%m-%dT%H:%M:%S", strict=False) for c in datetime_cols)
     if not exprs:

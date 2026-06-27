@@ -381,8 +381,8 @@ def _apply_date_format(df: pl.LazyFrame, spec: ExportSpec, *, keep_as_date: bool
     if not date_output_cols:
         return df
     if keep_as_date:
-        return df.with_columns([pl.col(col).cast(pl.Date).alias(col) for col in date_output_cols])
-    return df.with_columns([pl.col(col).cast(pl.Date).dt.strftime(spec.date_format).alias(col) for col in date_output_cols])
+        return df.with_columns([pl.col(col).str.to_date().alias(col) for col in date_output_cols])
+    return df.with_columns([pl.col(col).str.to_date().dt.strftime(spec.date_format).alias(col) for col in date_output_cols])
 
 
 # ---------------------------------------------------------------------------

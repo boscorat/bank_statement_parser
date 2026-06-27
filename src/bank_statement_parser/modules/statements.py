@@ -35,7 +35,6 @@ import os
 import shutil
 import sys
 import traceback
-import warnings
 from concurrent.futures import ProcessPoolExecutor
 from copy import deepcopy
 from datetime import datetime
@@ -1601,7 +1600,7 @@ class StatementBatch:
 
     def export(
         self,
-        filetype: Literal["excel", "csv", "json", "all", "both", "reporting"] = "excel",
+        filetype: Literal["excel", "csv", "json", "all", "reporting"] = "excel",
         folder: Path | None = None,
         type: Literal["single", "multi"] = "single",
         project_path: Path | None = None,
@@ -1624,10 +1623,6 @@ class StatementBatch:
                 CSV feeds to ``reporting/data/single/`` and
                 ``reporting/data/multi/`` inside the project directory.
                 Defaults to ``"excel"``.
-
-                .. deprecated::
-                    ``"both"`` is a deprecated alias for ``"all"`` and will be
-                    removed in a future release.  Use ``"all"`` instead.
             folder: Output path passed through to the underlying export
                 function.  For CSV and JSON this is the directory to write
                 files into; for Excel this is the full workbook path.  When
@@ -1647,13 +1642,6 @@ class StatementBatch:
                 a timestamped sub-folder for multi-file exports.  Defaults to
                 ``False``.
         """
-        if filetype == "both":
-            warnings.warn(
-                "filetype='both' is deprecated and will be removed in a future release. Use filetype='all' instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            filetype = "all"
         if filetype == "all":
             self.export(
                 filetype="excel",
