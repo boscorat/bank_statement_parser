@@ -60,6 +60,11 @@ dev = [
     "pymdown-extensions>=10.0.0",
 ]
 
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore::ResourceWarning:sqlite3",
+]
+
 [tool.ruff]
 line-length = 140
 target-version = "py311"
