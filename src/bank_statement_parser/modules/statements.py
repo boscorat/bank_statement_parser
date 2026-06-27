@@ -1,3 +1,20 @@
+# This file is part of bank_statement_parser.
+#
+# Copyright (c) 2026 Jason Farrar
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License for more details.
+#
+# You should have received a copy of the GNU Lesser General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 """
 Bank statement parsing and processing module.
 
@@ -15,9 +32,9 @@ import getpass
 import hashlib
 import multiprocessing
 import os
+import shutil
 import sys
 import traceback
-import warnings
 from concurrent.futures import ProcessPoolExecutor
 from copy import deepcopy
 from datetime import datetime
@@ -1201,7 +1218,7 @@ def copy_statements_to_project(
         dest_dir = paths.statements
         dest_dir.mkdir(parents=True, exist_ok=True)
         dest_path = dest_dir / info.filename_new
-        Path(pdf_path).copy(dest_path)
+        shutil.copy2(pdf_path, dest_path)
         copied.append(dest_path)
     return copied
 
@@ -1337,6 +1354,7 @@ class StatementBatch:
             self.process()
             self.process_secs = time() - self.timer_start
             self.duration_secs += self.process_secs
+        print(f"[TIMING] process: {self.process_secs:.2f}s | pdfs: {self.pdf_count} | errors: {self.errors} | reviews: {self.reviews}")
 
     def process(self):
         """
@@ -1533,6 +1551,7 @@ class StatementBatch:
                 project_path=resolved,
             )
             self.duration_secs += self.db_secs
+        print(f"[TIMING] parquet: {self.parquet_secs:.2f}s | db: {self.db_secs:.2f}s | total: {self.duration_secs:.2f}s")
 
     def copy_statements_to_project(self, project_path: Path | None = None) -> list[Path]:
         """
@@ -1581,7 +1600,7 @@ class StatementBatch:
 
     def export(
         self,
-        filetype: Literal["excel", "csv", "json", "all", "both", "reporting"] = "excel",
+        filetype: Literal["excel", "csv", "json", "all", "reporting"] = "excel",
         folder: Path | None = None,
         type: Literal["single", "multi"] = "single",
         project_path: Path | None = None,
@@ -1604,10 +1623,6 @@ class StatementBatch:
                 CSV feeds to ``reporting/data/single/`` and
                 ``reporting/data/multi/`` inside the project directory.
                 Defaults to ``"excel"``.
-
-                .. deprecated::
-                    ``"both"`` is a deprecated alias for ``"all"`` and will be
-                    removed in a future release.  Use ``"all"`` instead.
             folder: Output path passed through to the underlying export
                 function.  For CSV and JSON this is the directory to write
                 files into; for Excel this is the full workbook path.  When
@@ -1627,13 +1642,6 @@ class StatementBatch:
                 a timestamped sub-folder for multi-file exports.  Defaults to
                 ``False``.
         """
-        if filetype == "both":
-            warnings.warn(
-                "filetype='both' is deprecated and will be removed in a future release. Use filetype='all' instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            filetype = "all"
         if filetype == "all":
             self.export(
                 filetype="excel",

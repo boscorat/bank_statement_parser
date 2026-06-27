@@ -1119,7 +1119,7 @@ def generate_bank_config() -> str:
 
 def _escape_brackets(text: str) -> str:
     """Escape square brackets in text to prevent mkdocs treating them as link refs.
-    
+
     Uses HTML entities because mkdocs link reference detection runs before
     code span processing, so backslash escaping inside backticks doesn't work.
     """
