@@ -1,6 +1,6 @@
 [project]
 name = "uk-bank-statement-parser"
-version = "0.2.1rc13"
+version = "0.3.0"
 description = "Parse bank statement PDFs, extract transactions, and persist to Parquet and SQLite."
 readme = "README.md"
 license = "LGPL-3.0-or-later"
@@ -8,19 +8,29 @@ authors = [
     { name = "Jason Farrar", email = "farrar.jason1@gmail.com" }
 ]
 requires-python = ">=3.11"
-keywords = ["bank-statement", "pdf", "parser", "transactions", "polars", "sqlite", "parquet"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Financial and Insurance Industry",
     "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Office/Business :: Financial",
+    "Topic :: Text Processing :: Markup",
+    "Natural Language :: English",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Typing :: Typed",
 ]
+
+keywords = [
+  "bank-statement", "pdf", "parser", "uk", "finance", "bank statement",
+  "hsbc", "natwest", "tsb", "halifax", "toml"
+]
+
 dependencies = [
     "dacite>=1.9.2",
     "pdfplumber>=0.11.9",
@@ -36,9 +46,12 @@ bsp = "bank_statement_parser.cli:main"
 bsp-dev = "bank_statement_parser:dev.main"
 
 [project.urls]
-Homepage = "https://github.com/boscorat/bank_statement_parser"
+Homepage = "https://boscorat.github.io/bank_statement_parser/latest"
+Documentation = "https://boscorat.github.io/bank_statement_parser/latest"
 Repository = "https://github.com/boscorat/bank_statement_parser"
-Issues = "https://github.com/boscorat/bank_statement_parser/issues"
+"Bug Tracker" = "https://github.com/boscorat/bank_statement_parser/issues"
+Changelog = "https://github.com/boscorat/bank_statement_parser/blob/master/CHANGELOG.md"
+
 
 [build-system]
 requires = ["uv_build>=0.9.8,<0.12.0"]
@@ -58,6 +71,7 @@ dev = [
     "mike>=2.0.0",
     "mkdocs-material>=9.0.0",
     "pymdown-extensions>=10.0.0",
+    "towncrier>=24.8.0",
 ]
 
 [tool.pytest.ini_options]
@@ -70,3 +84,21 @@ line-length = 140
 target-version = "py311"
 lint.ignore = ["E402"]  # Module-level imports intentionally organized by section with comments
 lint.unfixable = ["F401"]
+
+[tool.towncrier]
+package = "uk-bank-statement-parser"
+filename = "CHANGELOG.md"
+directory = "changes"
+title_format = "## [{version}] - {project_date}"
+underlines = ["", "", ""]
+template = "changes/_template.md.jinja"
+type = [
+    { name = "Features",        showcontent = true,  filename = "feature" },
+    { name = "Bug Fixes",       showcontent = true,  filename = "bugfix" },
+    { name = "Deprecations",    showcontent = true,  filename = "deprecation" },
+    { name = "Security",        showcontent = true,  filename = "security" },
+    { name = "Performance",     showcontent = true,  filename = "performance" },
+    { name = "Breaking Changes", showcontent = true,  filename = "breaking" },
+    { name = "Documentation",   showcontent = false, filename = "doc" },
+    { name = "Internal",        showcontent = false, filename = "internal" },
+]

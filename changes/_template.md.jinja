@@ -1,0 +1,15 @@
+{% for section, _ in sections.items() %}
+{% if section != "Internal" %}
+
+### {{ section }}
+
+{% for category, _, fragments in definitions.items() if fragments[section] %}
+#### {{ category }}
+
+{% for text, _ in fragments[section] %}
+- {{ text }}
+{% endfor %}
+
+{% endfor %}
+{% endif %}
+{% endfor %}
