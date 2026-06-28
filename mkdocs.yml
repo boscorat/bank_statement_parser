@@ -55,6 +55,7 @@ extra:
 nav:
   - Home: index.md
   - Quick Start: guides/quick-start.md
+  - Changelog: changelog.md
   - Contributing:
       - Adding a New Bank: guides/contributing-new-bank.md
       - Local Testing: guides/local-testing.md
