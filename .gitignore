@@ -46,3 +46,6 @@ site/
 
 # Pending folder that may contain anonymised PDFs
 pending/
+
+# Dev testing file
+src/bank_statement_parser/dev.py
