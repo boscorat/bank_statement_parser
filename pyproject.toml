@@ -1,6 +1,6 @@
 [project]
 name = "uk-bank-statement-parser"
-version = "0.2.1rc13"
+version = "0.3.0"
 description = "Parse bank statement PDFs, extract transactions, and persist to Parquet and SQLite."
 readme = "README.md"
 license = "LGPL-3.0-or-later"
@@ -50,7 +50,7 @@ Homepage = "https://boscorat.github.io/bank_statement_parser/latest"
 Documentation = "https://boscorat.github.io/bank_statement_parser/latest"
 Repository = "https://github.com/boscorat/bank_statement_parser"
 "Bug Tracker" = "https://github.com/boscorat/bank_statement_parser/issues"
-Changelog = "https://github.com/boscorat/bank_statement_parser/CHANGELOG.md"
+Changelog = "https://github.com/boscorat/bank_statement_parser/blob/main/CHANGELOG.md"
 
 
 [build-system]
@@ -71,6 +71,7 @@ dev = [
     "mike>=2.0.0",
     "mkdocs-material>=9.0.0",
     "pymdown-extensions>=10.0.0",
+    "towncrier>=24.8.0",
 ]
 
 [tool.pytest.ini_options]
@@ -83,3 +84,21 @@ line-length = 140
 target-version = "py311"
 lint.ignore = ["E402"]  # Module-level imports intentionally organized by section with comments
 lint.unfixable = ["F401"]
+
+[tool.towncrier]
+package = "uk-bank-statement-parser"
+filename = "CHANGELOG.md"
+directory = "changes"
+title_format = "## [{version}] - {project_date}"
+underlines = ["", "", ""]
+template = "changes/_template.md.jinja"
+type = [
+    { name = "Features",        showcontent = true,  filename = "feature" },
+    { name = "Bug Fixes",       showcontent = true,  filename = "bugfix" },
+    { name = "Deprecations",    showcontent = true,  filename = "deprecation" },
+    { name = "Security",        showcontent = true,  filename = "security" },
+    { name = "Performance",     showcontent = true,  filename = "performance" },
+    { name = "Breaking Changes", showcontent = true,  filename = "breaking" },
+    { name = "Documentation",   showcontent = false, filename = "doc" },
+    { name = "Internal",        showcontent = false, filename = "internal" },
+]
