@@ -48,8 +48,13 @@ jobs:
 
       - name: Verify tag is on the release branch
         run: |
-          git fetch origin release --depth=1
-          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/release; then
+          TAG_COMMIT="$(git rev-parse "${GITHUB_SHA}^{commit}")"
+          if git rev-parse --is-shallow-repository | grep -q true; then
+            git fetch origin release --unshallow
+          else
+            git fetch origin release
+          fi
+          if ! git merge-base --is-ancestor "$TAG_COMMIT" origin/release; then
             echo "::error::Tagged commit is not on the release branch. Cherry-pick or merge to 'release' first."
             exit 1
           fi
