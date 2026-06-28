@@ -50,7 +50,7 @@ Homepage = "https://boscorat.github.io/bank_statement_parser/latest"
 Documentation = "https://boscorat.github.io/bank_statement_parser/latest"
 Repository = "https://github.com/boscorat/bank_statement_parser"
 "Bug Tracker" = "https://github.com/boscorat/bank_statement_parser/issues"
-Changelog = "https://github.com/boscorat/bank_statement_parser/blob/main/CHANGELOG.md"
+Changelog = "https://github.com/boscorat/bank_statement_parser/blob/master/CHANGELOG.md"
 
 
 [build-system]
