@@ -7,6 +7,9 @@
 #   3. github-release  — create a GitHub Release with all assets attached.
 #   4. deploy-docs     — generate and deploy versioned docs to GitHub Pages.
 #
+# The tagged commit must be reachable from the 'release' branch.  Tags pushed
+# from master (or any other branch) will fail the ancestry check in step 1.
+#
 # One-time setup required:
 #   - Create a "pypi" environment in GitHub repo Settings > Environments.
 #   - Register a Trusted Publisher on PyPI (account > Publishing):
@@ -42,6 +45,14 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
           persist-credentials: false
+
+      - name: Verify tag is on the release branch
+        run: |
+          git fetch origin release --depth=1
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/release; then
+            echo "::error::Tagged commit is not on the release branch. Cherry-pick or merge to 'release' first."
+            exit 1
+          fi
 
       - name: Install uv
         uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86  # v5

@@ -2,7 +2,7 @@ name: CI
 
 on:
   pull_request:
-    branches: [master]
+    branches: [master, release]
 
 permissions: {}  # no workflow-level permissions; each job declares its own
 
