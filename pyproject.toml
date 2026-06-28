@@ -8,19 +8,29 @@ authors = [
     { name = "Jason Farrar", email = "farrar.jason1@gmail.com" }
 ]
 requires-python = ">=3.11"
-keywords = ["bank-statement", "pdf", "parser", "transactions", "polars", "sqlite", "parquet"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Financial and Insurance Industry",
     "License :: OSI Approved :: GNU Lesser General Public License v3 or later (LGPLv3+)",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Office/Business :: Financial",
+    "Topic :: Text Processing :: Markup",
+    "Natural Language :: English",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Typing :: Typed",
 ]
+
+keywords = [
+  "bank-statement", "pdf", "parser", "uk", "finance", "bank statement",
+  "hsbc", "natwest", "tsb", "halifax", "toml"
+]
+
 dependencies = [
     "dacite>=1.9.2",
     "pdfplumber>=0.11.9",
@@ -36,9 +46,12 @@ bsp = "bank_statement_parser.cli:main"
 bsp-dev = "bank_statement_parser:dev.main"
 
 [project.urls]
-Homepage = "https://github.com/boscorat/bank_statement_parser"
+Homepage = "https://boscorat.github.io/bank_statement_parser/latest"
+Documentation = "https://boscorat.github.io/bank_statement_parser/latest"
 Repository = "https://github.com/boscorat/bank_statement_parser"
-Issues = "https://github.com/boscorat/bank_statement_parser/issues"
+"Bug Tracker" = "https://github.com/boscorat/bank_statement_parser/issues"
+Changelog = "https://github.com/boscorat/bank_statement_parser/CHANGELOG.md"
+
 
 [build-system]
 requires = ["uv_build>=0.9.8,<0.12.0"]
