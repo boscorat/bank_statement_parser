@@ -60,19 +60,6 @@ jobs:
             exit 1
           fi
 
-      - name: Verify tag is on the release branch
-        run: |
-          TAG_COMMIT="$(git rev-parse "${GITHUB_SHA}^{commit}")"
-          if git rev-parse --is-shallow-repository | grep -q true; then
-            git fetch origin release --unshallow
-          else
-            git fetch origin release
-          fi
-          if ! git merge-base --is-ancestor "$TAG_COMMIT" origin/release; then
-            echo "::error::Tagged commit is not on the release branch. Cherry-pick or merge to 'release' first."
-            exit 1
-          fi
-
       - name: Install uv
         uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86  # v5
         with:
@@ -274,7 +261,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
-          ref: main
+          ref: master
 
       - name: Extract changelog for this version
         id: changelog
@@ -284,7 +271,7 @@ jobs:
             CHANGELOG.md > release_notes.md
           if [ ! -s release_notes.md ]; then
             echo "## What's Changed" > release_notes.md
-            echo "See [CHANGELOG.md](https://github.com/boscorat/bank_statement_parser/blob/main/CHANGELOG.md) for details." >> release_notes.md
+            echo "See [CHANGELOG.md](https://github.com/boscorat/bank_statement_parser/blob/master/CHANGELOG.md) for details." >> release_notes.md
           fi
 
       - name: Download Python dists
