@@ -1,0 +1,10 @@
+repos:
+  - repo: local
+    hooks:
+      - id: towncrier-check
+        name: Check towncrier fragments
+        entry: towncrier check --compare-with origin/master
+        language: system
+        pass_filenames: false
+        stages: [commit]
+        always_run: true

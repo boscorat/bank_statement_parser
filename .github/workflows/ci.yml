@@ -36,5 +36,8 @@ jobs:
       - name: Ruff format check
         run: uv run ruff format --check .
 
+      - name: Check towncrier fragments
+        run: uv run towncrier check --compare-with origin/master
+
       - name: Pytest
         run: uv run pytest -v

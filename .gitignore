@@ -34,6 +34,16 @@ wheels/
 # anonymise.toml contains real PII — never commit it
 anonymise.toml
 
+# towncrier fragments (temporary files, auto-deleted at release)
+changes/*.feature
+changes/*.bugfix
+changes/*.breaking
+changes/*.deprecation
+changes/*.security
+changes/*.performance
+changes/*.doc
+changes/*.internal
+
 # test project directories (created and deleted by integration tests)
 tests/test_project/
 tests/test_project_bad/
