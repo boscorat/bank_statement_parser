@@ -10,6 +10,8 @@ Thank you for your interest in contributing to Bank Statement Parser! We welcome
 - [Response SLAs & Expectations](#response-slas--expectations)
 - [Types of Contributions](#types-of-contributions)
 - [Submission Workflow](#submission-workflow)
+- [Adding a Changelog Fragment](#adding-a-changelog-fragment)
+- [Test Data Requirements](#test-data-requirements)
 - [Getting Help](#getting-help)
 
 ---
@@ -24,6 +26,7 @@ Please review our [AGENTS.md](./AGENTS.md) for architectural context and develop
 - **Code Style:** ruff (linting & formatting)
 - **Tests:** pytest (see [AGENTS.md](./AGENTS.md) for test commands)
 - **Architecture:** [AGENTS.md](./AGENTS.md)
+- **Changelog Fragments:** See [Adding a Changelog Fragment](#adding-a-changelog-fragment) below
 
 ---
 
@@ -187,7 +190,119 @@ Implementation may take longer depending on complexity and priority.
 2. Reference any related issues
 3. Ensure tests pass: `pytest tests/`
 4. Ensure linting passes: `ruff check .` and `ruff format .`
-5. We review and merge
+5. Add a changelog fragment (see [Adding a Changelog Fragment](#adding-a-changelog-fragment) below)
+6. We review and merge
+
+---
+
+## Adding a Changelog Fragment
+
+Every code change (feature, bug fix, deprecation, etc.) must include a changelog fragment in the `changes/` directory.
+
+### Why?
+
+This project uses [towncrier](https://towncrier.readthedocs.io/) to automatically generate the `CHANGELOG.md` from individual fragments. This ensures:
+- Changelog entries are consistent and well-organized
+- Release notes are always accurate and complete
+- Developers don't fight over CHANGELOG.md diffs
+
+### How to Add a Fragment
+
+#### Step 1: Create a File in `changes/`
+
+Use the naming pattern:
+```
+<number>.<type>
+```
+
+where `<number>` is your **GitHub PR number** and `<type>` is one of:
+
+| Type | Use When | Example |
+|---|---|---|
+| `feature` | Adding new functionality | `123.feature` |
+| `bugfix` | Fixing a bug | `456.bugfix` |
+| `breaking` | Introducing breaking changes | `789.breaking` |
+| `deprecation` | Deprecating a feature | `234.deprecation` |
+| `security` | Fixing security vulnerabilities | `567.security` |
+| `performance` | Improving performance | `890.performance` |
+| `doc` | Documentation-only changes (not shown in changelog by default) | `111.doc` |
+| `internal` | Internal refactoring (not shown in changelog by default) | `222.internal` |
+
+**Examples:**
+- `123.feature` — for PR #123 adding a feature
+- `456.bugfix` — for PR #456 fixing a bug
+- `789.breaking` — for PR #789 introducing a breaking change
+
+If you don't have a PR number yet (e.g., you're working on a local branch), use `0.<type>` as a placeholder:
+- `0.feature` — placeholder for a feature (rename to actual PR number after PR creation)
+
+#### Step 2: Write a One-Line Description
+
+Open the file in your editor and add a **single line** describing your change:
+
+```
+Support async batch processing with configurable worker pool size
+```
+
+✅ **Good examples:**
+- `Added support for async batch processing with configurable worker pool`
+- `Fixed race condition in StatementBatch.process_turbo()`
+- `Deprecated filetype='both' parameter in favour of explicit 'data' or 'files'`
+- `Security: Validate SQL identifiers against whitelist to prevent injection`
+
+❌ **Bad examples:**
+- `Updated code` (too vague)
+- `Fixes bug` (doesn't say which bug)
+- `Changelog entry for PR #123` (doesn't describe the change)
+
+#### Step 3: Commit and Push
+
+```bash
+git add changes/123.feature
+git commit -s -m "feat: add async batch processing"
+git push origin your-branch-name
+```
+
+Your fragment will be automatically picked up by CI and included in the changelog at release time.
+
+### Tips & Common Mistakes
+
+**✅ Do:**
+- One fragment per logical change
+- Use your PR number in the filename
+- Keep the description to one line (~ 60–80 chars)
+- Use present tense, imperative voice ("Added", "Fixed", not "Adds" or "Fixes")
+
+**❌ Don't:**
+- Add content to `CHANGELOG.md` directly — let towncrier do it
+- Forget the fragment — CI will catch this before merge and block your PR
+- Use the wrong type — check the table above
+- Make the description too long — towncrier wraps long entries
+
+### Fragment Validation
+
+When you push your PR, GitHub Actions will automatically:
+1. ✅ Check that you've added a fragment (or only modified docs/tests which may not need one)
+2. ✅ Validate the fragment filename matches the allowed types
+3. ✅ Verify the fragment file is readable
+
+If validation fails, you'll see an error in your PR checks:
+```
+Check towncrier fragments — FAILED
+Fragment not found for this PR
+```
+
+Just add the missing fragment and push again—the check will pass!
+
+### Fragment Files Are Temporary
+
+Fragment files are **committed to the repository** as part of your PR. They are **automatically deleted** by towncrier when a new release is created. You don't need to clean them up manually — the release process handles it.
+
+This approach ensures:
+- ✅ Fragment history is preserved in git (audit trail)
+- ✅ Fragments are reviewed as part of the PR (like any other change)
+- ✅ No fragments are accidentally lost or forgotten
+- ✅ Release process is fully automated
 
 ---
 
