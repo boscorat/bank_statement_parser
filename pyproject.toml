@@ -85,7 +85,7 @@ lint.ignore = ["E402"]  # Module-level imports intentionally organized by sectio
 lint.unfixable = ["F401"]
 
 [tool.towncrier]
-package = "uk-bank-statement-parser"
+package = "bank_statement_parser"
 filename = "CHANGELOG.md"
 directory = "changes"
 title_format = "## [{version}] - {project_date}"
