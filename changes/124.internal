@@ -1,0 +1,1 @@
+Release workflow now accepts tags from any branch, enabling flexible release strategies (major/minor from master, hotfixes from version branches, etc.)
