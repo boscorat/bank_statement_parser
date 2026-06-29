@@ -7,10 +7,10 @@
 #   3. github-release  — create a GitHub Release with all assets attached.
 #   4. deploy-docs     — generate and deploy versioned docs to GitHub Pages.
 #
-# The tagged commit must be on either the 'release' branch OR on a matching
-# version branch (e.g., tag v0.3.1 on branch v0.3.1).  This allows per-version
-# release branches for maintenance and hotfixes while keeping the 'release'
-# branch as a fallback for direct releases.
+# Releases can be triggered from any branch by pushing a version tag (v*).
+# The tag must match the version in pyproject.toml.  This allows flexible
+# release strategies: major/minor releases from master, hotfixes from
+# version-specific branches, or releases from any other branch as needed.
 #
 # One-time setup required:
 #   - Create a "pypi" environment in GitHub repo Settings > Environments.
@@ -48,40 +48,6 @@ jobs:
         with:
           persist-credentials: true
           fetch-depth: 0
-
-      - name: Verify tag is on release or version branch
-        run: |
-          TAG_COMMIT="$(git rev-parse "${GITHUB_SHA}^{commit}")"
-          TAG_NAME="${GITHUB_REF#refs/tags/}"
-          
-          # Unshallow if needed
-          if git rev-parse --is-shallow-repository | grep -q true; then
-            git fetch origin release --unshallow
-          else
-            git fetch origin release
-          fi
-
-          # Fetch matching version branch only if it exists (don't hide real fetch failures)
-          if git ls-remote --exit-code --heads origin "${TAG_NAME}" >/dev/null 2>&1; then
-            git fetch origin "refs/heads/${TAG_NAME}":refs/remotes/origin/"${TAG_NAME}"
-          fi
-          
-          # Check if tag is on release branch
-          if git merge-base --is-ancestor "$TAG_COMMIT" origin/release; then
-            echo "✓ Tag is on release branch"
-            exit 0
-          fi
-          
-          # Check if tag is on matching version branch (e.g., v0.3.1 tag on v0.3.1 branch)
-          if git rev-parse "origin/${TAG_NAME}" >/dev/null 2>&1; then
-            if git merge-base --is-ancestor "$TAG_COMMIT" "origin/${TAG_NAME}"; then
-              echo "✓ Tag is on matching version branch ${TAG_NAME}"
-              exit 0
-            fi
-          fi
-          
-          echo "::error::Tagged commit must be on 'release' or on a matching version branch (${TAG_NAME}). Cherry-pick/merge the commit onto one of those branches (and push the branch if needed)."
-          exit 1
 
       - name: Install uv
         uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86  # v5
