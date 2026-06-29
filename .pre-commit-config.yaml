@@ -3,7 +3,7 @@ repos:
     hooks:
       - id: towncrier-check
         name: Check towncrier fragments
-        entry: uv run towncrier check --compare-with origin/HEAD
+        entry: uv run towncrier check --compare-with origin/master
         language: system
         pass_filenames: false
         stages: [commit]
