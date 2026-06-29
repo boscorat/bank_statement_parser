@@ -57,10 +57,13 @@ jobs:
           # Unshallow if needed
           if git rev-parse --is-shallow-repository | grep -q true; then
             git fetch origin release --unshallow
-            git fetch origin "refs/heads/${TAG_NAME}":refs/remotes/origin/"${TAG_NAME}" || true
           else
             git fetch origin release
-            git fetch origin "refs/heads/${TAG_NAME}":refs/remotes/origin/"${TAG_NAME}" || true
+          fi
+
+          # Fetch matching version branch only if it exists (don't hide real fetch failures)
+          if git ls-remote --exit-code --heads origin "${TAG_NAME}" >/dev/null 2>&1; then
+            git fetch origin "refs/heads/${TAG_NAME}":refs/remotes/origin/"${TAG_NAME}"
           fi
           
           # Check if tag is on release branch
