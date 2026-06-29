@@ -270,9 +270,7 @@ Your fragment will be automatically picked up by CI and included in the changelo
 **✅ Do:**
 - One fragment per logical change
 - Use your PR number in the filename
-- Keep the description to one line (~ 60–80 chars)
-- Use present tense, imperative voice ("Added", "Fixed", not "Adds" or "Fixes")
-
+- Use imperative voice ("Add", "Fix", not "Adds" or "Fixes")
 **❌ Don't:**
 - Add content to `CHANGELOG.md` directly — let towncrier do it
 - Forget the fragment — CI will catch this before merge and block your PR
