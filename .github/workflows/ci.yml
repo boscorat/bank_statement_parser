@@ -38,9 +38,7 @@ jobs:
         run: uv run ruff format --check .
 
       - name: Check towncrier fragments
-        run: |
-          git fetch origin "${{ github.base_ref }}" --depth=1
-          uv run towncrier check --compare-with "origin/${{ github.base_ref }}"
+        run: uv run towncrier check --compare-with "HEAD^1"
 
       - name: Pytest
         run: uv run pytest -v
