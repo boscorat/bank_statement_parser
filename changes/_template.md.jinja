@@ -1,10 +1,11 @@
-{% for section, _ in sections.items() %}
-{% if section != "Internal" %}
+{% set section_order = ["Features", "Bug Fixes", "Breaking Changes", "Security", "Deprecations", "Performance", "Documentation"] %}
+{% for section in section_order %}
+{% if sections.get(section) %}
 
 ### {{ section }}
 
 {% for category, definition in definitions.items() %}
-{% if sections[section][category] %}
+{% if sections[section].get(category) %}
 #### {{ category }}
 
 {% for text, _ in sections[section][category] %}

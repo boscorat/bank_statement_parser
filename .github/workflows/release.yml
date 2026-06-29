@@ -83,12 +83,31 @@ jobs:
             exit 1
           fi
 
+      - name: Get release date from git tag
+        id: date
+        run: |
+          # Extract the date when the tag was created (not when the workflow ran)
+          TAG_DATE=$(git log -1 --format=%ai "${{ github.ref }}" | cut -d' ' -f1)
+          echo "date=$TAG_DATE" >> "$GITHUB_OUTPUT"
+
       - name: Build changelog with towncrier
         run: |
           uv sync --group dev
           uv run towncrier build --yes \
             --version "${{ steps.version.outputs.version }}" \
-            --date "$(date -u +%Y-%m-%d)"
+            --date "${{ steps.date.outputs.date }}"
+
+      - name: Verify towncrier cleaned up all fragments
+        run: |
+          # Check that all fragment files were deleted (only .gitkeep and template should remain)
+          REMAINING=$(find changes/ -type f ! -name '_template.md.jinja' ! -name '.gitkeep' | wc -l)
+          if [ "$REMAINING" -ne 0 ]; then
+            echo "::error::Towncrier did not clean up all fragments after build"
+            echo "Remaining files:"
+            find changes/ -type f ! -name '_template.md.jinja' ! -name '.gitkeep'
+            exit 1
+          fi
+          echo "✓ All fragment files were successfully cleaned up"
 
       - name: Commit changelog
         run: |
