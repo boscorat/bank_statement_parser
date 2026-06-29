@@ -233,8 +233,8 @@ where `<number>` is your **GitHub PR number** and `<type>` is one of:
 - `456.bugfix` — for PR #456 fixing a bug
 - `789.breaking` — for PR #789 introducing a breaking change
 
-If you don't have a PR number yet (e.g., you're working on a local branch), use `0.<type>` as a placeholder:
-- `0.feature` — placeholder for a feature (rename to actual PR number after PR creation)
+If you don't have a PR number yet (e.g., you're working on a local branch), use a unique placeholder number (e.g., an issue number or `99999.<type>`), then rename it to the actual PR number after PR creation:
+- `99999.feature` — placeholder for a feature (rename to actual PR number after PR creation)
 
 #### Step 2: Write a One-Line Description
 
