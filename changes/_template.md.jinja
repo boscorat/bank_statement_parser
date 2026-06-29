@@ -3,13 +3,15 @@
 
 ### {{ section }}
 
-{% for category, _, fragments in definitions.items() if fragments[section] %}
+{% for category, definition in definitions.items() %}
+{% if sections[section][category] %}
 #### {{ category }}
 
-{% for text, _ in fragments[section] %}
+{% for text, _ in sections[section][category] %}
 - {{ text }}
 {% endfor %}
 
+{% endif %}
 {% endfor %}
 {% endif %}
 {% endfor %}
