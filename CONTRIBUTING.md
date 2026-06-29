@@ -282,7 +282,7 @@ Your fragment will be automatically picked up by CI and included in the changelo
 ### Fragment Validation
 
 When you push your PR, GitHub Actions will automatically:
-1. ✅ Check that you've added a fragment (or only modified docs/tests which may not need one)
+1. ✅ Check that you've added a fragment
 2. ✅ Validate the fragment filename matches the allowed types
 3. ✅ Verify the fragment file is readable
 
