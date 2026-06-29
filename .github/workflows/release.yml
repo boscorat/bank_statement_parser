@@ -80,7 +80,7 @@ jobs:
             fi
           fi
           
-          echo "::error::Tagged commit must be on 'release' branch or on a matching version branch (${TAG_NAME})"
+          echo "::error::Tagged commit must be on 'release' or on a matching version branch (${TAG_NAME}). Cherry-pick/merge the commit onto one of those branches (and push the branch if needed)."
           exit 1
 
       - name: Install uv
