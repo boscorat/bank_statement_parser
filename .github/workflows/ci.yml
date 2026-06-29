@@ -16,6 +16,7 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
         with:
           persist-credentials: false
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86  # v5
@@ -36,5 +37,7 @@ jobs:
       - name: Ruff format check
         run: uv run ruff format --check .
 
+      - name: Check towncrier fragments
+        run: uv run towncrier check --compare-with "${{ github.event.pull_request.base.sha }}"
       - name: Pytest
         run: uv run pytest -v
