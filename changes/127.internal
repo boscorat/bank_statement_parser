@@ -1,0 +1,1 @@
+Fix towncrier template to iterate sections dynamically and filter empty entries, and add start_string marker for correct changelog insertion ordering
