@@ -1,0 +1,1829 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Documentation for the bank_statement_parser Python library — parse bank statement PDFs, extract structured transaction data, and persist to Parquet and SQLite.">
+      
+      
+      
+        <link rel="canonical" href="https://boscorat.github.io/bank_statement_parser/0.3.2/guides/exports/">
+      
+      
+        <link rel="prev" href="../project-structure/">
+      
+      
+        <link rel="next" href="../../reference/cli/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Export Options - Bank Statement Parser</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+  
+      
+
+    
+  
+
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#export-options" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Bank Statement Parser" class="md-header__button md-logo" aria-label="Bank Statement Parser" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Bank Statement Parser
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Export Options
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/boscorat/bank_statement_parser" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    boscorat/bank_statement_parser
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Bank Statement Parser" class="md-nav__button md-logo" aria-label="Bank Statement Parser" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Bank Statement Parser
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/boscorat/bank_statement_parser" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    boscorat/bank_statement_parser
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quick-start/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Contributing
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing-new-bank/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding a New Bank
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../local-testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Local Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../test-data-submission/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test Data Submission
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../new-bank-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    New Bank Config Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../anonymisation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Anonymisation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../project-structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project Structure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Export Options
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Export Options
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#export-presets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Export Presets
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cli-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI Usage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#python-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python API
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Python API">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#export-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Export functions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Export functions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#export_csv" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        export_csv()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#export_excel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        export_excel()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#export_json" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        export_json()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#export_reporting_data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        export_reporting_data()
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage examples
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#report-classes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Report Classes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Report Classes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#available-classes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Available classes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Available classes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#flattransaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FlatTransaction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#factbalance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FactBalance
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dimtime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DimTime
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dimstatement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DimStatement
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dimaccount" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DimAccount
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#facttransaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FactTransaction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gapreport" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GapReport
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#output-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output Files
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Output Files">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#simple-preset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Simple preset
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#full-preset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Full preset
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reporting-feed-export-format-reporting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reporting feed (--export-format reporting)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/python-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#export-presets" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Export Presets
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cli-usage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI Usage
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#python-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python API
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Python API">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#export-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Export functions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Export functions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#export_csv" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        export_csv()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#export_excel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        export_excel()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#export_json" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        export_json()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#export_reporting_data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        export_reporting_data()
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage examples
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#report-classes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Report Classes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Report Classes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#available-classes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Available classes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Available classes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#flattransaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FlatTransaction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#factbalance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FactBalance
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dimtime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DimTime
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dimstatement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DimStatement
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dimaccount" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DimAccount
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#facttransaction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FactTransaction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#gapreport" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GapReport
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#output-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output Files
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Output Files">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#simple-preset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Simple preset
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#full-preset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Full preset
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reporting-feed-export-format-reporting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reporting feed (--export-format reporting)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<!-- DO NOT EDIT — this file is auto-generated by scripts/generate_docs.py -->
+<!-- Regenerate with: python scripts/generate_docs.py -->
+
+<h1 id="export-options">Export Options<a class="headerlink" href="#export-options" title="Permanent link">&para;</a></h1>
+<p>bank_statement_parser supports exporting report data in CSV, Excel, and JSON formats,
+with two export presets and a dedicated reporting feed for external BI tools. Exports are
+generated automatically by <code>bsp process</code> or can be triggered manually via the Python API.</p>
+<h2 id="export-presets">Export Presets<a class="headerlink" href="#export-presets" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Preset</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>single</code> (default)</td>
+<td>A single flat transactions table joining all dimensions. Best for spreadsheet analysis.</td>
+</tr>
+<tr>
+<td><code>multi</code></td>
+<td>Separate star-schema tables (accounts, calendar, statements, transactions, balances, gaps) for loading into an external database or BI tool.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="cli-usage">CLI Usage<a class="headerlink" href="#cli-usage" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Default: export single preset in both CSV and Excel from database</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>bsp<span class="w"> </span>process<span class="w"> </span>--pdfs<span class="w"> </span>~/statements
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Export multi star-schema tables as CSV only</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>bsp<span class="w"> </span>process<span class="w"> </span>--pdfs<span class="w"> </span>~/statements<span class="w"> </span>--export-type<span class="w"> </span>multi<span class="w"> </span>--export-format<span class="w"> </span>csv
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># Skip export entirely</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>bsp<span class="w"> </span>process<span class="w"> </span>--pdfs<span class="w"> </span>~/statements<span class="w"> </span>--no-export
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Choices</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--export-type</code></td>
+<td><code>single</code>, <code>multi</code></td>
+<td><code>single</code></td>
+<td>Export preset</td>
+</tr>
+<tr>
+<td><code>--export-format</code></td>
+<td><code>excel</code>, <code>csv</code>, <code>json</code>, <code>all</code>, <code>reporting</code></td>
+<td><code>all</code></td>
+<td>Output file format</td>
+</tr>
+<tr>
+<td><code>--no-export</code></td>
+<td>—</td>
+<td>off</td>
+<td>Skip the export step entirely</td>
+</tr>
+</tbody>
+</table>
+<h2 id="python-api">Python API<a class="headerlink" href="#python-api" title="Permanent link">&para;</a></h2>
+<h3 id="export-functions">Export functions<a class="headerlink" href="#export-functions" title="Permanent link">&para;</a></h3>
+<p><code>bsp.db</code> provides <code>export_csv()</code>, <code>export_excel()</code>, <code>export_json()</code>, and <code>export_reporting_data()</code>:</p>
+<h4 id="export_csv"><code>export_csv()</code><a class="headerlink" href="#export_csv" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">export_csv</span><span class="p">(</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="n">folder</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="nb">type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;single&#39;</span><span class="p">,</span> <span class="s1">&#39;multi&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;single&#39;</span><span class="p">,</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="n">project_path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">batch_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="n">filename_timestamp</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
+<p>Write report data to CSV files in <em>folder</em>.</p>
+<p>Each table is written as a separate <code>.csv</code> file named after its logical
+table name (e.g. <code>transactions.csv</code>, or <code>statement_dimension.csv</code>,
+<code>account_dimension.csv</code>, etc. for <code>type="multi"</code>).</p>
+<p>When <em>filename_timestamp</em> is <code>True</code>:</p>
+<ul>
+<li><code>type="single"</code>: the timestamp is appended to the filename, e.g.
+<code>transactions_20250331143022.csv</code>.</li>
+<li><code>type="multi"</code>: files are written into a <code>multi_20250331143022/</code>
+sub-folder inside <em>folder</em> with their original names.</li>
+</ul>
+<p>When <em>filename_timestamp</em> is <code>False</code>:</p>
+<ul>
+<li><code>type="single"</code>: files are written directly to <em>folder</em> with their
+original names, e.g. <code>transactions.csv</code>.</li>
+<li><code>type="multi"</code>: files are written into a <code>multi/</code> sub-folder inside
+<em>folder</em> with their original names.</li>
+</ul>
+<p><strong>Args:</strong></p>
+<ul>
+<li><code>folder</code> — Directory to write CSV files into.  When <code>None</code> the project's
+  <code>export/csv/</code> directory (resolved via <em>project_path</em>) is used and
+  created automatically if absent.</li>
+<li><code>type</code> — Export preset — <code>"single"</code> (flat transactions table) or
+  <code>"multi"</code> (separate star-schema tables for loading into a
+  database).  Defaults to <code>"single"</code>.</li>
+<li><code>project_path</code> — Optional project root used to resolve the default export
+  folder and data sources.  Falls back to the bundled default project
+  when <code>None</code>.</li>
+<li><code>batch_id</code> — Optional batch identifier to filter report data to a single
+  batch.  When <code>None</code> all rows are exported.</li>
+<li><code>filename_timestamp</code> — When <code>True</code>, append a human-readable timestamp
+  (<code>yyyymmddHHMMSS</code>) to the filename (single) or create a
+  timestamped sub-folder (multi).  Defaults to <code>False</code>.</li>
+</ul>
+<h4 id="export_excel"><code>export_excel()</code><a class="headerlink" href="#export_excel" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">export_excel</span><span class="p">(</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="n">path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="nb">type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;single&#39;</span><span class="p">,</span> <span class="s1">&#39;multi&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;single&#39;</span><span class="p">,</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">project_path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">batch_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">filename_timestamp</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
+<p>Write report data to an Excel workbook at <em>path</em>.</p>
+<p>Each table is written as a separate worksheet.  For <code>type="single"</code> a
+single <code>transactions</code> sheet is written; for <code>type="multi"</code> six sheets
+are written (<code>statement_dimension</code>, <code>account_dimension</code>,
+<code>calendar_dimension</code>, <code>transaction_measures</code>,
+<code>daily_account_balances</code>, <code>missing_statement_report</code>).</p>
+<p>Filename conventions:</p>
+<ul>
+<li><code>type="single"</code>, no timestamp: <code>transactions.xlsx</code></li>
+<li><code>type="single"</code>, with timestamp: <code>transactions_20250331143022.xlsx</code></li>
+<li><code>type="multi"</code>, no timestamp: <code>transactions_multi.xlsx</code></li>
+<li><code>type="multi"</code>, with timestamp: <code>transactions_multi_20250331143022.xlsx</code></li>
+</ul>
+<p>Worksheet names are never modified by the timestamp or type logic.</p>
+<p><strong>Args:</strong></p>
+<ul>
+<li><code>path</code> — Full file path for the output <code>.xlsx</code> workbook.  When <code>None</code>
+  the file is written to <code>export/excel/transactions.xlsx</code> inside the
+  project directory resolved via <em>project_path</em>.</li>
+<li><code>type</code> — Export preset — <code>"single"</code> (flat transactions table) or
+  <code>"multi"</code> (separate star-schema sheets for loading into a
+  database).  Defaults to <code>"single"</code>.</li>
+<li><code>project_path</code> — Optional project root used to resolve the default export
+  folder and data sources.  Falls back to the bundled default project
+  when <code>None</code>.</li>
+<li><code>batch_id</code> — Optional batch identifier to filter report data to a single
+  batch.  When <code>None</code> all rows are exported.</li>
+<li><code>filename_timestamp</code> — When <code>True</code>, append a human-readable timestamp
+  (<code>yyyymmddHHMMSS</code>) to the workbook filename.  Worksheet names
+  are unaffected.  Defaults to <code>False</code>.</li>
+</ul>
+<h4 id="export_json"><code>export_json()</code><a class="headerlink" href="#export_json" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">export_json</span><span class="p">(</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="n">folder</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="nb">type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;single&#39;</span><span class="p">,</span> <span class="s1">&#39;multi&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;single&#39;</span><span class="p">,</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="n">project_path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="n">batch_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">filename_timestamp</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
+<p>Write report data to JSON files in <em>folder</em>.</p>
+<p>Each table is written as a separate <code>.json</code> file containing a JSON array
+of row objects, named after its logical table name (e.g.
+<code>transactions.json</code>, or <code>statement_dimension.json</code>,
+<code>account_dimension.json</code>, etc. for <code>type="multi"</code>).</p>
+<p>When <em>filename_timestamp</em> is <code>True</code>:</p>
+<ul>
+<li><code>type="single"</code>: the timestamp is appended to the filename, e.g.
+<code>transactions_20250331143022.json</code>.</li>
+<li><code>type="multi"</code>: files are written into a <code>multi_20250331143022/</code>
+sub-folder inside <em>folder</em> with their original names.</li>
+</ul>
+<p>When <em>filename_timestamp</em> is <code>False</code>:</p>
+<ul>
+<li><code>type="single"</code>: files are written directly to <em>folder</em> with their
+original names, e.g. <code>transactions.json</code>.</li>
+<li><code>type="multi"</code>: files are written into a <code>multi/</code> sub-folder inside
+<em>folder</em> with their original names.</li>
+</ul>
+<p><strong>Args:</strong></p>
+<ul>
+<li><code>folder</code> — Directory to write JSON files into.  When <code>None</code> the
+  project's <code>export/json/</code> directory (resolved via <em>project_path</em>)
+  is used and created automatically if absent.</li>
+<li><code>type</code> — Export preset — <code>"single"</code> (flat transactions table) or
+  <code>"multi"</code> (separate star-schema tables for loading into a
+  database).  Defaults to <code>"single"</code>.</li>
+<li><code>project_path</code> — Optional project root used to resolve the default export
+  folder and data sources.  Falls back to the bundled default project
+  when <code>None</code>.</li>
+<li><code>batch_id</code> — Optional batch identifier to filter report data to a single
+  batch.  When <code>None</code> all rows are exported.</li>
+<li><code>filename_timestamp</code> — When <code>True</code>, append a human-readable timestamp
+  (<code>yyyymmddHHMMSS</code>) to the filename (single) or create a
+  timestamped sub-folder (multi).  Defaults to <code>False</code>.</li>
+</ul>
+<h4 id="export_reporting_data"><code>export_reporting_data()</code><a class="headerlink" href="#export_reporting_data" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">export_reporting_data</span><span class="p">(</span><span class="n">project_path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
+<p>Write CSV reporting feeds to the project's <code>reporting/data/</code> sub-directories.</p>
+<p>Calls :func:<code>export_csv</code> twice — once with <code>type="single"</code> writing to
+<code>reporting/data/single/</code> and once with <code>type="multi"</code> writing to
+<code>reporting/data/multi/</code> (created as a sub-folder of <code>reporting/data/</code>
+by the multi-export logic).  Both directories are created automatically if
+absent.</p>
+<p>This produces a stable set of CSV files that external reporting tools
+(e.g. Power BI, Tableau, Excel) can point at directly without needing
+to know about the full export machinery.</p>
+<p><strong>Args:</strong></p>
+<ul>
+<li><code>project_path</code> — Optional project root directory.  Falls back to the
+  bundled default project when <code>None</code>.</li>
+</ul>
+<p><strong>Example:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>    <span class="kn">import</span><span class="w"> </span><span class="nn">bank_statement_parser</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">bsp</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="n">bsp</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">export_reporting_data</span><span class="p">(</span><span class="n">project_path</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/my/project&quot;</span><span class="p">))</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    <span class="c1"># Writes:</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    <span class="c1">#   /my/project/reporting/data/single/transactions.csv</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>    <span class="c1">#   /my/project/reporting/data/multi/statement_dimension.csv</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>    <span class="c1">#   /my/project/reporting/data/multi/account_dimension.csv</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>    <span class="c1">#   /my/project/reporting/data/multi/calendar_dimension.csv</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>    <span class="c1">#   /my/project/reporting/data/multi/transaction_measures.csv</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>    <span class="c1">#   /my/project/reporting/data/multi/daily_account_balances.csv</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>    <span class="c1">#   /my/project/reporting/data/multi/missing_statement_report.csv</span>
+</code></pre></div>
+<h3 id="usage-examples">Usage examples<a class="headerlink" href="#usage-examples" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">bank_statement_parser</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">bsp</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="c1"># Export single CSV from database backend (default project)</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="n">bsp</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">export_csv</span><span class="p">()</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="c1"># Export multi star-schema tables to Excel</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="n">bsp</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">export_excel</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="s1">&#39;multi&#39;</span><span class="p">)</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="c1"># Export JSON</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="n">bsp</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">export_json</span><span class="p">()</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="c1"># Write stable CSV feeds for BI tools (simple + full presets)</span>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="n">bsp</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">export_reporting_data</span><span class="p">()</span>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="c1"># Export to a custom directory</span>
+<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="n">bsp</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">export_csv</span><span class="p">(</span><span class="n">folder</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s1">&#39;~/exports&#39;</span><span class="p">))</span>
+<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="n">bsp</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">export_excel</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s1">&#39;~/exports/report.xlsx&#39;</span><span class="p">))</span>
+</code></pre></div>
+<h2 id="report-classes">Report Classes<a class="headerlink" href="#report-classes" title="Permanent link">&para;</a></h2>
+<p>All report classes expose a <code>.all</code> attribute containing a <code>pl.LazyFrame</code>.
+Call <code>.collect()</code> to materialise the data.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">bank_statement_parser</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">bsp</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="c1"># Read from the DB backend</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="n">df</span> <span class="o">=</span> <span class="n">bsp</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">FlatTransaction</span><span class="p">()</span><span class="o">.</span><span class="n">all</span><span class="o">.</span><span class="n">collect</span><span class="p">()</span>
+</code></pre></div>
+<h3 id="available-classes">Available classes<a class="headerlink" href="#available-classes" title="Permanent link">&para;</a></h3>
+<h4 id="flattransaction"><code>FlatTransaction</code><a class="headerlink" href="#flattransaction" title="Permanent link">&para;</a></h4>
+<p>Denormalised transaction view joining all dimensions. One row per transaction with date, account, statement, and value columns.</p>
+<h4 id="factbalance"><code>FactBalance</code><a class="headerlink" href="#factbalance" title="Permanent link">&para;</a></h4>
+<p>Daily balance series per account. Forward-filled from statement data to cover every calendar date.</p>
+<h4 id="dimtime"><code>DimTime</code><a class="headerlink" href="#dimtime" title="Permanent link">&para;</a></h4>
+<p>Calendar dimension. One row per date spanning the full transaction date range, with year, quarter, month, week, and day attributes.</p>
+<h4 id="dimstatement"><code>DimStatement</code><a class="headerlink" href="#dimstatement" title="Permanent link">&para;</a></h4>
+<p>Statement dimension. One row per parsed PDF statement with statement date, filename, and batch timestamp.</p>
+<h4 id="dimaccount"><code>DimAccount</code><a class="headerlink" href="#dimaccount" title="Permanent link">&para;</a></h4>
+<p>Account dimension. One row per unique account with company, type, number, sort code, and holder.</p>
+<h4 id="facttransaction"><code>FactTransaction</code><a class="headerlink" href="#facttransaction" title="Permanent link">&para;</a></h4>
+<p>Transaction fact table. One row per transaction with foreign keys to dimension tables.</p>
+<h4 id="gapreport"><code>GapReport</code><a class="headerlink" href="#gapreport" title="Permanent link">&para;</a></h4>
+<p>Gap detection report. Flags periods where the closing balance of one statement does not match the opening balance of the next. Access <code>.gaps</code> for filtered gap rows only.</p>
+<h2 id="output-files">Output Files<a class="headerlink" href="#output-files" title="Permanent link">&para;</a></h2>
+<h3 id="simple-preset">Simple preset<a class="headerlink" href="#simple-preset" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>File</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CSV</td>
+<td><code>export/csv/transactions_table.csv</code></td>
+<td>Flat transaction table</td>
+</tr>
+<tr>
+<td>Excel</td>
+<td><code>export/excel/transactions.xlsx</code></td>
+<td>Sheet: <code>transactions_table</code></td>
+</tr>
+<tr>
+<td>JSON</td>
+<td><code>export/json/transactions_table.json</code></td>
+<td>Flat transaction table (JSON array)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="full-preset">Full preset<a class="headerlink" href="#full-preset" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Files / Sheets</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CSV</td>
+<td><code>export/csv/</code> — <code>statement.csv</code>, <code>account.csv</code>, <code>calendar.csv</code>, <code>transactions.csv</code>, <code>balances.csv</code>, <code>gaps.csv</code></td>
+<td>Separate star-schema tables</td>
+</tr>
+<tr>
+<td>Excel</td>
+<td><code>export/excel/transactions.xlsx</code> with sheets: <code>statement</code>, <code>account</code>, <code>calendar</code>, <code>transactions</code>, <code>balances</code>, <code>gaps</code></td>
+<td>Star-schema workbook</td>
+</tr>
+<tr>
+<td>JSON</td>
+<td><code>export/json/</code> — <code>statement.json</code>, <code>account.json</code>, <code>calendar.json</code>, <code>transactions.json</code>, <code>balances.json</code>, <code>gaps.json</code></td>
+<td>Separate star-schema tables (JSON arrays)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="reporting-feed-export-format-reporting">Reporting feed (<code>--export-format reporting</code>)<a class="headerlink" href="#reporting-feed-export-format-reporting" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Preset</th>
+<th>Path</th>
+<th>Contents</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>single</code></td>
+<td><code>reporting/data/single/transactions_table.csv</code></td>
+<td>Flat transaction table</td>
+</tr>
+<tr>
+<td><code>multi</code></td>
+<td><code>reporting/data/multi/</code> — <code>statement.csv</code>, <code>account.csv</code>, <code>calendar.csv</code>, <code>transactions.csv</code>, <code>balances.csv</code>, <code>gaps.csv</code></td>
+<td>Star-schema CSV feeds</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
