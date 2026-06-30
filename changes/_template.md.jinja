@@ -1,18 +1,19 @@
-{% set section_order = ["Features", "Bug Fixes", "Breaking Changes", "Security", "Deprecations", "Performance", "Documentation"] %}
-{% for section in section_order %}
-{% if sections.get(section) %}
+{%- for section, _ in sections.items() %}
+{%- if section %}
 
 ### {{ section }}
 
-{% for category, definition in definitions.items() %}
-{% if sections[section].get(category) %}
-#### {{ category }}
+{%- endif %}
+{%- for category, definition in definitions.items() if category in sections[section] %}
 
-{% for text, _ in sections[section][category] %}
+#### {{ definition.name }}
+
+{%- for text, _ in sections[section][category].items() %}
+{%- if text %}
+
 - {{ text }}
-{% endfor %}
+{%- endif %}
+{%- endfor %}
 
-{% endif %}
-{% endfor %}
-{% endif %}
-{% endfor %}
+{%- endfor %}
+{%- endfor %}

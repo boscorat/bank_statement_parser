@@ -4,6 +4,8 @@ All notable changes to the `uk-bank-statement-parser` package will be documented
 
 This project follows [Semantic Versioning](https://semver.org/) and uses [towncrier](https://towncrier.readthedocs.io/) for changelog management. Fragments live in the `changes/` directory.
 
+<!-- towncrier release notes start -->
+
 ## [0.3.0] - 2026-06-28
 
 ### Features
