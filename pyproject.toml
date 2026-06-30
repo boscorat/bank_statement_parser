@@ -99,5 +99,5 @@ type = [
     { name = "Performance",     showcontent = true,  directory = "performance" },
     { name = "Breaking Changes", showcontent = true,  directory = "breaking" },
     { name = "Documentation",   showcontent = false, directory = "doc" },
-    { name = "Internal",        showcontent = false, directory = "internal" },
+    { name = "Internal",        showcontent = true,  directory = "internal" },
 ]
