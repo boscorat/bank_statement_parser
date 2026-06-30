@@ -102,9 +102,32 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Generate changelog on the tag (detached HEAD)
           git add CHANGELOG.md changes/
-          git diff --cached --quiet || git commit -m "docs: changelog for v${{ steps.version.outputs.version }}"
-          git push origin HEAD
+          if ! git diff --cached --quiet; then
+            git commit -m "docs: changelog for v${{ steps.version.outputs.version }}"
+            CHANGELOG_COMMIT=$(git rev-parse HEAD)
+            
+            # Use git worktree to apply the changelog cleanly onto master
+            # This ensures a fast-forward push and avoids detached HEAD issues
+            git fetch origin master:master
+            WORKTREE_DIR=$(mktemp -d)
+            git worktree add "$WORKTREE_DIR" master
+            (
+              cd "$WORKTREE_DIR"
+              if grep -q "^## \\[${{ steps.version.outputs.version }}\\]" CHANGELOG.md; then
+                echo "Changelog for v${{ steps.version.outputs.version }} already present on master; skipping cherry-pick."
+              else
+                git cherry-pick --no-edit "$CHANGELOG_COMMIT"
+                git push origin master
+              fi
+            )
+            
+            # Clean up worktree
+            git worktree remove --force "$WORKTREE_DIR"
+            rm -rf "$WORKTREE_DIR"
+          fi
 
       - name: Build sdist and wheel
         run: uv build

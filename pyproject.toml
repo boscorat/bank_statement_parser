@@ -92,12 +92,12 @@ title_format = "## [{version}] - {project_date}"
 underlines = ["", "", ""]
 template = "changes/_template.md.jinja"
 type = [
-    { name = "Features",        showcontent = true,  filename = "feature" },
-    { name = "Bug Fixes",       showcontent = true,  filename = "bugfix" },
-    { name = "Deprecations",    showcontent = true,  filename = "deprecation" },
-    { name = "Security",        showcontent = true,  filename = "security" },
-    { name = "Performance",     showcontent = true,  filename = "performance" },
-    { name = "Breaking Changes", showcontent = true,  filename = "breaking" },
-    { name = "Documentation",   showcontent = false, filename = "doc" },
-    { name = "Internal",        showcontent = false, filename = "internal" },
+    { name = "Features",        showcontent = true,  directory = "feature" },
+    { name = "Bug Fixes",       showcontent = true,  directory = "bugfix" },
+    { name = "Deprecations",    showcontent = true,  directory = "deprecation" },
+    { name = "Security",        showcontent = true,  directory = "security" },
+    { name = "Performance",     showcontent = true,  directory = "performance" },
+    { name = "Breaking Changes", showcontent = true,  directory = "breaking" },
+    { name = "Documentation",   showcontent = false, directory = "doc" },
+    { name = "Internal",        showcontent = false, directory = "internal" },
 ]
