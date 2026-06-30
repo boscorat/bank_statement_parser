@@ -102,12 +102,26 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Generate changelog on the tag (detached HEAD)
           git add CHANGELOG.md changes/
           if ! git diff --cached --quiet; then
             git commit -m "docs: changelog for v${{ steps.version.outputs.version }}"
+            
+            # Use git worktree to apply the changelog cleanly onto master
+            # This ensures a fast-forward push and avoids detached HEAD issues
             git fetch origin master:master
-            git rebase master
-            git push origin HEAD:refs/heads/master
+            WORKTREE_DIR=$(mktemp -d)
+            git worktree add "$WORKTREE_DIR" master
+            cd "$WORKTREE_DIR"
+            
+            # Cherry-pick the changelog commit onto master
+            git cherry-pick --no-edit $(git rev-parse -@~1..HEAD)
+            git push origin master
+            
+            # Clean up worktree
+            cd -
+            git worktree remove "$WORKTREE_DIR"
           fi
 
       - name: Build sdist and wheel
