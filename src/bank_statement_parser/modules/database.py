@@ -184,8 +184,8 @@ _VIEW_MIGRATIONS: list[tuple[str, str]] = [
             ft.value_out,
             ft.value
         FROM FactTransaction ft
-        INNER JOIN DimStatement ds ON ft.statement_id = ds.statement_id
-        INNER JOIN DimAccount   da ON ft.account_id   = da.account_id
+        INNER JOIN DimStatement ds ON ft.statement_int = ds.statement_int
+        INNER JOIN DimAccount   da ON ft.account_int   = da.account_int
         """,
     ),
     (
@@ -194,9 +194,10 @@ _VIEW_MIGRATIONS: list[tuple[str, str]] = [
         CREATE VIEW DimStatementBatch AS
         SELECT DISTINCT
             bl.ID_BATCH          AS batch_id,
-            ds.statement_id,
+            ds.statement_int,
             ds.id_statement,
-            ds.account_id,
+            ds.account_int,
+            ds.id_account,
             ds.company,
             ds.account_type,
             ds.account_number,
@@ -220,11 +221,11 @@ _VIEW_MIGRATIONS: list[tuple[str, str]] = [
         CREATE VIEW FactTransactionBatch AS
         SELECT
             dsb.batch_id,
-            ft.transaction_id,
+            ft.transaction_int,
             ft.id_transaction,
-            ft.statement_id,
-            ft.account_id,
-            ft.time_id,
+            ft.statement_int,
+            ft.account_int,
+            ft.date_int,
             ft.id_date,
             ft.id_account,
             ft.id_statement,
@@ -238,7 +239,7 @@ _VIEW_MIGRATIONS: list[tuple[str, str]] = [
             ft.value_out,
             ft.value
         FROM FactTransaction ft
-        INNER JOIN DimStatementBatch dsb ON ft.statement_id = dsb.statement_id
+        INNER JOIN DimStatementBatch dsb ON ft.statement_int = dsb.statement_int
         """,
     ),
     (
@@ -247,7 +248,7 @@ _VIEW_MIGRATIONS: list[tuple[str, str]] = [
         CREATE VIEW DimAccountBatch AS
         SELECT DISTINCT
             dsb.batch_id,
-            da.account_id,
+            da.account_int,
             da.id_account,
             da.company,
             da.account_type,
@@ -255,28 +256,28 @@ _VIEW_MIGRATIONS: list[tuple[str, str]] = [
             da.sortcode,
             da.account_holder
         FROM DimAccount da
-        INNER JOIN DimStatementBatch dsb ON da.account_id = dsb.account_id
+        INNER JOIN DimStatementBatch dsb ON da.account_int = dsb.account_int
         """,
     ),
     (
-        "DimTimeBatch",
+        "DimDateBatch",
         """
-        CREATE VIEW DimTimeBatch AS
+        CREATE VIEW DimDateBatch AS
         SELECT
-            dt.*,
+            dd.*,
             r.batch_id
-        FROM DimTime dt
+        FROM DimDate dd
         INNER JOIN (
             SELECT
                 ftb.batch_id,
-                MIN(ftb.id_date)        AS min_date,
+                MIN(ftb.id_date)  AS min_date,
                 MAX(dsb.statement_date) AS max_date
             FROM FactTransactionBatch ftb
             INNER JOIN DimStatementBatch dsb
-                   ON ftb.statement_id = dsb.statement_id
-                  AND ftb.batch_id     = dsb.batch_id
+                   ON ftb.statement_int = dsb.statement_int
+                  AND ftb.batch_id      = dsb.batch_id
             GROUP BY ftb.batch_id
-        ) r ON dt.id_date BETWEEN r.min_date AND r.max_date
+        ) r ON dd.id_date BETWEEN r.min_date AND r.max_date
         """,
     ),
     (
@@ -285,8 +286,8 @@ _VIEW_MIGRATIONS: list[tuple[str, str]] = [
         CREATE VIEW FactBalanceBatch AS
         SELECT
             dab.batch_id,
-            fb.time_id,
-            fb.account_id,
+            fb.date_int,
+            fb.account_int,
             fb.id_date,
             fb.id_account,
             fb.opening_balance,
@@ -294,9 +295,9 @@ _VIEW_MIGRATIONS: list[tuple[str, str]] = [
             fb.movement,
             fb.outside_date
         FROM FactBalance fb
-        INNER JOIN DimAccountBatch dab ON fb.account_id = dab.account_id
-        INNER JOIN DimTimeBatch    dtb ON fb.time_id    = dtb.time_id
-                                     AND dab.batch_id   = dtb.batch_id
+        INNER JOIN DimAccountBatch dab ON fb.account_int = dab.account_int
+        INNER JOIN DimDateBatch    ddb ON fb.date_int    = ddb.date_int
+                                     AND dab.batch_id   = ddb.batch_id
         """,
     ),
     (
@@ -322,10 +323,10 @@ _VIEW_MIGRATIONS: list[tuple[str, str]] = [
             ftb.value_out,
             ftb.value
         FROM FactTransactionBatch ftb
-        INNER JOIN DimStatementBatch dsb ON ftb.statement_id = dsb.statement_id
-                                        AND ftb.batch_id     = dsb.batch_id
-        INNER JOIN DimAccountBatch   dab ON ftb.account_id   = dab.account_id
-                                        AND ftb.batch_id     = dab.batch_id
+        INNER JOIN DimStatementBatch dsb ON ftb.statement_int = dsb.statement_int
+                                        AND ftb.batch_id      = dsb.batch_id
+        INNER JOIN DimAccountBatch   dab ON ftb.account_int   = dab.account_int
+                                        AND ftb.batch_id      = dab.batch_id
         """,
     ),
 ]
