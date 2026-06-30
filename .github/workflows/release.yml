@@ -98,35 +98,50 @@ jobs:
           fi
           echo "✓ All fragment files were successfully cleaned up"
 
-      - name: Commit changelog
+      - name: Prepare changelog for PR review
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Generate changelog on the tag (detached HEAD)
+          # Stage changelog and fragments for potential PR
           git add CHANGELOG.md changes/
           if ! git diff --cached --quiet; then
+            # Create commit on current detached HEAD (tag checkout)
             git commit -m "docs: changelog for v${{ steps.version.outputs.version }}"
             CHANGELOG_COMMIT=$(git rev-parse HEAD)
             
-            # Use git worktree to apply the changelog cleanly onto master
-            # This ensures a fast-forward push and avoids detached HEAD issues
+            # Use git worktree to verify changelog integratability with master
             git fetch origin master:master
-            WORKTREE_DIR=$(mktemp -d)
-            git worktree add "$WORKTREE_DIR" master
-            (
-              cd "$WORKTREE_DIR"
-              if grep -q "^## \\[${{ steps.version.outputs.version }}\\]" CHANGELOG.md; then
-                echo "Changelog for v${{ steps.version.outputs.version }} already present on master; skipping cherry-pick."
-              else
-                git cherry-pick --no-edit "$CHANGELOG_COMMIT"
-                git push origin master
-              fi
-            )
+            VERIFICATION_DIR=$(mktemp -d)
+            git worktree add "$VERIFICATION_DIR" master
+            cd "$VERIFICATION_DIR"
             
-            # Clean up worktree
-            git worktree remove --force "$WORKTREE_DIR"
-            rm -rf "$WORKTREE_DIR"
+            # Check for duplicates and provide verification feedback
+            if grep -q "^## \[${{ steps.version.outputs.version }}\]" CHANGELOG.md; then
+              echo "✓ Changelog entry for v${{ steps.version.outputs.version }} already present on master"
+              echo "::notice::No changelog update needed - version already released"
+            else
+              echo "✓ Changelog entry will integrate cleanly onto master"
+              
+              # Create a separate branch for the changelog PR
+              cd -
+              BRANCH_NAME="changelog-update-v${{ steps.version.outputs.version }}"
+              
+              # Create and push the changelog-update branch
+              git checkout -b "$BRANCH_NAME" "$CHANGELOG_COMMIT"
+              git push origin "$BRANCH_NAME" -u
+              
+              echo "::notice::Changelog update branch created: $BRANCH_NAME"
+              echo "::notice::Review at: https://github.com/${{ github.repository }}/compare/master...$BRANCH_NAME"
+              echo "::notice::To merge, create a PR from this branch to master"
+            fi
+            
+            # Clean up verification worktree
+            cd - 2>/dev/null || true
+            git worktree remove --force "$VERIFICATION_DIR" 2>/dev/null || true
+            rm -rf "$VERIFICATION_DIR"
+           else
+            echo "::notice::No changelog changes detected for v${{ steps.version.outputs.version }}"
           fi
 
       - name: Build sdist and wheel
