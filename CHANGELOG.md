@@ -1,5 +1,3 @@
-## [0.3.1] - 2024-06-29
-
 # Changelog
 
 All notable changes to the `uk-bank-statement-parser` package will be documented in this file.
