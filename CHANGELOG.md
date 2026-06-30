@@ -6,7 +6,23 @@ This project follows [Semantic Versioning](https://semver.org/) and uses [towncr
 
 <!-- towncrier release notes start -->
 
-## [0.3.0] - 2026-06-28
+## [0.3.2.post1] - 2026-06-30
+
+
+#### Bug Fixes
+- Fix release workflow to push changelog updates to master when releasing from any branch
+<details>
+
+<summary>Internal Changes</summary>
+- Enforce towncrier changelog fragments in CI and pre-commit hooks for consistent release notes
+- Fixed towncrier package name config and improved release workflow robustness with date consistency and fragment cleanup validation
+- Release workflow now accepts version-branch tags (e.g., v0.3.1) for distributed release strategy
+- Release workflow now accepts tags from any branch, enabling flexible release strategies (major/minor from master, hotfixes from version branches, etc.)
+- Replace complex worktree cherry-pick approach with simpler verification and automatic changelog-update branch creation.
+- Fix towncrier template to iterate sections dynamically and filter empty entries, and add start_string marker for correct changelog insertion ordering
+- Add GitHub Actions ecosystem to Dependabot for automated action version updates
+- render internal changes in collapsed details block
+</details>## [0.3.0] - 2026-06-28
 
 ### Features
 
