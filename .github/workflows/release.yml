@@ -116,8 +116,12 @@ jobs:
             git worktree add "$WORKTREE_DIR" master
             (
               cd "$WORKTREE_DIR"
-              git cherry-pick --no-edit "$CHANGELOG_COMMIT"
-              git push origin master
+              if grep -q "^## \\[${{ steps.version.outputs.version }}\\]" CHANGELOG.md; then
+                echo "Changelog for v${{ steps.version.outputs.version }} already present on master; skipping cherry-pick."
+              else
+                git cherry-pick --no-edit "$CHANGELOG_COMMIT"
+                git push origin master
+              fi
             )
             
             # Clean up worktree
