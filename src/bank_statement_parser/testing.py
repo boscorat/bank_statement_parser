@@ -166,9 +166,10 @@ def _pdf_dir(category: str) -> Path | None:
         test skipping when PDFs are unavailable (e.g., users without SSH access
         to the private repo).
     """
-    # Try bundled path first
+    # Try bundled path first — only accept if it actually contains PDFs
+    # (the package ships empty placeholder directories)
     bundled_path = _PDFS_DIR / category
-    if bundled_path.is_dir():
+    if bundled_path.is_dir() and any(bundled_path.glob("*.pdf")):
         return bundled_path
 
     # Try to clone from private repo
