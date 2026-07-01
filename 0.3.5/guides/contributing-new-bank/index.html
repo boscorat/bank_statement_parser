@@ -1,0 +1,2004 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Documentation for the bank_statement_parser Python library — parse bank statement PDFs, extract structured transaction data, and persist to Parquet and SQLite.">
+      
+      
+      
+        <link rel="canonical" href="https://boscorat.github.io/bank_statement_parser/0.3.5/guides/contributing-new-bank/">
+      
+      
+        <link rel="prev" href="../quick-start/">
+      
+      
+        <link rel="next" href="../local-testing/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Adding a New Bank - Bank Statement Parser</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+  
+      
+
+    
+  
+
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#contributing-adding-a-new-bank" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Bank Statement Parser" class="md-header__button md-logo" aria-label="Bank Statement Parser" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Bank Statement Parser
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Adding a New Bank
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/boscorat/bank_statement_parser" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    boscorat/bank_statement_parser
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Bank Statement Parser" class="md-nav__button md-logo" aria-label="Bank Statement Parser" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Bank Statement Parser
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/boscorat/bank_statement_parser" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    boscorat/bank_statement_parser
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quick-start/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://github.com/boscorat/bank_statement_parser/releases" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Releases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Contributing
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding a New Bank
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding a New Bank
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#is-this-for-you" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Is This For You?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scenario-a-adding-an-entirely-new-bank" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scenario A: Adding an Entirely New Bank
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scenario-b-adding-a-new-account-type-to-existing-bank" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scenario B: Adding a New Account Type to Existing Bank
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scenario-c-improving-or-fixing-existing-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scenario C: Improving or Fixing Existing Config
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#worked-example-adding-hsbc-credit-card-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Worked Example: Adding HSBC Credit Card Config
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Worked Example: Adding HSBC Credit Card Config">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#file-1-companiestoml-bank-identification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        File 1: companies.toml (Bank Identification)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#file-2-accountstoml-account-definitions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        File 2: accounts.toml (Account Definitions)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#file-3-statement_typestoml-statement-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        File 3: statement_types.toml (Statement Layout)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#file-4-statement_tablestoml-transaction-table-extraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        File 4: statement_tables.toml (Transaction Table Extraction)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#finding-column-coordinates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Finding Column Coordinates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#complete-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Complete Reference
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../local-testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Local Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../test-data-submission/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test Data Submission
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../new-bank-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    New Bank Config Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../anonymisation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Anonymisation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../project-structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project Structure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../exports/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Export Options
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/python-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#is-this-for-you" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Is This For You?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scenario-a-adding-an-entirely-new-bank" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scenario A: Adding an Entirely New Bank
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scenario-b-adding-a-new-account-type-to-existing-bank" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scenario B: Adding a New Account Type to Existing Bank
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scenario-c-improving-or-fixing-existing-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scenario C: Improving or Fixing Existing Config
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#worked-example-adding-hsbc-credit-card-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Worked Example: Adding HSBC Credit Card Config
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Worked Example: Adding HSBC Credit Card Config">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#file-1-companiestoml-bank-identification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        File 1: companies.toml (Bank Identification)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#file-2-accountstoml-account-definitions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        File 2: accounts.toml (Account Definitions)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#file-3-statement_typestoml-statement-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        File 3: statement_types.toml (Statement Layout)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#file-4-statement_tablestoml-transaction-table-extraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        File 4: statement_tables.toml (Transaction Table Extraction)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#finding-column-coordinates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Finding Column Coordinates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#complete-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Complete Reference
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<!-- markdownlint-disable MD003 MD007 MD013 -->
+
+<h1 id="contributing-adding-a-new-bank">Contributing: Adding a New Bank<a class="headerlink" href="#contributing-adding-a-new-bank" title="Permanent link">&para;</a></h1>
+<p>This guide walks you through configuring Bank Statement Parser to parse statements from a new bank. <strong>No Python code required</strong> — it's all TOML configuration.</p>
+<h2 id="is-this-for-you">Is This For You?<a class="headerlink" href="#is-this-for-you" title="Permanent link">&para;</a></h2>
+<p>This guide covers three distinct scenarios:</p>
+<ul>
+<li><strong>Scenario A:</strong> Adding support for an entirely new bank (never seen before)</li>
+<li><strong>Scenario B:</strong> Adding a new account type to an existing bank (HSBC current accounts exist, now add HSBC savings)</li>
+<li><strong>Scenario C:</strong> Improving or fixing an existing bank's configuration</li>
+</ul>
+<p><strong>Choose your scenario below,</strong> or continue reading for the complete walkthrough.</p>
+<hr />
+<h2 id="scenario-a-adding-an-entirely-new-bank">Scenario A: Adding an Entirely New Bank<a class="headerlink" href="#scenario-a-adding-an-entirely-new-bank" title="Permanent link">&para;</a></h2>
+<p><strong>Effort:</strong> 2–4 hours (medium–high difficulty)</p>
+<p><strong>Requirements:</strong>
+- Understanding of your bank's PDF layout (columns, table positions)
+- 3+ anonymised test PDFs (different statement dates)
+- TOML configuration (4 new files, ~100 lines each)</p>
+<p><strong>What you'll create:</strong>
+- <code>project/config/import/NEWBANK_UK/companies.toml</code> — Bank identification
+- <code>project/config/import/NEWBANK_UK/accounts.toml</code> — Account definitions
+- <code>project/config/import/NEWBANK_UK/statement_types.toml</code> — Statement layout
+- <code>project/config/import/NEWBANK_UK/statement_tables.toml</code> — Transaction table extraction</p>
+<p><strong>Next steps:</strong>
+1. Read the <a href="#complete-reference">Complete Reference</a> section (auto-generated technical guide)
+2. Test locally with your PDFs (see <a href="../local-testing/">Local Testing Guide</a>)
+3. Prepare 3+ anonymised test PDFs + metadata JSON (see <a href="../test-data-submission/">Test Data Submission Guide</a>)
+4. Submit PR with config files and note about test data</p>
+<hr />
+<h2 id="scenario-b-adding-a-new-account-type-to-existing-bank">Scenario B: Adding a New Account Type to Existing Bank<a class="headerlink" href="#scenario-b-adding-a-new-account-type-to-existing-bank" title="Permanent link">&para;</a></h2>
+<p><strong>Effort:</strong> 1–2 hours (medium difficulty)</p>
+<p><strong>Requirements:</strong>
+- Bank already supported (e.g., HSBC current accounts work)
+- New account type (e.g., HSBC savings accounts)
+- 3+ anonymised test PDFs for the <strong>new account type</strong>
+- Modify existing TOML files (don't create new bank folder)</p>
+<p><strong>What you'll modify:</strong>
+- <code>project/config/import/HSBC_UK/accounts.toml</code> — Add new account definition
+- <code>project/config/import/HSBC_UK/statement_tables.toml</code> — Add new table extraction rules (if layout differs)
+- <code>project/config/import/HSBC_UK/statement_types.toml</code> — Add new statement type (if needed)</p>
+<p><strong>Next steps:</strong>
+1. Read the <a href="#complete-reference">Complete Reference</a> section
+2. Compare your new account type's PDF to the existing one (are columns in same place?)
+3. Modify only the files that differ
+4. Test locally (see <a href="../local-testing/">Local Testing Guide</a>)
+5. Prepare test data and submit PR</p>
+<hr />
+<h2 id="scenario-c-improving-or-fixing-existing-config">Scenario C: Improving or Fixing Existing Config<a class="headerlink" href="#scenario-c-improving-or-fixing-existing-config" title="Permanent link">&para;</a></h2>
+<p><strong>Effort:</strong> 30 mins–1 hour (low–medium difficulty)</p>
+<p><strong>Requirements:</strong>
+- Bank already configured
+- Fix or enhancement (better extraction, missing fields, etc.)
+- If config changes: 3+ new anonymised PDFs + metadata JSON
+- If small fix (typo, comment): test locally to verify</p>
+<p><strong>What you'll do:</strong>
+1. Identify the problem (via issue or your own discovery)
+2. Fix the TOML in one or more files
+3. Test locally to verify fix works (see <a href="../local-testing/">Local Testing Guide</a>)
+4. If config changed meaningfully: prepare test data
+5. Submit PR with explanation</p>
+<hr />
+<h2 id="worked-example-adding-hsbc-credit-card-config">Worked Example: Adding HSBC Credit Card Config<a class="headerlink" href="#worked-example-adding-hsbc-credit-card-config" title="Permanent link">&para;</a></h2>
+<p>Let's walk through a real (anonymised) example of what TOML files look like.</p>
+<h3 id="file-1-companiestoml-bank-identification">File 1: companies.toml (Bank Identification)<a class="headerlink" href="#file-1-companiestoml-bank-identification" title="Permanent link">&para;</a></h3>
+<p>This tells the parser how to identify that a PDF is from HSBC.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">[HSBC_UK]</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">company</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;HSBC Bank UK&#39;</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="k">[HSBC_UK.config]</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">config</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Company Info&#39;</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">locations</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="p">{</span><span class="n">page_number</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">top_left</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">[</span><span class="mi">475</span><span class="p">,</span><span class="w"> </span><span class="mi">110</span><span class="p">],</span><span class="w"> </span><span class="n">bottom_right</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">[</span><span class="mi">575</span><span class="p">,</span><span class="w"> </span><span class="mi">130</span><span class="p">]},</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">]</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="n">fields</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="p">{</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">        </span><span class="n">field</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s1">&#39;website&#39;</span><span class="p">,</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">        </span><span class="n">vital</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">        </span><span class="n">type</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">        </span><span class="n">string_pattern</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s1">&#39;^www\.hsbc\.co\.uk$&#39;</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">    </span><span class="p">},</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="p">]</span>
+</code></pre></div>
+<p><strong>What this does:</strong>
+- Looks for "www.hsbc.co.uk" on page 1 between pixels (475,110) and (575,130)
+- If found, this is an HSBC PDF</p>
+<h3 id="file-2-accountstoml-account-definitions">File 2: accounts.toml (Account Definitions)<a class="headerlink" href="#file-2-accountstoml-account-definitions" title="Permanent link">&para;</a></h3>
+<p>This tells the parser what account types HSBC offers, and how to identify them.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">[HSBC_UK_CRD]</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">account_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;CRD&quot;</span><span class="w">  </span><span class="c1"># Credit Card</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">company</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;HSBC_UK&#39;</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="k">[HSBC_UK_CRD.config]</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">config</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Account Identification&#39;</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="n">account</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Rewards Credit Card&#39;</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="n">locations</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="p">{</span><span class="n">page_number</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">top_left</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">[</span><span class="mi">50</span><span class="p">,</span><span class="w"> </span><span class="mi">150</span><span class="p">],</span><span class="w"> </span><span class="n">bottom_right</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">[</span><span class="mi">300</span><span class="p">,</span><span class="w"> </span><span class="mi">180</span><span class="p">]},</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="p">]</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="n">fields</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">    </span><span class="p">{</span><span class="n">field</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s1">&#39;account&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">vital</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"> </span><span class="n">type</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">string_pattern</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s1">&#39;Rewards.*Card&#39;</span><span class="p">},</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="p">]</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="k">[HSBC_UK_SAV]</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="n">account_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;SAV&quot;</span><span class="w">  </span><span class="c1"># Savings Account</span>
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="n">company</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;HSBC_UK&#39;</span>
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>
+<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="k">[HSBC_UK_SAV.config]</span>
+<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="n">config</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Account Identification&#39;</span>
+<a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a><span class="n">account</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Easy Saver&#39;</span>
+<a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="n">locations</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a><span class="w">    </span><span class="p">{</span><span class="n">page_number</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">top_left</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">[</span><span class="mi">50</span><span class="p">,</span><span class="w"> </span><span class="mi">150</span><span class="p">],</span><span class="w"> </span><span class="n">bottom_right</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">[</span><span class="mi">300</span><span class="p">,</span><span class="w"> </span><span class="mi">180</span><span class="p">]},</span>
+<a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="p">]</span>
+<a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="n">fields</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a><span class="w">    </span><span class="p">{</span><span class="n">field</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s1">&#39;account&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">vital</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"> </span><span class="n">type</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">string_pattern</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s1">&#39;Easy.*Saver&#39;</span><span class="p">},</span>
+<a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a><span class="p">]</span>
+</code></pre></div>
+<p><strong>What this does:</strong>
+- First account type: If PDF says "Rewards ... Card", it's a Credit Card
+- Second account type: If PDF says "Easy ... Saver", it's a Savings Account</p>
+<h3 id="file-3-statement_typestoml-statement-layout">File 3: statement_types.toml (Statement Layout)<a class="headerlink" href="#file-3-statement_typestoml-statement-layout" title="Permanent link">&para;</a></h3>
+<p>This tells the parser where to find statement-level data (opening balance, dates, etc.) and per-page transaction lines.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">[HSBC_UK_CRD_STATEMENT]</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">account_ref</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;HSBC_UK_CRD&#39;</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="n">statement_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Standard&#39;</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="k">[HSBC_UK_CRD_STATEMENT.header]</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="n">config</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Header&#39;</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="n">table_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;statement_header&quot;</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="n">locations</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">    </span><span class="p">{</span><span class="n">page_number</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">top_left</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">[</span><span class="mi">50</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">],</span><span class="w"> </span><span class="n">bottom_right</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">[</span><span class="mi">500</span><span class="p">,</span><span class="w"> </span><span class="mi">300</span><span class="p">]},</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="p">]</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="n">fields</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">    </span><span class="p">{</span><span class="n">field</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s1">&#39;statement_date&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">column</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="n">vital</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"> </span><span class="n">type</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">string_pattern</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s1">&#39;^[0-3][0-9]\s[A-Z][a-z]{2}\s[0-9]{4}$&#39;</span><span class="p">},</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">    </span><span class="p">{</span><span class="n">field</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s1">&#39;opening_balance&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">column</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="n">vital</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"> </span><span class="n">type</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;currency&quot;</span><span class="p">},</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">    </span><span class="p">{</span><span class="n">field</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s1">&#39;payments_in&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">column</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"> </span><span class="n">vital</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"> </span><span class="n">type</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;currency&quot;</span><span class="p">},</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="p">]</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="k">[HSBC_UK_CRD_STATEMENT.lines]</span>
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="n">config</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Transaction Lines&#39;</span>
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="n">statement_table</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;HSBC_UK_CRD_TRANSACTIONS&#39;</span>
+<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="n">page_detection</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="n">column</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">value</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;From beginning of statement&quot;</span><span class="p">}</span>
+</code></pre></div>
+<p><strong>What this does:</strong>
+- Header section: Extracts statement date and opening balance from page 1
+- Lines section: Extracts transaction rows (defined separately in statement_tables.toml)</p>
+<h3 id="file-4-statement_tablestoml-transaction-table-extraction">File 4: statement_tables.toml (Transaction Table Extraction)<a class="headerlink" href="#file-4-statement_tablestoml-transaction-table-extraction" title="Permanent link">&para;</a></h3>
+<p>This tells the parser where the transaction table is and how to extract each column.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">[HSBC_UK_CRD_TRANSACTIONS]</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;transaction&quot;</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">statement_table</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Transactions&#39;</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">table_columns</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">6</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="k">[HSBC_UK_CRD_TRANSACTIONS.locations]</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="n">vertical_lines</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="mi">50</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="mi">150</span><span class="p">,</span><span class="w"> </span><span class="mi">150</span><span class="p">,</span><span class="w"> </span><span class="mi">250</span><span class="p">,</span><span class="w"> </span><span class="mi">250</span><span class="p">,</span><span class="w"> </span><span class="mi">350</span><span class="p">,</span><span class="w"> </span><span class="mi">350</span><span class="p">,</span><span class="w"> </span><span class="mi">450</span><span class="p">,</span><span class="w"> </span><span class="mi">450</span><span class="p">,</span><span class="w"> </span><span class="mi">555</span><span class="p">]</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="k">[[HSBC_UK_CRD_TRANSACTIONS.fields]]</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="n">field</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;date&#39;</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="n">column</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="n">vital</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;string&quot;</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a><span class="n">string_pattern</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;^[0-3][0-9]\s[A-Z][a-z]{2}$&#39;</span>
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="k">[[HSBC_UK_CRD_TRANSACTIONS.fields]]</span>
+<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a><span class="n">field</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;details&#39;</span>
+<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="n">column</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span>
+<a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a><span class="n">vital</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a><span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;string&quot;</span>
+<a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a>
+<a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a><span class="k">[[HSBC_UK_CRD_TRANSACTIONS.fields]]</span>
+<a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a><span class="n">field</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;£_paid_in&#39;</span>
+<a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a><span class="n">column</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span>
+<a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a><span class="n">vital</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
+<a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a><span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;currency&quot;</span>
+<a id="__codelineno-3-27" name="__codelineno-3-27" href="#__codelineno-3-27"></a>
+<a id="__codelineno-3-28" name="__codelineno-3-28" href="#__codelineno-3-28"></a><span class="k">[[HSBC_UK_CRD_TRANSACTIONS.fields]]</span>
+<a id="__codelineno-3-29" name="__codelineno-3-29" href="#__codelineno-3-29"></a><span class="n">field</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;£_paid_out&#39;</span>
+<a id="__codelineno-3-30" name="__codelineno-3-30" href="#__codelineno-3-30"></a><span class="n">column</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span>
+<a id="__codelineno-3-31" name="__codelineno-3-31" href="#__codelineno-3-31"></a><span class="n">vital</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
+<a id="__codelineno-3-32" name="__codelineno-3-32" href="#__codelineno-3-32"></a><span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;currency&quot;</span>
+</code></pre></div>
+<p><strong>What this does:</strong>
+- Defines a 6-column transaction table
+- Vertical dividers at pixels: 50–100 (col 1), 100–150 (col 2), etc.
+- Column 0: Transaction date (regex pattern matches "11 Jan" format)
+- Column 2: Transaction details (merchant name, etc.)
+- Column 4: Credits (paid in)
+- Column 5: Debits (paid out)</p>
+<hr />
+<h2 id="finding-column-coordinates">Finding Column Coordinates<a class="headerlink" href="#finding-column-coordinates" title="Permanent link">&para;</a></h2>
+<p>The trickiest part of TOML config is measuring column coordinates. Here's how:</p>
+<p><strong>1. Get a PDF measurement tool:</strong>
+- macOS: Preview (built-in) has a Measure tool
+- Windows: Adobe Reader (free) or PDF tool
+- Online: Try <a href="https://pdfmeasure.com">pdfmeasure.com</a> (browser-based)</p>
+<p><strong>2. Open your bank's PDF</strong></p>
+<p><strong>3. Find the transaction table and measure:</strong>
+- Where does the first column start? (left edge of table)
+- Where does each column divider appear? (vertical lines between columns)
+- Where does the last column end? (right edge of table)</p>
+<p><strong>Example:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>| Column 1      | Column 2    | Column 3      |
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>|---------|---------|---------|
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>50px     100px    150px     250px
+</code></pre></div></p>
+<p>Becomes in TOML:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">vertical_lines</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="mi">50</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="mi">150</span><span class="p">,</span><span class="w"> </span><span class="mi">150</span><span class="p">,</span><span class="w"> </span><span class="mi">250</span><span class="p">]</span>
+</code></pre></div></p>
+<p><strong>💡 Tip:</strong> Values are in points (PDF units), roughly equivalent to 1/72 inch. An 8.5"×11" page is about 612×792 points.</p>
+<hr />
+<h2 id="complete-reference">Complete Reference<a class="headerlink" href="#complete-reference" title="Permanent link">&para;</a></h2>
+<p>Below is the complete technical reference (auto-generated from code). It covers all TOML fields, dataclasses, and configuration options.</p>
+<hr />
+<!-- START OF AUTO-GENERATED REFERENCE -->
+<!-- This content is generated by scripts/generate_docs.py -->
+<!-- To regenerate, run: python scripts/generate_docs.py -->
+
+<h1 id="adding-a-new-bank-technical-reference">Adding a New Bank — Technical Reference<a class="headerlink" href="#adding-a-new-bank-technical-reference" title="Permanent link">&para;</a></h1>
+<p>This section contains the complete TOML configuration reference for adding bank support. Most users should read the <a href="#worked-example-adding-hsbc-credit-card-config">Worked Example</a> section first.</p>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<p>Adding support for a new bank involves creating and editing several TOML files that describe how to identify the bank's PDFs, locate tables on each page, extract field values, and map them to standard output columns.</p>
+<p>The configuration lives in two places:</p>
+<table>
+<thead>
+<tr>
+<th>Location</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>project/config/import/&lt;BANK_COUNTRY&gt;/</code></td>
+<td>Bank-specific config folder (4 TOML files)</td>
+</tr>
+<tr>
+<td><code>project/config/import/account_types.toml</code></td>
+<td>Shared account type registry</td>
+</tr>
+<tr>
+<td><code>project/config/import/standard_fields.toml</code></td>
+<td>Shared standard field mappings</td>
+</tr>
+</tbody>
+</table>
+<h3 id="bank-config-folder-structure">Bank config folder structure<a class="headerlink" href="#bank-config-folder-structure" title="Permanent link">&para;</a></h3>
+<p>Each bank has its own subfolder named in <code>SCREAMING_SNAKE_CASE</code> (e.g. <code>HSBC_UK</code>, <code>TSB_UK</code>). A complete folder contains exactly four files:</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+<th>Key Dataclass</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>companies.toml</code></td>
+<td>Bank identification (name + PDF detection rule)</td>
+<td><a href="#company"><code>Company</code></a></td>
+</tr>
+<tr>
+<td><code>accounts.toml</code></td>
+<td>Account definitions (one per product/card type)</td>
+<td><a href="#account"><code>Account</code></a></td>
+</tr>
+<tr>
+<td><code>statement_types.toml</code></td>
+<td>Statement layout definitions (header + lines extraction)</td>
+<td><a href="#statementtype"><code>StatementType</code></a></td>
+</tr>
+<tr>
+<td><code>statement_tables.toml</code></td>
+<td>Physical table extraction rules (locations, fields, bookends)</td>
+<td><a href="#statementtable"><code>StatementTable</code></a></td>
+</tr>
+</tbody>
+</table>
+<h3 id="processing-pipeline">Processing pipeline<a class="headerlink" href="#processing-pipeline" title="Permanent link">&para;</a></h3>
+<p>Understanding the processing order helps when writing config:</p>
+<ol>
+<li><strong>Company identification</strong> — the <code>Company.config</code> extraction is run against page 1 to determine which bank issued the PDF.</li>
+<li><strong>Account identification</strong> — each <code>Account.config</code> is tried until one matches, identifying the specific account product.</li>
+<li><strong>Header extraction</strong> — the <code>StatementType.header</code> configs run to extract statement-level metadata (dates, balances, account details).</li>
+<li><strong>Lines extraction</strong> — the <code>StatementType.lines</code> configs run per-page to extract transaction rows.</li>
+<li><strong>Standard field mapping</strong> — raw extracted fields are mapped to <code>STD_*</code> output columns via <code>standard_fields.toml</code>.</li>
+<li><strong>Checks &amp; balances</strong> — opening balance + payments in - payments out = closing balance is validated.</li>
+</ol>
+<hr />
+<h2 id="step-1-register-the-account-type">Step 1: Register the Account Type<a class="headerlink" href="#step-1-register-the-account-type" title="Permanent link">&para;</a></h2>
+<p>If your bank uses an account type not already in <code>account_types.toml</code>, add a new entry. Most banks will use the existing types (<code>CRD</code>, <code>CUR</code>, <code>SAV</code>, <code>ISA</code>).</p>
+<p><strong>File:</strong> <code>project/config/import/account_types.toml</code></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">[CRD]</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">account_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Credit Card&quot;</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="k">[CUR]</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="n">account_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Current Account&quot;</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="k">[SAV]</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="n">account_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Savings Account&quot;</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="k">[ISA]</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="n">account_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;ISA&quot;</span>
+</code></pre></div>
+<h3 id="accounttype"><code>AccountType</code><a class="headerlink" href="#accounttype" title="Permanent link">&para;</a></h3>
+<p>Simple lookup label for an account type category.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Status</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>account_type</code></td>
+<td><code>str</code></td>
+<td>ACTIVE</td>
+<td>Account type label (e.g. "CRD" for credit card, "CUR" for current account).  Populated at load time but not subsequently consumed by the pipeline; present for potential reporting or routing use.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="step-2-create-the-bank-config-folder">Step 2: Create the Bank Config Folder<a class="headerlink" href="#step-2-create-the-bank-config-folder" title="Permanent link">&para;</a></h2>
+<p>Create a new subfolder under <code>project/config/import/</code> using the naming convention <code>&lt;BANK&gt;_&lt;COUNTRY&gt;</code> in SCREAMING_SNAKE_CASE:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>project/config/import/
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>  HSBC_UK/          # existing
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>  TSB_UK/           # existing
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>  NEWBANK_UK/       # &lt;- your new folder
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    companies.toml
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>    accounts.toml
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>    statement_types.toml
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>    statement_tables.toml
+</code></pre></div>
+<hr />
+<h2 id="step-3-companiestoml-bank-identification">Step 3: companies.toml — Bank Identification<a class="headerlink" href="#step-3-companiestoml-bank-identification" title="Permanent link">&para;</a></h2>
+<p>Tells the parser how to identify a PDF as belonging to this bank.</p>
+<p><strong>File:</strong> <code>project/config/import/&lt;BANK_COUNTRY&gt;/companies.toml</code></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">[HSBC_UK]</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">company</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;HSBC Bank UK&#39;</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="k">[HSBC_UK.config]</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="n">config</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Company Info&#39;</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="n">locations</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">    </span><span class="p">{</span><span class="n">page_number</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">top_left</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">[</span><span class="mi">475</span><span class="p">,</span><span class="w"> </span><span class="mi">110</span><span class="p">],</span><span class="w"> </span><span class="n">bottom_right</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">[</span><span class="mi">575</span><span class="p">,</span><span class="w"> </span><span class="mi">130</span><span class="p">]},</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="p">]</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="n">fields</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="w">    </span><span class="p">{</span><span class="n">field</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s1">&#39;website&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">vital</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"> </span><span class="n">type</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">string_pattern</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s1">&#39;^www\.hsbc\.co\.uk$&#39;</span><span class="p">},</span>
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="p">]</span>
+</code></pre></div>
+<h3 id="company"><code>Company</code><a class="headerlink" href="#company" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Status</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>company</code></td>
+<td><code>str</code></td>
+<td>ACTIVE</td>
+<td>Display name of the bank (e.g., 'HSBC Bank UK')</td>
+</tr>
+<tr>
+<td><code>config</code></td>
+<td><code>Config</code></td>
+<td>ACTIVE</td>
+<td>Extraction rule to identify the bank from page 1</td>
+</tr>
+</tbody>
+</table>
+<h3 id="config-for-company-identification"><code>Config</code> (for Company Identification)<a class="headerlink" href="#config-for-company-identification" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Status</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>config</code></td>
+<td><code>str</code></td>
+<td>ACTIVE</td>
+<td>Always set to <code>"Company Info"</code> for identification rules</td>
+</tr>
+<tr>
+<td><code>locations</code></td>
+<td><code>list[PDFLocation]</code></td>
+<td>ACTIVE</td>
+<td>List of page regions to search for the bank name</td>
+</tr>
+<tr>
+<td><code>fields</code></td>
+<td><code>list[ConfigField]</code></td>
+<td>ACTIVE</td>
+<td>Extraction rules (usually one: the company website or name)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="pdflocation"><code>PDFLocation</code><a class="headerlink" href="#pdflocation" title="Permanent link">&para;</a></h3>
+<p>Specifies a rectangular region on a PDF page (in points).</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Status</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>page_number</code></td>
+<td><code>int</code></td>
+<td>ACTIVE</td>
+<td>Page number (1-indexed; 1 = first page)</td>
+</tr>
+<tr>
+<td><code>top_left</code></td>
+<td><code>list&amp;#91;int&amp;#93;</code></td>
+<td>ACTIVE</td>
+<td>&#91;x, y&#93; coordinates of top-left corner in PDF points</td>
+</tr>
+<tr>
+<td><code>bottom_right</code></td>
+<td><code>list&amp;#91;int&amp;#93;</code></td>
+<td>ACTIVE</td>
+<td>&#91;x, y&#93; coordinates of bottom-right corner in PDF points</td>
+</tr>
+</tbody>
+</table>
+<h3 id="configfield"><code>ConfigField</code><a class="headerlink" href="#configfield" title="Permanent link">&para;</a></h3>
+<p>Defines a field to extract from a region.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Status</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>field</code></td>
+<td><code>str</code></td>
+<td>ACTIVE</td>
+<td>Field name (e.g., <code>"website"</code>, <code>"account_number"</code>)</td>
+</tr>
+<tr>
+<td><code>vital</code></td>
+<td><code>bool</code></td>
+<td>ACTIVE</td>
+<td>If <code>true</code>, extraction must succeed or the entire identification fails</td>
+</tr>
+<tr>
+<td><code>type</code></td>
+<td><code>str</code></td>
+<td>ACTIVE</td>
+<td>Field type: <code>"string"</code>, <code>"currency"</code>, <code>"number"</code>, <code>"date"</code></td>
+</tr>
+<tr>
+<td><code>string_pattern</code></td>
+<td><code>str</code></td>
+<td>CONDITIONAL</td>
+<td>Regex pattern (required if <code>type = "string"</code>). Example: <code>^www\.hsbc\.co\.uk$</code></td>
+</tr>
+<tr>
+<td><code>string_max_length</code></td>
+<td><code>int</code></td>
+<td>OPTIONAL</td>
+<td>Max length of extracted string</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="step-4-accountstoml-account-definitions">Step 4: accounts.toml — Account Definitions<a class="headerlink" href="#step-4-accountstoml-account-definitions" title="Permanent link">&para;</a></h2>
+<p>Defines account types supported by this bank and how to identify them.</p>
+<p><strong>File:</strong> <code>project/config/import/&lt;BANK_COUNTRY&gt;/accounts.toml</code></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">[HSBC_UK_CRD]</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="n">account_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;CRD&quot;</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="n">company</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;HSBC_UK&#39;</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="k">[HSBC_UK_CRD.config]</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="n">config</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Account Identification&#39;</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="n">account</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Rewards Credit Card&#39;</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="n">locations</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">    </span><span class="p">{</span><span class="n">page_number</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">top_left</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">[</span><span class="mi">50</span><span class="p">,</span><span class="w"> </span><span class="mi">150</span><span class="p">],</span><span class="w"> </span><span class="n">bottom_right</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">[</span><span class="mi">300</span><span class="p">,</span><span class="w"> </span><span class="mi">180</span><span class="p">]},</span>
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="p">]</span>
+<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="n">fields</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="w">    </span><span class="p">{</span><span class="n">field</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s1">&#39;account&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">vital</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"> </span><span class="n">type</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">string_pattern</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s1">&#39;Rewards.*Card&#39;</span><span class="p">},</span>
+<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="p">]</span>
+</code></pre></div>
+<h3 id="account"><code>Account</code><a class="headerlink" href="#account" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Status</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>account_type</code></td>
+<td><code>str</code></td>
+<td>ACTIVE</td>
+<td>Reference to account type (e.g., <code>"CRD"</code>, <code>"CUR"</code>, <code>"SAV"</code>, <code>"ISA"</code>)</td>
+</tr>
+<tr>
+<td><code>company</code></td>
+<td><code>str</code></td>
+<td>ACTIVE</td>
+<td>Reference to company key (e.g., <code>"HSBC_UK"</code>)</td>
+</tr>
+<tr>
+<td><code>config</code></td>
+<td><code>Config</code></td>
+<td>ACTIVE</td>
+<td>Extraction rule to identify this specific account type</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="step-5-statement_typestoml-statement-layout">Step 5: statement_types.toml — Statement Layout<a class="headerlink" href="#step-5-statement_typestoml-statement-layout" title="Permanent link">&para;</a></h2>
+<p>Defines how to extract statement-level metadata (header) and per-page transaction rows (lines).</p>
+<p><strong>File:</strong> <code>project/config/import/&lt;BANK_COUNTRY&gt;/statement_types.toml</code></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">[HSBC_UK_CRD_STATEMENT]</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="n">account_ref</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;HSBC_UK_CRD&#39;</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="n">statement_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Standard&#39;</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="k">[HSBC_UK_CRD_STATEMENT.header]</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="n">config</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Header&#39;</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="n">table_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;statement_header&quot;</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="n">locations</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="w">    </span><span class="p">{</span><span class="n">page_number</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">top_left</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">[</span><span class="mi">50</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">],</span><span class="w"> </span><span class="n">bottom_right</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">[</span><span class="mi">500</span><span class="p">,</span><span class="w"> </span><span class="mi">300</span><span class="p">]},</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="p">]</span>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="n">fields</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="w">    </span><span class="p">{</span><span class="n">field</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s1">&#39;statement_date&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">column</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="n">vital</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"> </span><span class="n">type</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">string_pattern</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s1">&#39;^[0-3][0-9]\s[A-Z][a-z]{2}\s[0-9]{4}$&#39;</span><span class="p">},</span>
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="w">    </span><span class="p">{</span><span class="n">field</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s1">&#39;opening_balance&#39;</span><span class="p">,</span><span class="w"> </span><span class="n">column</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="n">vital</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"> </span><span class="n">type</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;currency&quot;</span><span class="p">},</span>
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="p">]</span>
+<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>
+<a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a><span class="k">[HSBC_UK_CRD_STATEMENT.lines]</span>
+<a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a><span class="n">config</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Transaction Lines&#39;</span>
+<a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a><span class="n">statement_table</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;HSBC_UK_CRD_TRANSACTIONS&#39;</span>
+<a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a><span class="n">page_detection</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="n">column</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="n">value</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;From beginning of statement&quot;</span><span class="p">}</span>
+</code></pre></div>
+<h3 id="statementtype"><code>StatementType</code><a class="headerlink" href="#statementtype" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Status</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>account_ref</code></td>
+<td><code>str</code></td>
+<td>ACTIVE</td>
+<td>Reference to account key (e.g., <code>"HSBC_UK_CRD"</code>)</td>
+</tr>
+<tr>
+<td><code>statement_type</code></td>
+<td><code>str</code></td>
+<td>ACTIVE</td>
+<td>Type label (usually <code>"Standard"</code>)</td>
+</tr>
+<tr>
+<td><code>header</code></td>
+<td><code>TableExtraction</code></td>
+<td>ACTIVE</td>
+<td>Rules for extracting header/metadata</td>
+</tr>
+<tr>
+<td><code>lines</code></td>
+<td><code>TableExtraction</code></td>
+<td>ACTIVE</td>
+<td>Rules for extracting transaction rows</td>
+</tr>
+</tbody>
+</table>
+<h3 id="tableextraction"><code>TableExtraction</code><a class="headerlink" href="#tableextraction" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Status</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>config</code></td>
+<td><code>str</code></td>
+<td>ACTIVE</td>
+<td>Description (<code>"Header"</code> or <code>"Transaction Lines"</code>)</td>
+</tr>
+<tr>
+<td><code>statement_table</code></td>
+<td><code>str</code></td>
+<td>CONDITIONAL</td>
+<td>Reference to StatementTable (required for <code>lines</code>)</td>
+</tr>
+<tr>
+<td><code>table_type</code></td>
+<td><code>str</code></td>
+<td>OPTIONAL</td>
+<td>Table classification (<code>"statement_header"</code>, etc.)</td>
+</tr>
+<tr>
+<td><code>locations</code></td>
+<td><code>list[PDFLocation]</code></td>
+<td>ACTIVE</td>
+<td>Page regions to search</td>
+</tr>
+<tr>
+<td><code>fields</code></td>
+<td><code>list[ConfigField]</code></td>
+<td>ACTIVE</td>
+<td>Fields to extract</td>
+</tr>
+<tr>
+<td><code>page_detection</code></td>
+<td><code>dict</code></td>
+<td>OPTIONAL</td>
+<td>How to identify pages containing this table</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="step-6-statement_tablestoml-transaction-table-extraction">Step 6: statement_tables.toml — Transaction Table Extraction<a class="headerlink" href="#step-6-statement_tablestoml-transaction-table-extraction" title="Permanent link">&para;</a></h2>
+<p>Defines the physical layout of the transaction table (columns, vertical dividers, field mappings).</p>
+<p><strong>File:</strong> <code>project/config/import/&lt;BANK_COUNTRY&gt;/statement_tables.toml</code></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="k">[HSBC_UK_CRD_TRANSACTIONS]</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;transaction&quot;</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="n">statement_table</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;Transactions&#39;</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="n">table_columns</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">6</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="k">[HSBC_UK_CRD_TRANSACTIONS.locations]</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="n">vertical_lines</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="mi">50</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w"> </span><span class="mi">150</span><span class="p">,</span><span class="w"> </span><span class="mi">150</span><span class="p">,</span><span class="w"> </span><span class="mi">250</span><span class="p">,</span><span class="w"> </span><span class="mi">250</span><span class="p">,</span><span class="w"> </span><span class="mi">350</span><span class="p">,</span><span class="w"> </span><span class="mi">350</span><span class="p">,</span><span class="w"> </span><span class="mi">450</span><span class="p">,</span><span class="w"> </span><span class="mi">450</span><span class="p">,</span><span class="w"> </span><span class="mi">555</span><span class="p">]</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="k">[[HSBC_UK_CRD_TRANSACTIONS.fields]]</span>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="n">field</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;date&#39;</span>
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a><span class="n">column</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span>
+<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="n">vital</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
+<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;string&quot;</span>
+<a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a><span class="n">string_pattern</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;^[0-3][0-9]\s[A-Z][a-z]{2}$&#39;</span>
+<a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a>
+<a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a><span class="k">[[HSBC_UK_CRD_TRANSACTIONS.fields]]</span>
+<a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a><span class="n">field</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;details&#39;</span>
+<a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a><span class="n">column</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span>
+<a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a><span class="n">vital</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<a id="__codelineno-11-20" name="__codelineno-11-20" href="#__codelineno-11-20"></a><span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;string&quot;</span>
+<a id="__codelineno-11-21" name="__codelineno-11-21" href="#__codelineno-11-21"></a>
+<a id="__codelineno-11-22" name="__codelineno-11-22" href="#__codelineno-11-22"></a><span class="k">[[HSBC_UK_CRD_TRANSACTIONS.fields]]</span>
+<a id="__codelineno-11-23" name="__codelineno-11-23" href="#__codelineno-11-23"></a><span class="n">field</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;£_paid_in&#39;</span>
+<a id="__codelineno-11-24" name="__codelineno-11-24" href="#__codelineno-11-24"></a><span class="n">column</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span>
+<a id="__codelineno-11-25" name="__codelineno-11-25" href="#__codelineno-11-25"></a><span class="n">vital</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
+<a id="__codelineno-11-26" name="__codelineno-11-26" href="#__codelineno-11-26"></a><span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;currency&quot;</span>
+<a id="__codelineno-11-27" name="__codelineno-11-27" href="#__codelineno-11-27"></a>
+<a id="__codelineno-11-28" name="__codelineno-11-28" href="#__codelineno-11-28"></a><span class="k">[[HSBC_UK_CRD_TRANSACTIONS.fields]]</span>
+<a id="__codelineno-11-29" name="__codelineno-11-29" href="#__codelineno-11-29"></a><span class="n">field</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;£_paid_out&#39;</span>
+<a id="__codelineno-11-30" name="__codelineno-11-30" href="#__codelineno-11-30"></a><span class="n">column</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span>
+<a id="__codelineno-11-31" name="__codelineno-11-31" href="#__codelineno-11-31"></a><span class="n">vital</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span>
+<a id="__codelineno-11-32" name="__codelineno-11-32" href="#__codelineno-11-32"></a><span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;currency&quot;</span>
+</code></pre></div>
+<h3 id="statementtable"><code>StatementTable</code><a class="headerlink" href="#statementtable" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Status</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>type</code></td>
+<td><code>str</code></td>
+<td>ACTIVE</td>
+<td>Table type (<code>"transaction"</code> or <code>"header"</code>)</td>
+</tr>
+<tr>
+<td><code>statement_table</code></td>
+<td><code>str</code></td>
+<td>ACTIVE</td>
+<td>Display name of the table (e.g., <code>"Transactions"</code>, <code>"Header"</code>)</td>
+</tr>
+<tr>
+<td><code>table_columns</code></td>
+<td><code>int</code></td>
+<td>ACTIVE</td>
+<td>Number of columns in the table</td>
+</tr>
+<tr>
+<td><code>locations</code></td>
+<td><code>object</code></td>
+<td>ACTIVE</td>
+<td>Bounding box and divider lines</td>
+</tr>
+<tr>
+<td><code>fields</code></td>
+<td><code>list[TableField]</code></td>
+<td>ACTIVE</td>
+<td>Field extraction rules per column</td>
+</tr>
+</tbody>
+</table>
+<h3 id="tablefield"><code>TableField</code><a class="headerlink" href="#tablefield" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Status</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>field</code></td>
+<td><code>str</code></td>
+<td>ACTIVE</td>
+<td>Field name</td>
+</tr>
+<tr>
+<td><code>column</code></td>
+<td><code>int</code></td>
+<td>ACTIVE</td>
+<td>Column index (0-based)</td>
+</tr>
+<tr>
+<td><code>vital</code></td>
+<td><code>bool</code></td>
+<td>ACTIVE</td>
+<td>If <code>true</code>, field must extract successfully</td>
+</tr>
+<tr>
+<td><code>type</code></td>
+<td><code>str</code></td>
+<td>ACTIVE</td>
+<td>Field type (<code>"string"</code>, <code>"currency"</code>, <code>"number"</code>, <code>"date"</code>)</td>
+</tr>
+<tr>
+<td><code>string_pattern</code></td>
+<td><code>str</code></td>
+<td>CONDITIONAL</td>
+<td>Regex pattern for string fields</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="step-7-register-standard-field-mappings">Step 7: Register Standard Field Mappings<a class="headerlink" href="#step-7-register-standard-field-mappings" title="Permanent link">&para;</a></h2>
+<p>The last step is to map your extracted fields to the standard output columns (<code>STD_*</code>).</p>
+<p><strong>File:</strong> <code>project/config/import/standard_fields.toml</code></p>
+<p>This file defines how raw extracted fields map to standardized output columns:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="k">[HSBC_UK_CRD]</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="c1"># [ACTIVE] Raw extracted field → Standard output column mappings</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="n">STD_STATEMENT_DATE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;statement_date&quot;</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="n">STD_OPENING_BALANCE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;opening_balance&quot;</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="n">STD_CLOSING_BALANCE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;closing_balance&quot;</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="n">STD_PAYMENTS_IN</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;payments_in&quot;</span>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="n">STD_PAYMENTS_OUT</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;payments_out&quot;</span>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="n">STD_TRANSACTION_DATE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;date&quot;</span>
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="n">STD_TRANSACTION_DESC</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;details&quot;</span>
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="n">STD_TRANSACTION_PAYMENTS_IN</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;£_paid_in&quot;</span>
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="n">STD_TRANSACTION_PAYMENTS_OUT</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;£_paid_out&quot;</span>
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="n">STD_ACCOUNT</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;account&quot;</span>
+<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="n">STD_CURRENCY</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;GBP&quot;</span><span class="w">  </span><span class="c1"># or extract from PDF</span>
+<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a><span class="n">STD_COMPANY</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;HSBC_UK&quot;</span>
+<a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a><span class="n">STD_STATEMENT_TYPE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;Standard&quot;</span>
+</code></pre></div>
+<hr />
+<h2 id="before-you-submit">Before You Submit<a class="headerlink" href="#before-you-submit" title="Permanent link">&para;</a></h2>
+<p>✅ <strong>Checklist:</strong>
+- [ ] All 4 TOML files created/modified in bank folder
+- [ ] Bank name and account types verified
+- [ ] Company identification rule tested
+- [ ] Account identification rule tested
+- [ ] Header fields extract correctly (dates, balances)
+- [ ] Transaction table columns measured and dividers set correctly
+- [ ] All transaction fields extract correctly
+- [ ] Checks-and-balances pass
+- [ ] Standard field mappings registered
+- [ ] 3+ anonymised PDFs tested locally
+- [ ] Metadata JSON created for each PDF
+- [ ] PR description explains bank name and account types</p>
+<!-- END OF AUTO-GENERATED REFERENCE -->
+
+<hr />
+<h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Test your config locally</strong> (see <a href="../local-testing/">Local Testing Guide</a>)</li>
+<li><strong>Prepare anonymised PDFs</strong> (3+ different statements)</li>
+<li><strong>Create metadata JSON files</strong> (one per PDF) (see <a href="../test-data-submission/">Test Data Submission Guide</a>)</li>
+<li><strong>Submit PR</strong> with config files</li>
+<li><strong>Maintainers will request test PDFs</strong> and create private PR to activate tests</li>
+</ol>
+<hr />
+<h2 id="questions">Questions?<a class="headerlink" href="#questions" title="Permanent link">&para;</a></h2>
+<p>See the <a href="https://github.com/boscorat/bank_statement_parser/blob/master/CONTRIBUTING.md">CONTRIBUTING.md</a> guide on GitHub for help resources.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
