@@ -383,6 +383,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#032post1-2026-06-30" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        [0.3.2.post1] - 2026-06-30
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[0.3.2.post1] - 2026-06-30">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bug-fixes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bug Fixes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#030-2026-06-28" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -891,6 +919,34 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#032post1-2026-06-30" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        [0.3.2.post1] - 2026-06-30
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="[0.3.2.post1] - 2026-06-30">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#bug-fixes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bug Fixes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#030-2026-06-28" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -954,6 +1010,23 @@
 <p>This project follows <a href="https://semver.org/">Semantic Versioning</a> and uses <a href="https://towncrier.readthedocs.io/">towncrier</a> for changelog management. Fragments live in the <code>changes/</code> directory.</p>
 <!-- towncrier release notes start -->
 
+<h2 id="032post1-2026-06-30">[0.3.2.post1] - 2026-06-30<a class="headerlink" href="#032post1-2026-06-30" title="Permanent link">&para;</a></h2>
+<h4 id="bug-fixes">Bug Fixes<a class="headerlink" href="#bug-fixes" title="Permanent link">&para;</a></h4>
+<ul>
+<li>Fix release workflow to push changelog updates to master when releasing from any branch</li>
+</ul>
+<details>
+
+<summary>Internal Changes</summary>
+- Enforce towncrier changelog fragments in CI and pre-commit hooks for consistent release notes
+- Fixed towncrier package name config and improved release workflow robustness with date consistency and fragment cleanup validation
+- Release workflow now accepts version-branch tags (e.g., v0.3.1) for distributed release strategy
+- Release workflow now accepts tags from any branch, enabling flexible release strategies (major/minor from master, hotfixes from version branches, etc.)
+- Replace complex worktree cherry-pick approach with simpler verification and automatic changelog-update branch creation.
+- Fix towncrier template to iterate sections dynamically and filter empty entries, and add start_string marker for correct changelog insertion ordering
+- Add GitHub Actions ecosystem to Dependabot for automated action version updates
+- render internal changes in collapsed details block
+</details>
 <h2 id="030-2026-06-28">[0.3.0] - 2026-06-28<a class="headerlink" href="#030-2026-06-28" title="Permanent link">&para;</a></h2>
 <h3 id="features">Features<a class="headerlink" href="#features" title="Permanent link">&para;</a></h3>
 <ul>
