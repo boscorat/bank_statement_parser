@@ -36,7 +36,7 @@ Gap-filling strategy
 --------------------
 Frankfurter (and most providers) only return business-day rates.  After
 fetching, :func:`_forward_fill` extends the raw records to cover every date
-in the ``DimTime`` range by propagating the most recent known rate forward
+in the ``DimDate`` range by propagating the most recent known rate forward
 across weekends and holidays.
 """
 
@@ -332,23 +332,23 @@ def get_exchange_rates(
             conn.close()
             return
 
-        # -- determine date range from DimTime --------------------------------
+        # -- determine date range from DimDate --------------------------------
         try:
-            date_rows = conn.execute("SELECT MIN(id_date), MAX(id_date) FROM DimTime").fetchone()
+            date_rows = conn.execute("SELECT MIN(id_date), MAX(id_date) FROM DimDate").fetchone()
         except sqlite3.OperationalError:
-            print("[forex] DimTime table not found. Run bsp process first to populate the mart.")
+            print("[forex] DimDate table not found. Run bsp process first to populate the mart.")
             conn.close()
             return
 
         if not date_rows or date_rows[0] is None:
-            print("[forex] DimTime is empty. Run bsp process first to populate the mart.")
+            print("[forex] DimDate is empty. Run bsp process first to populate the mart.")
             conn.close()
             return
 
         date_min_str: str = date_rows[0]
         date_max_str: str = date_rows[1]
 
-        # Build the full list of calendar dates in the DimTime range.
+        # Build the full list of calendar dates in the DimDate range.
         d_start = date.fromisoformat(date_min_str)
         d_end = date.fromisoformat(date_max_str)
         all_dates: list[str] = []

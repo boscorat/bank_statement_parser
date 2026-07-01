@@ -62,11 +62,11 @@ def _make_db(tmp_path: Path) -> Path:
             PRIMARY KEY (id_date, currency)
         );
         CREATE TABLE DimAccount (
-            account_id INTEGER PRIMARY KEY,
-            currency   TEXT
+            account_int INTEGER PRIMARY KEY,
+            currency    TEXT
         );
-        CREATE TABLE DimTime (
-            time_id  INTEGER PRIMARY KEY,
+        CREATE TABLE DimDate (
+            date_int INTEGER PRIMARY KEY,
             id_date  TEXT NOT NULL
         );
         """
@@ -245,9 +245,9 @@ class TestGetExchangeRates:
         with pytest.raises(ProjectDatabaseMissing):
             get_exchange_rates(project_path=tmp_path)
 
-    def test_no_op_if_dimtime_empty(self, tmp_path):
+    def test_no_op_if_dimdate_empty(self, tmp_path):
         db_path = _make_db(tmp_path)
-        # DimTime is empty — function should print a message and return cleanly.
+        # DimDate is empty — function should print a message and return cleanly.
         with patch("bank_statement_parser.modules.forex.ProjectPaths.resolve") as mock_resolve:
             mock_paths = MagicMock()
             mock_paths.project_db = db_path
@@ -257,13 +257,13 @@ class TestGetExchangeRates:
             get_exchange_rates(project_path=tmp_path)
 
     def test_fetches_and_persists_rates(self, tmp_path):
-        """End-to-end: DimAccount has GBP, DimTime spans 3 days, rates fetched and written."""
+        """End-to-end: DimAccount has GBP, DimDate spans 3 days, rates fetched and written."""
         db_path = _make_db(tmp_path)
         conn = sqlite3.connect(db_path)
-        conn.execute("INSERT INTO DimAccount (account_id, currency) VALUES (1, 'GBP')")
-        conn.execute("INSERT INTO DimTime (time_id, id_date) VALUES (1, '2024-01-02')")
-        conn.execute("INSERT INTO DimTime (time_id, id_date) VALUES (2, '2024-01-03')")
-        conn.execute("INSERT INTO DimTime (time_id, id_date) VALUES (3, '2024-01-04')")
+        conn.execute("INSERT INTO DimAccount (account_int, currency) VALUES (1, 'GBP')")
+        conn.execute("INSERT INTO DimDate (date_int, id_date) VALUES (1, '2024-01-02')")
+        conn.execute("INSERT INTO DimDate (date_int, id_date) VALUES (2, '2024-01-03')")
+        conn.execute("INSERT INTO DimDate (date_int, id_date) VALUES (3, '2024-01-04')")
         conn.commit()
         conn.close()
 
@@ -305,8 +305,8 @@ class TestGetExchangeRates:
         """If all (date, currency) pairs already exist, nothing should be fetched."""
         db_path = _make_db(tmp_path)
         conn = sqlite3.connect(db_path)
-        conn.execute("INSERT INTO DimAccount (account_id, currency) VALUES (1, 'GBP')")
-        conn.execute("INSERT INTO DimTime (time_id, id_date) VALUES (1, '2024-01-02')")
+        conn.execute("INSERT INTO DimAccount (account_int, currency) VALUES (1, 'GBP')")
+        conn.execute("INSERT INTO DimDate (date_int, id_date) VALUES (1, '2024-01-02')")
         conn.execute("INSERT INTO exchange_rates (id_date, currency, rate_USD) VALUES ('2024-01-02', 'GBP', 1.27)")
         conn.commit()
         conn.close()
@@ -324,8 +324,8 @@ class TestGetExchangeRates:
         """Currencies unsupported by Frankfurter and with no secondary provider should warn."""
         db_path = _make_db(tmp_path)
         conn = sqlite3.connect(db_path)
-        conn.execute("INSERT INTO DimAccount (account_id, currency) VALUES (1, 'AED')")
-        conn.execute("INSERT INTO DimTime (time_id, id_date) VALUES (1, '2024-01-02')")
+        conn.execute("INSERT INTO DimAccount (account_int, currency) VALUES (1, 'AED')")
+        conn.execute("INSERT INTO DimDate (date_int, id_date) VALUES (1, '2024-01-02')")
         conn.commit()
         conn.close()
 
@@ -352,7 +352,7 @@ class TestGetExchangeRates:
         db_path = _make_db(tmp_path)
         conn = sqlite3.connect(db_path)
         # No currencies in DimAccount — only extra_currencies.
-        conn.execute("INSERT INTO DimTime (time_id, id_date) VALUES (1, '2024-01-02')")
+        conn.execute("INSERT INTO DimDate (date_int, id_date) VALUES (1, '2024-01-02')")
         conn.commit()
         conn.close()
 
