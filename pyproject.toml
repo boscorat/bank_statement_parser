@@ -49,7 +49,7 @@ Homepage = "https://boscorat.github.io/bank_statement_parser/latest"
 Documentation = "https://boscorat.github.io/bank_statement_parser/latest"
 Repository = "https://github.com/boscorat/bank_statement_parser"
 "Bug Tracker" = "https://github.com/boscorat/bank_statement_parser/issues"
-Changelog = "https://github.com/boscorat/bank_statement_parser/blob/master/CHANGELOG.md"
+Releases = "https://github.com/boscorat/bank_statement_parser/releases"
 
 
 [build-system]
@@ -70,7 +70,6 @@ dev = [
     "mike>=2.0.0",
     "mkdocs-material>=9.0.0",
     "pymdown-extensions>=10.0.0",
-    "towncrier>=24.8.0",
 ]
 
 [tool.pytest.ini_options]
@@ -84,20 +83,4 @@ target-version = "py311"
 lint.ignore = ["E402"]  # Module-level imports intentionally organized by section with comments
 lint.unfixable = ["F401"]
 
-[tool.towncrier]
-package = "bank_statement_parser"
-filename = "CHANGELOG.md"
-directory = "changes"
-title_format = "## [{version}] - {project_date}"
-underlines = ["", "", ""]
-template = "changes/_template.md.jinja"
-type = [
-    { name = "Features",        showcontent = true,  directory = "feature" },
-    { name = "Bug Fixes",       showcontent = true,  directory = "bugfix" },
-    { name = "Deprecations",    showcontent = true,  directory = "deprecation" },
-    { name = "Security",        showcontent = true,  directory = "security" },
-    { name = "Performance",     showcontent = true,  directory = "performance" },
-    { name = "Breaking Changes", showcontent = true,  directory = "breaking" },
-    { name = "Documentation",   showcontent = false, directory = "doc" },
-    { name = "Internal",        showcontent = true,  directory = "internal" },
-]
+
