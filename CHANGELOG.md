@@ -6,6 +6,15 @@ This project follows [Semantic Versioning](https://semver.org/) and uses [towncr
 
 <!-- towncrier release notes start -->
 
+## [0.3.3] - 2026-07-01
+
+
+<details>
+
+<summary>Internal Changes</summary>
+- update _VIEW_MIGRATIONS to use DimDate and *_int surrogate keys
+</details>
+
 ## [0.3.2.post1] - 2026-06-30
 
 
