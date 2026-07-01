@@ -37,7 +37,5 @@ jobs:
       - name: Ruff format check
         run: uv run ruff format --check .
 
-      - name: Check towncrier fragments
-        run: uv run towncrier check --compare-with "${{ github.event.pull_request.base.sha }}"
       - name: Pytest
         run: uv run pytest -v
