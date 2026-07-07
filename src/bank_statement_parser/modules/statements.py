@@ -195,7 +195,7 @@ def _write_debug_excel(
         print(f"[debug] failed to write debug_dataframes.xlsx for {stmt.file.name}: {write_exc}")
 
 
-def _write_debug_json(stmt: "Statement", include_lines: bool = False) -> None:
+def _write_debug_json(stmt: "Statement", include_lines: bool = False) -> Path | None:
     """Write a debug.json diagnostic file for a non-successful Statement.
 
     Collects all events accumulated in ``stmt._debug_collector`` during the
@@ -217,6 +217,10 @@ def _write_debug_json(stmt: "Statement", include_lines: bool = False) -> None:
             Pass ``True`` only for ``REVIEW`` results where the extraction
             succeeded but checks-and-balances failed — the transaction table
             is the primary aid for diagnosing those discrepancies.
+
+    Returns:
+        Path to the debug.json file that was written, or ``None`` if an
+        error prevented writing (the error is printed to stdout).
     """
     import json  # noqa: PLC0415
     from datetime import datetime  # noqa: PLC0415
@@ -266,8 +270,11 @@ def _write_debug_json(stmt: "Statement", include_lines: bool = False) -> None:
         # Write debug dataframes to Excel if available
         if stmt._debug_dataframes:
             _write_debug_excel(stmt, debug_dir, stmt._debug_dataframes)
+
+        return out_file
     except Exception as write_exc:  # noqa: BLE001
         print(f"[debug] failed to write debug.json for {stmt.file.name}: {write_exc}")
+        return None
 
 
 class Statement:

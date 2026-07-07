@@ -51,7 +51,7 @@ def debug_pdf_statement(
 
     The output is written to::
 
-        <project>/log/debug/<pdf.parent.name>_<pdf.name>/debug.json
+        <project>/log/debug/<pdf.parent.name>_<pdf.stem>/debug.json
 
     Any existing file at that path is overwritten.  No parquet or database
     writes are performed.
@@ -81,14 +81,10 @@ def debug_pdf_statement(
             skip_project_validation=True,
             debug=True,
         )
-        _write_debug_json(stmt)
+        debug_json_path = _write_debug_json(stmt)
         stmt.cleanup()
 
-        from bank_statement_parser.modules.paths import ProjectPaths
-
-        paths = ProjectPaths.resolve(project_path)
-        folder_name = f"{pdf.parent.name}_{pdf.name}"
-        return paths.log_debug_dir(folder_name) / "debug.json"
+        return debug_json_path
 
     except Exception as e:
         print(f"[debug] unexpected error processing {pdf.name}: {e}")
