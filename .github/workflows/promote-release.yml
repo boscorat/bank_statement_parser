@@ -68,13 +68,17 @@ jobs:
           RELEASE_JSON=$(gh release view "${{ inputs.tag }}" --json isDraft,id 2>/dev/null || echo "{}")
           IS_DRAFT=$(echo "$RELEASE_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin).get('isDraft', False))")
           RELEASE_ID=$(echo "$RELEASE_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin).get('id', ''))")
-          if [ "$IS_DRAFT" != "True" ] && [ "$RELEASE_ID" != "" ]; then
-            echo "::warning::Release ${{ inputs.tag }} is not a draft, but proceeding..."
-          fi
+          
           if [ -z "$RELEASE_ID" ]; then
-            echo "::error::Release ${{ inputs.tag }} not found"
+            echo "::error::Release ${{ inputs.tag }} not found. Create it by pushing the tag."
             exit 1
           fi
+          
+          if [ "$IS_DRAFT" != "True" ]; then
+            echo "::error::Release ${{ inputs.tag }} is not a draft (ID: $RELEASE_ID). It has already been promoted or was created manually as live."
+            exit 1
+          fi
+          
           echo "release_id=$RELEASE_ID" >> "$GITHUB_OUTPUT"
           echo "✓ Draft release found (ID: $RELEASE_ID)"
 
@@ -87,15 +91,30 @@ jobs:
         run: uv python install 3.14.2
 
       - name: Download artifacts from release
+        id: download
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p dist/
-          gh release download "${{ inputs.tag }}" \
+          if ! gh release download "${{ inputs.tag }}" \
             --pattern "*.whl" \
             --pattern "*.tar.gz" \
-            --dir dist/
-          echo "Downloaded artifacts:"
+            --dir dist/ 2>/tmp/download.log; then
+            echo "::error::Failed to download Python distributions"
+            cat /tmp/download.log
+            exit 1
+          fi
+          
+          # Verify at least wheel and sdist exist
+          WHEEL_COUNT=$(ls dist/*.whl 2>/dev/null | wc -l)
+          SDIST_COUNT=$(ls dist/*.tar.gz 2>/dev/null | wc -l)
+          if [ "$WHEEL_COUNT" -lt 1 ] || [ "$SDIST_COUNT" -lt 1 ]; then
+            echo "::error::Missing distributions. Wheel: $WHEEL_COUNT, Sdist: $SDIST_COUNT"
+            ls -lh dist/ || true
+            exit 1
+          fi
+          echo "artifacts_valid=true" >> "$GITHUB_OUTPUT"
+          echo "✓ Downloaded $(ls -1 dist/ | wc -l) artifacts:"
           ls -lh dist/
 
       - name: Publish to PyPI
@@ -104,37 +123,73 @@ jobs:
       - name: Verify package on PyPI
         id: pypi-verify
         run: |
-          echo "Waiting 30s for PyPI indexing..."
-          sleep 30
           VERSION="${{ steps.version.outputs.version }}"
           WHEEL_FILE=$(ls dist/*.whl | head -1)
           WHEEL_NAME=$(basename "$WHEEL_FILE" .whl)
-          # Extract package name and version from wheel (format: {distribution}-{version}-...)
+          # Extract package name from wheel (format: {distribution}-{version}-...)
           PKG_NAME=$(echo "$WHEEL_NAME" | cut -d- -f1 | tr '_' '-')
-          echo "Checking PyPI for $PKG_NAME==$VERSION..."
-          python3 -c "
+          
+          echo "Verifying package on PyPI: $PKG_NAME==$VERSION"
+          
+          # Retry up to 5 times with exponential backoff
+          MAX_RETRIES=5
+          RETRY_COUNT=0
+          FOUND=false
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            
+            if [ $RETRY_COUNT -gt 1 ]; then
+              WAIT_TIME=$((10 + (RETRY_COUNT - 2) * 15))  # 10s, 25s, 40s, 55s, 70s
+              echo "Retry $RETRY_COUNT/$MAX_RETRIES in ${WAIT_TIME}s..."
+              sleep $WAIT_TIME
+            else
+              echo "Initial check (10s delay)..."
+              sleep 10
+            fi
+            
+            # Check PyPI with proper string passing to avoid interpolation issues
+            if python3 << 'PYEOF'
           import urllib.request
           import json
+          import sys
+          
+          pkg_name = "$PKG_NAME"
+          version = "$VERSION"
+          
           try:
-              url = f'https://pypi.org/pypi/{urllib.parse.quote(\"$PKG_NAME\")}/json'
+              url = f'https://pypi.org/pypi/{urllib.parse.quote(pkg_name)}/json'
               with urllib.request.urlopen(url, timeout=10) as resp:
                   data = json.loads(resp.read())
                   releases = data.get('releases', {})
-                  if '${VERSION}' in releases:
-                      print(f'✓ Package $PKG_NAME==${VERSION} found on PyPI')
+                  
+                  if version in releases:
+                      print(f'✓ Found {pkg_name}=={version} on PyPI')
+                      sys.exit(0)
                   else:
-                      raise Exception(f'Version ${VERSION} not found. Available: {list(releases.keys())[-5:]}')
+                      available = list(releases.keys())[-3:]
+                      print(f'⏳ Version {version} not yet indexed. Recent releases: {available}')
+                      sys.exit(1)
           except Exception as e:
-              print(f'✗ PyPI verification failed: {e}')
-              exit(1)
-          " 2>&1 | tee /tmp/pypi-check.log
-          exit_code=${PIPESTATUS[0]}
-          result=$(cat /tmp/pypi-check.log)
-          echo "pypi_result=$result" >> "$GITHUB_OUTPUT"
-          exit $exit_code
+              print(f'⏳ Transient error: {e}')
+              sys.exit(1)
+          PYEOF
+            then
+              FOUND=true
+              break
+            fi
+          done
+          
+          if [ "$FOUND" = false ]; then
+            echo "::error::PyPI verification failed after $MAX_RETRIES attempts"
+            exit 1
+          fi
+          
+          echo "pypi_verified=true" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Deployment
         id: deployment
+        if: steps.pypi-verify.outcome == 'success'
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
         with:
           script: |
@@ -151,6 +206,7 @@ jobs:
             console.log(`✓ Created deployment ${deployment.data.id}`);
 
       - name: Update Deployment Status (success)
+        if: steps.deployment.outcome == 'success'
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
         with:
           script: |
@@ -217,42 +273,75 @@ jobs:
       - name: Fetch all tags for retroactive updates
         run: git fetch origin --tags --prune
 
-      - name: Retroactively update 2 prior versions
+      - name: Retroactively update prior versions
+        id: retro-docs
         run: |
           set -e
           
-          # Get all tags sorted by version (newest first), then take 2nd and 3rd
+          # Get all tags sorted by version (newest first)
           TAGS=$(git tag --sort=-version:refname)
           PRIOR_VERSIONS=$(echo "$TAGS" | head -3 | tail -2)
           
+          if [ -z "$PRIOR_VERSIONS" ]; then
+            echo "ℹ No prior versions to update"
+            exit 0
+          fi
+          
           for tag in $PRIOR_VERSIONS; do
             version="${tag#v}"
-            echo "Retroactively updating docs for $version with current bank configs..."
+            echo "Retroactively updating docs for $version..."
             
-            # Stash any uncommitted changes
-            git stash || true
+            # Stash uncommitted changes (but continue if none exist)
+            git stash push -m "auto-stash-for-$tag" || true
             
-            # Checkout the old tag to get its docs state (tag has v prefix)
-            git checkout "$tag" -- docs/
+            # Checkout old docs state
+            if ! git checkout "$tag" -- docs/ 2>/dev/null; then
+              echo "::error::Failed to checkout docs from $tag"
+              exit 1
+            fi
             
-            # Get the latest bank configs from master
-            git checkout origin/master -- src/bank_statement_parser/project/config/import/
+            # Get latest bank configs from main
+            if ! git checkout origin/master -- src/bank_statement_parser/project/config/import/ 2>/dev/null; then
+              echo "::error::Failed to checkout configs from origin/master"
+              exit 1
+            fi
             
-            # Regenerate docs with new bank data
-            uv run python scripts/generate_docs.py
+            # Regenerate docs
+            if ! uv run python scripts/generate_docs.py; then
+              echo "::error::generate_docs.py failed for version $version"
+              exit 1
+            fi
             
-            # Deploy locally (no push) — mike creates a commit on local gh-pages
-            uv run mike deploy "$version"
+            # Deploy locally (no push yet)
+            if ! uv run mike deploy "$version"; then
+              echo "::error::mike deploy failed for version $version"
+              exit 1
+            fi
+            
+            echo "✓ Updated $version"
           done
-
-          # Create root index.html that redirects to latest/
+          
+          # Set default version
           uv run mike set-default latest
-
-          # Push all retroactive commits to remote in one go
+          
+          # Configure git
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git push origin gh-pages
+          
+          # Push all retroactive commits
+          if ! git push origin gh-pages; then
+            echo "::error::Failed to push gh-pages branch"
+            exit 1
+          fi
+          
+          echo "✓ Retroactive docs update complete"
 
-      - name: Clean up
+      - name: Clean up git state
         if: always()
-        run: git stash pop || true
+        run: |
+          # Only pop stash if one exists and we're not in detached HEAD
+          if git stash list | grep -q "auto-stash-for-"; then
+            if ! git stash pop; then
+              echo "⚠ Failed to pop stash (may have conflicts; manual cleanup may be needed)"
+            fi
+          fi
