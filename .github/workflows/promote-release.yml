@@ -1,8 +1,5 @@
 # promote-release.yml — promote a draft release to live and publish to PyPI.
 #
-# Two-stage release workflow: after release.yml creates a draft release on tag push,
-# this workflow handles manual promotion to production (PyPI + GitHub release).
-#
 # Triggered manually via GitHub UI or CLI:
 #
 #   gh workflow run promote-release.yml -f tag=v1.0.0
@@ -11,10 +8,9 @@
 #   1. Verifies the tag and draft release exist
 #   2. Downloads artifacts from the draft release
 #   3. Publishes wheel + sdist to PyPI via OIDC
-#   4. Verifies package appears on PyPI (with retry backoff)
-#   5. Creates a GitHub Deployment record (for tracking)
-#   6. Un-drafts the GitHub Release
-#   7. Generates and deploys versioned docs to GitHub Pages
+#   4. Creates a GitHub Deployment record (for tracking)
+#   5. Un-drafts the GitHub Release
+#   6. Generates and deploys versioned docs to GitHub Pages
 
 name: Promote Release
 
