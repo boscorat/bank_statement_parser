@@ -149,7 +149,7 @@ jobs:
             fi
             
             # Check PyPI with proper string passing to avoid interpolation issues
-            if python3 << 'PYEOF'
+            if python3 << PYEOF
           import urllib.request
           import json
           import sys
