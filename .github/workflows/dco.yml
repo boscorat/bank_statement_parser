@@ -9,4 +9,4 @@ jobs:
   dco:
     runs-on: ubuntu-latest
     steps:
-      - uses: KineticCafe/actions-dco@v3.1.1
+      - uses: KineticCafe/actions-dco@v3.2.0
