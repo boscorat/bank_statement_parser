@@ -1,31 +1,26 @@
-# promote-release.yml — promote a draft release to live and publish to PyPI.
+# promote-release.yml — publish to PyPI and deploy docs when a release is promoted.
 #
-# Triggered manually via GitHub UI or CLI:
-#
-#   gh workflow run promote-release.yml -f tag=v1.0.0
+# Triggered automatically when a draft release is promoted to live (published)
+# via the GitHub UI or API.  The release.yml workflow creates the draft; this
+# workflow handles PyPI publication and docs deployment.
 #
 # This workflow:
-#   1. Verifies the tag and draft release exist
-#   2. Downloads artifacts from the draft release
+#   1. Validates the release tag matches pyproject.toml version
+#   2. Downloads artifacts from the release
 #   3. Publishes wheel + sdist to PyPI via OIDC
 #   4. Creates a GitHub Deployment record (for tracking)
-#   5. Un-drafts the GitHub Release
-#   6. Generates and deploys versioned docs to GitHub Pages
+#   5. Generates and deploys versioned docs to GitHub Pages
 
 name: Promote Release
 
 on:
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: 'Release tag to promote (e.g., v1.0.0)'
-        required: true
-        type: string
+  release:
+    types: [published]
 
 permissions: {}  # no workflow-level permissions; each job declares its own
 
 jobs:
-  # ── Validate tag, publish to PyPI, un-draft release ──────────────────
+  # ── Validate tag, publish to PyPI ─────────────────────────────────────
   promote:
     name: Promote to Live & Publish to PyPI
     runs-on: ubuntu-latest
@@ -40,7 +35,7 @@ jobs:
       - name: Checkout tag
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
-          ref: ${{ inputs.tag }}
+          ref: ${{ github.event.release.tag_name }}
           persist-credentials: false
 
       - name: Validate tag and extract version
@@ -52,35 +47,13 @@ jobs:
               print(tomllib.load(f)['project']['version'])
           ")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          TAG_VERSION="${{ inputs.tag }}"
+          TAG_VERSION="${{ github.event.release.tag_name }}"
           TAG_VERSION="${TAG_VERSION#v}"
           if [ "$TAG_VERSION" != "$VERSION" ]; then
             echo "::error::Tag version ($TAG_VERSION) does not match pyproject.toml version ($VERSION)"
             exit 1
           fi
-          echo "✓ Tag ${{ inputs.tag }} matches version $VERSION"
-
-      - name: Check draft release exists
-        id: release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          RELEASE_JSON=$(gh release view "${{ inputs.tag }}" --json isDraft,id 2>/dev/null || echo "{}")
-          IS_DRAFT=$(echo "$RELEASE_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin).get('isDraft', False))")
-          RELEASE_ID=$(echo "$RELEASE_JSON" | python3 -c "import sys, json; print(json.load(sys.stdin).get('id', ''))")
-          
-          if [ -z "$RELEASE_ID" ]; then
-            echo "::error::Release ${{ inputs.tag }} not found. Create it by pushing the tag."
-            exit 1
-          fi
-          
-          if [ "$IS_DRAFT" != "True" ]; then
-            echo "::error::Release ${{ inputs.tag }} is not a draft (ID: $RELEASE_ID). It has already been promoted or was created manually as live."
-            exit 1
-          fi
-          
-          echo "release_id=$RELEASE_ID" >> "$GITHUB_OUTPUT"
-          echo "✓ Draft release found (ID: $RELEASE_ID)"
+          echo "✓ Tag ${{ github.event.release.tag_name }} matches version $VERSION"
 
       - name: Install uv
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9  # v9.0.0
@@ -96,7 +69,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p dist/
-          if ! gh release download "${{ inputs.tag }}" \
+          if ! gh release download "${{ github.event.release.tag_name }}" \
             --pattern "*.whl" \
             --pattern "*.tar.gz" \
             --dir dist/ 2>/tmp/download.log; then
@@ -196,9 +169,9 @@ jobs:
             const deployment = await github.rest.repos.createDeployment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              ref: '${{ inputs.tag }}',
+              ref: '${{ github.event.release.tag_name }}',
               environment: 'production',
-              description: 'Release ${{ inputs.tag }} to PyPI',
+              description: 'Release ${{ github.event.release.tag_name }} to PyPI',
               auto_merge: false,
               required_contexts: []
             });
@@ -220,13 +193,6 @@ jobs:
             });
             console.log('✓ Deployment marked as success');
 
-      - name: Un-draft the release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release edit "${{ inputs.tag }}" --draft=false
-          echo "✓ Release ${{ inputs.tag }} promoted to live"
-
   # ── Generate and deploy docs to GitHub Pages ──────────────────────────
   deploy-docs:
     name: Generate & Deploy Docs
@@ -238,7 +204,7 @@ jobs:
       - name: Checkout release tag
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
-          ref: ${{ inputs.tag }}
+          ref: ${{ github.event.release.tag_name }}
           persist-credentials: true
 
       - name: Install uv
