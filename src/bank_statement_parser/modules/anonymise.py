@@ -107,11 +107,14 @@ def anonymise_pdf(
         If ``retain_descriptions`` is ``True`` but no ``always_anonymise_path``
         was provided.
     """
-    return _anonymise_pdf(
-        input_path,
-        output_path,
-        always_anonymise_path=always_anonymise_path,
-        never_anonymise_path=never_anonymise_path,
-        retain_descriptions=retain_descriptions,
-        debug=debug,
-    )
+if retain_descriptions and always_anonymise_path is None:
+    raise ValueError("retain_descriptions=True requires always_anonymise_path")
+
+return _anonymise_pdf(
+    input_path,
+    output_path,
+    always_anonymise_path=always_anonymise_path,
+    never_anonymise_path=never_anonymise_path,
+    retain_descriptions=retain_descriptions,
+    debug=debug,
+)
