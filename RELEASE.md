@@ -7,7 +7,7 @@ This document describes the two-stage release process for bank-statement-parser.
 Releases follow a **draft-then-promote** workflow:
 
 1. **Stage 1 (Automatic)**: Push a version tag → builds binaries → creates a **draft** GitHub Release
-2. **Stage 2 (Manual)**: Review artifacts → promote to live → publish to PyPI → deploy docs
+2. **Stage 2 (Manual)**: Review artifacts → promote to live (via GitHub UI) → auto-publish to PyPI → auto-deploy docs
 
 This allows maintainers to verify all artifacts are correct before making a release public.
 
@@ -71,33 +71,32 @@ This allows maintainers to verify all artifacts are correct before making a rele
 
 ## Stage 2: Promote to Live
 
-Once artifacts are verified, promote the release to live. This:
+Once artifacts are verified, promote the release to live via the GitHub UI. This automatically triggers the `promote-release.yml` workflow, which:
 
 1. Publishes wheel + sdist to PyPI
 2. Verifies package appears on PyPI
 3. Creates a GitHub Deployment record
-4. Un-drafts the GitHub Release (makes it visible to users)
-5. Generates and deploys versioned docs to GitHub Pages
+4. Generates and deploys versioned docs to GitHub Pages
+
+### Promote via GitHub UI
+
+1. Go to **Releases** page on GitHub
+2. Find the **Draft** release
+3. Click **Edit release** (pencil icon)
+4. Click **Publish release**
+
+This fires a `release` event with action `published`, which triggers the `promote-release.yml` workflow automatically. No manual workflow dispatch is needed.
 
 ### Promote via GitHub CLI
 
 ```bash
-gh workflow run promote-release.yml -f tag=v1.0.0
+gh release edit v1.0.0 --draft=false
 ```
-
-This triggers the `promote-release.yml` workflow for the specified tag.
-
-### Promote via GitHub UI
-
-1. Go to **Actions** → **Promote Release** workflow
-2. Click **Run workflow**
-3. Enter the tag (e.g., `v1.0.0`)
-4. Click **Run workflow**
 
 ### Monitor Promotion
 
 1. Go to **Actions** → **Promote Release**
-2. Click the workflow run
+2. Click the workflow run triggered by the release publish event
 3. Watch for job completion (~10-15 minutes)
 
 ### Verify Promotion
@@ -160,14 +159,14 @@ If you promoted a release but need to undo:
 - Delete the tag and re-create it
 - Push again
 
-### Draft release exists but promote workflow won't start
+### Promote workflow doesn't start after publishing release
 
-**Problem**: `promote-release.yml` fails at "Check draft release exists"
+**Problem**: `promote-release.yml` doesn't trigger when you publish the release
 
 **Solution**:
-- Verify the tag exists: `git tag -l v1.0.0`
-- Verify the GitHub Release exists on the Releases page
-- If not found, delete everything and re-tag
+- Verify the workflow file is on the default branch (GitHub Actions only reads from the default branch for release events)
+- Check that the `promote-release.yml` trigger is `release: types: [published]`
+- Try re-drafting and re-publishing the release
 
 ### Promote workflow fails at PyPI verification
 
@@ -203,7 +202,7 @@ The following setup is required once per repository:
    - Go to Account → Publishing (or https://pypi.org/manage/account/publishing/)
    - Add a new pending publisher:
      - **GitHub Repository**: `boscorat/bank_statement_parser`
-     - **Workflow**: `promote-release.yml` (used for promotion only)
+     - **Workflow**: `promote-release.yml`
      - **Environment**: `pypi`
 
 ### GitHub Pages
@@ -257,10 +256,11 @@ After promotion:
 
 ## Related Files
 
-- **`.github/workflows/release.yml`** — Triggered on tag push; builds binaries and creates draft
-- **`.github/workflows/promote-release.yml`** — Manual trigger; promotes to live and publishes to PyPI
+- **`.github/workflows/release.yml`** — Triggered on tag push; builds binaries and creates draft release
+- **`.github/workflows/promote-release.yml`** — Triggered on release publish; publishes to PyPI and deploys docs
 - **`pyproject.toml`** — Contains version number (must match tag)
 - **`.github/workflows/ci.yml`** — Runs tests on every push (ensure passing before release)
+- **`.github/workflows/docs.yml`** — Standalone docs deployment (manual trigger, for ad-hoc rebuilds)
 
 ---
 

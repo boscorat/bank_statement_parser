@@ -6,7 +6,9 @@
 #   2. system-packages — build .deb and .rpm via fpm.
 #   3. github-release  — create a DRAFT GitHub Release with auto-generated notes and all assets.
 #
-# After reviewing artifacts, use promote-release.yml to publish to PyPI and un-draft.
+# After reviewing artifacts, promote the draft release via the GitHub UI.
+# This fires a "release published" event that triggers promote-release.yml
+# to publish to PyPI and deploy docs.
 #
 # Releases can be triggered from any branch by pushing a version tag (v*).
 # The tag must match the version in pyproject.toml.  This allows flexible
@@ -22,7 +24,7 @@
 #   - Register a Trusted Publisher on PyPI (account > Publishing):
 #       Owner: boscorat
 #       Repository: bank_statement_parser
-#       Workflow: promote-release.yml (update from release.yml after first release)
+#       Workflow: promote-release.yml
 #       Environment: pypi
 #   - Enable GitHub Pages on gh-pages branch (Settings > Pages).
 #   - Configure Pages to deploy from gh-pages branch.
