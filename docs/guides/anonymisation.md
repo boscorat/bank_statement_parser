@@ -67,6 +67,7 @@ anonymise_pdf(
     output_path: str | Path | None = None,
     always_anonymise_path: str | Path | None = None,
     never_anonymise_path: str | Path | None = None,
+    retain_descriptions: bool = False,
     debug: bool = False,
 ) -> Path
 ```
@@ -97,6 +98,14 @@ Optional path to a user ``never_anonymise.toml`` file.  Phrases listed
 here are preserved exactly as-is during the scramble pass and are merged
 with the bundled system file.
 
+retain_descriptions:
+When ``True``, disable default letter-scrambling so that only
+``always_anonymise`` replacements and numeric ID substitutions (sort
+codes, account numbers, card numbers) are applied.  Transaction
+descriptions, merchant names, customer names, and addresses are left
+untouched.  Requires ``always_anonymise_path`` to be set; raises
+``ValueError`` if ``retain_descriptions`` is ``True`` without it.
+
 debug:
 When ``True``, print diagnostic information about config loading,
 fragment classification, and scramble pairs to stdout.
@@ -105,6 +114,15 @@ Returns
 -------
 Path
 The path to the anonymised output file.
+
+Raises
+------
+FileNotFoundError
+If ``input_path`` does not exist.
+
+ValueError
+If ``retain_descriptions`` is ``True`` but no ``always_anonymise_path``
+was provided.
 
 ## CLI Usage
 

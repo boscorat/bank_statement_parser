@@ -25,7 +25,9 @@ workbooks or CSV files.
   tables, as Excel and/or CSV.
 - **PDF anonymisation** — redact personally identifiable information from
   statement PDFs using a user-supplied mapping file. Transaction descriptions
-  are scrambled so merchant names cannot be recovered.
+  are scrambled so merchant names cannot be recovered. Optionally retain
+  transaction descriptions with `retain_descriptions=True` for tutorials
+  or review (requires `always_anonymise_path`).
 - **Parallel processing** — async + multiprocess batch mode for large PDF sets.
 - **Cross-platform** — pure Python with no OS-specific dependencies.
 
