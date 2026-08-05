@@ -68,6 +68,7 @@ The optional `uk-bank-statement-anonymiser` utility:
 - Redacts PII (names, addresses, account numbers) using pikepdf
 - Scrambles transaction descriptions so merchant names cannot be recovered
 - Processes anonymised PDFs **locally**; no data is sent to third parties
+- Supports `retain_descriptions=True` to preserve transaction descriptions (requires `always_anonymise_path`); use with caution as unscrambled text may contain identifying information
 
 ---
 

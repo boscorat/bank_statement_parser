@@ -29,6 +29,7 @@ anonymise_pdf(
     output_path: str | Path | None = None,
     always_anonymise_path: str | Path | None = None,
     never_anonymise_path: str | Path | None = None,
+    retain_descriptions: bool = False,
     debug: bool = False,
 ) -> Path
 """
@@ -51,6 +52,7 @@ def anonymise_pdf(
     output_path: str | Path | None = None,
     always_anonymise_path: str | Path | None = None,
     never_anonymise_path: str | Path | None = None,
+    retain_descriptions: bool = False,
     debug: bool = False,
 ) -> Path:
     """Anonymise a single bank statement PDF.
@@ -79,6 +81,14 @@ def anonymise_pdf(
         here are preserved exactly as-is during the scramble pass and are merged
         with the bundled system file.
 
+    retain_descriptions:
+        When ``True``, disable default letter-scrambling so that only
+        ``always_anonymise`` replacements and numeric ID substitutions (sort
+        codes, account numbers, card numbers) are applied.  Transaction
+        descriptions, merchant names, customer names, and addresses are left
+        untouched.  Requires ``always_anonymise_path`` to be set; raises
+        ``ValueError`` if ``retain_descriptions`` is ``True`` without it.
+
     debug:
         When ``True``, print diagnostic information about config loading,
         fragment classification, and scramble pairs to stdout.
@@ -87,11 +97,24 @@ def anonymise_pdf(
     -------
     Path
         The path to the anonymised output file.
+
+    Raises
+    ------
+    FileNotFoundError
+        If ``input_path`` does not exist.
+
+    ValueError
+        If ``retain_descriptions`` is ``True`` but no ``always_anonymise_path``
+        was provided.
     """
-    return _anonymise_pdf(
-        input_path,
-        output_path,
-        always_anonymise_path=always_anonymise_path,
-        never_anonymise_path=never_anonymise_path,
-        debug=debug,
-    )
+if retain_descriptions and always_anonymise_path is None:
+    raise ValueError("retain_descriptions=True requires always_anonymise_path")
+
+return _anonymise_pdf(
+    input_path,
+    output_path,
+    always_anonymise_path=always_anonymise_path,
+    never_anonymise_path=never_anonymise_path,
+    retain_descriptions=retain_descriptions,
+    debug=debug,
+)
