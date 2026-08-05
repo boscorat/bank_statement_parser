@@ -1547,7 +1547,7 @@ wheels = [
 
 [[package]]
 name = "uk-bank-statement-parser"
-version = "0.3.7"
+version = "0.3.8"
 source = { editable = "." }
 dependencies = [
     { name = "dacite" },
@@ -1578,7 +1578,7 @@ requires-dist = [
     { name = "dacite", specifier = ">=1.9.2" },
     { name = "pdfplumber", specifier = ">=0.11.9" },
     { name = "polars", specifier = ">=1.36.1" },
-    { name = "uk-bank-statement-anonymiser", marker = "python_full_version >= '3.11' and extra == 'anonymise'", specifier = ">=0.1.0" },
+    { name = "uk-bank-statement-anonymiser", marker = "extra == 'anonymise'", specifier = "==0.2.3" },
     { name = "xlsxwriter", specifier = ">=3.2.9" },
 ]
 provides-extras = ["anonymise"]
