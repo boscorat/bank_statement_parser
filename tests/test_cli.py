@@ -33,7 +33,6 @@ work by importing ``cli.py`` and extracting the parser via a patched
 import argparse
 import ast
 from pathlib import Path
-from typing import ClassVar
 from unittest.mock import patch
 
 import pytest
@@ -91,7 +90,7 @@ for action in _PARSER._subparsers._actions:
 class TestSubcommands:
     """Verify that the expected subcommands are registered."""
 
-    EXPECTED_SUBCOMMANDS: ClassVar[set[str]] = {"anonymise", "forex", "process"}
+    EXPECTED_SUBCOMMANDS = {"anonymise", "forex", "process"}
 
     def test_expected_subcommands_exist(self) -> None:
         """All expected subcommands must be present in the parser."""
@@ -125,7 +124,7 @@ def _get_positional_actions(subcommand: str) -> list[argparse.Action]:
 class TestProcessOptions:
     """Validate the ``process`` subcommand options."""
 
-    EXPECTED_FLAGS: ClassVar[set[str]] = {
+    EXPECTED_FLAGS = {
         "--project",
         "--pdfs",
         "--pattern",
@@ -190,7 +189,7 @@ class TestProcessOptions:
 class TestAnonymiseOptions:
     """Validate the ``anonymise`` subcommand options."""
 
-    EXPECTED_FLAGS: ClassVar[set[str]] = {"--output", "--always-anonymise", "--never-anonymise", "--debug"}
+    EXPECTED_FLAGS = {"--output", "--always-anonymise", "--never-anonymise", "--debug"}
 
     def test_all_expected_flags_exist(self) -> None:
         """Every expected --flag must be registered on the anonymise subparser."""

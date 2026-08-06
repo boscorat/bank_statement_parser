@@ -86,7 +86,7 @@ def debug_pdf_statement(
 
         return debug_json_path
 
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         print(f"[debug] unexpected error processing {pdf.name}: {e}")
         return None
 

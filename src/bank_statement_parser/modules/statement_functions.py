@@ -740,16 +740,18 @@ def get_results(
                     )
                 results.vstack(result, in_place=True)
 
-    if (statement_table := config.statement_table) and (spec := statement_table.transaction_spec):
-        results = results.pipe(
-            process_transactions,
-            transaction_spec=spec,
-            logs=logs,
-            file_path=file_path,
-            debug_collector=debug_collector,
-            debug_dataframes=debug_dataframes,
-        )
-        return results
+    if statement_table := config.statement_table:
+        # process transactions if there's a transaction spec
+        if spec := statement_table.transaction_spec:
+            results = results.pipe(
+                process_transactions,
+                transaction_spec=spec,
+                logs=logs,
+                file_path=file_path,
+                debug_collector=debug_collector,
+                debug_dataframes=debug_dataframes,
+            )
+            return results
 
     if scope == "all":
         return results
@@ -795,7 +797,10 @@ def get_standard_fields(
 
     for std_field, std_config in config_standard_fields.items():
         if std_config.section == section:
-            ref = next((ref for ref in std_config.std_refs if ref.statement_type == statement_type), None)
+            try:
+                ref = [ref for ref in std_config.std_refs if ref.statement_type == statement_type][0]
+            except IndexError:
+                ref = None
             if ref:
                 if ref.concat_fields:
                     data = data.with_columns(pl.concat_str([f"{field}" for field in ref.concat_fields]).alias(std_field))
@@ -919,7 +924,9 @@ def get_standard_fields(
                         "snapshot_stored": True,
                     }
                 )
-        except Exception:  # noqa: BLE001, S110
-            pass  # # add a GUID to each record
+        except Exception:  # noqa: BLE001
+            pass  # Silently fail if snapshot cannot be created
+
+    # # add a GUID to each record
     # data = data.with_columns(STD_GUID=pl.lit(f"{uuid4()}"))
     return data

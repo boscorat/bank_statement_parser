@@ -100,10 +100,9 @@ Private constants use a leading underscore: `_ALLOWED_TABLES`. Public shared con
 ### Classes — use `__slots__` on every class. Regular classes declare a tuple; dataclasses use `slots=True`. Subclasses declare only their own additional slots.
 
 ```python
-@dataclass(frozen=True, slots=True)  # immutable value objects
+@dataclass(frozen=True, slots=True)   # immutable value objects
 class AccountType:
     account_type: str
-
 
 @dataclass(frozen=False, slots=True)  # mutable state holders
 class Account:
@@ -115,7 +114,7 @@ class Account:
 
 ```python
 class Housekeeping:
-    FK_RELATIONSHIPS = [...]  # class variable, not in __slots__
+    FK_RELATIONSHIPS = [...]          # class variable, not in __slots__
     _ALLOWED_TABLES: frozenset[str] = frozenset([...])
 ```
 
@@ -135,7 +134,6 @@ Use `frozenset[str]` for any identifier or name whitelist used in membership tes
 ```python
 def __enter__(self) -> "TestHarness":
     return self.setup()
-
 
 def __exit__(self, *args: object) -> None:
     self.teardown()

@@ -29,7 +29,7 @@ from time import time
 
 import polars as pl
 
-from bank_statement_parser.data.build_datamart import _ensure_mart_structure, build_datamart
+from bank_statement_parser.data.build_datamart import build_datamart, _ensure_mart_structure
 from bank_statement_parser.modules.data import PdfResult, Success
 from bank_statement_parser.modules.errors import ProjectDatabaseMissing
 from bank_statement_parser.modules.paths import ProjectPaths
@@ -362,9 +362,9 @@ def _migrate_db(conn: sqlite3.Connection) -> None:
         _validate_migration_identifier(table, _ALLOWED_MIGRATION_TABLES, "table")
         _validate_migration_identifier(column, _ALLOWED_MIGRATION_COLUMNS, "column")
         _validate_migration_identifier(col_type, _ALLOWED_MIGRATION_TYPES, "column type")
-        existing = {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+        existing = {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}  # noqa: S608
         if column not in existing:
-            conn.execute(f'ALTER TABLE {table} ADD COLUMN "{column}" {col_type} DEFAULT {default}')
+            conn.execute(f'ALTER TABLE {table} ADD COLUMN "{column}" {col_type} DEFAULT {default}')  # noqa: S608
             print(f"[migrate] added column {column} to {table}")
 
     existing_tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'").fetchall()}
@@ -531,7 +531,7 @@ def update_db(
     if pdf_count > (errors + reviews):  # if all pdf statements have failed/are under review no point in re-building the datamart
         try:
             build_datamart(db_path=db_path)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             print(f"[update_db] ** Datamart Rebuild Failed **: {type(e).__name__}: {e}")
 
     return db_secs
