@@ -41,9 +41,11 @@ class TestSyntax:
         sorted(_PKG_DIR.rglob("*.py")),
         ids=lambda p: str(p.relative_to(_PKG_DIR)),
     )
-    def test_module_parses(self, py_file: Path) -> None:
-        """Each .py file must parse without SyntaxErrors."""
-        ast.parse(py_file.read_text(encoding="utf-8"), filename=str(py_file))
+    def test_module_compiles(self, py_file: Path) -> None:
+        """Each .py file must compile without SyntaxErrors."""
+        source = py_file.read_text(encoding="utf-8")
+        tree = ast.parse(source, filename=str(py_file))
+        compile(tree, str(py_file), "exec")
 
 
 def test_package_importable() -> None:
