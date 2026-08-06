@@ -43,7 +43,8 @@ _DOCS = _REPO_ROOT / "docs"
 
 # Ensure scripts/ is importable
 sys.path.insert(0, str(_SCRIPTS))
-import generate_docs
+import generate_docs  # noqa: E402
+
 
 # ===================================================================
 # Freshness tests — generated output matches committed files
@@ -89,12 +90,13 @@ class TestApiCoverage:
         for node in ast.walk(tree):
             if isinstance(node, ast.Assign):
                 for target in node.targets:
-                    if isinstance(target, ast.Name) and target.id == "__all__" and isinstance(node.value, ast.List):
-                        return [
-                            elt.value  # type: ignore[union-attr]
-                            for elt in node.value.elts
-                            if isinstance(elt, ast.Constant) and isinstance(elt.value, str)
-                        ]
+                    if isinstance(target, ast.Name) and target.id == "__all__":
+                        if isinstance(node.value, ast.List):
+                            return [
+                                elt.value  # type: ignore[union-attr]
+                                for elt in node.value.elts
+                                if isinstance(elt, ast.Constant) and isinstance(elt.value, str)
+                            ]
         return []
 
     def test_every_all_symbol_in_api_docs(self) -> None:

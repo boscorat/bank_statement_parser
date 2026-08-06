@@ -18,7 +18,6 @@
 import argparse
 import sqlite3
 from pathlib import Path
-from typing import ClassVar
 
 
 class Housekeeping:
@@ -32,7 +31,7 @@ class Housekeeping:
         db_path: Path to the project's ``database/project.db`` SQLite file.
     """
 
-    FK_RELATIONSHIPS: ClassVar[list[tuple[str, str, str, str]]] = [
+    FK_RELATIONSHIPS = [
         ("checks_and_balances", "ID_BATCHLINE", "batch_lines", "ID_BATCHLINE"),
         ("checks_and_balances", "ID_BATCH", "batch_heads", "ID_BATCH"),
         ("statement_heads", "ID_BATCHLINE", "batch_lines", "ID_BATCHLINE"),
@@ -40,7 +39,7 @@ class Housekeeping:
         ("batch_lines", "ID_BATCH", "batch_heads", "ID_BATCH"),
     ]
 
-    DELETE_ORDER: ClassVar[list[str]] = [
+    DELETE_ORDER = [
         "checks_and_balances",
         "statement_lines",
         "batch_lines",
@@ -185,7 +184,7 @@ class Housekeeping:
 
 
 if __name__ == "__main__":
-    from bank_statement_parser.modules.paths import ProjectPaths
+    from bank_statement_parser.modules.paths import ProjectPaths  # noqa: PLC0415
 
     parser = argparse.ArgumentParser(description="Database integrity housekeeping")
     parser.add_argument(
