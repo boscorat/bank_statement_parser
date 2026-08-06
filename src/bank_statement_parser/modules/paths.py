@@ -353,7 +353,7 @@ class ProjectPaths:
     # ------------------------------------------------------------------
 
     @classmethod
-    def resolve(cls, project_path: Path | None = None) -> "ProjectPaths":
+    def resolve(cls, project_path: Path | None = None) -> ProjectPaths:
         """Return a :class:`ProjectPaths` for *project_path*.
 
         When *project_path* is ``None``, the default project folder bundled
@@ -581,7 +581,7 @@ def _create_project_db(paths: ProjectPaths) -> None:
         paths: A :class:`ProjectPaths` instance for the target project.
     """
     paths.ensure_subdir_for_write(paths.database)
-    from bank_statement_parser.data.create_project_db import main as create_db  # noqa: PLC0415
+    from bank_statement_parser.data.create_project_db import main as create_db
 
     create_db(db_path=paths.project_db, with_fk=True)
     print(f"[scaffold] created missing database: {paths.project_db}")
@@ -641,6 +641,6 @@ def _scaffold_new_project(paths: ProjectPaths) -> None:
     # 6. Create the SQLite database with the full schema.
     #    Import here to avoid a circular dependency at module level
     #    (database.py → paths.py; paths.py must not import database.py at top).
-    from bank_statement_parser.data.create_project_db import main as create_db  # noqa: PLC0415
+    from bank_statement_parser.data.create_project_db import main as create_db
 
     create_db(db_path=paths.project_db, with_fk=True)

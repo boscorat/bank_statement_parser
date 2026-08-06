@@ -269,7 +269,7 @@ def _drop_mart_objects(conn: sqlite3.Connection) -> None:
             if name not in _ALLOWED_MART_NAMES:  # defence-in-depth: name is a literal above
                 raise ValueError(f"Unexpected mart object name {name!r}; refusing to DROP.")
             kw = "VIEW" if row[0] == "view" else "TABLE"
-            conn.execute(f"DROP {kw} IF EXISTS {name}")  # noqa: S608
+            conn.execute(f"DROP {kw} IF EXISTS {name}")
 
 
 def _ensure_mart_structure(conn: sqlite3.Connection) -> None:
@@ -680,7 +680,7 @@ def _build_fact_balance(conn: sqlite3.Connection, verbose: bool) -> float:
     for tbl in ("_fb_agg", "_fb_bk", "_fb_grid"):
         if tbl not in _ALLOWED_TEMP:
             raise ValueError(f"Unexpected temp table name {tbl!r}; refusing to DROP.")
-        conn.execute(f"DROP TABLE IF EXISTS {tbl}")  # noqa: S608
+        conn.execute(f"DROP TABLE IF EXISTS {tbl}")
 
     elapsed = time.monotonic() - t0
     n = conn.execute("SELECT COUNT(*) FROM FactBalance").fetchone()[0]
@@ -743,7 +743,7 @@ def build_datamart(db_path: Path, verbose: bool = True) -> dict:
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    from bank_statement_parser.modules.paths import ProjectPaths  # noqa: PLC0415
+    from bank_statement_parser.modules.paths import ProjectPaths
 
     parser = argparse.ArgumentParser(description="Build (or rebuild) the data mart tables from raw source data.")
     parser.add_argument(

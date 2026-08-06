@@ -66,12 +66,12 @@ def extract_banks(config_dir: Path) -> list[tuple[str, list[str]]]:
         try:
             with open(companies_file, "rb") as f:
                 companies_data = tomllib.load(f)
-        except Exception:
+        except Exception:  # noqa: BLE001, S112
             continue
 
         # Find the company name (first [[section]] in companies.toml)
         bank_name = None
-        for section_name, section_data in companies_data.items():
+        for section_data in companies_data.values():
             if isinstance(section_data, dict) and "name" in section_data:
                 bank_name = section_data["name"]
                 break
@@ -84,11 +84,11 @@ def extract_banks(config_dir: Path) -> list[tuple[str, list[str]]]:
         try:
             with open(accounts_file, "rb") as f:
                 accounts_data = tomllib.load(f)
-        except Exception:
+        except Exception:  # noqa: BLE001
             accounts = []
         else:
             accounts = []
-            for section_name, section_data in accounts_data.items():
+            for section_data in accounts_data.values():
                 if isinstance(section_data, dict) and "account" in section_data:
                     account_name = section_data["account"]
                     if account_name and account_name not in accounts:

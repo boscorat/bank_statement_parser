@@ -29,7 +29,7 @@ from bank_statement_parser.data.create_project_db import main as create_db
 from bank_statement_parser.data.housekeeping import Housekeeping
 
 __all__ = [
+    "Housekeeping",
     "build_datamart",
     "create_db",
-    "Housekeeping",
 ]

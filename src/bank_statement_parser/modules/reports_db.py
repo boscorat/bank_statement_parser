@@ -105,7 +105,7 @@ def _read_data(db_path: Path, table_name: str) -> pl.LazyFrame:
         ValueError: If *table_name* is not in the allowed whitelist.
     """
     _validate_read_target(table_name)
-    query = f"SELECT * FROM {table_name}"  # noqa: S608
+    query = f"SELECT * FROM {table_name}"
     with sqlite3.connect(db_path) as conn:
         return pl.read_database(query, connection=conn, infer_schema_length=None).lazy()
 
@@ -134,7 +134,7 @@ def _read_data_filtered(db_path: Path, table_name: str, batch_table: str, batch_
     if batch_id is None:
         return _read_data(db_path, table_name)
     _validate_read_target(batch_table)
-    query = f"SELECT * FROM {batch_table} WHERE batch_id = ?"  # noqa: S608
+    query = f"SELECT * FROM {batch_table} WHERE batch_id = ?"
     with sqlite3.connect(db_path) as conn:
         return pl.read_database(query, connection=conn, execute_options={"parameters": [batch_id]}, infer_schema_length=None).lazy()
 
@@ -194,7 +194,7 @@ def _ts() -> str:
     Returns:
         Datetime formatted as ``"yyyymmddHHMMSS"``, e.g. ``"20250331143022"``.
     """
-    return datetime.now().strftime("%Y%m%d%H%M%S")
+    return datetime.now().strftime("%Y%m%d%H%M%S")  # noqa: DTZ005
 
 
 def _collect_report_frames(
