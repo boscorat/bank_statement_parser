@@ -33,15 +33,16 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from bank_statement_parser.modules.data import ForexApiConfig
-from bank_statement_parser.modules.errors import ProjectDatabaseMissing
 from bank_statement_parser.modules.forex import (
     _forward_fill,
     _load_forex_config,
-    _provider_exchangerate_api,
     _provider_frankfurter,
+    _provider_exchangerate_api,
     get_exchange_rates,
 )
+from bank_statement_parser.modules.data import ForexApiConfig
+from bank_statement_parser.modules.errors import ProjectDatabaseMissing
+
 
 # ---------------------------------------------------------------------------
 # Helpers

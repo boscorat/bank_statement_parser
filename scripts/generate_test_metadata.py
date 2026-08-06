@@ -76,7 +76,7 @@ def _get_transaction_count(project_path: Path, id_statement: str) -> int:
             )
             count = cursor.fetchone()[0]
             return count
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         print(f"    ⚠️  Could not query transaction count from database: {e}")
         return 0
 
@@ -148,7 +148,7 @@ def _generate_metadata_for_good_pdfs() -> int:
             print(f"✓ {pdf_path.name} → {metadata_path.name}")
             successful += 1
 
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             print(f"✗ {pdf_path.name}: {type(e).__name__}: {e}")
 
     # Cleanup
@@ -211,7 +211,7 @@ def _generate_metadata_for_bad_pdfs() -> int:
             print(f"✓ {pdf_path.name} → {metadata_path.name}")
             successful += 1
 
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             print(f"✗ {pdf_path.name}: {type(e).__name__}: {e}")
 
     # Cleanup

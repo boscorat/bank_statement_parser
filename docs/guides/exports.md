@@ -238,7 +238,7 @@ import bank_statement_parser as bsp
 bsp.db.export_csv()
 
 # Export multi star-schema tables to Excel
-bsp.db.export_excel(type="multi")
+bsp.db.export_excel(type='multi')
 
 # Export JSON
 bsp.db.export_json()
@@ -248,9 +248,8 @@ bsp.db.export_reporting_data()
 
 # Export to a custom directory
 from pathlib import Path
-
-bsp.db.export_csv(folder=Path("~/exports"))
-bsp.db.export_excel(path=Path("~/exports/report.xlsx"))
+bsp.db.export_csv(folder=Path('~/exports'))
+bsp.db.export_excel(path=Path('~/exports/report.xlsx'))
 ```
 
 ## Report Classes

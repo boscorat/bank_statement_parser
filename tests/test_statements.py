@@ -263,7 +263,7 @@ class TestExports:
         paths = ProjectPaths.resolve(good_project.project_path)
         with sqlite3.connect(str(paths.project_db)) as conn:
             for stem, table in _MULTI_STEM_TO_DB_TABLE.items():
-                db_rows = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+                db_rows = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]  # noqa: S608
                 df = pl.read_csv(paths.csv / "multi" / f"{stem}.csv", infer_schema_length=0)
                 assert df.height == db_rows, f"{stem}.csv: CSV rows={df.height} != DB rows={db_rows}"
 
@@ -339,7 +339,7 @@ class TestExports:
         paths = ProjectPaths.resolve(good_project.project_path)
         with sqlite3.connect(str(paths.project_db)) as conn:
             for stem, table in _MULTI_STEM_TO_DB_TABLE.items():
-                db_rows = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+                db_rows = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]  # noqa: S608
                 df = pl.read_json(paths.json / "multi" / f"{stem}.json", infer_schema_length=None)
                 assert df.height == db_rows, f"{stem}.json: JSON rows={df.height} != DB rows={db_rows}"
 

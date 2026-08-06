@@ -126,7 +126,7 @@ def good_project() -> Generator[ProjectContext, None, None]:  # type: ignore[mis
             pytest.skip("No good PDFs with metadata sidecars found")
 
         # Count banks for session-end summary
-        global _good_bank_counts
+        global _good_bank_counts  # noqa: PLW0603
         _good_bank_counts = {}
         for pdf in pdfs_with_metadata:
             match = re.match(r"anonymised_([A-Za-z]+)", pdf.name)
@@ -141,7 +141,7 @@ def good_project() -> Generator[ProjectContext, None, None]:  # type: ignore[mis
         batch.update_data()
         batch.delete_temp_files()
 
-        global _good_pdf_count
+        global _good_pdf_count  # noqa: PLW0603
         _good_pdf_count = len(pdfs_with_metadata)
 
         yield ProjectContext(project_path=project_path, batch=batch, pdfs=pdfs_with_metadata)
@@ -189,7 +189,7 @@ def bad_project() -> Generator[ProjectContext, None, None]:  # type: ignore[misc
             project_path=project_path,
         )
 
-        global _bad_pdf_count
+        global _bad_pdf_count  # noqa: PLW0603
         _bad_pdf_count = len(pdfs_with_metadata)
 
         yield ProjectContext(project_path=project_path, batch=batch, pdfs=pdfs_with_metadata)

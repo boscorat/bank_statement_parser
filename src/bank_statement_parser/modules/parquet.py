@@ -44,7 +44,7 @@ from bank_statement_parser.modules.paths import ProjectPaths
 
 
 class Parquet:
-    __slots__ = ("db_records", "file", "key", "records", "schema")
+    __slots__ = ("file", "schema", "records", "key", "db_records")
 
     def __init__(self, file: Path, schema: pl.DataFrame, records: pl.DataFrame | None, key: str | None) -> None:
         self.file = file

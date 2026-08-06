@@ -993,8 +993,9 @@ def generate_bank_config() -> str:
     acct_lines: list[str] = []
     entry_count = 0
     for line in accounts_toml.splitlines():
-        if line.startswith("[") and not line.startswith("[HSBC_UK_CRD_RCC") and entry_count >= 1:
-            break
+        if line.startswith("[") and not line.startswith("[HSBC_UK_CRD_RCC"):
+            if entry_count >= 1:
+                break
         if line.startswith("[HSBC_UK_CRD_RCC"):
             entry_count = 1
         if entry_count >= 1:
@@ -1390,7 +1391,14 @@ def generate_python_api() -> str:
         in_code = False
         for line in qs_lines:
             stripped = line.strip()
-            if stripped.startswith(("import ", "from ", "batch", "flat", "bsp.", "#")):
+            if (
+                stripped.startswith("import ")
+                or stripped.startswith("from ")
+                or stripped.startswith("batch")
+                or stripped.startswith("flat")
+                or stripped.startswith("bsp.")
+                or stripped.startswith("#")
+            ):
                 in_code = True
             if in_code:
                 if stripped and not re.match(r"^-+$", stripped) and not re.match(r"^\w.*\w$", stripped.rstrip(":")):
@@ -2006,12 +2014,12 @@ def _extract_banks(config_dir: Path) -> list[tuple[str, list[str]]]:
         try:
             with open(companies_file, "rb") as f:
                 companies_data = tomllib.load(f)
-        except Exception:  # noqa: BLE001, S112
+        except Exception:
             continue
 
         # Find the company name (first [[section]] in companies.toml)
         bank_name = None
-        for section_data in companies_data.values():
+        for section_name, section_data in companies_data.items():
             if isinstance(section_data, dict) and "name" in section_data:
                 bank_name = section_data["name"]
                 break
@@ -2024,11 +2032,11 @@ def _extract_banks(config_dir: Path) -> list[tuple[str, list[str]]]:
         try:
             with open(accounts_file, "rb") as f:
                 accounts_data = tomllib.load(f)
-        except Exception:  # noqa: BLE001
+        except Exception:
             accounts = []
         else:
             accounts = []
-            for section_data in accounts_data.values():
+            for section_name, section_data in accounts_data.items():
                 if isinstance(section_data, dict) and "account" in section_data:
                     account_name = section_data["account"]
                     if account_name and account_name not in accounts:
@@ -2147,7 +2155,7 @@ def main() -> None:
         table = _generate_banks_table(config_dir)
         _update_index_md_table(_INDEX_MD, table)
         print(f"Updated banks table in {_INDEX_MD.relative_to(_REPO_ROOT)}")
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         print(f"Warning: Failed to update banks table: {e}")
 
 
