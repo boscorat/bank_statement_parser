@@ -16,11 +16,34 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 """
-test_import — smoke test verifying the package is importable.
+test_import — syntax and importability smoke tests.
 
-Catches SyntaxErrors, circular imports, and missing dependencies that would
-prevent ``import bank_statement_parser`` from succeeding.
+Validates that:
+- Every ``.py`` file in the package parses without SyntaxErrors (via
+  ``ast.parse``), catching indentation bugs and other parse failures
+  regardless of whether optional dependencies are installed.
+- The top-level package is importable at runtime.
 """
+
+import ast
+from pathlib import Path
+
+import pytest
+
+_PKG_DIR = Path(__file__).resolve().parent.parent / "src" / "bank_statement_parser"
+
+
+class TestSyntax:
+    """Verify all source files are syntactically valid Python."""
+
+    @pytest.mark.parametrize(
+        "py_file",
+        sorted(_PKG_DIR.rglob("*.py")),
+        ids=lambda p: str(p.relative_to(_PKG_DIR)),
+    )
+    def test_module_parses(self, py_file: Path) -> None:
+        """Each .py file must parse without SyntaxErrors."""
+        ast.parse(py_file.read_text(encoding="utf-8"), filename=str(py_file))
 
 
 def test_package_importable() -> None:
