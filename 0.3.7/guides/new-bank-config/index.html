@@ -2639,13 +2639,13 @@ The <code>field</code> spec extracts text from that region and checks it against
 </tr>
 <tr>
 <td><code>config</code></td>
-<td><code>Config</code></td>
+<td><code>Config | None</code></td>
 <td>ACTIVE</td>
 <td>Extraction config used during the company-identification pass. Extracts a discriminating field (e.g. a bank-specific header string) to confirm the PDF belongs to this company before attempting account matching.</td>
 </tr>
 <tr>
 <td><code>accounts</code></td>
-<td><code>dict</code></td>
+<td><code>dict | None</code></td>
 <td>STUB</td>
 <td>Declared but never accessed by the pipeline after load.  Intended as a lookup from account key to Account object but currently unused.</td>
 </tr>
@@ -2671,25 +2671,25 @@ The <code>field</code> spec extracts text from that region and checks it against
 </tr>
 <tr>
 <td><code>statement_table_key</code></td>
-<td><code>str</code></td>
+<td><code>str | None</code></td>
 <td>ACTIVE</td>
 <td>Key into statement_tables.toml that identifies the StatementTable to use.  Resolved to statement_table at load time.  Set to None for inline single-field configs.</td>
 </tr>
 <tr>
 <td><code>statement_table</code></td>
-<td><code>StatementTable</code></td>
+<td><code>StatementTable | None</code></td>
 <td>ACTIVE</td>
 <td>Resolved at load time from statement_table_key.  The StatementTable object used during extraction.  Not set directly in TOML.</td>
 </tr>
 <tr>
 <td><code>locations</code></td>
-<td><code>list&amp;#91;Location</code></td>
+<td><code>list&amp;#91;Location&amp;#93; | None</code></td>
 <td>ACTIVE</td>
 <td>Used only for inline single-field configs (where statement_table is None).  Defines where on the page to find the field value.</td>
 </tr>
 <tr>
 <td><code>field</code></td>
-<td><code>Field</code></td>
+<td><code>Field | None</code></td>
 <td>ACTIVE</td>
 <td>Used only for inline single-field configs.  Defines the extraction spec for the single value to read from the location.</td>
 </tr>
@@ -2709,43 +2709,43 @@ The <code>field</code> spec extracts text from that region and checks it against
 <tbody>
 <tr>
 <td><code>page_number</code></td>
-<td><code>int</code></td>
+<td><code>int | None</code></td>
 <td>ACTIVE</td>
 <td>1-based page number.  When set the location is used only on that page.  When None the location is cloned for every page (spawn_locations()).</td>
 </tr>
 <tr>
 <td><code>top_left</code></td>
-<td><code>list&amp;#91;int</code></td>
+<td><code>list&amp;#91;int&amp;#93; | None</code></td>
 <td>ACTIVE</td>
 <td>&#91;x, y&#93; coordinates of the top-left corner of the crop rectangle. Must be set together with bottom_right.  When both are None the full page is used.</td>
 </tr>
 <tr>
 <td><code>bottom_right</code></td>
-<td><code>list&amp;#91;int</code></td>
+<td><code>list&amp;#91;int&amp;#93; | None</code></td>
 <td>ACTIVE</td>
 <td>&#91;x, y&#93; coordinates of the bottom-right corner of the crop rectangle.  Must be set together with top_left.</td>
 </tr>
 <tr>
 <td><code>vertical_lines</code></td>
-<td><code>list&amp;#91;int</code></td>
+<td><code>list&amp;#91;int&amp;#93; | None</code></td>
 <td>ACTIVE</td>
 <td>Explicit x-coordinates of vertical column dividers supplied to pdfplumber as explicit_vertical_lines.  Pairs of identical values create a zero-width gap that forces a column boundary (e.g. &#91;100, 100, 200, 200&#93;). When set, pdfplumber's automatic column detection is disabled for this region.</td>
 </tr>
 <tr>
 <td><code>dynamic_last_vertical_line</code></td>
-<td><code>DynamicLineSpec</code></td>
+<td><code>DynamicLineSpec | None</code></td>
 <td>ACTIVE</td>
 <td>When set, the final value in vertical_lines is replaced at runtime with an x-coordinate derived from a PDF image's bounding box.  See DynamicLineSpec.  Used where the rightmost column boundary floats with a logo.</td>
 </tr>
 <tr>
 <td><code>allow_text_failover</code></td>
-<td><code>bool</code></td>
+<td><code>bool | None</code></td>
 <td>ACTIVE</td>
 <td>When True and the extracted table has the wrong number of columns, the extraction is retried without vertical_lines, falling back to pdfplumber's text-based column detection.  Useful as a safety net for pages where the explicit dividers produce a malformed table.</td>
 </tr>
 <tr>
 <td><code>try_shift_down</code></td>
-<td><code>int</code></td>
+<td><code>int | None</code></td>
 <td>ACTIVE</td>
 <td>Number of PDF points to shift the crop rectangle downward (applied to both top_left&#91;1&#93; and bottom_right&#91;1&#93;) when the initial extraction returns an empty region.  Handles statements where the table top boundary varies slightly between pages.</td>
 </tr>
@@ -2771,7 +2771,7 @@ The <code>field</code> spec extracts text from that region and checks it against
 </tr>
 <tr>
 <td><code>cell</code></td>
-<td><code>Cell</code></td>
+<td><code>Cell | None</code></td>
 <td>ACTIVE</td>
 <td>Row/column address for summary or detail table extraction. Mutually exclusive with <code>column</code>; set to None for transaction tables.</td>
 </tr>
@@ -2795,13 +2795,13 @@ The <code>field</code> spec extracts text from that region and checks it against
 </tr>
 <tr>
 <td><code>strip_characters_start</code></td>
-<td><code>str</code></td>
+<td><code>str | None</code></td>
 <td>ACTIVE</td>
 <td>Characters to strip from the start of the raw string before pattern matching (passed to Polars str.strip_chars_start()).  Useful for leading currency symbols not covered by the account currency spec.</td>
 </tr>
 <tr>
 <td><code>strip_characters_end</code></td>
-<td><code>str</code></td>
+<td><code>str | None</code></td>
 <td>ACTIVE</td>
 <td>Characters to strip from the end of the raw string before pattern matching (passed to Polars str.strip_chars_end()).</td>
 </tr>
@@ -2813,25 +2813,25 @@ The <code>field</code> spec extracts text from that region and checks it against
 </tr>
 <tr>
 <td><code>numeric_modifier</code></td>
-<td><code>NumericModifier</code></td>
+<td><code>NumericModifier | None</code></td>
 <td>ACTIVE</td>
 <td>Sign/multiplier transformation applied after numeric casting. See NumericModifier.  Omit for straightforward positive numeric values.</td>
 </tr>
 <tr>
 <td><code>string_pattern</code></td>
-<td><code>str</code></td>
+<td><code>str | None</code></td>
 <td>ACTIVE</td>
 <td>Regex pattern the extracted string must match.  Extraction is marked as failed (success = False) if the value does not match.  Used to validate field contents (e.g. date format) and to skip blank or irrelevant rows.</td>
 </tr>
 <tr>
 <td><code>string_max_length</code></td>
-<td><code>int</code></td>
+<td><code>int | None</code></td>
 <td>ACTIVE</td>
 <td>Maximum character length for string values; longer strings are truncated via str.head().  Useful for capping free-text description fields. Defaults to 999 if not set.</td>
 </tr>
 <tr>
 <td><code>date_format</code></td>
-<td><code>str</code></td>
+<td><code>str | None</code></td>
 <td>STUB</td>
 <td>Intended strptime format for date parsing at the Field level. Declared but never read by the pipeline; date format parsing is handled via StdRefs.format in get_standard_fields() instead.</td>
 </tr>
@@ -2843,7 +2843,7 @@ The <code>field</code> spec extracts text from that region and checks it against
 </tr>
 <tr>
 <td><code>regex_groups</code></td>
-<td><code>int</code></td>
+<td><code>int | None</code></td>
 <td>ACTIVE</td>
 <td>When set, extracts the specified capture group (1-indexed) from the string_pattern regex match instead of the entire match (group 0). Useful for splitting a single PDF column into multiple fields via regex capture groups. Example: string_pattern = '^(&#91;A-Z &#93;+)\s+(&#91;A-Z0-9&#93;+)$' with regex_groups = 1 extracts group 1; regex_groups = 2 extracts group 2. When None, defaults to group 0 (entire match, backward compatible). Omit for standard extraction.</td>
 </tr>
@@ -2966,13 +2966,13 @@ to identify where each transaction starts and ends:</p>
 </tr>
 <tr>
 <td><code>header_text</code></td>
-<td><code>str</code></td>
+<td><code>str | None</code></td>
 <td>ACTIVE</td>
 <td>When set, the first table row whose text matches this string is stripped before extraction.  Use when pdfplumber includes the column header row in the extracted data.</td>
 </tr>
 <tr>
 <td><code>remove_header</code></td>
-<td><code>bool</code></td>
+<td><code>bool | None</code></td>
 <td>ACTIVE</td>
 <td>When True the first table row is unconditionally stripped.  Use when the header row is always present but its text varies (making header_text impractical).</td>
 </tr>
@@ -2990,49 +2990,49 @@ to identify where each transaction starts and ends:</p>
 </tr>
 <tr>
 <td><code>table_columns</code></td>
-<td><code>int</code></td>
+<td><code>int | None</code></td>
 <td>ACTIVE</td>
 <td>Expected minimum number of columns in the extracted table.  Passed to pdfplumber as min_words_horizontal and used to validate column count after extraction.  Also triggers allow_text_failover retry logic.</td>
 </tr>
 <tr>
 <td><code>table_rows</code></td>
-<td><code>int</code></td>
+<td><code>int | None</code></td>
 <td>ACTIVE</td>
 <td>Expected minimum number of rows in the extracted table.  Passed to pdfplumber as min_words_vertical.</td>
 </tr>
 <tr>
 <td><code>row_spacing</code></td>
-<td><code>int</code></td>
+<td><code>int | None</code></td>
 <td>ACTIVE</td>
 <td>pdfplumber snap_y_tolerance in PDF points.  Rows whose top edges fall within this distance of each other are merged into the same table row. Increase if the statement uses tight line spacing that splits a single visual row across multiple pdfplumber rows.</td>
 </tr>
 <tr>
 <td><code>tests</code></td>
-<td><code>list&amp;#91;Test</code></td>
+<td><code>list&amp;#91;Test&amp;#93; | None</code></td>
 <td>STUB</td>
 <td>Declarative post-extraction assertions.  Declared and accepted in TOML but no pipeline code evaluates them.  Reserved for a future config validation pass.</td>
 </tr>
 <tr>
 <td><code>delete_success_false</code></td>
-<td><code>bool</code></td>
+<td><code>bool | None</code></td>
 <td>STUB</td>
 <td>Intended to drop rows where any field extraction returned success = False.  Declared and set in TOML (typically True) but no pipeline code currently reads or acts on this flag.</td>
 </tr>
 <tr>
 <td><code>delete_cast_success_false</code></td>
-<td><code>bool</code></td>
+<td><code>bool | None</code></td>
 <td>STUB</td>
 <td>Intended to drop rows where numeric casting failed.  Declared and set in TOML (typically True) but no pipeline code currently reads or acts on this flag.</td>
 </tr>
 <tr>
 <td><code>delete_rows_with_missing_vital_fields</code></td>
-<td><code>bool</code></td>
+<td><code>bool | None</code></td>
 <td>STUB</td>
 <td>Intended to drop rows where any vital field is missing after extraction.  Declared and set in TOML (typically True) but no pipeline code currently reads or acts on this flag.  Note: vital-field hard-failure logic exists in validate() but is separate from this flag.</td>
 </tr>
 <tr>
 <td><code>transaction_spec</code></td>
-<td><code>TransactionSpec</code></td>
+<td><code>TransactionSpec | None</code></td>
 <td>ACTIVE</td>
 <td>When set, the table is processed as a transaction table using the bookend-based multi-row extraction path.  Must be None for summary/detail tables.</td>
 </tr>
@@ -3052,43 +3052,43 @@ to identify where each transaction starts and ends:</p>
 <tbody>
 <tr>
 <td><code>page_number</code></td>
-<td><code>int</code></td>
+<td><code>int | None</code></td>
 <td>ACTIVE</td>
 <td>1-based page number.  When set the location is used only on that page.  When None the location is cloned for every page (spawn_locations()).</td>
 </tr>
 <tr>
 <td><code>top_left</code></td>
-<td><code>list&amp;#91;int</code></td>
+<td><code>list&amp;#91;int&amp;#93; | None</code></td>
 <td>ACTIVE</td>
 <td>&#91;x, y&#93; coordinates of the top-left corner of the crop rectangle. Must be set together with bottom_right.  When both are None the full page is used.</td>
 </tr>
 <tr>
 <td><code>bottom_right</code></td>
-<td><code>list&amp;#91;int</code></td>
+<td><code>list&amp;#91;int&amp;#93; | None</code></td>
 <td>ACTIVE</td>
 <td>&#91;x, y&#93; coordinates of the bottom-right corner of the crop rectangle.  Must be set together with top_left.</td>
 </tr>
 <tr>
 <td><code>vertical_lines</code></td>
-<td><code>list&amp;#91;int</code></td>
+<td><code>list&amp;#91;int&amp;#93; | None</code></td>
 <td>ACTIVE</td>
 <td>Explicit x-coordinates of vertical column dividers supplied to pdfplumber as explicit_vertical_lines.  Pairs of identical values create a zero-width gap that forces a column boundary (e.g. &#91;100, 100, 200, 200&#93;). When set, pdfplumber's automatic column detection is disabled for this region.</td>
 </tr>
 <tr>
 <td><code>dynamic_last_vertical_line</code></td>
-<td><code>DynamicLineSpec</code></td>
+<td><code>DynamicLineSpec | None</code></td>
 <td>ACTIVE</td>
 <td>When set, the final value in vertical_lines is replaced at runtime with an x-coordinate derived from a PDF image's bounding box.  See DynamicLineSpec.  Used where the rightmost column boundary floats with a logo.</td>
 </tr>
 <tr>
 <td><code>allow_text_failover</code></td>
-<td><code>bool</code></td>
+<td><code>bool | None</code></td>
 <td>ACTIVE</td>
 <td>When True and the extracted table has the wrong number of columns, the extraction is retried without vertical_lines, falling back to pdfplumber's text-based column detection.  Useful as a safety net for pages where the explicit dividers produce a malformed table.</td>
 </tr>
 <tr>
 <td><code>try_shift_down</code></td>
-<td><code>int</code></td>
+<td><code>int | None</code></td>
 <td>ACTIVE</td>
 <td>Number of PDF points to shift the crop rectangle downward (applied to both top_left&#91;1&#93; and bottom_right&#91;1&#93;) when the initial extraction returns an empty region.  Handles statements where the table top boundary varies slightly between pages.</td>
 </tr>
@@ -3140,7 +3140,7 @@ to identify where each transaction starts and ends:</p>
 </tr>
 <tr>
 <td><code>cell</code></td>
-<td><code>Cell</code></td>
+<td><code>Cell | None</code></td>
 <td>ACTIVE</td>
 <td>Row/column address for summary or detail table extraction. Mutually exclusive with <code>column</code>; set to None for transaction tables.</td>
 </tr>
@@ -3164,13 +3164,13 @@ to identify where each transaction starts and ends:</p>
 </tr>
 <tr>
 <td><code>strip_characters_start</code></td>
-<td><code>str</code></td>
+<td><code>str | None</code></td>
 <td>ACTIVE</td>
 <td>Characters to strip from the start of the raw string before pattern matching (passed to Polars str.strip_chars_start()).  Useful for leading currency symbols not covered by the account currency spec.</td>
 </tr>
 <tr>
 <td><code>strip_characters_end</code></td>
-<td><code>str</code></td>
+<td><code>str | None</code></td>
 <td>ACTIVE</td>
 <td>Characters to strip from the end of the raw string before pattern matching (passed to Polars str.strip_chars_end()).</td>
 </tr>
@@ -3182,25 +3182,25 @@ to identify where each transaction starts and ends:</p>
 </tr>
 <tr>
 <td><code>numeric_modifier</code></td>
-<td><code>NumericModifier</code></td>
+<td><code>NumericModifier | None</code></td>
 <td>ACTIVE</td>
 <td>Sign/multiplier transformation applied after numeric casting. See NumericModifier.  Omit for straightforward positive numeric values.</td>
 </tr>
 <tr>
 <td><code>string_pattern</code></td>
-<td><code>str</code></td>
+<td><code>str | None</code></td>
 <td>ACTIVE</td>
 <td>Regex pattern the extracted string must match.  Extraction is marked as failed (success = False) if the value does not match.  Used to validate field contents (e.g. date format) and to skip blank or irrelevant rows.</td>
 </tr>
 <tr>
 <td><code>string_max_length</code></td>
-<td><code>int</code></td>
+<td><code>int | None</code></td>
 <td>ACTIVE</td>
 <td>Maximum character length for string values; longer strings are truncated via str.head().  Useful for capping free-text description fields. Defaults to 999 if not set.</td>
 </tr>
 <tr>
 <td><code>date_format</code></td>
-<td><code>str</code></td>
+<td><code>str | None</code></td>
 <td>STUB</td>
 <td>Intended strptime format for date parsing at the Field level. Declared but never read by the pipeline; date format parsing is handled via StdRefs.format in get_standard_fields() instead.</td>
 </tr>
@@ -3212,7 +3212,7 @@ to identify where each transaction starts and ends:</p>
 </tr>
 <tr>
 <td><code>regex_groups</code></td>
-<td><code>int</code></td>
+<td><code>int | None</code></td>
 <td>ACTIVE</td>
 <td>When set, extracts the specified capture group (1-indexed) from the string_pattern regex match instead of the entire match (group 0). Useful for splitting a single PDF column into multiple fields via regex capture groups. Example: string_pattern = '^(&#91;A-Z &#93;+)\s+(&#91;A-Z0-9&#93;+)$' with regex_groups = 1 extracts group 1; regex_groups = 2 extracts group 2. When None, defaults to group 0 (entire match, backward compatible). Omit for standard extraction.</td>
 </tr>
@@ -3258,13 +3258,13 @@ to identify where each transaction starts and ends:</p>
 <tbody>
 <tr>
 <td><code>prefix</code></td>
-<td><code>str</code></td>
+<td><code>str | None</code></td>
 <td>ACTIVE</td>
 <td>If the raw value starts with this string the prefix is stripped and the multiplier applied.  Use for formats like "(123.45)" where "(" signals a negative value.</td>
 </tr>
 <tr>
 <td><code>suffix</code></td>
-<td><code>str</code></td>
+<td><code>str | None</code></td>
 <td>ACTIVE</td>
 <td>If the raw value ends with this string the suffix is stripped and the multiplier applied.  Use for formats like "123.45 CR" or "123.45D".</td>
 </tr>
@@ -3332,7 +3332,7 @@ to identify where each transaction starts and ends:</p>
 </tr>
 <tr>
 <td><code>numeric_modifier</code></td>
-<td><code>NumericModifier</code></td>
+<td><code>NumericModifier | None</code></td>
 <td>ACTIVE</td>
 <td>Sign/multiplier modifier for the offset value.  Overrides the parent Field.numeric_modifier.</td>
 </tr>
@@ -3408,19 +3408,19 @@ to identify where each transaction starts and ends:</p>
 </tr>
 <tr>
 <td><code>fill_forward_fields</code></td>
-<td><code>list&amp;#91;str</code></td>
+<td><code>list&amp;#91;str&amp;#93; | None</code></td>
 <td>ACTIVE</td>
 <td>Field names whose null values should be forward-filled across rows within the same page after pivot.  Use for sparse columns where a value (e.g. a date or payment type) appears only on the first row of a multi-row block and needs propagating to the end row.</td>
 </tr>
 <tr>
 <td><code>merge_fields</code></td>
-<td><code>MergeFields</code></td>
+<td><code>MergeFields | None</code></td>
 <td>ACTIVE</td>
 <td>When set, collapses multi-row text fields within each transaction into a single joined string.  See MergeFields.</td>
 </tr>
 <tr>
 <td><code>exclude_rows</code></td>
-<td><code>list&amp;#91;FieldValidation</code></td>
+<td><code>list&amp;#91;FieldValidation&amp;#93; | None</code></td>
 <td>ACTIVE</td>
 <td>Rows where any rule's field value matches its pattern are removed from the results before bookend detection runs.  Use to suppress known non-transaction rows (e.g. a closing balance summary line) that would otherwise interfere with transaction counting or checks &amp; balances. Each rule is a {field, pattern} pair; a row is excluded if any rule matches.</td>
 </tr>
@@ -3464,19 +3464,19 @@ to identify where each transaction starts and ends:</p>
 </tr>
 <tr>
 <td><code>extra_validation_start</code></td>
-<td><code>FieldValidation</code></td>
+<td><code>FieldValidation | None</code></td>
 <td>ACTIVE</td>
 <td>When set, any row where the named field's value does NOT match the pattern is excluded from being a start-bookend candidate for this bookend. Rows excluded here may still be captured by another bookend in the list. Useful for bookends that should only trigger on a specific row shape (e.g. an interest charge line identified by its details text).</td>
 </tr>
 <tr>
 <td><code>extra_validation_end</code></td>
-<td><code>FieldValidation</code></td>
+<td><code>FieldValidation | None</code></td>
 <td>STUB</td>
 <td>Symmetric counterpart to extra_validation_start for end rows. Declared but not yet implemented in the pipeline; no code currently reads this field.  Reserved for future use.</td>
 </tr>
 <tr>
 <td><code>sticky_fields</code></td>
-<td><code>list&amp;#91;str</code></td>
+<td><code>list&amp;#91;str&amp;#93; | None</code></td>
 <td>STUB</td>
 <td>Intended to forward-fill named fields from the start row of a transaction down to its end row, scoped within a single transaction (as opposed to fill_forward_fields which fills across transactions).  Declared but not implemented; no pipeline code reads this field.</td>
 </tr>
@@ -3664,7 +3664,7 @@ account vs. credit card) if their PDF layouts differ.</p>
 <tbody>
 <tr>
 <td><code>configs</code></td>
-<td><code>list&amp;#91;Config</code></td>
+<td><code>list&amp;#91;Config&amp;#93; | None</code></td>
 <td>ACTIVE</td>
 <td>Ordered list of Config steps.  Executed in sequence during extraction; results are stacked into the section's results DataFrame.</td>
 </tr>
@@ -3690,25 +3690,25 @@ account vs. credit card) if their PDF layouts differ.</p>
 </tr>
 <tr>
 <td><code>statement_table_key</code></td>
-<td><code>str</code></td>
+<td><code>str | None</code></td>
 <td>ACTIVE</td>
 <td>Key into statement_tables.toml that identifies the StatementTable to use.  Resolved to statement_table at load time.  Set to None for inline single-field configs.</td>
 </tr>
 <tr>
 <td><code>statement_table</code></td>
-<td><code>StatementTable</code></td>
+<td><code>StatementTable | None</code></td>
 <td>ACTIVE</td>
 <td>Resolved at load time from statement_table_key.  The StatementTable object used during extraction.  Not set directly in TOML.</td>
 </tr>
 <tr>
 <td><code>locations</code></td>
-<td><code>list&amp;#91;Location</code></td>
+<td><code>list&amp;#91;Location&amp;#93; | None</code></td>
 <td>ACTIVE</td>
 <td>Used only for inline single-field configs (where statement_table is None).  Defines where on the page to find the field value.</td>
 </tr>
 <tr>
 <td><code>field</code></td>
-<td><code>Field</code></td>
+<td><code>Field | None</code></td>
 <td>ACTIVE</td>
 <td>Used only for inline single-field configs.  Defines the extraction spec for the single value to read from the location.</td>
 </tr>
@@ -3766,7 +3766,7 @@ defines a PDF detection rule to identify which account a given statement belongs
 </tr>
 <tr>
 <td><code>company</code></td>
-<td><code>Company</code></td>
+<td><code>Company | None</code></td>
 <td>ACTIVE</td>
 <td>Resolved at load time from company_key.  Provides the company name and company-level identification config.</td>
 </tr>
@@ -3778,7 +3778,7 @@ defines a PDF detection rule to identify which account a given statement belongs
 </tr>
 <tr>
 <td><code>account_type</code></td>
-<td><code>AccountType</code></td>
+<td><code>AccountType | None</code></td>
 <td>STUB</td>
 <td>Resolved at load time from account_type_key.  The AccountType object is populated but never subsequently read by any pipeline consumer.</td>
 </tr>
@@ -3790,7 +3790,7 @@ defines a PDF detection rule to identify which account a given statement belongs
 </tr>
 <tr>
 <td><code>statement_type</code></td>
-<td><code>StatementType</code></td>
+<td><code>StatementType | None</code></td>
 <td>ACTIVE</td>
 <td>Resolved at load time from statement_type_key.  Provides the header and lines ConfigGroups used during extraction.</td>
 </tr>
@@ -3965,49 +3965,49 @@ marked <code>vital = true</code> will raise a <code>ConfigError</code> if no map
 </tr>
 <tr>
 <td><code>field</code></td>
-<td><code>str</code></td>
+<td><code>str | None</code></td>
 <td>ACTIVE</td>
 <td>Name of the raw extracted column to promote.  Set to None (or omit) when a literal default value should be used instead of a column value.</td>
 </tr>
 <tr>
 <td><code>concat_fields</code></td>
-<td><code>list</code></td>
+<td><code>list | None</code></td>
 <td>ACTIVE</td>
 <td>Name of the raw extracted columns to concatenate and promote.  Set to None (or omit) in order to revert to a single field and it's fallback</td>
 </tr>
 <tr>
 <td><code>format</code></td>
-<td><code>str</code></td>
+<td><code>str | None</code></td>
 <td>ACTIVE</td>
 <td>strptime format string applied when StandardFields.type == "date" (e.g. "%-d %B %Y").  Ignored for numeric and string types.</td>
 </tr>
 <tr>
 <td><code>default</code></td>
-<td><code>str</code></td>
+<td><code>str | None</code></td>
 <td>ACTIVE</td>
 <td>Literal string value used as the output when <code>field</code> is None/absent. Useful for injecting constant metadata (e.g. transaction_type = "CC").</td>
 </tr>
 <tr>
 <td><code>multiplier</code></td>
-<td><code>float</code></td>
+<td><code>float | None</code></td>
 <td>ACTIVE</td>
 <td>Scalar applied to the value after casting when StandardFields.type == "numeric".  Use -1 to invert sign (e.g. to convert a credit amount stored as positive into a negative figure).</td>
 </tr>
 <tr>
 <td><code>exclude_positive_values</code></td>
-<td><code>bool</code></td>
+<td><code>bool | None</code></td>
 <td>ACTIVE</td>
 <td>When True, any positive numeric value is replaced with 0 after casting.  Used to isolate debit-side figures from a combined amount column.</td>
 </tr>
 <tr>
 <td><code>exclude_negative_values</code></td>
-<td><code>bool</code></td>
+<td><code>bool | None</code></td>
 <td>ACTIVE</td>
 <td>When True, any negative numeric value is replaced with 0 after casting.  Used to isolate credit-side figures from a combined amount column.</td>
 </tr>
 <tr>
 <td><code>terminator</code></td>
-<td><code>str</code></td>
+<td><code>str | None</code></td>
 <td>ACTIVE</td>
 <td>Regex pattern; when present the string value is truncated at the first match position before being written to the standard column.  Useful for stripping trailing boilerplate appended by merge_fields (e.g. " | BALANCE CARRIED FORWARD").</td>
 </tr>
@@ -4088,13 +4088,13 @@ not currently read by the pipeline — they are reserved for future use.</p>
 </tr>
 <tr>
 <td><code>config</code></td>
-<td><code>Config</code></td>
+<td><code>Config | None</code></td>
 <td>ACTIVE</td>
 <td>Extraction config used during the company-identification pass. Extracts a discriminating field (e.g. a bank-specific header string) to confirm the PDF belongs to this company before attempting account matching.</td>
 </tr>
 <tr>
 <td><code>accounts</code></td>
-<td><code>dict</code></td>
+<td><code>dict | None</code></td>
 <td>STUB</td>
 <td>Declared but never accessed by the pipeline after load.  Intended as a lookup from account key to Account object but currently unused.</td>
 </tr>
@@ -4126,7 +4126,7 @@ not currently read by the pipeline — they are reserved for future use.</p>
 </tr>
 <tr>
 <td><code>company</code></td>
-<td><code>Company</code></td>
+<td><code>Company | None</code></td>
 <td>ACTIVE</td>
 <td>Resolved at load time from company_key.  Provides the company name and company-level identification config.</td>
 </tr>
@@ -4138,7 +4138,7 @@ not currently read by the pipeline — they are reserved for future use.</p>
 </tr>
 <tr>
 <td><code>account_type</code></td>
-<td><code>AccountType</code></td>
+<td><code>AccountType | None</code></td>
 <td>STUB</td>
 <td>Resolved at load time from account_type_key.  The AccountType object is populated but never subsequently read by any pipeline consumer.</td>
 </tr>
@@ -4150,7 +4150,7 @@ not currently read by the pipeline — they are reserved for future use.</p>
 </tr>
 <tr>
 <td><code>statement_type</code></td>
-<td><code>StatementType</code></td>
+<td><code>StatementType | None</code></td>
 <td>ACTIVE</td>
 <td>Resolved at load time from statement_type_key.  Provides the header and lines ConfigGroups used during extraction.</td>
 </tr>
@@ -4240,7 +4240,7 @@ not currently read by the pipeline — they are reserved for future use.</p>
 <tbody>
 <tr>
 <td><code>configs</code></td>
-<td><code>list&amp;#91;Config</code></td>
+<td><code>list&amp;#91;Config&amp;#93; | None</code></td>
 <td>ACTIVE</td>
 <td>Ordered list of Config steps.  Executed in sequence during extraction; results are stacked into the section's results DataFrame.</td>
 </tr>
@@ -4266,25 +4266,25 @@ not currently read by the pipeline — they are reserved for future use.</p>
 </tr>
 <tr>
 <td><code>statement_table_key</code></td>
-<td><code>str</code></td>
+<td><code>str | None</code></td>
 <td>ACTIVE</td>
 <td>Key into statement_tables.toml that identifies the StatementTable to use.  Resolved to statement_table at load time.  Set to None for inline single-field configs.</td>
 </tr>
 <tr>
 <td><code>statement_table</code></td>
-<td><code>StatementTable</code></td>
+<td><code>StatementTable | None</code></td>
 <td>ACTIVE</td>
 <td>Resolved at load time from statement_table_key.  The StatementTable object used during extraction.  Not set directly in TOML.</td>
 </tr>
 <tr>
 <td><code>locations</code></td>
-<td><code>list&amp;#91;Location</code></td>
+<td><code>list&amp;#91;Location&amp;#93; | None</code></td>
 <td>ACTIVE</td>
 <td>Used only for inline single-field configs (where statement_table is None).  Defines where on the page to find the field value.</td>
 </tr>
 <tr>
 <td><code>field</code></td>
-<td><code>Field</code></td>
+<td><code>Field | None</code></td>
 <td>ACTIVE</td>
 <td>Used only for inline single-field configs.  Defines the extraction spec for the single value to read from the location.</td>
 </tr>
@@ -4316,13 +4316,13 @@ not currently read by the pipeline — they are reserved for future use.</p>
 </tr>
 <tr>
 <td><code>header_text</code></td>
-<td><code>str</code></td>
+<td><code>str | None</code></td>
 <td>ACTIVE</td>
 <td>When set, the first table row whose text matches this string is stripped before extraction.  Use when pdfplumber includes the column header row in the extracted data.</td>
 </tr>
 <tr>
 <td><code>remove_header</code></td>
-<td><code>bool</code></td>
+<td><code>bool | None</code></td>
 <td>ACTIVE</td>
 <td>When True the first table row is unconditionally stripped.  Use when the header row is always present but its text varies (making header_text impractical).</td>
 </tr>
@@ -4340,49 +4340,49 @@ not currently read by the pipeline — they are reserved for future use.</p>
 </tr>
 <tr>
 <td><code>table_columns</code></td>
-<td><code>int</code></td>
+<td><code>int | None</code></td>
 <td>ACTIVE</td>
 <td>Expected minimum number of columns in the extracted table.  Passed to pdfplumber as min_words_horizontal and used to validate column count after extraction.  Also triggers allow_text_failover retry logic.</td>
 </tr>
 <tr>
 <td><code>table_rows</code></td>
-<td><code>int</code></td>
+<td><code>int | None</code></td>
 <td>ACTIVE</td>
 <td>Expected minimum number of rows in the extracted table.  Passed to pdfplumber as min_words_vertical.</td>
 </tr>
 <tr>
 <td><code>row_spacing</code></td>
-<td><code>int</code></td>
+<td><code>int | None</code></td>
 <td>ACTIVE</td>
 <td>pdfplumber snap_y_tolerance in PDF points.  Rows whose top edges fall within this distance of each other are merged into the same table row. Increase if the statement uses tight line spacing that splits a single visual row across multiple pdfplumber rows.</td>
 </tr>
 <tr>
 <td><code>tests</code></td>
-<td><code>list&amp;#91;Test</code></td>
+<td><code>list&amp;#91;Test&amp;#93; | None</code></td>
 <td>STUB</td>
 <td>Declarative post-extraction assertions.  Declared and accepted in TOML but no pipeline code evaluates them.  Reserved for a future config validation pass.</td>
 </tr>
 <tr>
 <td><code>delete_success_false</code></td>
-<td><code>bool</code></td>
+<td><code>bool | None</code></td>
 <td>STUB</td>
 <td>Intended to drop rows where any field extraction returned success = False.  Declared and set in TOML (typically True) but no pipeline code currently reads or acts on this flag.</td>
 </tr>
 <tr>
 <td><code>delete_cast_success_false</code></td>
-<td><code>bool</code></td>
+<td><code>bool | None</code></td>
 <td>STUB</td>
 <td>Intended to drop rows where numeric casting failed.  Declared and set in TOML (typically True) but no pipeline code currently reads or acts on this flag.</td>
 </tr>
 <tr>
 <td><code>delete_rows_with_missing_vital_fields</code></td>
-<td><code>bool</code></td>
+<td><code>bool | None</code></td>
 <td>STUB</td>
 <td>Intended to drop rows where any vital field is missing after extraction.  Declared and set in TOML (typically True) but no pipeline code currently reads or acts on this flag.  Note: vital-field hard-failure logic exists in validate() but is separate from this flag.</td>
 </tr>
 <tr>
 <td><code>transaction_spec</code></td>
-<td><code>TransactionSpec</code></td>
+<td><code>TransactionSpec | None</code></td>
 <td>ACTIVE</td>
 <td>When set, the table is processed as a transaction table using the bookend-based multi-row extraction path.  Must be None for summary/detail tables.</td>
 </tr>
@@ -4402,43 +4402,43 @@ not currently read by the pipeline — they are reserved for future use.</p>
 <tbody>
 <tr>
 <td><code>page_number</code></td>
-<td><code>int</code></td>
+<td><code>int | None</code></td>
 <td>ACTIVE</td>
 <td>1-based page number.  When set the location is used only on that page.  When None the location is cloned for every page (spawn_locations()).</td>
 </tr>
 <tr>
 <td><code>top_left</code></td>
-<td><code>list&amp;#91;int</code></td>
+<td><code>list&amp;#91;int&amp;#93; | None</code></td>
 <td>ACTIVE</td>
 <td>&#91;x, y&#93; coordinates of the top-left corner of the crop rectangle. Must be set together with bottom_right.  When both are None the full page is used.</td>
 </tr>
 <tr>
 <td><code>bottom_right</code></td>
-<td><code>list&amp;#91;int</code></td>
+<td><code>list&amp;#91;int&amp;#93; | None</code></td>
 <td>ACTIVE</td>
 <td>&#91;x, y&#93; coordinates of the bottom-right corner of the crop rectangle.  Must be set together with top_left.</td>
 </tr>
 <tr>
 <td><code>vertical_lines</code></td>
-<td><code>list&amp;#91;int</code></td>
+<td><code>list&amp;#91;int&amp;#93; | None</code></td>
 <td>ACTIVE</td>
 <td>Explicit x-coordinates of vertical column dividers supplied to pdfplumber as explicit_vertical_lines.  Pairs of identical values create a zero-width gap that forces a column boundary (e.g. &#91;100, 100, 200, 200&#93;). When set, pdfplumber's automatic column detection is disabled for this region.</td>
 </tr>
 <tr>
 <td><code>dynamic_last_vertical_line</code></td>
-<td><code>DynamicLineSpec</code></td>
+<td><code>DynamicLineSpec | None</code></td>
 <td>ACTIVE</td>
 <td>When set, the final value in vertical_lines is replaced at runtime with an x-coordinate derived from a PDF image's bounding box.  See DynamicLineSpec.  Used where the rightmost column boundary floats with a logo.</td>
 </tr>
 <tr>
 <td><code>allow_text_failover</code></td>
-<td><code>bool</code></td>
+<td><code>bool | None</code></td>
 <td>ACTIVE</td>
 <td>When True and the extracted table has the wrong number of columns, the extraction is retried without vertical_lines, falling back to pdfplumber's text-based column detection.  Useful as a safety net for pages where the explicit dividers produce a malformed table.</td>
 </tr>
 <tr>
 <td><code>try_shift_down</code></td>
-<td><code>int</code></td>
+<td><code>int | None</code></td>
 <td>ACTIVE</td>
 <td>Number of PDF points to shift the crop rectangle downward (applied to both top_left&#91;1&#93; and bottom_right&#91;1&#93;) when the initial extraction returns an empty region.  Handles statements where the table top boundary varies slightly between pages.</td>
 </tr>
@@ -4490,7 +4490,7 @@ not currently read by the pipeline — they are reserved for future use.</p>
 </tr>
 <tr>
 <td><code>cell</code></td>
-<td><code>Cell</code></td>
+<td><code>Cell | None</code></td>
 <td>ACTIVE</td>
 <td>Row/column address for summary or detail table extraction. Mutually exclusive with <code>column</code>; set to None for transaction tables.</td>
 </tr>
@@ -4514,13 +4514,13 @@ not currently read by the pipeline — they are reserved for future use.</p>
 </tr>
 <tr>
 <td><code>strip_characters_start</code></td>
-<td><code>str</code></td>
+<td><code>str | None</code></td>
 <td>ACTIVE</td>
 <td>Characters to strip from the start of the raw string before pattern matching (passed to Polars str.strip_chars_start()).  Useful for leading currency symbols not covered by the account currency spec.</td>
 </tr>
 <tr>
 <td><code>strip_characters_end</code></td>
-<td><code>str</code></td>
+<td><code>str | None</code></td>
 <td>ACTIVE</td>
 <td>Characters to strip from the end of the raw string before pattern matching (passed to Polars str.strip_chars_end()).</td>
 </tr>
@@ -4532,25 +4532,25 @@ not currently read by the pipeline — they are reserved for future use.</p>
 </tr>
 <tr>
 <td><code>numeric_modifier</code></td>
-<td><code>NumericModifier</code></td>
+<td><code>NumericModifier | None</code></td>
 <td>ACTIVE</td>
 <td>Sign/multiplier transformation applied after numeric casting. See NumericModifier.  Omit for straightforward positive numeric values.</td>
 </tr>
 <tr>
 <td><code>string_pattern</code></td>
-<td><code>str</code></td>
+<td><code>str | None</code></td>
 <td>ACTIVE</td>
 <td>Regex pattern the extracted string must match.  Extraction is marked as failed (success = False) if the value does not match.  Used to validate field contents (e.g. date format) and to skip blank or irrelevant rows.</td>
 </tr>
 <tr>
 <td><code>string_max_length</code></td>
-<td><code>int</code></td>
+<td><code>int | None</code></td>
 <td>ACTIVE</td>
 <td>Maximum character length for string values; longer strings are truncated via str.head().  Useful for capping free-text description fields. Defaults to 999 if not set.</td>
 </tr>
 <tr>
 <td><code>date_format</code></td>
-<td><code>str</code></td>
+<td><code>str | None</code></td>
 <td>STUB</td>
 <td>Intended strptime format for date parsing at the Field level. Declared but never read by the pipeline; date format parsing is handled via StdRefs.format in get_standard_fields() instead.</td>
 </tr>
@@ -4562,7 +4562,7 @@ not currently read by the pipeline — they are reserved for future use.</p>
 </tr>
 <tr>
 <td><code>regex_groups</code></td>
-<td><code>int</code></td>
+<td><code>int | None</code></td>
 <td>ACTIVE</td>
 <td>When set, extracts the specified capture group (1-indexed) from the string_pattern regex match instead of the entire match (group 0). Useful for splitting a single PDF column into multiple fields via regex capture groups. Example: string_pattern = '^(&#91;A-Z &#93;+)\s+(&#91;A-Z0-9&#93;+)$' with regex_groups = 1 extracts group 1; regex_groups = 2 extracts group 2. When None, defaults to group 0 (entire match, backward compatible). Omit for standard extraction.</td>
 </tr>
@@ -4638,7 +4638,7 @@ not currently read by the pipeline — they are reserved for future use.</p>
 </tr>
 <tr>
 <td><code>numeric_modifier</code></td>
-<td><code>NumericModifier</code></td>
+<td><code>NumericModifier | None</code></td>
 <td>ACTIVE</td>
 <td>Sign/multiplier modifier for the offset value.  Overrides the parent Field.numeric_modifier.</td>
 </tr>
@@ -4658,13 +4658,13 @@ not currently read by the pipeline — they are reserved for future use.</p>
 <tbody>
 <tr>
 <td><code>prefix</code></td>
-<td><code>str</code></td>
+<td><code>str | None</code></td>
 <td>ACTIVE</td>
 <td>If the raw value starts with this string the prefix is stripped and the multiplier applied.  Use for formats like "(123.45)" where "(" signals a negative value.</td>
 </tr>
 <tr>
 <td><code>suffix</code></td>
-<td><code>str</code></td>
+<td><code>str | None</code></td>
 <td>ACTIVE</td>
 <td>If the raw value ends with this string the suffix is stripped and the multiplier applied.  Use for formats like "123.45 CR" or "123.45D".</td>
 </tr>
@@ -4758,19 +4758,19 @@ not currently read by the pipeline — they are reserved for future use.</p>
 </tr>
 <tr>
 <td><code>fill_forward_fields</code></td>
-<td><code>list&amp;#91;str</code></td>
+<td><code>list&amp;#91;str&amp;#93; | None</code></td>
 <td>ACTIVE</td>
 <td>Field names whose null values should be forward-filled across rows within the same page after pivot.  Use for sparse columns where a value (e.g. a date or payment type) appears only on the first row of a multi-row block and needs propagating to the end row.</td>
 </tr>
 <tr>
 <td><code>merge_fields</code></td>
-<td><code>MergeFields</code></td>
+<td><code>MergeFields | None</code></td>
 <td>ACTIVE</td>
 <td>When set, collapses multi-row text fields within each transaction into a single joined string.  See MergeFields.</td>
 </tr>
 <tr>
 <td><code>exclude_rows</code></td>
-<td><code>list&amp;#91;FieldValidation</code></td>
+<td><code>list&amp;#91;FieldValidation&amp;#93; | None</code></td>
 <td>ACTIVE</td>
 <td>Rows where any rule's field value matches its pattern are removed from the results before bookend detection runs.  Use to suppress known non-transaction rows (e.g. a closing balance summary line) that would otherwise interfere with transaction counting or checks &amp; balances. Each rule is a {field, pattern} pair; a row is excluded if any rule matches.</td>
 </tr>
@@ -4814,19 +4814,19 @@ not currently read by the pipeline — they are reserved for future use.</p>
 </tr>
 <tr>
 <td><code>extra_validation_start</code></td>
-<td><code>FieldValidation</code></td>
+<td><code>FieldValidation | None</code></td>
 <td>ACTIVE</td>
 <td>When set, any row where the named field's value does NOT match the pattern is excluded from being a start-bookend candidate for this bookend. Rows excluded here may still be captured by another bookend in the list. Useful for bookends that should only trigger on a specific row shape (e.g. an interest charge line identified by its details text).</td>
 </tr>
 <tr>
 <td><code>extra_validation_end</code></td>
-<td><code>FieldValidation</code></td>
+<td><code>FieldValidation | None</code></td>
 <td>STUB</td>
 <td>Symmetric counterpart to extra_validation_start for end rows. Declared but not yet implemented in the pipeline; no code currently reads this field.  Reserved for future use.</td>
 </tr>
 <tr>
 <td><code>sticky_fields</code></td>
-<td><code>list&amp;#91;str</code></td>
+<td><code>list&amp;#91;str&amp;#93; | None</code></td>
 <td>STUB</td>
 <td>Intended to forward-fill named fields from the start row of a transaction down to its end row, scoped within a single transaction (as opposed to fill_forward_fields which fills across transactions).  Declared but not implemented; no pipeline code reads this field.</td>
 </tr>
@@ -4942,49 +4942,49 @@ not currently read by the pipeline — they are reserved for future use.</p>
 </tr>
 <tr>
 <td><code>field</code></td>
-<td><code>str</code></td>
+<td><code>str | None</code></td>
 <td>ACTIVE</td>
 <td>Name of the raw extracted column to promote.  Set to None (or omit) when a literal default value should be used instead of a column value.</td>
 </tr>
 <tr>
 <td><code>concat_fields</code></td>
-<td><code>list</code></td>
+<td><code>list | None</code></td>
 <td>ACTIVE</td>
 <td>Name of the raw extracted columns to concatenate and promote.  Set to None (or omit) in order to revert to a single field and it's fallback</td>
 </tr>
 <tr>
 <td><code>format</code></td>
-<td><code>str</code></td>
+<td><code>str | None</code></td>
 <td>ACTIVE</td>
 <td>strptime format string applied when StandardFields.type == "date" (e.g. "%-d %B %Y").  Ignored for numeric and string types.</td>
 </tr>
 <tr>
 <td><code>default</code></td>
-<td><code>str</code></td>
+<td><code>str | None</code></td>
 <td>ACTIVE</td>
 <td>Literal string value used as the output when <code>field</code> is None/absent. Useful for injecting constant metadata (e.g. transaction_type = "CC").</td>
 </tr>
 <tr>
 <td><code>multiplier</code></td>
-<td><code>float</code></td>
+<td><code>float | None</code></td>
 <td>ACTIVE</td>
 <td>Scalar applied to the value after casting when StandardFields.type == "numeric".  Use -1 to invert sign (e.g. to convert a credit amount stored as positive into a negative figure).</td>
 </tr>
 <tr>
 <td><code>exclude_positive_values</code></td>
-<td><code>bool</code></td>
+<td><code>bool | None</code></td>
 <td>ACTIVE</td>
 <td>When True, any positive numeric value is replaced with 0 after casting.  Used to isolate debit-side figures from a combined amount column.</td>
 </tr>
 <tr>
 <td><code>exclude_negative_values</code></td>
-<td><code>bool</code></td>
+<td><code>bool | None</code></td>
 <td>ACTIVE</td>
 <td>When True, any negative numeric value is replaced with 0 after casting.  Used to isolate credit-side figures from a combined amount column.</td>
 </tr>
 <tr>
 <td><code>terminator</code></td>
-<td><code>str</code></td>
+<td><code>str | None</code></td>
 <td>ACTIVE</td>
 <td>Regex pattern; when present the string value is truncated at the first match position before being written to the standard column.  Useful for stripping trailing boilerplate appended by merge_fields (e.g. " | BALANCE CARRIED FORWARD").</td>
 </tr>
