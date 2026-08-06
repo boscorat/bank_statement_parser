@@ -31,12 +31,12 @@ import time
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
+from tomllib import load
 from typing import Any, TypedDict
 
 import polars as pl
 from dacite import from_dict
 from pdfplumber.pdf import PDF
-from tomllib import load
 
 from bank_statement_parser.modules.data import (
     Account,
@@ -142,7 +142,7 @@ class ImportConfigManager:
         >>> accounts = config.get_accounts_for_company("my_company")
     """
 
-    __slots__ = ("_project_path", "_config_dict", "_accounts_df", "_statement_types_df", "_companies_df")
+    __slots__ = ("_accounts_df", "_companies_df", "_config_dict", "_project_path", "_statement_types_df")
 
     def __init__(self, project_path: Path | None = None) -> None:
         """
@@ -257,12 +257,12 @@ class ImportConfigManager:
             self._require_config_dir()
 
         config_dict: dict[str, _ConfigEntry] = {
-            "companies": {"dataclass": Company, "config": dict()},
-            "account_types": {"dataclass": AccountType, "config": dict()},
-            "accounts": {"dataclass": Account, "config": dict()},
-            "statement_types": {"dataclass": StatementType, "config": dict()},
-            "statement_tables": {"dataclass": StatementTable, "config": dict()},
-            "standard_fields": {"dataclass": StandardFields, "config": dict()},
+            "companies": {"dataclass": Company, "config": {}},
+            "account_types": {"dataclass": AccountType, "config": {}},
+            "accounts": {"dataclass": Account, "config": {}},
+            "statement_types": {"dataclass": StatementType, "config": {}},
+            "statement_tables": {"dataclass": StatementTable, "config": {}},
+            "standard_fields": {"dataclass": StandardFields, "config": {}},
         }
 
         for key in config_dict:
@@ -314,7 +314,7 @@ class ImportConfigManager:
         Args:
             config_dict: The fully loaded (but not yet linked) config dictionary.
         """
-        for key, statement_type in config_dict["statement_types"]["config"].items():
+        for statement_type in config_dict["statement_types"]["config"].values():
             for config_group in [statement_type.header.configs, statement_type.lines.configs]:
                 if config_group:
                     for idx, cfg in enumerate(config_group):
@@ -411,7 +411,7 @@ class ImportConfigManager:
             if len(result) > 0:
                 logs.vstack(
                     pl.DataFrame(
-                        [[file_path, "config", "identify_from_pdf", time.time() - start, 1, datetime.now(), ""]],
+                        [[file_path, "config", "identify_from_pdf", time.time() - start, 1, datetime.now(), ""]],  # noqa: DTZ005
                         schema=logs.schema,
                         orient="row",
                     ),
@@ -443,7 +443,7 @@ class ImportConfigManager:
             raise StatementError(f"Unable to identify the account from the statement provided: {file_path}")
         logs.vstack(
             pl.DataFrame(
-                [[file_path, "config", "get_config_from_account", time.time() - start, 1, datetime.now(), ""]],
+                [[file_path, "config", "get_config_from_account", time.time() - start, 1, datetime.now(), ""]],  # noqa: DTZ005
                 schema=logs.schema,
                 orient="row",
             ),
@@ -483,7 +483,7 @@ class ImportConfigManager:
             if len(result) > 0:
                 logs.vstack(
                     pl.DataFrame(
-                        [[file_path, "config", "get_config_from_company", time.time() - start, 1, datetime.now(), ""]],
+                        [[file_path, "config", "get_config_from_company", time.time() - start, 1, datetime.now(), ""]],  # noqa: DTZ005
                         schema=logs.schema,
                         orient="row",
                     ),
@@ -522,7 +522,7 @@ class ImportConfigManager:
                 account = self.get_config_from_company(key, pdf, logs, file_path)
                 logs.vstack(
                     pl.DataFrame(
-                        [[file_path, "config", "get_config_from_statement", time.time() - start, 1, datetime.now(), ""]],
+                        [[file_path, "config", "get_config_from_statement", time.time() - start, 1, datetime.now(), ""]],  # noqa: DTZ005
                         schema=logs.schema,
                         orient="row",
                     ),

@@ -97,26 +97,14 @@ _HAS_ANONYMISE = importlib.util.find_spec("bank_statement_anonymiser") is not No
 import bank_statement_parser.modules.reports_db as db
 
 # ---------------------------------------------------------------------------
-# Statement processing
+# Data structures
 # ---------------------------------------------------------------------------
-from bank_statement_parser.modules.statements import (
-    Statement,
-    StatementBatch,
-    copy_statements_to_project,
-    delete_temp_files,
-    process_pdf_statement,
-)
+from bank_statement_parser.modules.data import Failure, ParquetFiles, PdfResult, Review, StatementInfo, Success
 
 # ---------------------------------------------------------------------------
 # Low-level persistence helpers — consumed by openstan's StanBatch
 # ---------------------------------------------------------------------------
 from bank_statement_parser.modules.database import update_db
-from bank_statement_parser.modules.parquet import update_parquet
-
-# ---------------------------------------------------------------------------
-# Data structures
-# ---------------------------------------------------------------------------
-from bank_statement_parser.modules.data import Failure, ParquetFiles, PdfResult, Review, StatementInfo, Success
 
 # ---------------------------------------------------------------------------
 # Debug / diagnostics
@@ -137,7 +125,19 @@ from bank_statement_parser.modules.errors import (
 # Config helpers
 # ---------------------------------------------------------------------------
 from bank_statement_parser.modules.import_config import copy_default_import_config
+from bank_statement_parser.modules.parquet import update_parquet
 from bank_statement_parser.modules.paths import ProjectPaths, copy_project_folders, validate_or_initialise_project
+
+# ---------------------------------------------------------------------------
+# Statement processing
+# ---------------------------------------------------------------------------
+from bank_statement_parser.modules.statements import (
+    Statement,
+    StatementBatch,
+    copy_statements_to_project,
+    delete_temp_files,
+    process_pdf_statement,
+)
 
 # ---------------------------------------------------------------------------
 # PDF anonymisation utility
@@ -148,6 +148,16 @@ if _HAS_ANONYMISE:
 # ---------------------------------------------------------------------------
 # Low-level PDF helpers
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Database / data-mart utilities
+# ---------------------------------------------------------------------------
+from bank_statement_parser.data import Housekeeping, build_datamart, create_db
+from bank_statement_parser.modules.data import ForexApiConfig
+
+# ---------------------------------------------------------------------------
+# Forex / currency conversion
+# ---------------------------------------------------------------------------
+from bank_statement_parser.modules.forex import get_exchange_rates
 from bank_statement_parser.modules.pdf_functions import (
     get_table_from_region,
     page_crop,
@@ -157,71 +167,48 @@ from bank_statement_parser.modules.pdf_functions import (
 )
 
 # ---------------------------------------------------------------------------
-# Database / data-mart utilities
-# ---------------------------------------------------------------------------
-from bank_statement_parser.data import Housekeeping, build_datamart, create_db
-
-# ---------------------------------------------------------------------------
-# Forex / currency conversion
-# ---------------------------------------------------------------------------
-from bank_statement_parser.modules.forex import get_exchange_rates
-from bank_statement_parser.modules.data import ForexApiConfig
-
-# ---------------------------------------------------------------------------
 # Testing harness
 # ---------------------------------------------------------------------------
 from bank_statement_parser.testing import TestHarness
 
 __all__ = [
-    # Meta
-    "__app_name__",
-    "__version__",
-    # Namespaced report backend
-    "db",
-    # Statement processing
+    "Failure",
+    "ForexApiConfig",
+    "Housekeeping",
+    "ParquetFiles",
+    "PdfResult",
+    "ProjectConfigMissing",
+    "ProjectDatabaseMissing",
+    "ProjectPaths",
+    "Review",
     "Statement",
     "StatementBatch",
-    "process_pdf_statement",
-    "copy_statements_to_project",
-    "delete_temp_files",
-    # Low-level persistence helpers
-    "update_parquet",
-    "update_db",
-    # Data structures
-    "PdfResult",
-    "Success",
-    "Review",
-    "Failure",
-    "StatementInfo",
-    "ParquetFiles",
-    # Debug / diagnostics
-    "debug_pdf_statement",
-    "debug_statements",
-    # Errors
     "StatementError",
-    "ProjectDatabaseMissing",
-    "ProjectConfigMissing",
-    # Config helpers
+    "StatementInfo",
+    "Success",
+    "TestGateFailure",
+    "TestHarness",
+    "__app_name__",
+    "__version__",
+    "build_datamart",
     "copy_default_import_config",
     "copy_project_folders",
-    "validate_or_initialise_project",
-    "ProjectPaths",
-    # Low-level PDF helpers
-    "pdf_open",
+    "copy_statements_to_project",
+    "create_db",
+    "db",
+    "debug_pdf_statement",
+    "debug_statements",
+    "delete_temp_files",
+    "get_exchange_rates",
+    "get_table_from_region",
     "page_crop",
     "page_text",
+    "pdf_open",
+    "process_pdf_statement",
     "region_search",
-    "get_table_from_region",
-    # Data-mart / database
-    "build_datamart",
-    "create_db",
-    "Housekeeping",
-    # Forex / currency conversion
-    "get_exchange_rates",
-    "ForexApiConfig",
-    # Testing harness
-    "TestHarness",
-    "TestGateFailure",
+    "update_db",
+    "update_parquet",
+    "validate_or_initialise_project",
 ]
 
 # Conditionally add anonymise_pdf if uk-bank-statement-anonymiser is installed

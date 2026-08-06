@@ -21,13 +21,9 @@ from pathlib import Path
 class StatementError(Exception):
     """Root exception for statement processing errors."""
 
-    pass
-
 
 class ConfigError(StatementError):
     """Configuration error during setup."""
-
-    pass
 
 
 class ConfigFileError(ConfigError):
@@ -47,8 +43,6 @@ class NotAValidConfigFolder(ConfigError):
 
 class ProjectError(StatementError):
     """Project error during setup or operation."""
-
-    pass
 
 
 class ProjectFolderNotFound(ProjectError):
@@ -88,7 +82,7 @@ class TestGateFailure(StatementError):
         output: Captured stdout/stderr from the pytest run.
     """
 
-    __slots__ = ("failed", "errors", "output")
+    __slots__ = ("errors", "failed", "output")
 
     def __init__(self, failed: int, errors: int, output: str) -> None:
         self.failed = failed

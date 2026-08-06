@@ -302,36 +302,36 @@ class StdRefs:
     # [ACTIVE] — Key used to select this rule; matched against the statement type string
     # of the PDF being processed (e.g. "HSBC UK Current Account").
 
-    field: Optional[str]
+    field: str | None
     # [ACTIVE] — Name of the raw extracted column to promote.  Set to None (or omit)
     # when a literal default value should be used instead of a column value.
 
-    concat_fields: Optional[list]
+    concat_fields: list | None
     # [ACTIVE] — Name of the raw extracted columns to concatenate and promote.  Set to None (or omit)
     # in order to revert to a single field and it's fallback
 
-    format: Optional[str]
+    format: str | None
     # [ACTIVE] — strptime format string applied when StandardFields.type == "date"
     # (e.g. "%-d %B %Y").  Ignored for numeric and string types.
 
-    default: Optional[str]
+    default: str | None
     # [ACTIVE] — Literal string value used as the output when ``field`` is None/absent.
     # Useful for injecting constant metadata (e.g. transaction_type = "CC").
 
-    multiplier: Optional[float] = 1
+    multiplier: float | None = 1
     # [ACTIVE] — Scalar applied to the value after casting when
     # StandardFields.type == "numeric".  Use -1 to invert sign (e.g. to convert a
     # credit amount stored as positive into a negative figure).
 
-    exclude_positive_values: Optional[bool] = False
+    exclude_positive_values: bool | None = False
     # [ACTIVE] — When True, any positive numeric value is replaced with 0 after
     # casting.  Used to isolate debit-side figures from a combined amount column.
 
-    exclude_negative_values: Optional[bool] = False
+    exclude_negative_values: bool | None = False
     # [ACTIVE] — When True, any negative numeric value is replaced with 0 after
     # casting.  Used to isolate credit-side figures from a combined amount column.
 
-    terminator: Optional[str] = None
+    terminator: str | None = None
     # [ACTIVE] — Regex pattern; when present the string value is truncated at the
     # first match position before being written to the standard column.  Useful for
     # stripping trailing boilerplate appended by merge_fields
@@ -437,12 +437,12 @@ class NumericModifier:
     Example TOML: ``numeric_modifier = {suffix = "D", multiplier = -1.0}``
     """
 
-    prefix: Optional[str]
+    prefix: str | None
     # [ACTIVE] — If the raw value starts with this string the prefix is stripped and
     # the multiplier applied.  Use for formats like "(123.45)" where "(" signals a
     # negative value.
 
-    suffix: Optional[str]
+    suffix: str | None
     # [ACTIVE] — If the raw value ends with this string the suffix is stripped and
     # the multiplier applied.  Use for formats like "123.45 CR" or "123.45D".
 
@@ -499,7 +499,7 @@ class FieldOffset:
     # offset value when type == "numeric".  Overrides the account-level currency.
     # When type == "currency" the account-level currency is used and this is ignored.
 
-    numeric_modifier: Optional[NumericModifier] = None
+    numeric_modifier: NumericModifier | None = None
     # [ACTIVE] — Sign/multiplier modifier for the offset value.  Overrides the
     # parent Field.numeric_modifier.
 
@@ -524,7 +524,7 @@ class Field:
     # Used as the field identifier throughout the pipeline and in the output Parquet
     # files.
 
-    cell: Optional[Cell]
+    cell: Cell | None
     # [ACTIVE] — Row/column address for summary or detail table extraction.
     # Mutually exclusive with ``column``; set to None for transaction tables.
 
@@ -549,12 +549,12 @@ class Field:
     #                amount fields; reserve "numeric" for non-monetary numerics (e.g.
     #                APR, sort code).
 
-    strip_characters_start: Optional[str] = None
+    strip_characters_start: str | None = None
     # [ACTIVE] — Characters to strip from the start of the raw string before pattern
     # matching (passed to Polars str.strip_chars_start()).  Useful for leading
     # currency symbols not covered by the account currency spec.
 
-    strip_characters_end: Optional[str] = None
+    strip_characters_end: str | None = None
     # [ACTIVE] — Characters to strip from the end of the raw string before pattern
     # matching (passed to Polars str.strip_chars_end()).
 
@@ -565,22 +565,22 @@ class Field:
     # (which always uses the account-level currency).  Omit for non-monetary numeric
     # fields (e.g. APR, sort code) where no currency stripping is required.
 
-    numeric_modifier: Optional[NumericModifier] = None
+    numeric_modifier: NumericModifier | None = None
     # [ACTIVE] — Sign/multiplier transformation applied after numeric casting.
     # See NumericModifier.  Omit for straightforward positive numeric values.
 
-    string_pattern: Optional[str] = None
+    string_pattern: str | None = None
     # [ACTIVE] — Regex pattern the extracted string must match.  Extraction is
     # marked as failed (success = False) if the value does not match.  Used to
     # validate field contents (e.g. date format) and to skip blank or irrelevant
     # rows.
 
-    string_max_length: Optional[int] = None
+    string_max_length: int | None = None
     # [ACTIVE] — Maximum character length for string values; longer strings are
     # truncated via str.head().  Useful for capping free-text description fields.
     # Defaults to 999 if not set.
 
-    date_format: Optional[str] = None
+    date_format: str | None = None
     # [STUB] — Intended strptime format for date parsing at the Field level.
     # Declared but never read by the pipeline; date format parsing is handled via
     # StdRefs.format in get_standard_fields() instead.
@@ -592,7 +592,7 @@ class Field:
     # column is still extracted normally; the offset column value replaces it in the
     # output.  See FieldOffset.
 
-    regex_groups: Optional[int] = None
+    regex_groups: int | None = None
     # [ACTIVE] — When set, extracts the specified capture group (1-indexed) from the
     # string_pattern regex match instead of the entire match (group 0). Useful for
     # splitting a single PDF column into multiple fields via regex capture groups.
@@ -655,37 +655,37 @@ class Location:
     ``{page_number = 1, top_left = [50, 120], bottom_right = [560, 400], vertical_lines = [50, 150, 150, 320]}``
     """
 
-    page_number: Optional[int] = None
+    page_number: int | None = None
     # [ACTIVE] — 1-based page number.  When set the location is used only on that
     # page.  When None the location is cloned for every page (spawn_locations()).
 
-    top_left: Optional[list[int]] = None
+    top_left: list[int] | None = None
     # [ACTIVE] — [x, y] coordinates of the top-left corner of the crop rectangle.
     # Must be set together with bottom_right.  When both are None the full page is
     # used.
 
-    bottom_right: Optional[list[int]] = None
+    bottom_right: list[int] | None = None
     # [ACTIVE] — [x, y] coordinates of the bottom-right corner of the crop
     # rectangle.  Must be set together with top_left.
 
-    vertical_lines: Optional[list[int]] = None
+    vertical_lines: list[int] | None = None
     # [ACTIVE] — Explicit x-coordinates of vertical column dividers supplied to
     # pdfplumber as explicit_vertical_lines.  Pairs of identical values create a
     # zero-width gap that forces a column boundary (e.g. [100, 100, 200, 200]).
     # When set, pdfplumber's automatic column detection is disabled for this region.
 
-    dynamic_last_vertical_line: Optional[DynamicLineSpec] = None
+    dynamic_last_vertical_line: DynamicLineSpec | None = None
     # [ACTIVE] — When set, the final value in vertical_lines is replaced at runtime
     # with an x-coordinate derived from a PDF image's bounding box.  See
     # DynamicLineSpec.  Used where the rightmost column boundary floats with a logo.
 
-    allow_text_failover: Optional[bool] = False
+    allow_text_failover: bool | None = False
     # [ACTIVE] — When True and the extracted table has the wrong number of columns,
     # the extraction is retried without vertical_lines, falling back to pdfplumber's
     # text-based column detection.  Useful as a safety net for pages where the
     # explicit dividers produce a malformed table.
 
-    try_shift_down: Optional[int] = None
+    try_shift_down: int | None = None
     # [ACTIVE] — Number of PDF points to shift the crop rectangle downward (applied
     # to both top_left[1] and bottom_right[1]) when the initial extraction returns an
     # empty region.  Handles statements where the table top boundary varies slightly
@@ -760,19 +760,19 @@ class TransactionBookend:
     # [ACTIVE] — Minimum number of end_fields that must have extracted
     # successfully for a row to be flagged as transaction_end = True.
 
-    extra_validation_start: Optional[FieldValidation]
+    extra_validation_start: FieldValidation | None
     # [ACTIVE] — When set, any row where the named field's value does NOT match the
     # pattern is excluded from being a start-bookend candidate for this bookend.
     # Rows excluded here may still be captured by another bookend in the list.
     # Useful for bookends that should only trigger on a specific row shape
     # (e.g. an interest charge line identified by its details text).
 
-    extra_validation_end: Optional[FieldValidation]
+    extra_validation_end: FieldValidation | None
     # [STUB] — Symmetric counterpart to extra_validation_start for end rows.
     # Declared but not yet implemented in the pipeline; no code currently reads
     # this field.  Reserved for future use.
 
-    sticky_fields: Optional[list[str]]
+    sticky_fields: list[str] | None
     # [STUB] — Intended to forward-fill named fields from the start row of a
     # transaction down to its end row, scoped within a single transaction (as
     # opposed to fill_forward_fields which fills across transactions).  Declared
@@ -822,17 +822,17 @@ class TransactionSpec:
     # boundaries.  Evaluated in order; a row matched by an earlier bookend is not
     # re-matched by a later one.  At least one bookend is required.
 
-    fill_forward_fields: Optional[list[str]]
+    fill_forward_fields: list[str] | None
     # [ACTIVE] — Field names whose null values should be forward-filled across rows
     # within the same page after pivot.  Use for sparse columns where a value
     # (e.g. a date or payment type) appears only on the first row of a multi-row
     # block and needs propagating to the end row.
 
-    merge_fields: Optional[MergeFields]
+    merge_fields: MergeFields | None
     # [ACTIVE] — When set, collapses multi-row text fields within each transaction
     # into a single joined string.  See MergeFields.
 
-    exclude_rows: Optional[list[FieldValidation]]
+    exclude_rows: list[FieldValidation] | None
     # [ACTIVE] — Rows where any rule's field value matches its pattern are removed
     # from the results before bookend detection runs.  Use to suppress known
     # non-transaction rows (e.g. a closing balance summary line) that would
@@ -876,12 +876,12 @@ class StatementTable:
     # [STUB] — Human-readable table label (e.g. "Transactions", "Account Summary").
     # Loaded from TOML for documentation purposes but not consumed by the pipeline.
 
-    header_text: Optional[str]
+    header_text: str | None
     # [ACTIVE] — When set, the first table row whose text matches this string is
     # stripped before extraction.  Use when pdfplumber includes the column header
     # row in the extracted data.
 
-    remove_header: Optional[bool]
+    remove_header: bool | None
     # [ACTIVE] — When True the first table row is unconditionally stripped.  Use
     # when the header row is always present but its text varies (making header_text
     # impractical).
@@ -895,43 +895,43 @@ class StatementTable:
     # each field must have a column; for summary/detail tables each field must have
     # a cell.
 
-    table_columns: Optional[int]
+    table_columns: int | None
     # [ACTIVE] — Expected minimum number of columns in the extracted table.  Passed
     # to pdfplumber as min_words_horizontal and used to validate column count after
     # extraction.  Also triggers allow_text_failover retry logic.
 
-    table_rows: Optional[int]
+    table_rows: int | None
     # [ACTIVE] — Expected minimum number of rows in the extracted table.  Passed to
     # pdfplumber as min_words_vertical.
 
-    row_spacing: Optional[int]
+    row_spacing: int | None
     # [ACTIVE] — pdfplumber snap_y_tolerance in PDF points.  Rows whose top edges
     # fall within this distance of each other are merged into the same table row.
     # Increase if the statement uses tight line spacing that splits a single visual
     # row across multiple pdfplumber rows.
 
-    tests: Optional[list[Test]]
+    tests: list[Test] | None
     # [STUB] — Declarative post-extraction assertions.  Declared and accepted in
     # TOML but no pipeline code evaluates them.  Reserved for a future config
     # validation pass.
 
-    delete_success_false: Optional[bool]
+    delete_success_false: bool | None
     # [STUB] — Intended to drop rows where any field extraction returned
     # success = False.  Declared and set in TOML (typically True) but no pipeline
     # code currently reads or acts on this flag.
 
-    delete_cast_success_false: Optional[bool]
+    delete_cast_success_false: bool | None
     # [STUB] — Intended to drop rows where numeric casting failed.  Declared and
     # set in TOML (typically True) but no pipeline code currently reads or acts on
     # this flag.
 
-    delete_rows_with_missing_vital_fields: Optional[bool]
+    delete_rows_with_missing_vital_fields: bool | None
     # [STUB] — Intended to drop rows where any vital field is missing after
     # extraction.  Declared and set in TOML (typically True) but no pipeline code
     # currently reads or acts on this flag.  Note: vital-field hard-failure logic
     # exists in validate() but is separate from this flag.
 
-    transaction_spec: Optional[TransactionSpec]
+    transaction_spec: TransactionSpec | None
     # [ACTIVE] — When set, the table is processed as a transaction table using the
     # bookend-based multi-row extraction path.  Must be None for summary/detail
     # tables.
@@ -954,20 +954,20 @@ class Config:
     # Balances").  Written into the "config" column of the long-format results
     # DataFrame for traceability.
 
-    statement_table_key: Optional[str]
+    statement_table_key: str | None
     # [ACTIVE] — Key into statement_tables.toml that identifies the StatementTable
     # to use.  Resolved to statement_table at load time.  Set to None for inline
     # single-field configs.
 
-    statement_table: Optional[StatementTable]
+    statement_table: StatementTable | None
     # [ACTIVE] — Resolved at load time from statement_table_key.  The StatementTable
     # object used during extraction.  Not set directly in TOML.
 
-    locations: Optional[list[Location]]
+    locations: list[Location] | None
     # [ACTIVE] — Used only for inline single-field configs (where statement_table is
     # None).  Defines where on the page to find the field value.
 
-    field: Optional[Field]
+    field: Field | None
     # [ACTIVE] — Used only for inline single-field configs.  Defines the extraction
     # spec for the single value to read from the location.
 
@@ -981,7 +981,7 @@ class ConfigGroup:
     Defined in ``statement_types.toml``.
     """
 
-    configs: Optional[list[Config]]
+    configs: list[Config] | None
     # [ACTIVE] — Ordered list of Config steps.  Executed in sequence during
     # extraction; results are stacked into the section's results DataFrame.
 
@@ -1038,12 +1038,12 @@ class Company:
     # [ACTIVE] — Human-readable company name (e.g. "HSBC UK").  Used to populate
     # the STD_COMPANY standard field.
 
-    config: Optional[Config]
+    config: Config | None
     # [ACTIVE] — Extraction config used during the company-identification pass.
     # Extracts a discriminating field (e.g. a bank-specific header string) to
     # confirm the PDF belongs to this company before attempting account matching.
 
-    accounts: Optional[dict]
+    accounts: dict | None
     # [STUB] — Declared but never accessed by the pipeline after load.  Intended
     # as a lookup from account key to Account object but currently unused.
 
@@ -1081,7 +1081,7 @@ class Account:
     # [ACTIVE] — Key into companies.toml identifying the issuing bank.  Used to
     # build ID_ACCOUNT and to look up the Company object at load time.
 
-    company: Optional[Company]
+    company: Company | None
     # [ACTIVE] — Resolved at load time from company_key.  Provides the company name
     # and company-level identification config.
 
@@ -1089,7 +1089,7 @@ class Account:
     # [ACTIVE] — Key into account_types.toml (e.g. "CRD", "CUR", "SAV").  Used to
     # look up the AccountType object at load time.
 
-    account_type: Optional[AccountType]
+    account_type: AccountType | None
     # [STUB] — Resolved at load time from account_type_key.  The AccountType object
     # is populated but never subsequently read by any pipeline consumer.
 
@@ -1098,7 +1098,7 @@ class Account:
     # this account's statements.  Used to look up the StatementType object at load
     # time.
 
-    statement_type: Optional[StatementType]
+    statement_type: StatementType | None
     # [ACTIVE] — Resolved at load time from statement_type_key.  Provides the header
     # and lines ConfigGroups used during extraction.
 

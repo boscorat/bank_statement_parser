@@ -169,7 +169,7 @@ def _write_debug_excel(
         debug_dataframes: Dict mapping section names to lists of dataframes.
     """
     try:
-        from xlsxwriter import Workbook  # noqa: PLC0415
+        from xlsxwriter import Workbook
 
         out_file = debug_dir / "debug_dataframes.xlsx"
         wb = Workbook(str(out_file))
@@ -222,8 +222,8 @@ def _write_debug_json(stmt: "Statement", include_lines: bool = False) -> Path | 
         Path to the debug.json file that was written, or ``None`` if an
         error prevented writing (the error is printed to stdout).
     """
-    import json  # noqa: PLC0415
-    from datetime import datetime  # noqa: PLC0415
+    import json
+    from datetime import datetime
 
     try:
         paths = ProjectPaths.resolve(stmt.project_path)
@@ -256,7 +256,7 @@ def _write_debug_json(stmt: "Statement", include_lines: bool = False) -> Path | 
                 "id_batch": stmt.ID_BATCH or "",
                 "success": stmt.success,
                 "error_message": stmt.error_message,
-                "debug_timestamp": datetime.now().isoformat(timespec="seconds"),
+                "debug_timestamp": datetime.now().isoformat(timespec="seconds"),  # noqa: DTZ005
             },
             "events": stmt._debug_collector or [],
             "checks_and_balances": cab_data,
@@ -310,41 +310,38 @@ class Statement:
     """
 
     __slots__ = (
+        "ID_ACCOUNT",
+        "ID_BATCH",
+        "ID_STATEMENT",
+        "_debug_collector",
+        "_debug_dataframes",
+        "account",
+        "account_key",
+        "checks_and_balances",
+        "company",
         "company_key",
+        "config",
+        "config_header",
+        "config_lines",
+        "debug",
+        "error_detail",
+        "error_message",
         "file",
         "file_absolute",
         "file_renamed",
-        "account_key",
-        "ID_BATCH",
-        "ID_ACCOUNT",
-        "checks_and_balances",
-        "pdf",
-        "ID_STATEMENT",
-        "config",
-        "company",
-        "account",
-        "statement_type",
-        "config_header",
-        "config_lines",
         "header_results",
         "lines_results",
-        "success",
-        "error_message",
+        "logs",
+        "pdf",
         "project_path",
         "skip_project_validation",
-        "logs",
-        "error_detail",
-        # Lightweight summary scalars — populated on success; None otherwise.
-        # Avoids a second .collect() call in process_pdf_statement().
-        "std_statement_date",
+        "statement_type",
+        "std_closing_balance",
+        "std_opening_balance",
         "std_payments_in",
         "std_payments_out",
-        "std_opening_balance",
-        "std_closing_balance",
-        # Debug support — populated when debug=True; None otherwise.
-        "debug",
-        "_debug_collector",
-        "_debug_dataframes",
+        "std_statement_date",
+        "success",
     )
 
     def __init__(
@@ -413,7 +410,7 @@ class Statement:
         self.skip_project_validation = skip_project_validation
         self.debug: bool = debug
         self._debug_collector: list | None = [] if debug else None
-        self._debug_dataframes: dict[str, list[pl.DataFrame]] = {} if debug else {}
+        self._debug_dataframes: dict[str, list[pl.DataFrame]] = {}
 
         # Safe defaults — ensure every slot is initialised before the processing
         # try block so that is_successfull() and cleanup() never hit an
@@ -619,27 +616,17 @@ class Statement:
             self.checks_and_balances.filter(pl.col("ZERO_TRANSACTION_STATEMENT")).height > 0
         ):  # some statments are just a header so there's nothing really to fail
             return True
-        if self.header_results.collect().height == 0:
-            return False
-        elif self.lines_results.collect().height == 0:
-            return False
-        elif self.checks_and_balances.height == 0:
-            return False
-        elif self.checks_and_balances.filter(~pl.col("BAL_PAYMENTS_IN")).height > 0:
-            return False
-        elif self.checks_and_balances.filter(~pl.col("BAL_PAYMENTS_OUT")).height > 0:
-            return False
-        elif self.checks_and_balances.filter(~pl.col("BAL_MOVEMENT")).height > 0:
-            return False
-        elif self.checks_and_balances.filter(~pl.col("BAL_CLOSING")).height > 0:
-            return False
-        # Check that no transaction lines have null dates (datamart integrity)
-        elif self.checks_and_balances.filter(pl.col("TRANSACTION_LINES_WITH_NULL_DATE") > 0).height > 0:
-            return False
-        # Check that no transaction lines have null descriptions
-        elif self.checks_and_balances.filter(pl.col("TRANSACTION_LINES_WITH_NULL_DESC") > 0).height > 0:
-            return False
-        return True
+        return not (
+            self.header_results.collect().height == 0
+            or self.lines_results.collect().height == 0
+            or self.checks_and_balances.height == 0
+            or self.checks_and_balances.filter(~pl.col("BAL_PAYMENTS_IN")).height > 0
+            or self.checks_and_balances.filter(~pl.col("BAL_PAYMENTS_OUT")).height > 0
+            or self.checks_and_balances.filter(~pl.col("BAL_MOVEMENT")).height > 0
+            or self.checks_and_balances.filter(~pl.col("BAL_CLOSING")).height > 0
+            or self.checks_and_balances.filter(pl.col("TRANSACTION_LINES_WITH_NULL_DATE") > 0).height > 0
+            or self.checks_and_balances.filter(pl.col("TRANSACTION_LINES_WITH_NULL_DESC") > 0).height > 0
+        )
 
     def get_results(self, section: str) -> pl.LazyFrame:
         """
@@ -917,7 +904,7 @@ def process_pdf_statement(
     batch_line["STD_FILENAME"] = pdf.name
     batch_line["STD_ACCOUNT"] = ""
     batch_line["STD_DURATION_SECS"] = 0.00
-    batch_line["STD_UPDATETIME"] = datetime.now()
+    batch_line["STD_UPDATETIME"] = datetime.now()  # noqa: DTZ005
     batch_line["STD_SUCCESS"] = False
     batch_line["STD_ERROR_MESSAGE"] = ""
     batch_line["ERROR_CAB"] = False
@@ -980,7 +967,7 @@ def process_pdf_statement(
                 statement_heads_path = paths.statement_heads_temp(idx, batch_id)
                 pq_statement_heads.cleanup()
                 pq_statement_heads = None
-            except (IOError, OSError, ValueError, pl.exceptions.PolarsError) as e:
+            except (OSError, ValueError, pl.exceptions.PolarsError) as e:
                 _handle_parquet_write_error("StatementHeads", batch_line, [error_message], pdf, e)
                 error_data = True
 
@@ -995,7 +982,7 @@ def process_pdf_statement(
                 statement_lines_path = paths.statement_lines_temp(idx, batch_id)
                 pq_statement_lines.cleanup()
                 pq_statement_lines = None
-            except (IOError, OSError, ValueError, pl.exceptions.PolarsError) as e:
+            except (OSError, ValueError, pl.exceptions.PolarsError) as e:
                 _handle_parquet_write_error("StatementLines", batch_line, [error_message], pdf, e)
                 error_data = True
 
@@ -1038,15 +1025,13 @@ def process_pdf_statement(
                 cab_path = paths.cab_temp(idx, batch_id)
                 pq_cab.cleanup()
                 pq_cab = None
-            except (IOError, OSError, ValueError, pl.exceptions.PolarsError) as e:
+            except (OSError, ValueError, pl.exceptions.PolarsError) as e:
                 _handle_parquet_write_error("ChecksAndBalances", batch_line, [error_message], pdf, e)
                 error_data = True
 
         stmt.cleanup()
         stmt = None
-    except Exception as e:
-        # Last-resort guard — intentionally broad to catch any unexpected failures outside
-        # the statement constructor (e.g. path resolution errors, import issues).
+    except Exception as e:  # noqa: BLE001 — last-resort guard, intentionally broad
         # All recoverable statement-level errors are caught by inner try/except blocks above.
         error_other = True
         batch_line["ERROR_CONFIG"] = True
@@ -1058,7 +1043,7 @@ def process_pdf_statement(
     # Record processing time and timestamp
     line_end = time()
     batch_line["STD_DURATION_SECS"] = line_end - line_start
-    batch_line["STD_UPDATETIME"] = datetime.now()
+    batch_line["STD_UPDATETIME"] = datetime.now()  # noqa: DTZ005
 
     # Save batch line data — always written regardless of success/failure
     pq_batch_lines = pq.BatchLines(file=paths.batch_lines_temp(idx, batch_id), batch_lines=[batch_line])
@@ -1263,31 +1248,31 @@ class StatementBatch:
     """
 
     __slots__ = (
-        "process_time",
-        "path",
         "ID_BATCH",
         "ID_SESSION",
         "ID_USER",
         "__type",
-        "company_key",
         "account_key",
-        "print_log",
-        "pdfs",
-        "pdf_count",
-        "log",
-        "errors",
-        "reviews",
-        "duration_secs",
-        "process_secs",
-        "parquet_secs",
-        "db_secs",
         "batch_lines",
-        "timer_start",
-        "statements",
-        "turbo",
-        "project_path",
-        "skip_project_validation",
+        "company_key",
+        "db_secs",
+        "duration_secs",
+        "errors",
+        "log",
+        "parquet_secs",
+        "path",
+        "pdf_count",
+        "pdfs",
+        "print_log",
+        "process_secs",
+        "process_time",
         "processed_pdfs",
+        "project_path",
+        "reviews",
+        "skip_project_validation",
+        "statements",
+        "timer_start",
+        "turbo",
     )
 
     def __init__(
@@ -1326,7 +1311,7 @@ class StatementBatch:
         if not skip_project_validation:
             validate_or_initialise_project(ProjectPaths.resolve(project_path).root)
         print("processing...")
-        self.process_time: datetime = datetime.now()
+        self.process_time: datetime = datetime.now()  # noqa: DTZ005
         self.timer_start = time()
         self.ID_BATCH: str = str(uuid4())
         self.ID_SESSION: str = str(uuid4())
@@ -1339,7 +1324,7 @@ class StatementBatch:
         self.skip_project_validation = skip_project_validation
         self.pdfs = pdfs
         # Build path string from unique parent directories of all PDFs
-        self.path: str = ", ".join(map(str, set([p.parent for p in self.pdfs])))
+        self.path: str = ", ".join(map(str, {p.parent for p in self.pdfs}))
         self.pdf_count: int = len(self.pdfs)
         self.log: list = []
         self.errors: int = 0
@@ -1677,7 +1662,7 @@ class StatementBatch:
             return
         resolved_project_path = project_path if project_path is not None else self.project_path
 
-        import bank_statement_parser.modules.reports_db as _rd  # noqa: PLC0415
+        import bank_statement_parser.modules.reports_db as _rd
 
         if filetype == "excel":
             _rd.export_excel(
@@ -1768,4 +1753,3 @@ class StatementBatch:
     def __del__(self):
         """Destructor to ensure temporary files are cleaned up."""
         # self.delete_temp_files()
-        pass

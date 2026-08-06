@@ -290,6 +290,6 @@ def create_views(db_path: Path):
 
 
 if __name__ == "__main__":
-    from bank_statement_parser.modules.paths import ProjectPaths  # noqa: PLC0415
+    from bank_statement_parser.modules.paths import ProjectPaths
 
     create_views(ProjectPaths.resolve().project_db)

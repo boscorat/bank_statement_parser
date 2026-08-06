@@ -54,28 +54,23 @@ from bank_statement_parser.modules.statements import (
 )
 
 __all__ = [
-    # Statement processing
+    "Failure",
+    "ParquetFiles",
+    "PdfResult",
+    "Review",
     "Statement",
     "StatementBatch",
-    "process_pdf_statement",
-    "PdfResult",
-    "Success",
-    "Review",
-    "Failure",
+    "StatementError",
     "StatementInfo",
-    "ParquetFiles",
-    "delete_temp_files",
-    # Config helpers
+    "Success",
     "copy_default_import_config",
     "copy_project_folders",
-    # Errors
-    "StatementError",
-    # Low-level PDF helpers
-    "pdf_open",
+    "db",
+    "delete_temp_files",
+    "get_table_from_region",
     "page_crop",
     "page_text",
+    "pdf_open",
+    "process_pdf_statement",
     "region_search",
-    "get_table_from_region",
-    # Namespaced report backend
-    "db",
 ]
