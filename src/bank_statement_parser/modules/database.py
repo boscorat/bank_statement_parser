@@ -533,3 +533,5 @@ def update_db(
             build_datamart(db_path=db_path)
         except Exception as e:  # noqa: BLE001
             print(f"[update_db] ** Datamart Rebuild Failed **: {type(e).__name__}: {e}")
+
+    return db_secs

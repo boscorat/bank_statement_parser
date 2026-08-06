@@ -139,8 +139,8 @@ Configuration for a financial institution (bank/provider).
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
 | `company` | `str` | ACTIVE | Human-readable company name (e.g. "HSBC UK").  Used to populate the STD_COMPANY standard field. |
-| `config` | `Config` | ACTIVE | Extraction config used during the company-identification pass. Extracts a discriminating field (e.g. a bank-specific header string) to confirm the PDF belongs to this company before attempting account matching. |
-| `accounts` | `dict` | STUB | Declared but never accessed by the pipeline after load.  Intended as a lookup from account key to Account object but currently unused. |
+| `config` | `Config | None` | ACTIVE | Extraction config used during the company-identification pass. Extracts a discriminating field (e.g. a bank-specific header string) to confirm the PDF belongs to this company before attempting account matching. |
+| `accounts` | `dict | None` | STUB | Declared but never accessed by the pipeline after load.  Intended as a lookup from account key to Account object but currently unused. |
 
 #### `Config`
 
@@ -149,10 +149,10 @@ A single extraction step: one table (or one standalone field) from one location.
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
 | `config` | `str` | ACTIVE | Human-readable label for this extraction step (e.g. "Statement Balances").  Written into the "config" column of the long-format results DataFrame for traceability. |
-| `statement_table_key` | `str` | ACTIVE | Key into statement_tables.toml that identifies the StatementTable to use.  Resolved to statement_table at load time.  Set to None for inline single-field configs. |
-| `statement_table` | `StatementTable` | ACTIVE | Resolved at load time from statement_table_key.  The StatementTable object used during extraction.  Not set directly in TOML. |
-| `locations` | `list&#91;Location` | ACTIVE | Used only for inline single-field configs (where statement_table is None).  Defines where on the page to find the field value. |
-| `field` | `Field` | ACTIVE | Used only for inline single-field configs.  Defines the extraction spec for the single value to read from the location. |
+| `statement_table_key` | `str | None` | ACTIVE | Key into statement_tables.toml that identifies the StatementTable to use.  Resolved to statement_table at load time.  Set to None for inline single-field configs. |
+| `statement_table` | `StatementTable | None` | ACTIVE | Resolved at load time from statement_table_key.  The StatementTable object used during extraction.  Not set directly in TOML. |
+| `locations` | `list&#91;Location&#93; | None` | ACTIVE | Used only for inline single-field configs (where statement_table is None).  Defines where on the page to find the field value. |
+| `field` | `Field | None` | ACTIVE | Used only for inline single-field configs.  Defines the extraction spec for the single value to read from the location. |
 
 #### `Location`
 
@@ -160,13 +160,13 @@ Describes a rectangular region on a PDF page from which a table or text is extra
 
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
-| `page_number` | `int` | ACTIVE | 1-based page number.  When set the location is used only on that page.  When None the location is cloned for every page (spawn_locations()). |
-| `top_left` | `list&#91;int` | ACTIVE | &#91;x, y&#93; coordinates of the top-left corner of the crop rectangle. Must be set together with bottom_right.  When both are None the full page is used. |
-| `bottom_right` | `list&#91;int` | ACTIVE | &#91;x, y&#93; coordinates of the bottom-right corner of the crop rectangle.  Must be set together with top_left. |
-| `vertical_lines` | `list&#91;int` | ACTIVE | Explicit x-coordinates of vertical column dividers supplied to pdfplumber as explicit_vertical_lines.  Pairs of identical values create a zero-width gap that forces a column boundary (e.g. &#91;100, 100, 200, 200&#93;). When set, pdfplumber's automatic column detection is disabled for this region. |
-| `dynamic_last_vertical_line` | `DynamicLineSpec` | ACTIVE | When set, the final value in vertical_lines is replaced at runtime with an x-coordinate derived from a PDF image's bounding box.  See DynamicLineSpec.  Used where the rightmost column boundary floats with a logo. |
-| `allow_text_failover` | `bool` | ACTIVE | When True and the extracted table has the wrong number of columns, the extraction is retried without vertical_lines, falling back to pdfplumber's text-based column detection.  Useful as a safety net for pages where the explicit dividers produce a malformed table. |
-| `try_shift_down` | `int` | ACTIVE | Number of PDF points to shift the crop rectangle downward (applied to both top_left&#91;1&#93; and bottom_right&#91;1&#93;) when the initial extraction returns an empty region.  Handles statements where the table top boundary varies slightly between pages. |
+| `page_number` | `int | None` | ACTIVE | 1-based page number.  When set the location is used only on that page.  When None the location is cloned for every page (spawn_locations()). |
+| `top_left` | `list&#91;int&#93; | None` | ACTIVE | &#91;x, y&#93; coordinates of the top-left corner of the crop rectangle. Must be set together with bottom_right.  When both are None the full page is used. |
+| `bottom_right` | `list&#91;int&#93; | None` | ACTIVE | &#91;x, y&#93; coordinates of the bottom-right corner of the crop rectangle.  Must be set together with top_left. |
+| `vertical_lines` | `list&#91;int&#93; | None` | ACTIVE | Explicit x-coordinates of vertical column dividers supplied to pdfplumber as explicit_vertical_lines.  Pairs of identical values create a zero-width gap that forces a column boundary (e.g. &#91;100, 100, 200, 200&#93;). When set, pdfplumber's automatic column detection is disabled for this region. |
+| `dynamic_last_vertical_line` | `DynamicLineSpec | None` | ACTIVE | When set, the final value in vertical_lines is replaced at runtime with an x-coordinate derived from a PDF image's bounding box.  See DynamicLineSpec.  Used where the rightmost column boundary floats with a logo. |
+| `allow_text_failover` | `bool | None` | ACTIVE | When True and the extracted table has the wrong number of columns, the extraction is retried without vertical_lines, falling back to pdfplumber's text-based column detection.  Useful as a safety net for pages where the explicit dividers produce a malformed table. |
+| `try_shift_down` | `int | None` | ACTIVE | Number of PDF points to shift the crop rectangle downward (applied to both top_left&#91;1&#93; and bottom_right&#91;1&#93;) when the initial extraction returns an empty region.  Handles statements where the table top boundary varies slightly between pages. |
 
 #### `Field`
 
@@ -175,19 +175,19 @@ Extraction specification for a single column or cell within a PDF table.
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
 | `field` | `str` | ACTIVE | Output column name for this field (e.g. "date", "£_paid_out"). Used as the field identifier throughout the pipeline and in the output Parquet files. |
-| `cell` | `Cell` | ACTIVE | Row/column address for summary or detail table extraction. Mutually exclusive with ``column``; set to None for transaction tables. |
+| `cell` | `Cell | None` | ACTIVE | Row/column address for summary or detail table extraction. Mutually exclusive with ``column``; set to None for transaction tables. |
 | `column` | `int | None` | ACTIVE | Zero-based column index for transaction table extraction. Mutually exclusive with ``cell``; set to None for summary/detail tables. |
 | `vital` | `bool` | ACTIVE | When True, extraction failure for this field causes the row to be flagged as a hard failure and excluded from output.  When False, failure is recorded but the row is retained. |
 | `type` | `str` | ACTIVE | Data type: "string", "numeric", or "currency".  * "string"   — raw text extraction; pattern matching and trimming applied. * "numeric"  — numeric extraction with optional explicit currency stripping via ``currency_override``. * "currency" — identical to "numeric" but inherits the CurrencySpec from the account's ``Account.currency`` rather than requiring an explicit ``currency_override`` on every field.  Use this for all monetary amount fields; reserve "numeric" for non-monetary numerics (e.g. APR, sort code). |
-| `strip_characters_start` | `str` | ACTIVE | Characters to strip from the start of the raw string before pattern matching (passed to Polars str.strip_chars_start()).  Useful for leading currency symbols not covered by the account currency spec. |
-| `strip_characters_end` | `str` | ACTIVE | Characters to strip from the end of the raw string before pattern matching (passed to Polars str.strip_chars_end()). |
+| `strip_characters_start` | `str | None` | ACTIVE | Characters to strip from the start of the raw string before pattern matching (passed to Polars str.strip_chars_start()).  Useful for leading currency symbols not covered by the account currency spec. |
+| `strip_characters_end` | `str | None` | ACTIVE | Characters to strip from the end of the raw string before pattern matching (passed to Polars str.strip_chars_end()). |
 | `currency_override` | `str | None` | ACTIVE | Explicit ISO 4217 currency key (e.g. "GBP") used when ``type == "numeric"`` and currency stripping is needed but should differ from the account-level ``Account.currency``.  Ignored when ``type == "currency"`` (which always uses the account-level currency).  Omit for non-monetary numeric fields (e.g. APR, sort code) where no currency stripping is required. |
-| `numeric_modifier` | `NumericModifier` | ACTIVE | Sign/multiplier transformation applied after numeric casting. See NumericModifier.  Omit for straightforward positive numeric values. |
-| `string_pattern` | `str` | ACTIVE | Regex pattern the extracted string must match.  Extraction is marked as failed (success = False) if the value does not match.  Used to validate field contents (e.g. date format) and to skip blank or irrelevant rows. |
-| `string_max_length` | `int` | ACTIVE | Maximum character length for string values; longer strings are truncated via str.head().  Useful for capping free-text description fields. Defaults to 999 if not set. |
-| `date_format` | `str` | STUB | Intended strptime format for date parsing at the Field level. Declared but never read by the pipeline; date format parsing is handled via StdRefs.format in get_standard_fields() instead. |
+| `numeric_modifier` | `NumericModifier | None` | ACTIVE | Sign/multiplier transformation applied after numeric casting. See NumericModifier.  Omit for straightforward positive numeric values. |
+| `string_pattern` | `str | None` | ACTIVE | Regex pattern the extracted string must match.  Extraction is marked as failed (success = False) if the value does not match.  Used to validate field contents (e.g. date format) and to skip blank or irrelevant rows. |
+| `string_max_length` | `int | None` | ACTIVE | Maximum character length for string values; longer strings are truncated via str.head().  Useful for capping free-text description fields. Defaults to 999 if not set. |
+| `date_format` | `str | None` | STUB | Intended strptime format for date parsing at the Field level. Declared but never read by the pipeline; date format parsing is handled via StdRefs.format in get_standard_fields() instead. |
 | `value_offset` | `'FieldOffset'` | ACTIVE | When set, reads the field's value from an adjacent column (Field.column + FieldOffset.cols_offset) using the type and currency rules defined in the FieldOffset rather than those on this Field.  The primary field column is still extracted normally; the offset column value replaces it in the output.  See FieldOffset. |
-| `regex_groups` | `int` | ACTIVE | When set, extracts the specified capture group (1-indexed) from the string_pattern regex match instead of the entire match (group 0). Useful for splitting a single PDF column into multiple fields via regex capture groups. Example: string_pattern = '^(&#91;A-Z &#93;+)\s+(&#91;A-Z0-9&#93;+)$' with regex_groups = 1 extracts group 1; regex_groups = 2 extracts group 2. When None, defaults to group 0 (entire match, backward compatible). Omit for standard extraction. |
+| `regex_groups` | `int | None` | ACTIVE | When set, extracts the specified capture group (1-indexed) from the string_pattern regex match instead of the entire match (group 0). Useful for splitting a single PDF column into multiple fields via regex capture groups. Example: string_pattern = '^(&#91;A-Z &#93;+)\s+(&#91;A-Z0-9&#93;+)$' with regex_groups = 1 extracts group 1; regex_groups = 2 extracts group 2. When None, defaults to group 0 (entire match, backward compatible). Omit for standard extraction. |
 
 ## Step 4: Define Statement Tables
 
@@ -277,18 +277,18 @@ Full configuration for extracting one table from a PDF statement.
 | --- | --- | --- | --- |
 | `type` | `str` | STUB | Table type label: "transaction", "summary", or "detail".  Loaded from TOML but not currently read by the pipeline; the extraction path is determined by whether transaction_spec is present rather than this field. |
 | `statement_table` | `str` | STUB | Human-readable table label (e.g. "Transactions", "Account Summary"). Loaded from TOML for documentation purposes but not consumed by the pipeline. |
-| `header_text` | `str` | ACTIVE | When set, the first table row whose text matches this string is stripped before extraction.  Use when pdfplumber includes the column header row in the extracted data. |
-| `remove_header` | `bool` | ACTIVE | When True the first table row is unconditionally stripped.  Use when the header row is always present but its text varies (making header_text impractical). |
+| `header_text` | `str | None` | ACTIVE | When set, the first table row whose text matches this string is stripped before extraction.  Use when pdfplumber includes the column header row in the extracted data. |
+| `remove_header` | `bool | None` | ACTIVE | When True the first table row is unconditionally stripped.  Use when the header row is always present but its text varies (making header_text impractical). |
 | `locations` | `list&#91;Location&#93;` | ACTIVE | One or more Location entries describing where on the page to find this table.  Locations without a page_number are cloned for every page. |
 | `fields` | `list&#91;Field&#93;` | ACTIVE | Ordered list of field extraction specs.  For transaction tables each field must have a column; for summary/detail tables each field must have a cell. |
-| `table_columns` | `int` | ACTIVE | Expected minimum number of columns in the extracted table.  Passed to pdfplumber as min_words_horizontal and used to validate column count after extraction.  Also triggers allow_text_failover retry logic. |
-| `table_rows` | `int` | ACTIVE | Expected minimum number of rows in the extracted table.  Passed to pdfplumber as min_words_vertical. |
-| `row_spacing` | `int` | ACTIVE | pdfplumber snap_y_tolerance in PDF points.  Rows whose top edges fall within this distance of each other are merged into the same table row. Increase if the statement uses tight line spacing that splits a single visual row across multiple pdfplumber rows. |
-| `tests` | `list&#91;Test` | STUB | Declarative post-extraction assertions.  Declared and accepted in TOML but no pipeline code evaluates them.  Reserved for a future config validation pass. |
-| `delete_success_false` | `bool` | STUB | Intended to drop rows where any field extraction returned success = False.  Declared and set in TOML (typically True) but no pipeline code currently reads or acts on this flag. |
-| `delete_cast_success_false` | `bool` | STUB | Intended to drop rows where numeric casting failed.  Declared and set in TOML (typically True) but no pipeline code currently reads or acts on this flag. |
-| `delete_rows_with_missing_vital_fields` | `bool` | STUB | Intended to drop rows where any vital field is missing after extraction.  Declared and set in TOML (typically True) but no pipeline code currently reads or acts on this flag.  Note: vital-field hard-failure logic exists in validate() but is separate from this flag. |
-| `transaction_spec` | `TransactionSpec` | ACTIVE | When set, the table is processed as a transaction table using the bookend-based multi-row extraction path.  Must be None for summary/detail tables. |
+| `table_columns` | `int | None` | ACTIVE | Expected minimum number of columns in the extracted table.  Passed to pdfplumber as min_words_horizontal and used to validate column count after extraction.  Also triggers allow_text_failover retry logic. |
+| `table_rows` | `int | None` | ACTIVE | Expected minimum number of rows in the extracted table.  Passed to pdfplumber as min_words_vertical. |
+| `row_spacing` | `int | None` | ACTIVE | pdfplumber snap_y_tolerance in PDF points.  Rows whose top edges fall within this distance of each other are merged into the same table row. Increase if the statement uses tight line spacing that splits a single visual row across multiple pdfplumber rows. |
+| `tests` | `list&#91;Test&#93; | None` | STUB | Declarative post-extraction assertions.  Declared and accepted in TOML but no pipeline code evaluates them.  Reserved for a future config validation pass. |
+| `delete_success_false` | `bool | None` | STUB | Intended to drop rows where any field extraction returned success = False.  Declared and set in TOML (typically True) but no pipeline code currently reads or acts on this flag. |
+| `delete_cast_success_false` | `bool | None` | STUB | Intended to drop rows where numeric casting failed.  Declared and set in TOML (typically True) but no pipeline code currently reads or acts on this flag. |
+| `delete_rows_with_missing_vital_fields` | `bool | None` | STUB | Intended to drop rows where any vital field is missing after extraction.  Declared and set in TOML (typically True) but no pipeline code currently reads or acts on this flag.  Note: vital-field hard-failure logic exists in validate() but is separate from this flag. |
+| `transaction_spec` | `TransactionSpec | None` | ACTIVE | When set, the table is processed as a transaction table using the bookend-based multi-row extraction path.  Must be None for summary/detail tables. |
 
 #### `Location`
 
@@ -296,13 +296,13 @@ Describes a rectangular region on a PDF page from which a table or text is extra
 
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
-| `page_number` | `int` | ACTIVE | 1-based page number.  When set the location is used only on that page.  When None the location is cloned for every page (spawn_locations()). |
-| `top_left` | `list&#91;int` | ACTIVE | &#91;x, y&#93; coordinates of the top-left corner of the crop rectangle. Must be set together with bottom_right.  When both are None the full page is used. |
-| `bottom_right` | `list&#91;int` | ACTIVE | &#91;x, y&#93; coordinates of the bottom-right corner of the crop rectangle.  Must be set together with top_left. |
-| `vertical_lines` | `list&#91;int` | ACTIVE | Explicit x-coordinates of vertical column dividers supplied to pdfplumber as explicit_vertical_lines.  Pairs of identical values create a zero-width gap that forces a column boundary (e.g. &#91;100, 100, 200, 200&#93;). When set, pdfplumber's automatic column detection is disabled for this region. |
-| `dynamic_last_vertical_line` | `DynamicLineSpec` | ACTIVE | When set, the final value in vertical_lines is replaced at runtime with an x-coordinate derived from a PDF image's bounding box.  See DynamicLineSpec.  Used where the rightmost column boundary floats with a logo. |
-| `allow_text_failover` | `bool` | ACTIVE | When True and the extracted table has the wrong number of columns, the extraction is retried without vertical_lines, falling back to pdfplumber's text-based column detection.  Useful as a safety net for pages where the explicit dividers produce a malformed table. |
-| `try_shift_down` | `int` | ACTIVE | Number of PDF points to shift the crop rectangle downward (applied to both top_left&#91;1&#93; and bottom_right&#91;1&#93;) when the initial extraction returns an empty region.  Handles statements where the table top boundary varies slightly between pages. |
+| `page_number` | `int | None` | ACTIVE | 1-based page number.  When set the location is used only on that page.  When None the location is cloned for every page (spawn_locations()). |
+| `top_left` | `list&#91;int&#93; | None` | ACTIVE | &#91;x, y&#93; coordinates of the top-left corner of the crop rectangle. Must be set together with bottom_right.  When both are None the full page is used. |
+| `bottom_right` | `list&#91;int&#93; | None` | ACTIVE | &#91;x, y&#93; coordinates of the bottom-right corner of the crop rectangle.  Must be set together with top_left. |
+| `vertical_lines` | `list&#91;int&#93; | None` | ACTIVE | Explicit x-coordinates of vertical column dividers supplied to pdfplumber as explicit_vertical_lines.  Pairs of identical values create a zero-width gap that forces a column boundary (e.g. &#91;100, 100, 200, 200&#93;). When set, pdfplumber's automatic column detection is disabled for this region. |
+| `dynamic_last_vertical_line` | `DynamicLineSpec | None` | ACTIVE | When set, the final value in vertical_lines is replaced at runtime with an x-coordinate derived from a PDF image's bounding box.  See DynamicLineSpec.  Used where the rightmost column boundary floats with a logo. |
+| `allow_text_failover` | `bool | None` | ACTIVE | When True and the extracted table has the wrong number of columns, the extraction is retried without vertical_lines, falling back to pdfplumber's text-based column detection.  Useful as a safety net for pages where the explicit dividers produce a malformed table. |
+| `try_shift_down` | `int | None` | ACTIVE | Number of PDF points to shift the crop rectangle downward (applied to both top_left&#91;1&#93; and bottom_right&#91;1&#93;) when the initial extraction returns an empty region.  Handles statements where the table top boundary varies slightly between pages. |
 
 #### `DynamicLineSpec`
 
@@ -320,19 +320,19 @@ Extraction specification for a single column or cell within a PDF table.
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
 | `field` | `str` | ACTIVE | Output column name for this field (e.g. "date", "£_paid_out"). Used as the field identifier throughout the pipeline and in the output Parquet files. |
-| `cell` | `Cell` | ACTIVE | Row/column address for summary or detail table extraction. Mutually exclusive with ``column``; set to None for transaction tables. |
+| `cell` | `Cell | None` | ACTIVE | Row/column address for summary or detail table extraction. Mutually exclusive with ``column``; set to None for transaction tables. |
 | `column` | `int | None` | ACTIVE | Zero-based column index for transaction table extraction. Mutually exclusive with ``cell``; set to None for summary/detail tables. |
 | `vital` | `bool` | ACTIVE | When True, extraction failure for this field causes the row to be flagged as a hard failure and excluded from output.  When False, failure is recorded but the row is retained. |
 | `type` | `str` | ACTIVE | Data type: "string", "numeric", or "currency".  * "string"   — raw text extraction; pattern matching and trimming applied. * "numeric"  — numeric extraction with optional explicit currency stripping via ``currency_override``. * "currency" — identical to "numeric" but inherits the CurrencySpec from the account's ``Account.currency`` rather than requiring an explicit ``currency_override`` on every field.  Use this for all monetary amount fields; reserve "numeric" for non-monetary numerics (e.g. APR, sort code). |
-| `strip_characters_start` | `str` | ACTIVE | Characters to strip from the start of the raw string before pattern matching (passed to Polars str.strip_chars_start()).  Useful for leading currency symbols not covered by the account currency spec. |
-| `strip_characters_end` | `str` | ACTIVE | Characters to strip from the end of the raw string before pattern matching (passed to Polars str.strip_chars_end()). |
+| `strip_characters_start` | `str | None` | ACTIVE | Characters to strip from the start of the raw string before pattern matching (passed to Polars str.strip_chars_start()).  Useful for leading currency symbols not covered by the account currency spec. |
+| `strip_characters_end` | `str | None` | ACTIVE | Characters to strip from the end of the raw string before pattern matching (passed to Polars str.strip_chars_end()). |
 | `currency_override` | `str | None` | ACTIVE | Explicit ISO 4217 currency key (e.g. "GBP") used when ``type == "numeric"`` and currency stripping is needed but should differ from the account-level ``Account.currency``.  Ignored when ``type == "currency"`` (which always uses the account-level currency).  Omit for non-monetary numeric fields (e.g. APR, sort code) where no currency stripping is required. |
-| `numeric_modifier` | `NumericModifier` | ACTIVE | Sign/multiplier transformation applied after numeric casting. See NumericModifier.  Omit for straightforward positive numeric values. |
-| `string_pattern` | `str` | ACTIVE | Regex pattern the extracted string must match.  Extraction is marked as failed (success = False) if the value does not match.  Used to validate field contents (e.g. date format) and to skip blank or irrelevant rows. |
-| `string_max_length` | `int` | ACTIVE | Maximum character length for string values; longer strings are truncated via str.head().  Useful for capping free-text description fields. Defaults to 999 if not set. |
-| `date_format` | `str` | STUB | Intended strptime format for date parsing at the Field level. Declared but never read by the pipeline; date format parsing is handled via StdRefs.format in get_standard_fields() instead. |
+| `numeric_modifier` | `NumericModifier | None` | ACTIVE | Sign/multiplier transformation applied after numeric casting. See NumericModifier.  Omit for straightforward positive numeric values. |
+| `string_pattern` | `str | None` | ACTIVE | Regex pattern the extracted string must match.  Extraction is marked as failed (success = False) if the value does not match.  Used to validate field contents (e.g. date format) and to skip blank or irrelevant rows. |
+| `string_max_length` | `int | None` | ACTIVE | Maximum character length for string values; longer strings are truncated via str.head().  Useful for capping free-text description fields. Defaults to 999 if not set. |
+| `date_format` | `str | None` | STUB | Intended strptime format for date parsing at the Field level. Declared but never read by the pipeline; date format parsing is handled via StdRefs.format in get_standard_fields() instead. |
 | `value_offset` | `'FieldOffset'` | ACTIVE | When set, reads the field's value from an adjacent column (Field.column + FieldOffset.cols_offset) using the type and currency rules defined in the FieldOffset rather than those on this Field.  The primary field column is still extracted normally; the offset column value replaces it in the output.  See FieldOffset. |
-| `regex_groups` | `int` | ACTIVE | When set, extracts the specified capture group (1-indexed) from the string_pattern regex match instead of the entire match (group 0). Useful for splitting a single PDF column into multiple fields via regex capture groups. Example: string_pattern = '^(&#91;A-Z &#93;+)\s+(&#91;A-Z0-9&#93;+)$' with regex_groups = 1 extracts group 1; regex_groups = 2 extracts group 2. When None, defaults to group 0 (entire match, backward compatible). Omit for standard extraction. |
+| `regex_groups` | `int | None` | ACTIVE | When set, extracts the specified capture group (1-indexed) from the string_pattern regex match instead of the entire match (group 0). Useful for splitting a single PDF column into multiple fields via regex capture groups. Example: string_pattern = '^(&#91;A-Z &#93;+)\s+(&#91;A-Z0-9&#93;+)$' with regex_groups = 1 extracts group 1; regex_groups = 2 extracts group 2. When None, defaults to group 0 (entire match, backward compatible). Omit for standard extraction. |
 
 #### `Cell`
 
@@ -349,8 +349,8 @@ Optional sign/multiplier transformation applied after numeric casting.
 
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
-| `prefix` | `str` | ACTIVE | If the raw value starts with this string the prefix is stripped and the multiplier applied.  Use for formats like "(123.45)" where "(" signals a negative value. |
-| `suffix` | `str` | ACTIVE | If the raw value ends with this string the suffix is stripped and the multiplier applied.  Use for formats like "123.45 CR" or "123.45D". |
+| `prefix` | `str | None` | ACTIVE | If the raw value starts with this string the prefix is stripped and the multiplier applied.  Use for formats like "(123.45)" where "(" signals a negative value. |
+| `suffix` | `str | None` | ACTIVE | If the raw value ends with this string the suffix is stripped and the multiplier applied.  Use for formats like "123.45 CR" or "123.45D". |
 | `multiplier` | `float` | ACTIVE | Scalar applied to the cast value when the prefix/suffix matches, or unconditionally if neither prefix nor suffix is set.  Typically -1 to invert sign. |
 | `exclude_negative_values` | `bool` | ACTIVE | When True, any negative result after casting and multiplier application is replaced with 0.  Useful for isolating one side of a combined debit/credit column. |
 | `exclude_positive_values` | `bool` | ACTIVE | When True, any positive result after casting and multiplier application is replaced with 0.  Useful for isolating one side of a combined debit/credit column. |
@@ -366,7 +366,7 @@ Reads a field's value from an adjacent column rather than the field's own column
 | `vital` | `bool` | ACTIVE | Passed to the extraction pipeline for the offset field; when True extraction failure is treated as a hard failure for that row. |
 | `type` | `str` | ACTIVE | Data type for the offset value: "string", "numeric", or "currency". Overrides the parent Field.type for this value read. |
 | `currency_override` | `str | None` | ACTIVE | Explicit currency key (e.g. "GBP") for numeric stripping of the offset value when type == "numeric".  Overrides the account-level currency. When type == "currency" the account-level currency is used and this is ignored. |
-| `numeric_modifier` | `NumericModifier` | ACTIVE | Sign/multiplier modifier for the offset value.  Overrides the parent Field.numeric_modifier. |
+| `numeric_modifier` | `NumericModifier | None` | ACTIVE | Sign/multiplier modifier for the offset value.  Overrides the parent Field.numeric_modifier. |
 
 #### `CurrencySpec`
 
@@ -388,9 +388,9 @@ Full specification for extracting transactions from a transaction-type table.
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
 | `transaction_bookends` | `list&#91;TransactionBookend&#93;` | ACTIVE | One or more bookend definitions that identify transaction boundaries.  Evaluated in order; a row matched by an earlier bookend is not re-matched by a later one.  At least one bookend is required. |
-| `fill_forward_fields` | `list&#91;str` | ACTIVE | Field names whose null values should be forward-filled across rows within the same page after pivot.  Use for sparse columns where a value (e.g. a date or payment type) appears only on the first row of a multi-row block and needs propagating to the end row. |
-| `merge_fields` | `MergeFields` | ACTIVE | When set, collapses multi-row text fields within each transaction into a single joined string.  See MergeFields. |
-| `exclude_rows` | `list&#91;FieldValidation` | ACTIVE | Rows where any rule's field value matches its pattern are removed from the results before bookend detection runs.  Use to suppress known non-transaction rows (e.g. a closing balance summary line) that would otherwise interfere with transaction counting or checks & balances. Each rule is a {field, pattern} pair; a row is excluded if any rule matches. |
+| `fill_forward_fields` | `list&#91;str&#93; | None` | ACTIVE | Field names whose null values should be forward-filled across rows within the same page after pivot.  Use for sparse columns where a value (e.g. a date or payment type) appears only on the first row of a multi-row block and needs propagating to the end row. |
+| `merge_fields` | `MergeFields | None` | ACTIVE | When set, collapses multi-row text fields within each transaction into a single joined string.  See MergeFields. |
+| `exclude_rows` | `list&#91;FieldValidation&#93; | None` | ACTIVE | Rows where any rule's field value matches its pattern are removed from the results before bookend detection runs.  Use to suppress known non-transaction rows (e.g. a closing balance summary line) that would otherwise interfere with transaction counting or checks & balances. Each rule is a {field, pattern} pair; a row is excluded if any rule matches. |
 
 #### `TransactionBookend`
 
@@ -402,9 +402,9 @@ Defines how the start and end of a single transaction are detected within a tabl
 | `min_non_empty_start` | `int` | ACTIVE | Minimum number of start_fields that must have extracted successfully for a row to be flagged as transaction_start = True. |
 | `end_fields` | `list&#91;str&#93;` | ACTIVE | Field names checked to identify the last row of a transaction. A row qualifies as an end row when at least min_non_empty_end of these fields extracted successfully. |
 | `min_non_empty_end` | `int` | ACTIVE | Minimum number of end_fields that must have extracted successfully for a row to be flagged as transaction_end = True. |
-| `extra_validation_start` | `FieldValidation` | ACTIVE | When set, any row where the named field's value does NOT match the pattern is excluded from being a start-bookend candidate for this bookend. Rows excluded here may still be captured by another bookend in the list. Useful for bookends that should only trigger on a specific row shape (e.g. an interest charge line identified by its details text). |
-| `extra_validation_end` | `FieldValidation` | STUB | Symmetric counterpart to extra_validation_start for end rows. Declared but not yet implemented in the pipeline; no code currently reads this field.  Reserved for future use. |
-| `sticky_fields` | `list&#91;str` | STUB | Intended to forward-fill named fields from the start row of a transaction down to its end row, scoped within a single transaction (as opposed to fill_forward_fields which fills across transactions).  Declared but not implemented; no pipeline code reads this field. |
+| `extra_validation_start` | `FieldValidation | None` | ACTIVE | When set, any row where the named field's value does NOT match the pattern is excluded from being a start-bookend candidate for this bookend. Rows excluded here may still be captured by another bookend in the list. Useful for bookends that should only trigger on a specific row shape (e.g. an interest charge line identified by its details text). |
+| `extra_validation_end` | `FieldValidation | None` | STUB | Symmetric counterpart to extra_validation_start for end rows. Declared but not yet implemented in the pipeline; no code currently reads this field.  Reserved for future use. |
+| `sticky_fields` | `list&#91;str&#93; | None` | STUB | Intended to forward-fill named fields from the start row of a transaction down to its end row, scoped within a single transaction (as opposed to fill_forward_fields which fills across transactions).  Declared but not implemented; no pipeline code reads this field. |
 
 #### `FieldValidation`
 
@@ -531,7 +531,7 @@ An ordered list of Config extraction steps for one pipeline section.
 
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
-| `configs` | `list&#91;Config` | ACTIVE | Ordered list of Config steps.  Executed in sequence during extraction; results are stacked into the section's results DataFrame. |
+| `configs` | `list&#91;Config&#93; | None` | ACTIVE | Ordered list of Config steps.  Executed in sequence during extraction; results are stacked into the section's results DataFrame. |
 
 #### `Config`
 
@@ -540,10 +540,10 @@ A single extraction step: one table (or one standalone field) from one location.
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
 | `config` | `str` | ACTIVE | Human-readable label for this extraction step (e.g. "Statement Balances").  Written into the "config" column of the long-format results DataFrame for traceability. |
-| `statement_table_key` | `str` | ACTIVE | Key into statement_tables.toml that identifies the StatementTable to use.  Resolved to statement_table at load time.  Set to None for inline single-field configs. |
-| `statement_table` | `StatementTable` | ACTIVE | Resolved at load time from statement_table_key.  The StatementTable object used during extraction.  Not set directly in TOML. |
-| `locations` | `list&#91;Location` | ACTIVE | Used only for inline single-field configs (where statement_table is None).  Defines where on the page to find the field value. |
-| `field` | `Field` | ACTIVE | Used only for inline single-field configs.  Defines the extraction spec for the single value to read from the location. |
+| `statement_table_key` | `str | None` | ACTIVE | Key into statement_tables.toml that identifies the StatementTable to use.  Resolved to statement_table at load time.  Set to None for inline single-field configs. |
+| `statement_table` | `StatementTable | None` | ACTIVE | Resolved at load time from statement_table_key.  The StatementTable object used during extraction.  Not set directly in TOML. |
+| `locations` | `list&#91;Location&#93; | None` | ACTIVE | Used only for inline single-field configs (where statement_table is None).  Defines where on the page to find the field value. |
+| `field` | `Field | None` | ACTIVE | Used only for inline single-field configs.  Defines the extraction spec for the single value to read from the location. |
 
 ## Step 6: Define Accounts
 
@@ -585,11 +585,11 @@ Full runtime configuration for one bank account.
 | --- | --- | --- | --- |
 | `account` | `str` | ACTIVE | Human-readable account name (e.g. "Current Account").  Written to the STD_ACCOUNT standard field in the output. |
 | `company_key` | `str` | ACTIVE | Key into companies.toml identifying the issuing bank.  Used to build ID_ACCOUNT and to look up the Company object at load time. |
-| `company` | `Company` | ACTIVE | Resolved at load time from company_key.  Provides the company name and company-level identification config. |
+| `company` | `Company | None` | ACTIVE | Resolved at load time from company_key.  Provides the company name and company-level identification config. |
 | `account_type_key` | `str` | ACTIVE | Key into account_types.toml (e.g. "CRD", "CUR", "SAV").  Used to look up the AccountType object at load time. |
-| `account_type` | `AccountType` | STUB | Resolved at load time from account_type_key.  The AccountType object is populated but never subsequently read by any pipeline consumer. |
+| `account_type` | `AccountType | None` | STUB | Resolved at load time from account_type_key.  The AccountType object is populated but never subsequently read by any pipeline consumer. |
 | `statement_type_key` | `str` | ACTIVE | Key into statement_types.toml identifying the extraction layout for this account's statements.  Used to look up the StatementType object at load time. |
-| `statement_type` | `StatementType` | ACTIVE | Resolved at load time from statement_type_key.  Provides the header and lines ConfigGroups used during extraction. |
+| `statement_type` | `StatementType | None` | ACTIVE | Resolved at load time from statement_type_key.  Provides the header and lines ConfigGroups used during extraction. |
 | `exclude_last_n_pages` | `int` | ACTIVE | Number of trailing pages to skip when cloning per-page locations. Set to 1 (or more) when the final page(s) contain terms & conditions or other non-transaction content that would otherwise be passed to the extraction pipeline. |
 | `currency` | `str` | ACTIVE | ISO 4217 currency code for all monetary fields on this account (e.g. "GBP", "USD", "PHP").  Must be a key in ``currency_spec`` in ``currency.py``; validated at config load time.  Used by the extraction pipeline to resolve the CurrencySpec for fields of type "currency". |
 | `config` | `Config` | ACTIVE | Account-level identification config.  A lightweight extraction step run to confirm a PDF belongs to this account before the full extraction pass. Defined inline under ``&#91;ACCOUNT_KEY.config&#93;`` in accounts.toml. |
@@ -655,14 +655,14 @@ Mapping rule that promotes a raw extracted field to a standard output column.
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
 | `statement_type` | `str` | ACTIVE | Key used to select this rule; matched against the statement type string of the PDF being processed (e.g. "HSBC UK Current Account"). |
-| `field` | `str` | ACTIVE | Name of the raw extracted column to promote.  Set to None (or omit) when a literal default value should be used instead of a column value. |
-| `concat_fields` | `list` | ACTIVE | Name of the raw extracted columns to concatenate and promote.  Set to None (or omit) in order to revert to a single field and it's fallback |
-| `format` | `str` | ACTIVE | strptime format string applied when StandardFields.type == "date" (e.g. "%-d %B %Y").  Ignored for numeric and string types. |
-| `default` | `str` | ACTIVE | Literal string value used as the output when ``field`` is None/absent. Useful for injecting constant metadata (e.g. transaction_type = "CC"). |
-| `multiplier` | `float` | ACTIVE | Scalar applied to the value after casting when StandardFields.type == "numeric".  Use -1 to invert sign (e.g. to convert a credit amount stored as positive into a negative figure). |
-| `exclude_positive_values` | `bool` | ACTIVE | When True, any positive numeric value is replaced with 0 after casting.  Used to isolate debit-side figures from a combined amount column. |
-| `exclude_negative_values` | `bool` | ACTIVE | When True, any negative numeric value is replaced with 0 after casting.  Used to isolate credit-side figures from a combined amount column. |
-| `terminator` | `str` | ACTIVE | Regex pattern; when present the string value is truncated at the first match position before being written to the standard column.  Useful for stripping trailing boilerplate appended by merge_fields (e.g. " \| BALANCE CARRIED FORWARD"). |
+| `field` | `str | None` | ACTIVE | Name of the raw extracted column to promote.  Set to None (or omit) when a literal default value should be used instead of a column value. |
+| `concat_fields` | `list | None` | ACTIVE | Name of the raw extracted columns to concatenate and promote.  Set to None (or omit) in order to revert to a single field and it's fallback |
+| `format` | `str | None` | ACTIVE | strptime format string applied when StandardFields.type == "date" (e.g. "%-d %B %Y").  Ignored for numeric and string types. |
+| `default` | `str | None` | ACTIVE | Literal string value used as the output when ``field`` is None/absent. Useful for injecting constant metadata (e.g. transaction_type = "CC"). |
+| `multiplier` | `float | None` | ACTIVE | Scalar applied to the value after casting when StandardFields.type == "numeric".  Use -1 to invert sign (e.g. to convert a credit amount stored as positive into a negative figure). |
+| `exclude_positive_values` | `bool | None` | ACTIVE | When True, any positive numeric value is replaced with 0 after casting.  Used to isolate debit-side figures from a combined amount column. |
+| `exclude_negative_values` | `bool | None` | ACTIVE | When True, any negative numeric value is replaced with 0 after casting.  Used to isolate credit-side figures from a combined amount column. |
+| `terminator` | `str | None` | ACTIVE | Regex pattern; when present the string value is truncated at the first match position before being written to the standard column.  Useful for stripping trailing boilerplate appended by merge_fields (e.g. " \| BALANCE CARRIED FORWARD"). |
 
 #### `StandardFields`
 
@@ -703,8 +703,8 @@ Configuration for a financial institution (bank/provider).
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
 | `company` | `str` | ACTIVE | Human-readable company name (e.g. "HSBC UK").  Used to populate the STD_COMPANY standard field. |
-| `config` | `Config` | ACTIVE | Extraction config used during the company-identification pass. Extracts a discriminating field (e.g. a bank-specific header string) to confirm the PDF belongs to this company before attempting account matching. |
-| `accounts` | `dict` | STUB | Declared but never accessed by the pipeline after load.  Intended as a lookup from account key to Account object but currently unused. |
+| `config` | `Config | None` | ACTIVE | Extraction config used during the company-identification pass. Extracts a discriminating field (e.g. a bank-specific header string) to confirm the PDF belongs to this company before attempting account matching. |
+| `accounts` | `dict | None` | STUB | Declared but never accessed by the pipeline after load.  Intended as a lookup from account key to Account object but currently unused. |
 
 ### `Account`
 
@@ -714,11 +714,11 @@ Full runtime configuration for one bank account.
 | --- | --- | --- | --- |
 | `account` | `str` | ACTIVE | Human-readable account name (e.g. "Current Account").  Written to the STD_ACCOUNT standard field in the output. |
 | `company_key` | `str` | ACTIVE | Key into companies.toml identifying the issuing bank.  Used to build ID_ACCOUNT and to look up the Company object at load time. |
-| `company` | `Company` | ACTIVE | Resolved at load time from company_key.  Provides the company name and company-level identification config. |
+| `company` | `Company | None` | ACTIVE | Resolved at load time from company_key.  Provides the company name and company-level identification config. |
 | `account_type_key` | `str` | ACTIVE | Key into account_types.toml (e.g. "CRD", "CUR", "SAV").  Used to look up the AccountType object at load time. |
-| `account_type` | `AccountType` | STUB | Resolved at load time from account_type_key.  The AccountType object is populated but never subsequently read by any pipeline consumer. |
+| `account_type` | `AccountType | None` | STUB | Resolved at load time from account_type_key.  The AccountType object is populated but never subsequently read by any pipeline consumer. |
 | `statement_type_key` | `str` | ACTIVE | Key into statement_types.toml identifying the extraction layout for this account's statements.  Used to look up the StatementType object at load time. |
-| `statement_type` | `StatementType` | ACTIVE | Resolved at load time from statement_type_key.  Provides the header and lines ConfigGroups used during extraction. |
+| `statement_type` | `StatementType | None` | ACTIVE | Resolved at load time from statement_type_key.  Provides the header and lines ConfigGroups used during extraction. |
 | `exclude_last_n_pages` | `int` | ACTIVE | Number of trailing pages to skip when cloning per-page locations. Set to 1 (or more) when the final page(s) contain terms & conditions or other non-transaction content that would otherwise be passed to the extraction pipeline. |
 | `currency` | `str` | ACTIVE | ISO 4217 currency code for all monetary fields on this account (e.g. "GBP", "USD", "PHP").  Must be a key in ``currency_spec`` in ``currency.py``; validated at config load time.  Used by the extraction pipeline to resolve the CurrencySpec for fields of type "currency". |
 | `config` | `Config` | ACTIVE | Account-level identification config.  A lightweight extraction step run to confirm a PDF belongs to this account before the full extraction pass. Defined inline under ``&#91;ACCOUNT_KEY.config&#93;`` in accounts.toml. |
@@ -747,7 +747,7 @@ An ordered list of Config extraction steps for one pipeline section.
 
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
-| `configs` | `list&#91;Config` | ACTIVE | Ordered list of Config steps.  Executed in sequence during extraction; results are stacked into the section's results DataFrame. |
+| `configs` | `list&#91;Config&#93; | None` | ACTIVE | Ordered list of Config steps.  Executed in sequence during extraction; results are stacked into the section's results DataFrame. |
 
 ### `Config`
 
@@ -756,10 +756,10 @@ A single extraction step: one table (or one standalone field) from one location.
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
 | `config` | `str` | ACTIVE | Human-readable label for this extraction step (e.g. "Statement Balances").  Written into the "config" column of the long-format results DataFrame for traceability. |
-| `statement_table_key` | `str` | ACTIVE | Key into statement_tables.toml that identifies the StatementTable to use.  Resolved to statement_table at load time.  Set to None for inline single-field configs. |
-| `statement_table` | `StatementTable` | ACTIVE | Resolved at load time from statement_table_key.  The StatementTable object used during extraction.  Not set directly in TOML. |
-| `locations` | `list&#91;Location` | ACTIVE | Used only for inline single-field configs (where statement_table is None).  Defines where on the page to find the field value. |
-| `field` | `Field` | ACTIVE | Used only for inline single-field configs.  Defines the extraction spec for the single value to read from the location. |
+| `statement_table_key` | `str | None` | ACTIVE | Key into statement_tables.toml that identifies the StatementTable to use.  Resolved to statement_table at load time.  Set to None for inline single-field configs. |
+| `statement_table` | `StatementTable | None` | ACTIVE | Resolved at load time from statement_table_key.  The StatementTable object used during extraction.  Not set directly in TOML. |
+| `locations` | `list&#91;Location&#93; | None` | ACTIVE | Used only for inline single-field configs (where statement_table is None).  Defines where on the page to find the field value. |
+| `field` | `Field | None` | ACTIVE | Used only for inline single-field configs.  Defines the extraction spec for the single value to read from the location. |
 
 ### `StatementTable`
 
@@ -769,18 +769,18 @@ Full configuration for extracting one table from a PDF statement.
 | --- | --- | --- | --- |
 | `type` | `str` | STUB | Table type label: "transaction", "summary", or "detail".  Loaded from TOML but not currently read by the pipeline; the extraction path is determined by whether transaction_spec is present rather than this field. |
 | `statement_table` | `str` | STUB | Human-readable table label (e.g. "Transactions", "Account Summary"). Loaded from TOML for documentation purposes but not consumed by the pipeline. |
-| `header_text` | `str` | ACTIVE | When set, the first table row whose text matches this string is stripped before extraction.  Use when pdfplumber includes the column header row in the extracted data. |
-| `remove_header` | `bool` | ACTIVE | When True the first table row is unconditionally stripped.  Use when the header row is always present but its text varies (making header_text impractical). |
+| `header_text` | `str | None` | ACTIVE | When set, the first table row whose text matches this string is stripped before extraction.  Use when pdfplumber includes the column header row in the extracted data. |
+| `remove_header` | `bool | None` | ACTIVE | When True the first table row is unconditionally stripped.  Use when the header row is always present but its text varies (making header_text impractical). |
 | `locations` | `list&#91;Location&#93;` | ACTIVE | One or more Location entries describing where on the page to find this table.  Locations without a page_number are cloned for every page. |
 | `fields` | `list&#91;Field&#93;` | ACTIVE | Ordered list of field extraction specs.  For transaction tables each field must have a column; for summary/detail tables each field must have a cell. |
-| `table_columns` | `int` | ACTIVE | Expected minimum number of columns in the extracted table.  Passed to pdfplumber as min_words_horizontal and used to validate column count after extraction.  Also triggers allow_text_failover retry logic. |
-| `table_rows` | `int` | ACTIVE | Expected minimum number of rows in the extracted table.  Passed to pdfplumber as min_words_vertical. |
-| `row_spacing` | `int` | ACTIVE | pdfplumber snap_y_tolerance in PDF points.  Rows whose top edges fall within this distance of each other are merged into the same table row. Increase if the statement uses tight line spacing that splits a single visual row across multiple pdfplumber rows. |
-| `tests` | `list&#91;Test` | STUB | Declarative post-extraction assertions.  Declared and accepted in TOML but no pipeline code evaluates them.  Reserved for a future config validation pass. |
-| `delete_success_false` | `bool` | STUB | Intended to drop rows where any field extraction returned success = False.  Declared and set in TOML (typically True) but no pipeline code currently reads or acts on this flag. |
-| `delete_cast_success_false` | `bool` | STUB | Intended to drop rows where numeric casting failed.  Declared and set in TOML (typically True) but no pipeline code currently reads or acts on this flag. |
-| `delete_rows_with_missing_vital_fields` | `bool` | STUB | Intended to drop rows where any vital field is missing after extraction.  Declared and set in TOML (typically True) but no pipeline code currently reads or acts on this flag.  Note: vital-field hard-failure logic exists in validate() but is separate from this flag. |
-| `transaction_spec` | `TransactionSpec` | ACTIVE | When set, the table is processed as a transaction table using the bookend-based multi-row extraction path.  Must be None for summary/detail tables. |
+| `table_columns` | `int | None` | ACTIVE | Expected minimum number of columns in the extracted table.  Passed to pdfplumber as min_words_horizontal and used to validate column count after extraction.  Also triggers allow_text_failover retry logic. |
+| `table_rows` | `int | None` | ACTIVE | Expected minimum number of rows in the extracted table.  Passed to pdfplumber as min_words_vertical. |
+| `row_spacing` | `int | None` | ACTIVE | pdfplumber snap_y_tolerance in PDF points.  Rows whose top edges fall within this distance of each other are merged into the same table row. Increase if the statement uses tight line spacing that splits a single visual row across multiple pdfplumber rows. |
+| `tests` | `list&#91;Test&#93; | None` | STUB | Declarative post-extraction assertions.  Declared and accepted in TOML but no pipeline code evaluates them.  Reserved for a future config validation pass. |
+| `delete_success_false` | `bool | None` | STUB | Intended to drop rows where any field extraction returned success = False.  Declared and set in TOML (typically True) but no pipeline code currently reads or acts on this flag. |
+| `delete_cast_success_false` | `bool | None` | STUB | Intended to drop rows where numeric casting failed.  Declared and set in TOML (typically True) but no pipeline code currently reads or acts on this flag. |
+| `delete_rows_with_missing_vital_fields` | `bool | None` | STUB | Intended to drop rows where any vital field is missing after extraction.  Declared and set in TOML (typically True) but no pipeline code currently reads or acts on this flag.  Note: vital-field hard-failure logic exists in validate() but is separate from this flag. |
+| `transaction_spec` | `TransactionSpec | None` | ACTIVE | When set, the table is processed as a transaction table using the bookend-based multi-row extraction path.  Must be None for summary/detail tables. |
 
 ### `Location`
 
@@ -788,13 +788,13 @@ Describes a rectangular region on a PDF page from which a table or text is extra
 
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
-| `page_number` | `int` | ACTIVE | 1-based page number.  When set the location is used only on that page.  When None the location is cloned for every page (spawn_locations()). |
-| `top_left` | `list&#91;int` | ACTIVE | &#91;x, y&#93; coordinates of the top-left corner of the crop rectangle. Must be set together with bottom_right.  When both are None the full page is used. |
-| `bottom_right` | `list&#91;int` | ACTIVE | &#91;x, y&#93; coordinates of the bottom-right corner of the crop rectangle.  Must be set together with top_left. |
-| `vertical_lines` | `list&#91;int` | ACTIVE | Explicit x-coordinates of vertical column dividers supplied to pdfplumber as explicit_vertical_lines.  Pairs of identical values create a zero-width gap that forces a column boundary (e.g. &#91;100, 100, 200, 200&#93;). When set, pdfplumber's automatic column detection is disabled for this region. |
-| `dynamic_last_vertical_line` | `DynamicLineSpec` | ACTIVE | When set, the final value in vertical_lines is replaced at runtime with an x-coordinate derived from a PDF image's bounding box.  See DynamicLineSpec.  Used where the rightmost column boundary floats with a logo. |
-| `allow_text_failover` | `bool` | ACTIVE | When True and the extracted table has the wrong number of columns, the extraction is retried without vertical_lines, falling back to pdfplumber's text-based column detection.  Useful as a safety net for pages where the explicit dividers produce a malformed table. |
-| `try_shift_down` | `int` | ACTIVE | Number of PDF points to shift the crop rectangle downward (applied to both top_left&#91;1&#93; and bottom_right&#91;1&#93;) when the initial extraction returns an empty region.  Handles statements where the table top boundary varies slightly between pages. |
+| `page_number` | `int | None` | ACTIVE | 1-based page number.  When set the location is used only on that page.  When None the location is cloned for every page (spawn_locations()). |
+| `top_left` | `list&#91;int&#93; | None` | ACTIVE | &#91;x, y&#93; coordinates of the top-left corner of the crop rectangle. Must be set together with bottom_right.  When both are None the full page is used. |
+| `bottom_right` | `list&#91;int&#93; | None` | ACTIVE | &#91;x, y&#93; coordinates of the bottom-right corner of the crop rectangle.  Must be set together with top_left. |
+| `vertical_lines` | `list&#91;int&#93; | None` | ACTIVE | Explicit x-coordinates of vertical column dividers supplied to pdfplumber as explicit_vertical_lines.  Pairs of identical values create a zero-width gap that forces a column boundary (e.g. &#91;100, 100, 200, 200&#93;). When set, pdfplumber's automatic column detection is disabled for this region. |
+| `dynamic_last_vertical_line` | `DynamicLineSpec | None` | ACTIVE | When set, the final value in vertical_lines is replaced at runtime with an x-coordinate derived from a PDF image's bounding box.  See DynamicLineSpec.  Used where the rightmost column boundary floats with a logo. |
+| `allow_text_failover` | `bool | None` | ACTIVE | When True and the extracted table has the wrong number of columns, the extraction is retried without vertical_lines, falling back to pdfplumber's text-based column detection.  Useful as a safety net for pages where the explicit dividers produce a malformed table. |
+| `try_shift_down` | `int | None` | ACTIVE | Number of PDF points to shift the crop rectangle downward (applied to both top_left&#91;1&#93; and bottom_right&#91;1&#93;) when the initial extraction returns an empty region.  Handles statements where the table top boundary varies slightly between pages. |
 
 ### `DynamicLineSpec`
 
@@ -812,19 +812,19 @@ Extraction specification for a single column or cell within a PDF table.
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
 | `field` | `str` | ACTIVE | Output column name for this field (e.g. "date", "£_paid_out"). Used as the field identifier throughout the pipeline and in the output Parquet files. |
-| `cell` | `Cell` | ACTIVE | Row/column address for summary or detail table extraction. Mutually exclusive with ``column``; set to None for transaction tables. |
+| `cell` | `Cell | None` | ACTIVE | Row/column address for summary or detail table extraction. Mutually exclusive with ``column``; set to None for transaction tables. |
 | `column` | `int | None` | ACTIVE | Zero-based column index for transaction table extraction. Mutually exclusive with ``cell``; set to None for summary/detail tables. |
 | `vital` | `bool` | ACTIVE | When True, extraction failure for this field causes the row to be flagged as a hard failure and excluded from output.  When False, failure is recorded but the row is retained. |
 | `type` | `str` | ACTIVE | Data type: "string", "numeric", or "currency".  * "string"   — raw text extraction; pattern matching and trimming applied. * "numeric"  — numeric extraction with optional explicit currency stripping via ``currency_override``. * "currency" — identical to "numeric" but inherits the CurrencySpec from the account's ``Account.currency`` rather than requiring an explicit ``currency_override`` on every field.  Use this for all monetary amount fields; reserve "numeric" for non-monetary numerics (e.g. APR, sort code). |
-| `strip_characters_start` | `str` | ACTIVE | Characters to strip from the start of the raw string before pattern matching (passed to Polars str.strip_chars_start()).  Useful for leading currency symbols not covered by the account currency spec. |
-| `strip_characters_end` | `str` | ACTIVE | Characters to strip from the end of the raw string before pattern matching (passed to Polars str.strip_chars_end()). |
+| `strip_characters_start` | `str | None` | ACTIVE | Characters to strip from the start of the raw string before pattern matching (passed to Polars str.strip_chars_start()).  Useful for leading currency symbols not covered by the account currency spec. |
+| `strip_characters_end` | `str | None` | ACTIVE | Characters to strip from the end of the raw string before pattern matching (passed to Polars str.strip_chars_end()). |
 | `currency_override` | `str | None` | ACTIVE | Explicit ISO 4217 currency key (e.g. "GBP") used when ``type == "numeric"`` and currency stripping is needed but should differ from the account-level ``Account.currency``.  Ignored when ``type == "currency"`` (which always uses the account-level currency).  Omit for non-monetary numeric fields (e.g. APR, sort code) where no currency stripping is required. |
-| `numeric_modifier` | `NumericModifier` | ACTIVE | Sign/multiplier transformation applied after numeric casting. See NumericModifier.  Omit for straightforward positive numeric values. |
-| `string_pattern` | `str` | ACTIVE | Regex pattern the extracted string must match.  Extraction is marked as failed (success = False) if the value does not match.  Used to validate field contents (e.g. date format) and to skip blank or irrelevant rows. |
-| `string_max_length` | `int` | ACTIVE | Maximum character length for string values; longer strings are truncated via str.head().  Useful for capping free-text description fields. Defaults to 999 if not set. |
-| `date_format` | `str` | STUB | Intended strptime format for date parsing at the Field level. Declared but never read by the pipeline; date format parsing is handled via StdRefs.format in get_standard_fields() instead. |
+| `numeric_modifier` | `NumericModifier | None` | ACTIVE | Sign/multiplier transformation applied after numeric casting. See NumericModifier.  Omit for straightforward positive numeric values. |
+| `string_pattern` | `str | None` | ACTIVE | Regex pattern the extracted string must match.  Extraction is marked as failed (success = False) if the value does not match.  Used to validate field contents (e.g. date format) and to skip blank or irrelevant rows. |
+| `string_max_length` | `int | None` | ACTIVE | Maximum character length for string values; longer strings are truncated via str.head().  Useful for capping free-text description fields. Defaults to 999 if not set. |
+| `date_format` | `str | None` | STUB | Intended strptime format for date parsing at the Field level. Declared but never read by the pipeline; date format parsing is handled via StdRefs.format in get_standard_fields() instead. |
 | `value_offset` | `'FieldOffset'` | ACTIVE | When set, reads the field's value from an adjacent column (Field.column + FieldOffset.cols_offset) using the type and currency rules defined in the FieldOffset rather than those on this Field.  The primary field column is still extracted normally; the offset column value replaces it in the output.  See FieldOffset. |
-| `regex_groups` | `int` | ACTIVE | When set, extracts the specified capture group (1-indexed) from the string_pattern regex match instead of the entire match (group 0). Useful for splitting a single PDF column into multiple fields via regex capture groups. Example: string_pattern = '^(&#91;A-Z &#93;+)\s+(&#91;A-Z0-9&#93;+)$' with regex_groups = 1 extracts group 1; regex_groups = 2 extracts group 2. When None, defaults to group 0 (entire match, backward compatible). Omit for standard extraction. |
+| `regex_groups` | `int | None` | ACTIVE | When set, extracts the specified capture group (1-indexed) from the string_pattern regex match instead of the entire match (group 0). Useful for splitting a single PDF column into multiple fields via regex capture groups. Example: string_pattern = '^(&#91;A-Z &#93;+)\s+(&#91;A-Z0-9&#93;+)$' with regex_groups = 1 extracts group 1; regex_groups = 2 extracts group 2. When None, defaults to group 0 (entire match, backward compatible). Omit for standard extraction. |
 
 ### `Cell`
 
@@ -846,7 +846,7 @@ Reads a field's value from an adjacent column rather than the field's own column
 | `vital` | `bool` | ACTIVE | Passed to the extraction pipeline for the offset field; when True extraction failure is treated as a hard failure for that row. |
 | `type` | `str` | ACTIVE | Data type for the offset value: "string", "numeric", or "currency". Overrides the parent Field.type for this value read. |
 | `currency_override` | `str | None` | ACTIVE | Explicit currency key (e.g. "GBP") for numeric stripping of the offset value when type == "numeric".  Overrides the account-level currency. When type == "currency" the account-level currency is used and this is ignored. |
-| `numeric_modifier` | `NumericModifier` | ACTIVE | Sign/multiplier modifier for the offset value.  Overrides the parent Field.numeric_modifier. |
+| `numeric_modifier` | `NumericModifier | None` | ACTIVE | Sign/multiplier modifier for the offset value.  Overrides the parent Field.numeric_modifier. |
 
 ### `NumericModifier`
 
@@ -854,8 +854,8 @@ Optional sign/multiplier transformation applied after numeric casting.
 
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
-| `prefix` | `str` | ACTIVE | If the raw value starts with this string the prefix is stripped and the multiplier applied.  Use for formats like "(123.45)" where "(" signals a negative value. |
-| `suffix` | `str` | ACTIVE | If the raw value ends with this string the suffix is stripped and the multiplier applied.  Use for formats like "123.45 CR" or "123.45D". |
+| `prefix` | `str | None` | ACTIVE | If the raw value starts with this string the prefix is stripped and the multiplier applied.  Use for formats like "(123.45)" where "(" signals a negative value. |
+| `suffix` | `str | None` | ACTIVE | If the raw value ends with this string the suffix is stripped and the multiplier applied.  Use for formats like "123.45 CR" or "123.45D". |
 | `multiplier` | `float` | ACTIVE | Scalar applied to the cast value when the prefix/suffix matches, or unconditionally if neither prefix nor suffix is set.  Typically -1 to invert sign. |
 | `exclude_negative_values` | `bool` | ACTIVE | When True, any negative result after casting and multiplier application is replaced with 0.  Useful for isolating one side of a combined debit/credit column. |
 | `exclude_positive_values` | `bool` | ACTIVE | When True, any positive result after casting and multiplier application is replaced with 0.  Useful for isolating one side of a combined debit/credit column. |
@@ -880,9 +880,9 @@ Full specification for extracting transactions from a transaction-type table.
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
 | `transaction_bookends` | `list&#91;TransactionBookend&#93;` | ACTIVE | One or more bookend definitions that identify transaction boundaries.  Evaluated in order; a row matched by an earlier bookend is not re-matched by a later one.  At least one bookend is required. |
-| `fill_forward_fields` | `list&#91;str` | ACTIVE | Field names whose null values should be forward-filled across rows within the same page after pivot.  Use for sparse columns where a value (e.g. a date or payment type) appears only on the first row of a multi-row block and needs propagating to the end row. |
-| `merge_fields` | `MergeFields` | ACTIVE | When set, collapses multi-row text fields within each transaction into a single joined string.  See MergeFields. |
-| `exclude_rows` | `list&#91;FieldValidation` | ACTIVE | Rows where any rule's field value matches its pattern are removed from the results before bookend detection runs.  Use to suppress known non-transaction rows (e.g. a closing balance summary line) that would otherwise interfere with transaction counting or checks & balances. Each rule is a {field, pattern} pair; a row is excluded if any rule matches. |
+| `fill_forward_fields` | `list&#91;str&#93; | None` | ACTIVE | Field names whose null values should be forward-filled across rows within the same page after pivot.  Use for sparse columns where a value (e.g. a date or payment type) appears only on the first row of a multi-row block and needs propagating to the end row. |
+| `merge_fields` | `MergeFields | None` | ACTIVE | When set, collapses multi-row text fields within each transaction into a single joined string.  See MergeFields. |
+| `exclude_rows` | `list&#91;FieldValidation&#93; | None` | ACTIVE | Rows where any rule's field value matches its pattern are removed from the results before bookend detection runs.  Use to suppress known non-transaction rows (e.g. a closing balance summary line) that would otherwise interfere with transaction counting or checks & balances. Each rule is a {field, pattern} pair; a row is excluded if any rule matches. |
 
 ### `TransactionBookend`
 
@@ -894,9 +894,9 @@ Defines how the start and end of a single transaction are detected within a tabl
 | `min_non_empty_start` | `int` | ACTIVE | Minimum number of start_fields that must have extracted successfully for a row to be flagged as transaction_start = True. |
 | `end_fields` | `list&#91;str&#93;` | ACTIVE | Field names checked to identify the last row of a transaction. A row qualifies as an end row when at least min_non_empty_end of these fields extracted successfully. |
 | `min_non_empty_end` | `int` | ACTIVE | Minimum number of end_fields that must have extracted successfully for a row to be flagged as transaction_end = True. |
-| `extra_validation_start` | `FieldValidation` | ACTIVE | When set, any row where the named field's value does NOT match the pattern is excluded from being a start-bookend candidate for this bookend. Rows excluded here may still be captured by another bookend in the list. Useful for bookends that should only trigger on a specific row shape (e.g. an interest charge line identified by its details text). |
-| `extra_validation_end` | `FieldValidation` | STUB | Symmetric counterpart to extra_validation_start for end rows. Declared but not yet implemented in the pipeline; no code currently reads this field.  Reserved for future use. |
-| `sticky_fields` | `list&#91;str` | STUB | Intended to forward-fill named fields from the start row of a transaction down to its end row, scoped within a single transaction (as opposed to fill_forward_fields which fills across transactions).  Declared but not implemented; no pipeline code reads this field. |
+| `extra_validation_start` | `FieldValidation | None` | ACTIVE | When set, any row where the named field's value does NOT match the pattern is excluded from being a start-bookend candidate for this bookend. Rows excluded here may still be captured by another bookend in the list. Useful for bookends that should only trigger on a specific row shape (e.g. an interest charge line identified by its details text). |
+| `extra_validation_end` | `FieldValidation | None` | STUB | Symmetric counterpart to extra_validation_start for end rows. Declared but not yet implemented in the pipeline; no code currently reads this field.  Reserved for future use. |
+| `sticky_fields` | `list&#91;str&#93; | None` | STUB | Intended to forward-fill named fields from the start row of a transaction down to its end row, scoped within a single transaction (as opposed to fill_forward_fields which fills across transactions).  Declared but not implemented; no pipeline code reads this field. |
 
 ### `FieldValidation`
 
@@ -934,14 +934,14 @@ Mapping rule that promotes a raw extracted field to a standard output column.
 | Field | Type | Status | Description |
 | --- | --- | --- | --- |
 | `statement_type` | `str` | ACTIVE | Key used to select this rule; matched against the statement type string of the PDF being processed (e.g. "HSBC UK Current Account"). |
-| `field` | `str` | ACTIVE | Name of the raw extracted column to promote.  Set to None (or omit) when a literal default value should be used instead of a column value. |
-| `concat_fields` | `list` | ACTIVE | Name of the raw extracted columns to concatenate and promote.  Set to None (or omit) in order to revert to a single field and it's fallback |
-| `format` | `str` | ACTIVE | strptime format string applied when StandardFields.type == "date" (e.g. "%-d %B %Y").  Ignored for numeric and string types. |
-| `default` | `str` | ACTIVE | Literal string value used as the output when ``field`` is None/absent. Useful for injecting constant metadata (e.g. transaction_type = "CC"). |
-| `multiplier` | `float` | ACTIVE | Scalar applied to the value after casting when StandardFields.type == "numeric".  Use -1 to invert sign (e.g. to convert a credit amount stored as positive into a negative figure). |
-| `exclude_positive_values` | `bool` | ACTIVE | When True, any positive numeric value is replaced with 0 after casting.  Used to isolate debit-side figures from a combined amount column. |
-| `exclude_negative_values` | `bool` | ACTIVE | When True, any negative numeric value is replaced with 0 after casting.  Used to isolate credit-side figures from a combined amount column. |
-| `terminator` | `str` | ACTIVE | Regex pattern; when present the string value is truncated at the first match position before being written to the standard column.  Useful for stripping trailing boilerplate appended by merge_fields (e.g. " \| BALANCE CARRIED FORWARD"). |
+| `field` | `str | None` | ACTIVE | Name of the raw extracted column to promote.  Set to None (or omit) when a literal default value should be used instead of a column value. |
+| `concat_fields` | `list | None` | ACTIVE | Name of the raw extracted columns to concatenate and promote.  Set to None (or omit) in order to revert to a single field and it's fallback |
+| `format` | `str | None` | ACTIVE | strptime format string applied when StandardFields.type == "date" (e.g. "%-d %B %Y").  Ignored for numeric and string types. |
+| `default` | `str | None` | ACTIVE | Literal string value used as the output when ``field`` is None/absent. Useful for injecting constant metadata (e.g. transaction_type = "CC"). |
+| `multiplier` | `float | None` | ACTIVE | Scalar applied to the value after casting when StandardFields.type == "numeric".  Use -1 to invert sign (e.g. to convert a credit amount stored as positive into a negative figure). |
+| `exclude_positive_values` | `bool | None` | ACTIVE | When True, any positive numeric value is replaced with 0 after casting.  Used to isolate debit-side figures from a combined amount column. |
+| `exclude_negative_values` | `bool | None` | ACTIVE | When True, any negative numeric value is replaced with 0 after casting.  Used to isolate credit-side figures from a combined amount column. |
+| `terminator` | `str | None` | ACTIVE | Regex pattern; when present the string value is truncated at the first match position before being written to the standard column.  Useful for stripping trailing boilerplate appended by merge_fields (e.g. " \| BALANCE CARRIED FORWARD"). |
 
 ### `Test`
 

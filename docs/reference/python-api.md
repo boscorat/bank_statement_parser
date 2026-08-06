@@ -9,25 +9,61 @@ All public symbols are available from the top-level package:
 import bank_statement_parser as bsp
 ```
 
-## Meta
+## Ungrouped
 
-### `bsp.__app_name__`
+### `bsp.Failure`
 
-*constant*
+*class* — `bank_statement_parser.modules.data`
 
-### `bsp.__version__`
+Payload for a PDF result where no usable statement data was produced.
 
-*constant*
+### `bsp.ForexApiConfig`
 
-## Namespaced report backend
+*class* — `bank_statement_parser.modules.data`
 
-### `bsp.db`
+Configuration for the forex exchange-rate fetching service.
 
-*module* — `bank_statement_parser.modules.reports_db`
+### `bsp.Housekeeping`
 
-SQLite-backed report classes and export helpers.
+*class* — `bank_statement_parser.data`
 
-## Statement processing
+Orphan-detection and cascaded-delete helper for the raw SQLite database.
+
+### `bsp.ParquetFiles`
+
+*class* — `bank_statement_parser.modules.data`
+
+Paths to the statement-level temporary Parquet files written on the SUCCESS path.
+
+### `bsp.PdfResult`
+
+*class* — `bank_statement_parser.modules.data`
+
+Top-level result returned by :func:`~bank_statement_parser.modules.statements.process_pdf_statement`.
+
+### `bsp.ProjectConfigMissing`
+
+*class* — `bank_statement_parser.modules.errors`
+
+Project config folder missing or empty.
+
+### `bsp.ProjectDatabaseMissing`
+
+*class* — `bank_statement_parser.modules.errors`
+
+Project database file not found.
+
+### `bsp.ProjectPaths`
+
+*class* — `bank_statement_parser.modules.paths`
+
+All file-system paths for a bank_statement_parser project, derived from a single root directory.
+
+### `bsp.Review`
+
+*class* — `bank_statement_parser.modules.data`
+
+Payload for a PDF where extraction succeeded but CAB validation failed.
 
 ### `bsp.Statement`
 
@@ -41,63 +77,11 @@ Represents a single bank statement PDF with data extraction and validation.
 
 Handles batch processing of multiple bank statement PDFs.
 
-### `bsp.process_pdf_statement()`
+### `bsp.StatementError`
 
-*function* — `bank_statement_parser.modules.statements`
+*class* — `bank_statement_parser.modules.errors`
 
-Process a single bank statement PDF and save results to parquet files.
-
-### `bsp.copy_statements_to_project()`
-
-*function* — `bank_statement_parser.modules.statements`
-
-Copy processed statement PDFs into the project ``statements/`` directory.
-
-### `bsp.delete_temp_files()`
-
-*function* — `bank_statement_parser.modules.statements`
-
-Delete temporary parquet files created during batch processing.
-
-## Low-level persistence helpers
-
-### `bsp.update_parquet()`
-
-*function* — `bank_statement_parser.modules.parquet`
-
-Update parquet files with processed results from all PDFs in a batch.
-
-### `bsp.update_db()`
-
-*function* — `bank_statement_parser.modules.database`
-
-Insert processed batch results into the SQLite database.
-
-## Data structures
-
-### `bsp.PdfResult`
-
-*class* — `bank_statement_parser.modules.data`
-
-Top-level result returned by :func:`~bank_statement_parser.modules.statements.process_pdf_statement`.
-
-### `bsp.Success`
-
-*class* — `bank_statement_parser.modules.data`
-
-Payload for a fully-validated PDF result.
-
-### `bsp.Review`
-
-*class* — `bank_statement_parser.modules.data`
-
-Payload for a PDF where extraction succeeded but CAB validation failed.
-
-### `bsp.Failure`
-
-*class* — `bank_statement_parser.modules.data`
-
-Payload for a PDF result where no usable statement data was produced.
+Root exception for statement processing errors.
 
 ### `bsp.StatementInfo`
 
@@ -105,47 +89,37 @@ Payload for a PDF result where no usable statement data was produced.
 
 Statement-level metadata extracted from a successfully validated PDF.
 
-### `bsp.ParquetFiles`
+### `bsp.Success`
 
 *class* — `bank_statement_parser.modules.data`
 
-Paths to the statement-level temporary Parquet files written on the SUCCESS path.
+Payload for a fully-validated PDF result.
 
-## Debug / diagnostics
-
-### `bsp.debug_pdf_statement()`
-
-*function* — `bank_statement_parser.modules.debug`
-
-Re-process a single failing PDF and write a debug.json diagnostic file.
-
-### `bsp.debug_statements()`
-
-*function* — `bank_statement_parser.modules.debug`
-
-Re-process all failing statements from a completed batch and write debug files.
-
-## Errors
-
-### `bsp.StatementError`
+### `bsp.TestGateFailure`
 
 *class* — `bank_statement_parser.modules.errors`
 
-Root exception for statement processing errors.
+Raised when bsp's own pytest suite fails during TestHarness.setup().
 
-### `bsp.ProjectDatabaseMissing`
+### `bsp.TestHarness`
 
-*class* — `bank_statement_parser.modules.errors`
+*class* — `bank_statement_parser.testing`
 
-Project database file not found.
+Programmatic test environment for integration testing by dependent projects.
 
-### `bsp.ProjectConfigMissing`
+### `bsp.__app_name__`
 
-*class* — `bank_statement_parser.modules.errors`
+*constant*
 
-Project config folder missing or empty.
+### `bsp.__version__`
 
-## Config helpers
+*constant*
+
+### `bsp.build_datamart()`
+
+*function* — `bank_statement_parser.data`
+
+Empty and rebuild all mart tables (DimDate, DimAccount, DimStatement, FactTransaction, FactBalance) from the raw source tables.
 
 ### `bsp.copy_default_import_config()`
 
@@ -159,25 +133,53 @@ Copy all default import TOML configuration files to a destination directory.
 
 Copy the project folder structure (directories only) to a destination.
 
-### `bsp.validate_or_initialise_project()`
+### `bsp.copy_statements_to_project()`
 
-*function* — `bank_statement_parser.modules.paths`
+*function* — `bank_statement_parser.modules.statements`
 
-Validate an existing project or initialise a new one at *project_path*.
+Copy processed statement PDFs into the project ``statements/`` directory.
 
-### `bsp.ProjectPaths`
+### `bsp.create_db()`
 
-*class* — `bank_statement_parser.modules.paths`
+*function* — `bank_statement_parser.data`
 
-All file-system paths for a bank_statement_parser project, derived from a single root directory.
+Create (or recreate) the raw SQLite database with all tables and indexes.
 
-## Low-level PDF helpers
+### `bsp.db`
 
-### `bsp.pdf_open()`
+*module* — `bank_statement_parser.modules.reports_db`
+
+SQLite-backed report classes and export helpers.
+
+### `bsp.debug_pdf_statement()`
+
+*function* — `bank_statement_parser.modules.debug`
+
+Re-process a single failing PDF and write a debug.json diagnostic file.
+
+### `bsp.debug_statements()`
+
+*function* — `bank_statement_parser.modules.debug`
+
+Re-process all failing statements from a completed batch and write debug files.
+
+### `bsp.delete_temp_files()`
+
+*function* — `bank_statement_parser.modules.statements`
+
+Delete temporary parquet files created during batch processing.
+
+### `bsp.get_exchange_rates()`
+
+*function* — `bank_statement_parser.modules.forex`
+
+Fetch daily USD-based exchange rates and persist them to ``exchange_rates``.
+
+### `bsp.get_table_from_region()`
 
 *function* — `bank_statement_parser.modules.pdf_functions`
 
-Open a PDF file and return the PDF object with performance logging.
+Extract a structured table from a PDF region using configurable extraction settings.
 
 ### `bsp.page_crop()`
 
@@ -191,65 +193,41 @@ Crop a PDF page to the specified bounding box coordinates, with smart defaults.
 
 Extract all text content from a PDF page.
 
+### `bsp.pdf_open()`
+
+*function* — `bank_statement_parser.modules.pdf_functions`
+
+Open a PDF file and return the PDF object with performance logging.
+
+### `bsp.process_pdf_statement()`
+
+*function* — `bank_statement_parser.modules.statements`
+
+Process a single bank statement PDF and save results to parquet files.
+
 ### `bsp.region_search()`
 
 *function* — `bank_statement_parser.modules.pdf_functions`
 
 Search for a regex pattern within a PDF region and return the first match text.
 
-### `bsp.get_table_from_region()`
+### `bsp.update_db()`
 
-*function* — `bank_statement_parser.modules.pdf_functions`
+*function* — `bank_statement_parser.modules.database`
 
-Extract a structured table from a PDF region using configurable extraction settings.
+Insert processed batch results into the SQLite database.
 
-## Data-mart / database
+### `bsp.update_parquet()`
 
-### `bsp.build_datamart()`
+*function* — `bank_statement_parser.modules.parquet`
 
-*function* — `bank_statement_parser.data`
+Update parquet files with processed results from all PDFs in a batch.
 
-Empty and rebuild all mart tables (DimDate, DimAccount, DimStatement, FactTransaction, FactBalance) from the raw source tables.
+### `bsp.validate_or_initialise_project()`
 
-### `bsp.create_db()`
+*function* — `bank_statement_parser.modules.paths`
 
-*function* — `bank_statement_parser.data`
-
-Create (or recreate) the raw SQLite database with all tables and indexes.
-
-### `bsp.Housekeeping`
-
-*class* — `bank_statement_parser.data`
-
-Orphan-detection and cascaded-delete helper for the raw SQLite database.
-
-## Forex / currency conversion
-
-### `bsp.get_exchange_rates()`
-
-*function* — `bank_statement_parser.modules.forex`
-
-Fetch daily USD-based exchange rates and persist them to ``exchange_rates``.
-
-### `bsp.ForexApiConfig`
-
-*class* — `bank_statement_parser.modules.data`
-
-Configuration for the forex exchange-rate fetching service.
-
-## Testing harness
-
-### `bsp.TestHarness`
-
-*class* — `bank_statement_parser.testing`
-
-Programmatic test environment for integration testing by dependent projects.
-
-### `bsp.TestGateFailure`
-
-*class* — `bank_statement_parser.modules.errors`
-
-Raised when bsp's own pytest suite fails during TestHarness.setup().
+Validate an existing project or initialise a new one at *project_path*.
 
 ## DB Report Backend
 
