@@ -90,7 +90,7 @@ def _ts() -> str:
     Returns:
         Datetime formatted as ``"yyyymmddHHMMSS"``, e.g. ``"20250331143022"``.
     """
-    return datetime.now().strftime("%Y%m%d%H%M%S")
+    return datetime.now().strftime("%Y%m%d%H%M%S")  # noqa: DTZ005
 
 
 # ---------------------------------------------------------------------------
@@ -306,7 +306,7 @@ def _build_frame(
         where_clauses.append("da.id_account = ?")
     else:
         # For other tables that already carry id_account directly
-        base_query = f"SELECT * FROM {spec.source_table}"  # noqa: S608
+        base_query = f"SELECT * FROM {spec.source_table}"
         where_clauses.append("id_account = ?")
 
     if date_from is not None:

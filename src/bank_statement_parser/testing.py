@@ -53,6 +53,7 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+from typing import Self
 
 from bank_statement_parser.modules.errors import TestGateFailure
 from bank_statement_parser.modules.paths import ProjectPaths, validate_or_initialise_project
@@ -106,6 +107,7 @@ def _clone_test_data() -> Path | None:
                 capture_output=True,
                 text=True,
                 timeout=60,
+                check=False,
             )
             # Now pull the latest changes
             result = subprocess.run(
@@ -113,6 +115,7 @@ def _clone_test_data() -> Path | None:
                 capture_output=True,
                 text=True,
                 timeout=60,
+                check=False,
             )
             if result.returncode != 0:
                 # Pull failed — return existing cache if available
@@ -124,6 +127,7 @@ def _clone_test_data() -> Path | None:
                 capture_output=True,
                 text=True,
                 timeout=60,
+                check=False,
             )
             if result.returncode != 0:
                 return None
@@ -240,7 +244,7 @@ class TestHarness:
             compare_databases(h.db_path, my_db_path)
     """
 
-    __slots__ = ("_project_path", "_owned", "_test_results", "_batch", "_ready", "_skip_bsp_tests")
+    __slots__ = ("_batch", "_owned", "_project_path", "_ready", "_skip_bsp_tests", "_test_results")
 
     def __init__(self, skip_bsp_tests: bool = False) -> None:
         self._project_path: Path | None = None
@@ -332,7 +336,7 @@ class TestHarness:
     # Context manager
     # ------------------------------------------------------------------
 
-    def __enter__(self) -> "TestHarness":
+    def __enter__(self) -> "Self":
         """Set up the harness and return it for use as a context manager.
 
         Returns:
@@ -424,6 +428,7 @@ class TestHarness:
             ["python", "-m", "pytest", str(tests_path), "-q", "--tb=short"],
             capture_output=True,
             text=True,
+            check=False,
         )
 
         output = result.stdout + result.stderr

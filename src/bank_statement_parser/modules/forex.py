@@ -94,9 +94,9 @@ def _load_forex_config(project_path: Path | None) -> ForexApiConfig:
     Returns:
         A :class:`~bank_statement_parser.modules.data.ForexApiConfig` instance.
     """
-    import tomllib  # noqa: PLC0415  — stdlib, Python ≥ 3.11
+    import tomllib
 
-    import dacite  # noqa: PLC0415
+    import dacite
 
     paths = ProjectPaths.resolve(project_path)
     config_file = paths.forex_config
@@ -119,7 +119,7 @@ def _provider_frankfurter(
     currencies: list[str],
     date_from: str,
     date_to: str,
-    api_key: str,  # noqa: ARG001 — Frankfurter does not use an API key
+    api_key: str,
 ) -> list[tuple[str, str, float]]:
     """Fetch USD-based rates from Frankfurter for a date range.
 
