@@ -100,7 +100,7 @@ def _cmd_anonymise(args: argparse.Namespace) -> int:
     except ImportError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
-    except (ValueError, FileNotFoundError, IOError, OSError) as exc:
+    except (ValueError, FileNotFoundError, OSError) as exc:
         print(f"Error: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 1
 
@@ -173,9 +173,9 @@ def _cmd_process(args: argparse.Namespace) -> int:
 
     # -- summary -------------------------------------------------------------
     paths = ProjectPaths.resolve(project_path)
-    print("")
+    print()
     print(f"Done — processed {batch.pdf_count} PDF(s) ({batch.errors} error(s)) in {batch.duration_secs:.1f}s.")
-    print("")
+    print()
     print(f"Database: {paths.project_db}")
     print(f"Exports:  {paths.exports}")
 
