@@ -15,11 +15,14 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import json
 import random
 import sqlite3
 import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
+
+from bank_statement_parser.modules.db_migration import _DDL_DB_META, fingerprint_data_scripts
 
 
 def generate_mock_data(db_path: Path, num_batches: int = 10, statements_per_batch: int = 20, transactions_per_statement: int = 50):
@@ -278,6 +281,14 @@ def generate_mock_data(db_path: Path, num_batches: int = 10, statements_per_batc
         batch_heads_data,
     )
     print(f"Inserted {len(batch_heads_data)} batch_heads (written last as in production)")
+
+    # Write version + script fingerprint metadata (may already exist from create_db)
+    cursor.execute(_DDL_DB_META)
+    from bank_statement_parser import __version__
+
+    hashes = fingerprint_data_scripts()
+    cursor.execute("INSERT OR REPLACE INTO db_meta (key, value) VALUES ('bsp_version', ?)", (__version__,))
+    cursor.execute("INSERT OR REPLACE INTO db_meta (key, value) VALUES ('script_hashes', ?)", (json.dumps(hashes),))
 
     conn.commit()
     cursor.execute("PRAGMA foreign_keys = ON;")

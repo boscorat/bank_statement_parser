@@ -181,6 +181,18 @@ Fetch daily USD-based exchange rates and persist them to ``exchange_rates``.
 
 Extract a structured table from a PDF region using configurable extraction settings.
 
+### `bsp.migrate_db()`
+
+*function* — `bank_statement_parser.modules.db_migration`
+
+Upgrade *db_path* to the current BSP version if needed.
+
+### `bsp.needs_upgrade()`
+
+*function* — `bank_statement_parser.modules.db_migration`
+
+Check whether *db_path* requires a migration to the current BSP version.
+
 ### `bsp.page_crop()`
 
 *function* — `bank_statement_parser.modules.pdf_functions`
