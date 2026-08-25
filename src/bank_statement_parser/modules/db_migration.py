@@ -374,6 +374,7 @@ def migrate_db(db_path: Path) -> bool:
             archive_path.rename(db_path)
         except OSError:
             pass
+        _cleanup_temp(temp_db_path)
         warnings.warn(f"[upgrade] failed to replace database: {type(exc).__name__}: {exc}", UserWarning, stacklevel=2)
         return False
 
