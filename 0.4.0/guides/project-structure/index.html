@@ -1122,7 +1122,7 @@ No files are included in the copy — only the folder hierarchy is reproduced.</
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>    <span class="kn">import</span><span class="w"> </span><span class="nn">bank_statement_parser</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">bsp</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">bsp</span><span class="o">.</span><span class="n">copy_project_folders</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;~/my_project&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">())</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">bsp</span><span class="o">.</span><span class="n">copy_project_folders</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="s2">"~/my_project"</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">())</span>
 </code></pre></div>
 <h3 id="validate_or_initialise_project"><code>validate_or_initialise_project()</code><a class="headerlink" href="#validate_or_initialise_project" title="Permanent link">&para;</a></h3>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">validate_or_initialise_project</span><span class="p">(</span><span class="n">project_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
@@ -1180,7 +1180,7 @@ create them.</p>
 </ul>
 <h2 id="cli-integration">CLI Integration<a class="headerlink" href="#cli-integration" title="Permanent link">&para;</a></h2>
 <p>The <code>bsp process</code> command handles project creation automatically:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Creates ./bsp_project/ if it doesn&#39;t exist</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Creates ./bsp_project/ if it doesn't exist</span>
 <a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>bsp<span class="w"> </span>process<span class="w"> </span>--pdfs<span class="w"> </span>~/statements
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># Use a custom project path</span>

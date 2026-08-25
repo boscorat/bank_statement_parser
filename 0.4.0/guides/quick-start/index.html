@@ -1327,7 +1327,7 @@
 <li>Open <strong>PowerShell</strong> — press <code>Win + S</code>, type <code>PowerShell</code>, and press Enter</li>
 <li>
 <p>Copy and paste the following command, then press Enter:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">powershell</span> <span class="n">-ExecutionPolicy</span> <span class="n">ByPass</span> <span class="n">-c</span> <span class="s2">&quot;irm https://astral.sh/uv/install.ps1 | iex&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="n">powershell</span> <span class="n">-ExecutionPolicy</span> <span class="n">ByPass</span> <span class="n">-c</span> <span class="s2">"irm https://astral.sh/uv/install.ps1 | iex"</span>
 </code></pre></div>
 </li>
 <li>
@@ -1357,7 +1357,7 @@
 <hr />
 <h3 id="step-4-run-bank-statement-parser">Step 4 — Run Bank Statement Parser<a class="headerlink" href="#step-4-run-bank-statement-parser" title="Permanent link">&para;</a></h3>
 <p>In PowerShell, run the following command, replacing the path with the location of your statements folder:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">bsp</span> <span class="k">process</span> <span class="p">-</span><span class="n">-pdfs</span> <span class="s2">&quot;C:\Users\YourName\Documents\statements&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">bsp</span> <span class="k">process</span> <span class="p">-</span><span class="n">-pdfs</span> <span class="s2">"C:\Users\YourName\Documents\statements"</span>
 </code></pre></div>
 <p>You will see progress messages as each statement is processed. When it finishes, a new folder called <code>bsp_project</code> will have been created inside your statements folder.</p>
 <hr />

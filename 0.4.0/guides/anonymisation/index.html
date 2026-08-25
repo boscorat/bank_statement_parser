@@ -1110,14 +1110,14 @@ while preserving the document's visual structure and layout.</p>
 </table>
 <p>You can supplement these with your own files:</p>
 <p><strong><code>always_anonymise.toml</code></strong> — force specific replacements:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="s2">&quot;40-37-28&quot;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;00-00-00&quot;</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="s2">&quot;12345678&quot;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;00000000&quot;</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="s2">&quot;Jason Farrar&quot;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;John Doe&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="s2">"40-37-28"</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"00-00-00"</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="s2">"12345678"</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"00000000"</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="s2">"Jason Farrar"</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"John Doe"</span>
 </code></pre></div></p>
 <p><strong><code>never_anonymise.toml</code></strong> — protect additional phrases:
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="n">exclude</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="s2">&quot;My Bank&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="s2">&quot;My Employer Ltd&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">    </span><span class="s2">"My Bank"</span><span class="p">,</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">    </span><span class="s2">"My Employer Ltd"</span><span class="p">,</span>
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="p">]</span>
 </code></pre></div></p>
 <p>User config files should <strong>not</strong> be committed to source control — they will

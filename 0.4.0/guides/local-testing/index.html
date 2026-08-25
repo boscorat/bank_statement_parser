@@ -1371,7 +1371,7 @@ If no tables are detected, the <code>locations</code> bounding box is probably w
 <h3 id="step-3-verify-field-patterns-regex">Step 3: Verify Field Patterns (Regex)<a class="headerlink" href="#step-3-verify-field-patterns-regex" title="Permanent link">&para;</a></h3>
 <p>Are field patterns matching the actual text?</p>
 <p><strong>Check the field definition:</strong>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="err">{</span><span class="n">field</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;date&#39;</span><span class="err">,</span><span class="w"> </span><span class="n">column</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="err">,</span><span class="w"> </span><span class="n">vital</span><span class="o">=</span><span class="kc">false</span><span class="err">,</span><span class="w"> </span><span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="err">,</span><span class="w"> </span><span class="n">string_pattern</span><span class="w"> </span><span class="o">=</span><span class="s1">&#39;^[0-3][0-9]\s?[A-Z][a-z]{2}\s?[0-3][0-9]$&#39;</span><span class="err">}</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="err">{</span><span class="n">field</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'date'</span><span class="err">,</span><span class="w"> </span><span class="n">column</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="err">,</span><span class="w"> </span><span class="n">vital</span><span class="o">=</span><span class="kc">false</span><span class="err">,</span><span class="w"> </span><span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"string"</span><span class="err">,</span><span class="w"> </span><span class="n">string_pattern</span><span class="w"> </span><span class="o">=</span><span class="s1">'^[0-3][0-9]\s?[A-Z][a-z]{2}\s?[0-3][0-9]$'</span><span class="err">}</span>
 </code></pre></div></p>
 <p>This pattern matches dates like: <code>11 Jan 11</code>, <code>1Jan11</code>, <code>01 Jan 01</code>, etc.</p>
 <p><strong>Verify the pattern:</strong>
@@ -1385,10 +1385,10 @@ If no tables are detected, the <code>locations</code> bounding box is probably w
 - <strong>Spaces:</strong> Pattern assumes spaces. Check if your PDF uses tabs or no space: adjust <code>\s</code> or <code>\s?</code></p>
 <p><strong>Fix example:</strong>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># OLD: requires 2-digit day</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">string_pattern</span><span class="w"> </span><span class="o">=</span><span class="s1">&#39;^[0-3][0-9]\s[A-Z][a-z]{2}\s[0-3][0-9]$&#39;</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="n">string_pattern</span><span class="w"> </span><span class="o">=</span><span class="s1">'^[0-3][0-9]\s[A-Z][a-z]{2}\s[0-3][0-9]$'</span>
 <a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
 <a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># NEW: allows single-digit day</span>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="n">string_pattern</span><span class="w"> </span><span class="o">=</span><span class="s1">&#39;^[0-3]?[0-9]\s[A-Z][a-z]{2}\s[0-3]?[0-9]$&#39;</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="n">string_pattern</span><span class="w"> </span><span class="o">=</span><span class="s1">'^[0-3]?[0-9]\s[A-Z][a-z]{2}\s[0-3]?[0-9]$'</span>
 </code></pre></div></p>
 <hr />
 <h3 id="step-4-verify-balanceamount-extraction">Step 4: Verify Balance/Amount Extraction<a class="headerlink" href="#step-4-verify-balanceamount-extraction" title="Permanent link">&para;</a></h3>
@@ -1490,7 +1490,7 @@ If no tables are detected, the <code>locations</code> bounding box is probably w
 <p><strong>Get all transactions for a statement:</strong>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="k">SELECT</span><span class="w"> </span><span class="n">transaction_date</span><span class="p">,</span><span class="w"> </span><span class="n">transaction_desc</span><span class="p">,</span><span class="w"> </span><span class="n">payments_in</span><span class="p">,</span><span class="w"> </span><span class="n">payments_out</span><span class="w"> </span>
 <a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="k">FROM</span><span class="w"> </span><span class="n">statement_lines</span><span class="w"> </span>
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="k">WHERE</span><span class="w"> </span><span class="n">ID_STATEMENT</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;YOUR_STATEMENT_ID&#39;</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="k">WHERE</span><span class="w"> </span><span class="n">ID_STATEMENT</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'YOUR_STATEMENT_ID'</span>
 <a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">transaction_number</span><span class="p">;</span>
 </code></pre></div></p>
 <p><strong>Check checks-and-balances:</strong>
