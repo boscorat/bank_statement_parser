@@ -103,7 +103,7 @@ def fingerprint_data_scripts(data_dir: Path | None = None) -> dict[str, str]:
         A dict mapping ``filename.py`` to its SHA-512 hex digest.
     """
     if data_dir is None:
-        from bank_statement_parser.modules.paths import DATA  # noqa: PLC0415
+        from bank_statement_parser.modules.paths import DATA
 
         data_dir = DATA
 
@@ -177,7 +177,7 @@ def needs_upgrade(db_path: Path) -> bool:
         if meta is None:
             return True
 
-        from bank_statement_parser import __version__  # noqa: PLC0415
+        from bank_statement_parser import __version__
 
         stored_version = meta.get("bsp_version", "")
         if stored_version != __version__:
@@ -185,10 +185,7 @@ def needs_upgrade(db_path: Path) -> bool:
 
         stored_hashes = json.loads(meta.get("script_hashes", "{}"))
         current_hashes = fingerprint_data_scripts()
-        if stored_hashes != current_hashes:
-            return True
-
-        return False
+        return stored_hashes != current_hashes
     finally:
         conn.close()
 
@@ -239,15 +236,15 @@ def _copy_user_objects(old_conn: sqlite3.Connection, new_conn: sqlite3.Connectio
     """
     for table_info in user_objects["tables"]:
         new_conn.execute(table_info["sql"])
-        rows = old_conn.execute(f'SELECT * FROM "{table_info["name"]}"').fetchall()  # noqa: S608
+        rows = old_conn.execute(f'SELECT * FROM "{table_info["name"]}"').fetchall()
         if rows:
-            cols = [desc[0] for desc in old_conn.execute(f'SELECT * FROM "{table_info["name"]}" LIMIT 0').fetchall() or []]  # noqa: S608
+            cols = [desc[0] for desc in old_conn.execute(f'SELECT * FROM "{table_info["name"]}" LIMIT 0').fetchall() or []]
             # Re-fetch column names via PRAGMA for robustness
-            pragma_rows = old_conn.execute(f'PRAGMA table_info("{table_info["name"]}")').fetchall()  # noqa: S608
+            pragma_rows = old_conn.execute(f'PRAGMA table_info("{table_info["name"]}")').fetchall()
             cols = [r[1] for r in pragma_rows]
             placeholders = ", ".join(["?"] * len(cols))
             col_str = ", ".join([f'"{c}"' for c in cols])
-            new_conn.executemany(f'INSERT OR REPLACE INTO "{table_info["name"]}" ({col_str}) VALUES ({placeholders})', rows)  # noqa: S608
+            new_conn.executemany(f'INSERT OR REPLACE INTO "{table_info["name"]}" ({col_str}) VALUES ({placeholders})', rows)
 
     for view_info in user_objects["views"]:
         new_conn.execute(view_info["sql"])
@@ -293,7 +290,7 @@ def migrate_db(db_path: Path) -> bool:
         return False
 
     # Resolve current version for the archive name
-    from bank_statement_parser import __version__  # noqa: PLC0415
+    from bank_statement_parser import __version__
 
     conn = sqlite3.connect(str(db_path))
     meta = _read_db_meta(conn)
@@ -305,7 +302,7 @@ def migrate_db(db_path: Path) -> bool:
     # 1. Create fresh temp DB with current schema
     temp_db_path = db_path.with_name(f"{db_path.stem}_upgrade{db_path.suffix}")
     try:
-        from bank_statement_parser.data.create_project_db import main as create_db  # noqa: PLC0415
+        from bank_statement_parser.data.create_project_db import main as create_db
 
         create_db(db_path=temp_db_path, with_fk=False)
     except Exception as exc:  # noqa: BLE001
@@ -314,22 +311,24 @@ def migrate_db(db_path: Path) -> bool:
         return False
 
     # 2. Copy raw source data
+    old_conn = None
+    new_conn = None
     try:
         old_conn = sqlite3.connect(str(db_path))
         new_conn = sqlite3.connect(str(temp_db_path))
 
         for table in _RAW_TABLES:
             try:
-                rows = old_conn.execute(f'SELECT * FROM "{table}"').fetchall()  # noqa: S608
+                rows = old_conn.execute(f'SELECT * FROM "{table}"').fetchall()
             except sqlite3.OperationalError:
                 continue
             if not rows:
                 continue
-            pragma_rows = old_conn.execute(f'PRAGMA table_info("{table}")').fetchall()  # noqa: S608
+            pragma_rows = old_conn.execute(f'PRAGMA table_info("{table}")').fetchall()
             cols = [r[1] for r in pragma_rows]
             placeholders = ", ".join(["?"] * len(cols))
             col_str = ", ".join([f'"{c}"' for c in cols])
-            new_conn.executemany(f'INSERT OR REPLACE INTO "{table}" ({col_str}) VALUES ({placeholders})', rows)  # noqa: S608
+            new_conn.executemany(f'INSERT OR REPLACE INTO "{table}" ({col_str}) VALUES ({placeholders})', rows)
 
         new_conn.commit()
 
@@ -337,19 +336,28 @@ def migrate_db(db_path: Path) -> bool:
         user_objects = _get_user_objects(old_conn)
         _copy_user_objects(old_conn, new_conn, user_objects)
         new_conn.commit()
-
-        old_conn.close()
-        new_conn.close()
     except Exception as exc:  # noqa: BLE001
+        if old_conn is not None:
+            old_conn.close()
+        if new_conn is not None:
+            new_conn.close()
         _cleanup_temp(temp_db_path)
         warnings.warn(f"[upgrade] failed to migrate data: {type(exc).__name__}: {exc}", UserWarning, stacklevel=2)
         return False
+
+    old_conn.close()
+    new_conn.close()
 
     # 4. Archive old DB
     try:
         archive_dir = db_path.parent / "database_archive"
         archive_dir.mkdir(parents=True, exist_ok=True)
         archive_path = archive_dir / f"project_v{old_version}{db_path.suffix}"
+        if archive_path.exists():
+            from datetime import datetime
+
+            ts = datetime.now().strftime("%Y%m%d%H%M%S")  # noqa: DTZ005
+            archive_path = archive_dir / f"project_v{old_version}_{ts}{db_path.suffix}"
         db_path.rename(archive_path)
         print(f"[upgrade] archived old database to {archive_path}")
     except Exception as exc:  # noqa: BLE001

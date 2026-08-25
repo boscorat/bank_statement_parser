@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import json
 import random
 import sqlite3
 import uuid
@@ -283,9 +284,7 @@ def generate_mock_data(db_path: Path, num_batches: int = 10, statements_per_batc
 
     # Write version + script fingerprint metadata (may already exist from create_db)
     cursor.execute(_DDL_DB_META)
-    from bank_statement_parser import __version__  # noqa: PLC0415
-
-    import json
+    from bank_statement_parser import __version__
 
     hashes = fingerprint_data_scripts()
     cursor.execute("INSERT OR REPLACE INTO db_meta (key, value) VALUES ('bsp_version', ?)", (__version__,))

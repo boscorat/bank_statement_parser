@@ -197,7 +197,7 @@ def main(db_path: Path, with_fk: bool = False) -> None:
 
     # Write version + script fingerprint metadata
     conn.execute(_DDL_DB_META)
-    from bank_statement_parser import __version__  # noqa: PLC0415
+    from bank_statement_parser import __version__
 
     hashes = fingerprint_data_scripts()
     conn.execute("INSERT INTO db_meta (key, value) VALUES ('bsp_version', ?)", (__version__,))

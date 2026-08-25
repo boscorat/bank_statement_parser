@@ -27,7 +27,6 @@ Run with:
 
 import sqlite3
 import warnings
-from pathlib import Path
 
 import pytest
 
@@ -40,9 +39,6 @@ from bank_statement_parser.modules.db_migration import (
     migrate_db,
     needs_upgrade,
 )
-
-_TEST_DB = Path(__file__).parent / "test_migration.db"
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -278,22 +274,38 @@ class TestMigrateDb:
         assert meta["bsp_version"] == __version__
         assert "script_hashes" in meta
 
-    def test_upgrade_failure_preserves_original(self, tmp_path):
-        """On failure, the original database is preserved untouched."""
+    def test_upgrade_failure_preserves_original(self, tmp_path, monkeypatch):
+        """On failure, the original database is preserved and a warning is emitted."""
         db_path = tmp_path / "project.db"
         create_db(db_path=db_path, with_fk=False)
         generate_mock_data(db_path=db_path, num_batches=1, statements_per_batch=2, transactions_per_statement=3)
+
+        # Dirty version to force migration
+        conn = sqlite3.connect(str(db_path))
+        conn.execute("UPDATE db_meta SET value = '0.0.1' WHERE key = 'bsp_version'")
+        conn.commit()
+        conn.close()
 
         # Record original state
         conn = sqlite3.connect(str(db_path))
         original_statements = conn.execute("SELECT COUNT(*) FROM statement_heads").fetchone()[0]
         conn.close()
 
-        # No upgrade needed → no warning, original intact
-        with warnings.catch_warnings(record=True):
+        # Mock create_db to raise during migration
+        def failing_create_db(*args, **kwargs):
+            raise RuntimeError("simulated failure")
+
+        monkeypatch.setattr(
+            "bank_statement_parser.data.create_project_db.main",
+            failing_create_db,
+        )
+
+        with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             result = migrate_db(db_path)
-            assert result is False  # no upgrade needed
+            assert result is False
+            assert len(w) == 1
+            assert "simulated failure" in str(w[0].message)
 
         # Verify original is intact
         conn = sqlite3.connect(str(db_path))

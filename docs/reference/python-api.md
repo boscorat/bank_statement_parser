@@ -193,6 +193,12 @@ Upgrade *db_path* to the current BSP version if needed.
 
 Check whether *db_path* requires a migration to the current BSP version.
 
+### `bsp.page_crop()`
+
+*function* — `bank_statement_parser.modules.pdf_functions`
+
+Crop a PDF page to the specified bounding box coordinates, with smart defaults.
+
 ### `bsp.page_text()`
 
 *function* — `bank_statement_parser.modules.pdf_functions`

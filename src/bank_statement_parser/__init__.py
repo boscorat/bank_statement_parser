@@ -102,14 +102,14 @@ import bank_statement_parser.modules.reports_db as db
 from bank_statement_parser.modules.data import Failure, ParquetFiles, PdfResult, Review, StatementInfo, Success
 
 # ---------------------------------------------------------------------------
-# Database migration — consumed by openstan's StanBatch
-# ---------------------------------------------------------------------------
-from bank_statement_parser.modules.db_migration import migrate_db, needs_upgrade
-
-# ---------------------------------------------------------------------------
 # Low-level persistence helpers — consumed by openstan's StanBatch
 # ---------------------------------------------------------------------------
 from bank_statement_parser.modules.database import update_db
+
+# ---------------------------------------------------------------------------
+# Database migration — consumed by openstan's StanBatch
+# ---------------------------------------------------------------------------
+from bank_statement_parser.modules.db_migration import migrate_db, needs_upgrade
 
 # ---------------------------------------------------------------------------
 # Debug / diagnostics
@@ -208,6 +208,7 @@ __all__ = [
     "get_table_from_region",
     "migrate_db",
     "needs_upgrade",
+    "page_crop",
     "page_text",
     "pdf_open",
     "process_pdf_statement",
