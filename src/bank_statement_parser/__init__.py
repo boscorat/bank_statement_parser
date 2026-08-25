@@ -102,6 +102,11 @@ import bank_statement_parser.modules.reports_db as db
 from bank_statement_parser.modules.data import Failure, ParquetFiles, PdfResult, Review, StatementInfo, Success
 
 # ---------------------------------------------------------------------------
+# Database migration — consumed by openstan's StanBatch
+# ---------------------------------------------------------------------------
+from bank_statement_parser.modules.db_migration import migrate_db, needs_upgrade
+
+# ---------------------------------------------------------------------------
 # Low-level persistence helpers — consumed by openstan's StanBatch
 # ---------------------------------------------------------------------------
 from bank_statement_parser.modules.database import update_db
@@ -201,7 +206,8 @@ __all__ = [
     "delete_temp_files",
     "get_exchange_rates",
     "get_table_from_region",
-    "page_crop",
+    "migrate_db",
+    "needs_upgrade",
     "page_text",
     "pdf_open",
     "process_pdf_statement",

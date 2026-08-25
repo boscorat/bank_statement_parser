@@ -442,6 +442,10 @@ def update_db(
     paths = ProjectPaths.resolve(project_path)
     db_path = paths.project_db
 
+    from bank_statement_parser.modules.db_migration import migrate_db  # noqa: PLC0415
+
+    migrate_db(db_path)
+
     _require_db(db_path)
 
     conn = sqlite3.connect(db_path)

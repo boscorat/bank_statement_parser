@@ -15,10 +15,12 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import json
 import sqlite3
 from pathlib import Path
 
 from bank_statement_parser.data.create_project_db_views import create_views
+from bank_statement_parser.modules.db_migration import _DDL_DB_META, fingerprint_data_scripts
 
 # DDL for the exchange_rates reference table.  Uses a composite primary key
 # (id_date, currency) so it cannot be created via the generic create_table()
@@ -193,9 +195,17 @@ def main(db_path: Path, with_fk: bool = False) -> None:
     print(_DDL_EXCHANGE_RATES)
     conn.execute(_DDL_EXCHANGE_RATES)
 
+    # Write version + script fingerprint metadata
+    conn.execute(_DDL_DB_META)
+    from bank_statement_parser import __version__  # noqa: PLC0415
+
+    hashes = fingerprint_data_scripts()
+    conn.execute("INSERT INTO db_meta (key, value) VALUES ('bsp_version', ?)", (__version__,))
+    conn.execute("INSERT INTO db_meta (key, value) VALUES ('script_hashes', ?)", (json.dumps(hashes),))
     conn.commit()
-    conn.close()
     print(f"Database created: {db_path}")
+
+    conn.close()
 
     create_views(db_path)
 
