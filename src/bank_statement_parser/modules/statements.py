@@ -1210,7 +1210,8 @@ def copy_statements_to_project(
         dest_dir = paths.statements
         dest_dir.mkdir(parents=True, exist_ok=True)
         dest_path = dest_dir / info.filename_new
-        shutil.copy2(pdf_path, dest_path)
+        if pdf_path.resolve() != dest_path.resolve():
+            shutil.copy2(pdf_path, dest_path)
         copied.append(dest_path)
     return copied
 

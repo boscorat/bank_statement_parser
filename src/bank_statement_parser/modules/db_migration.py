@@ -85,6 +85,17 @@ CREATE TABLE IF NOT EXISTS db_meta (
 )
 """
 
+# Column renames across BSP versions.  Keys are table names, values are
+# dicts mapping old column name → new column name.  During migration, a
+# renamed column's data is preserved under the new name instead of being
+# silently dropped.
+_COLUMN_RENAMES: dict[str, dict[str, str]] = {
+    "statement_lines": {
+        "STD_PAYMENTS_IN": "STD_TRANSACTION_PAYMENTS_IN",
+        "STD_PAYMENTS_OUT": "STD_TRANSACTION_PAYMENTS_OUT",
+    },
+}
+
 
 # ---------------------------------------------------------------------------
 # Script fingerprinting
@@ -223,6 +234,48 @@ def _get_user_objects(conn: sqlite3.Connection) -> dict[str, list[dict[str, str]
     return user_objects
 
 
+def _resolve_column_map(
+    old_conn: sqlite3.Connection,
+    new_conn: sqlite3.Connection,
+    table: str,
+) -> tuple[list[str], list[str], list[str]]:
+    """Build a column mapping from old schema to new schema for *table*.
+
+    Returns a 3-tuple of equal-length lists:
+
+    * ``old_select`` — column names to ``SELECT`` from the old table,
+    * ``new_insert`` — corresponding names to ``INSERT INTO`` the new table
+      (after applying any renames from :data:`_COLUMN_RENAMES`),
+    * ``dropped`` — old columns that have no counterpart in the new schema
+      (these will be silently dropped with a warning).
+    """
+    old_pragma = old_conn.execute(f'PRAGMA table_info("{table}")').fetchall()
+    new_pragma = new_conn.execute(f'PRAGMA table_info("{table}")').fetchall()
+    old_cols = [r[1] for r in old_pragma]
+    new_cols = {r[1] for r in new_pragma}
+    renames = _COLUMN_RENAMES.get(table, {})
+
+    old_select: list[str] = []
+    new_insert: list[str] = []
+    dropped: list[str] = []
+
+    for col in old_cols:
+        if col in renames:
+            new_name = renames[col]
+            if new_name in new_cols:
+                old_select.append(col)
+                new_insert.append(new_name)
+            else:
+                dropped.append(col)
+        elif col in new_cols:
+            old_select.append(col)
+            new_insert.append(col)
+        else:
+            dropped.append(col)
+
+    return old_select, new_insert, dropped
+
+
 def _copy_user_objects(old_conn: sqlite3.Connection, new_conn: sqlite3.Connection, user_objects: dict[str, list[dict[str, str]]]) -> None:
     """Copy user-added objects from *old_conn* to *new_conn*.
 
@@ -235,16 +288,24 @@ def _copy_user_objects(old_conn: sqlite3.Connection, new_conn: sqlite3.Connectio
         user_objects: Output of :func:`_get_user_objects`.
     """
     for table_info in user_objects["tables"]:
+        table_name = table_info["name"]
         new_conn.execute(table_info["sql"])
-        rows = old_conn.execute(f'SELECT * FROM "{table_info["name"]}"').fetchall()
-        if rows:
-            cols = [desc[0] for desc in old_conn.execute(f'SELECT * FROM "{table_info["name"]}" LIMIT 0').fetchall() or []]
-            # Re-fetch column names via PRAGMA for robustness
-            pragma_rows = old_conn.execute(f'PRAGMA table_info("{table_info["name"]}")').fetchall()
-            cols = [r[1] for r in pragma_rows]
-            placeholders = ", ".join(["?"] * len(cols))
-            col_str = ", ".join([f'"{c}"' for c in cols])
-            new_conn.executemany(f'INSERT OR REPLACE INTO "{table_info["name"]}" ({col_str}) VALUES ({placeholders})', rows)
+        old_select, new_insert, dropped = _resolve_column_map(old_conn, new_conn, table_name)
+        if dropped:
+            warnings.warn(
+                f"[upgrade] dropping columns from user table {table_name} not in new schema: {', '.join(dropped)}",
+                UserWarning,
+                stacklevel=2,
+            )
+        if not new_insert:
+            continue
+        select_str = ", ".join([f'"{c}"' for c in old_select])
+        rows = old_conn.execute(f'SELECT {select_str} FROM "{table_name}"').fetchall()
+        if not rows:
+            continue
+        placeholders = ", ".join(["?"] * len(new_insert))
+        col_str = ", ".join([f'"{c}"' for c in new_insert])
+        new_conn.executemany(f'INSERT OR REPLACE INTO "{table_name}" ({col_str}) VALUES ({placeholders})', rows)
 
     for view_info in user_objects["views"]:
         new_conn.execute(view_info["sql"])
@@ -319,15 +380,23 @@ def migrate_db(db_path: Path) -> bool:
 
         for table in _RAW_TABLES:
             try:
-                rows = old_conn.execute(f'SELECT * FROM "{table}"').fetchall()
+                old_cols_for_select, new_cols_for_insert, dropped = _resolve_column_map(old_conn, new_conn, table)
             except sqlite3.OperationalError:
                 continue
+            if dropped:
+                warnings.warn(
+                    f"[upgrade] dropping columns from {table} not in new schema: {', '.join(dropped)}",
+                    UserWarning,
+                    stacklevel=2,
+                )
+            if not new_cols_for_insert:
+                continue
+            select_str = ", ".join([f'"{c}"' for c in old_cols_for_select])
+            rows = old_conn.execute(f'SELECT {select_str} FROM "{table}"').fetchall()
             if not rows:
                 continue
-            pragma_rows = old_conn.execute(f'PRAGMA table_info("{table}")').fetchall()
-            cols = [r[1] for r in pragma_rows]
-            placeholders = ", ".join(["?"] * len(cols))
-            col_str = ", ".join([f'"{c}"' for c in cols])
+            placeholders = ", ".join(["?"] * len(new_cols_for_insert))
+            col_str = ", ".join([f'"{c}"' for c in new_cols_for_insert])
             new_conn.executemany(f'INSERT OR REPLACE INTO "{table}" ({col_str}) VALUES ({placeholders})', rows)
 
         new_conn.commit()
@@ -359,6 +428,12 @@ def migrate_db(db_path: Path) -> bool:
             ts = datetime.now().strftime("%Y%m%d%H%M%S")  # noqa: DTZ005
             archive_path = archive_dir / f"project_v{old_version}_{ts}{db_path.suffix}"
         db_path.rename(archive_path)
+        # Move WAL/SHM sidecar files alongside the archived DB so stale
+        # sidecars don't corrupt the promoted replacement.
+        for suffix in ("-wal", "-shm"):
+            sidecar = db_path.parent / f"{db_path.name}{suffix}"
+            if sidecar.exists():
+                sidecar.rename(archive_dir / f"{archive_path.name}{suffix}")
         print(f"[upgrade] archived old database to {archive_path}")
     except Exception as exc:  # noqa: BLE001
         _cleanup_temp(temp_db_path)
@@ -378,7 +453,16 @@ def migrate_db(db_path: Path) -> bool:
         warnings.warn(f"[upgrade] failed to replace database: {type(exc).__name__}: {exc}", UserWarning, stacklevel=2)
         return False
 
-    # 6. Report user objects preserved
+    # 6. Rebuild mart tables from raw data
+    try:
+        from bank_statement_parser.data.build_datamart import build_datamart
+
+        print("[upgrade] rebuilding data mart tables …")
+        build_datamart(db_path=db_path, verbose=False)
+    except Exception as exc:  # noqa: BLE001
+        warnings.warn(f"[upgrade] failed to rebuild data mart: {type(exc).__name__}: {exc}", UserWarning, stacklevel=2)
+
+    # 7. Report user objects preserved
     n_tables = len(user_objects.get("tables", []))
     n_views = len(user_objects.get("views", []))
     n_triggers = len(user_objects.get("triggers", []))

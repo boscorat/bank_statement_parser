@@ -84,6 +84,38 @@ def db_with_user_objects(fresh_db):
     return fresh_db
 
 
+@pytest.fixture()
+def old_db_renamed_columns(tmp_path):
+    """Create a database with old column names that were later renamed.
+
+    Simulates a BSP database created before the STD_PAYMENTS_IN/OUT →
+    STD_TRANSACTION_PAYMENTS_IN/OUT rename.
+    """
+    db_path = tmp_path / "project.db"
+    create_db(db_path=db_path, with_fk=False)
+    generate_mock_data(db_path=db_path, num_batches=1, statements_per_batch=2, transactions_per_statement=3)
+
+    # Drop all views and mart tables so ALTER TABLE can proceed
+    conn = sqlite3.connect(str(db_path))
+    views = [r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='view'").fetchall()]
+    for v in views:
+        conn.execute(f"DROP VIEW IF EXISTS {v}")
+    for t in ("DimDate", "DimAccount", "DimStatement", "FactTransaction", "FactBalance"):
+        conn.execute(f"DROP TABLE IF EXISTS {t}")
+    conn.execute('ALTER TABLE statement_lines RENAME COLUMN "STD_TRANSACTION_PAYMENTS_IN" TO "STD_PAYMENTS_IN"')
+    conn.execute('ALTER TABLE statement_lines RENAME COLUMN "STD_TRANSACTION_PAYMENTS_OUT" TO "STD_PAYMENTS_OUT"')
+    conn.commit()
+    conn.close()
+
+    # Remove db_meta to trigger upgrade
+    conn = sqlite3.connect(str(db_path))
+    conn.execute("DROP TABLE IF EXISTS db_meta")
+    conn.commit()
+    conn.close()
+
+    return db_path
+
+
 # ---------------------------------------------------------------------------
 # TestFingerprintScripts
 # ---------------------------------------------------------------------------
@@ -251,6 +283,16 @@ class TestMigrateDb:
         assert post_transactions == pre_transactions
         conn.close()
 
+    def test_mart_tables_populated(self, db_with_user_objects):
+        """Mart tables are rebuilt with data after migration."""
+        migrate_db(db_with_user_objects)
+
+        conn = sqlite3.connect(str(db_with_user_objects))
+        for table in ("DimDate", "DimAccount", "DimStatement", "FactTransaction", "FactBalance"):
+            count = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+            assert count > 0, f"{table} should have rows after migration"
+        conn.close()
+
     def test_old_db_archived(self, db_with_user_objects):
         """The old database is moved to database_archive/ with version suffix."""
         archive_dir = db_with_user_objects.parent / "database_archive"
@@ -328,3 +370,65 @@ class TestMigrateDb:
         from bank_statement_parser import __version__
 
         assert meta["bsp_version"] == __version__
+
+
+# ---------------------------------------------------------------------------
+# TestMigrateDbColumnRenames
+# ---------------------------------------------------------------------------
+
+
+class TestMigrateDbColumnRenames:
+    def test_renamed_columns_preserve_data(self, old_db_renamed_columns):
+        """Data in old column names is preserved under the new column names after migration."""
+        # Record pre-migration row count and a sample value from old columns
+        conn = sqlite3.connect(str(old_db_renamed_columns))
+        pre_count = conn.execute("SELECT COUNT(*) FROM statement_lines").fetchone()[0]
+        pre_payments_in = conn.execute("SELECT SUM(CAST(STD_PAYMENTS_IN AS REAL)) FROM statement_lines").fetchone()[0]
+        pre_payments_out = conn.execute("SELECT SUM(CAST(STD_PAYMENTS_OUT AS REAL)) FROM statement_lines").fetchone()[0]
+        conn.close()
+
+        result = migrate_db(old_db_renamed_columns)
+        assert result is True
+
+        # Verify data migrated to new column names
+        conn = sqlite3.connect(str(old_db_renamed_columns))
+        post_count = conn.execute("SELECT COUNT(*) FROM statement_lines").fetchone()[0]
+        post_payments_in = conn.execute("SELECT SUM(CAST(STD_TRANSACTION_PAYMENTS_IN AS REAL)) FROM statement_lines").fetchone()[0]
+        post_payments_out = conn.execute("SELECT SUM(CAST(STD_TRANSACTION_PAYMENTS_OUT AS REAL)) FROM statement_lines").fetchone()[0]
+        conn.close()
+
+        assert post_count == pre_count
+        assert post_payments_in == pre_payments_in
+        assert post_payments_out == pre_payments_out
+
+    def test_old_column_names_no_longer_exist(self, old_db_renamed_columns):
+        """After migration, old column names should not exist in the new schema."""
+        migrate_db(old_db_renamed_columns)
+
+        conn = sqlite3.connect(str(old_db_renamed_columns))
+        columns = {r[1] for r in conn.execute("PRAGMA table_info(statement_lines)").fetchall()}
+        conn.close()
+
+        assert "STD_PAYMENTS_IN" not in columns
+        assert "STD_PAYMENTS_OUT" not in columns
+        assert "STD_TRANSACTION_PAYMENTS_IN" in columns
+        assert "STD_TRANSACTION_PAYMENTS_OUT" in columns
+
+    def test_rename_migration_emits_no_drop_warning(self, old_db_renamed_columns):
+        """Renamed columns should NOT emit a drop warning (they are mapped, not dropped)."""
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            migrate_db(old_db_renamed_columns)
+
+            drop_warnings = [x for x in w if "dropping columns" in str(x.message)]
+            assert len(drop_warnings) == 0
+
+    def test_mart_tables_rebuilt_after_migration(self, old_db_renamed_columns):
+        """After migration, mart tables (DimDate, FactTransaction, etc.) are populated."""
+        migrate_db(old_db_renamed_columns)
+
+        conn = sqlite3.connect(str(old_db_renamed_columns))
+        for table in ("DimDate", "DimAccount", "DimStatement", "FactTransaction", "FactBalance"):
+            count = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+            assert count > 0, f"{table} should have rows after migration"
+        conn.close()
