@@ -247,7 +247,7 @@ def _resolve_column_map(
     * ``new_insert`` — corresponding names to ``INSERT INTO`` the new table
       (after applying any renames from :data:`_COLUMN_RENAMES`),
     * ``dropped`` — old columns that have no counterpart in the new schema
-      (these will be silently dropped with a warning).
+      (these are dropped with a :class:`UserWarning`).
     """
     old_pragma = old_conn.execute(f'PRAGMA table_info("{table}")').fetchall()
     new_pragma = new_conn.execute(f'PRAGMA table_info("{table}")').fetchall()
@@ -429,11 +429,15 @@ def migrate_db(db_path: Path) -> bool:
             archive_path = archive_dir / f"project_v{old_version}_{ts}{db_path.suffix}"
         db_path.rename(archive_path)
         # Move WAL/SHM sidecar files alongside the archived DB so stale
-        # sidecars don't corrupt the promoted replacement.
+        # sidecars don't corrupt the promoted replacement.  Each move is
+        # best-effort: failure here should not abort the migration.
         for suffix in ("-wal", "-shm"):
-            sidecar = db_path.parent / f"{db_path.name}{suffix}"
-            if sidecar.exists():
-                sidecar.rename(archive_dir / f"{archive_path.name}{suffix}")
+            try:
+                sidecar = db_path.parent / f"{db_path.name}{suffix}"
+                if sidecar.exists():
+                    sidecar.rename(archive_dir / f"{archive_path.name}{suffix}")
+            except OSError:
+                pass
         print(f"[upgrade] archived old database to {archive_path}")
     except Exception as exc:  # noqa: BLE001
         _cleanup_temp(temp_db_path)
