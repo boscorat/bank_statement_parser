@@ -282,6 +282,16 @@ To upgrade:
 ~/.venvs/bsp/bin/pip install --upgrade uk-bank-statement-parser
 ```
 
+## Community
+
+| Channel | Purpose |
+|---------|---------|
+| [GitHub Discussions](https://github.com/boscorat/openstan/discussions) | Questions, support, bank requests, ideas |
+| [openstan.org](https://openstan.org) | User guide, tutorials, screen references |
+| [LinkedIn](https://linkedin.com/company/openstan) | Release announcements, use cases |
+| [Bluesky](https://bsky.app/profile/openstan.org) | Quick updates, tips |
+| [YouTube](https://youtube.com/@openstan) | Video tutorials |
+
 ## License
 
 [LGPL-3.0-or-later](LICENSE)
