@@ -148,4 +148,4 @@ This gives users a window to upgrade before the vulnerability is publicly disclo
 
 If you have security questions or concerns about using Bank Statement Parser, please email [farrar.jason1@gmail.com](mailto:farrar.jason1@gmail.com).
 
-For non-security issues, please use [GitHub Issues](https://github.com/boscorat/bank_statement_parser/issues) or [GitHub Discussions](https://github.com/boscorat/bank_statement_parser/discussions).
+For non-security issues, please use [GitHub Issues](https://github.com/boscorat/bank_statement_parser/issues) or [GitHub Discussions](https://github.com/boscorat/openstan/discussions).
