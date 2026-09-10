@@ -98,13 +98,13 @@ Bank Statement Parser solves one problem brilliantly: **extract structured trans
 - Tax calculations or reconciliation
 - Investment/trading accounts
 
-When in doubt, check [CONTRIBUTING.md](./CONTRIBUTING.md) → "Adding a Bank" or open a [GitHub Discussion](https://github.com/boscorat/bank_statement_parser/discussions) to ask before investing time.
+When in doubt, check [CONTRIBUTING.md](./CONTRIBUTING.md) → "Adding a Bank" or open a [GitHub Discussion](https://github.com/boscorat/openstan/discussions/categories/adding-a-new-bank) to ask before investing time.
 
 ---
 
 ## Contact & Questions
 
-- **Feature requests?** Open a [GitHub Discussion](https://github.com/boscorat/bank_statement_parser/discussions/new?category=ideas) (not an issue) and reference this vision doc.
+- **Feature requests?** Open a [GitHub Discussion](https://github.com/boscorat/openstan/discussions/categories/ideas) (not an issue) and reference this vision doc.
 - **Adding a bank?** See [CONTRIBUTING.md](./CONTRIBUTING.md) → "Adding a New Bank Configuration"
 - **Security vulnerability?** See [SECURITY.md](./SECURITY.md)
-- **General help?** Open a [GitHub Discussion](https://github.com/boscorat/bank_statement_parser/discussions/new?category=questions)
+- **General help?** Open a [GitHub Discussion](https://github.com/boscorat/openstan/discussions/categories/q-a)

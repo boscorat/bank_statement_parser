@@ -289,7 +289,7 @@ For each anonymised PDF, create a `.json` sidecar file describing expected parsi
 
 - Check existing [GitHub Issues](https://github.com/boscorat/bank_statement_parser/issues)
 - Open a [new issue](https://github.com/boscorat/bank_statement_parser/issues/new) with your question (we'll tag it as `question`)
-- Discussions (if enabled on the repo)
+- Ask in [GitHub Discussions](https://github.com/boscorat/openstan/discussions/categories/q-a)
 
 ### Feedback
 
