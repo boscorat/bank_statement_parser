@@ -3,6 +3,11 @@
 [![License: LGPL-3.0-or-later](https://img.shields.io/badge/License-LGPL--3.0--or--later-blue.svg)](https://www.gnu.org/licenses/lgpl-3.0.html)
 [![Python 3.14+](https://img.shields.io/badge/Python-3.14%2B-blue.svg)](https://www.python.org/downloads/)
 
+> **Part of the [openstan](https://github.com/boscorat/openstan) ecosystem.**
+> Can be used standalone via [PyPI](https://pypi.org/project/uk-bank-statement-parser/) or as part of the openstan desktop application.
+> **Found a bug?** [Open an issue](https://github.com/boscorat/bank_statement_parser/issues) on this repo.
+> **Need help?** [Start a discussion](https://github.com/boscorat/openstan/discussions) on openstan.
+
 Parse bank statement PDFs, extract structured transaction data, validate
 financial information through checks and balances, and persist results to
 Parquet files and a SQLite star-schema data mart. Export reports as Excel
