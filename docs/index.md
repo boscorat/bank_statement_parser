@@ -55,3 +55,5 @@ New to Bank Statement Parser? The [Quick Start guide](guides/quick-start.md) wal
 - [GitHub Repository](https://github.com/boscorat/bank_statement_parser)
 - [PyPI Package](https://pypi.org/project/uk-bank-statement-parser/)
 - [Issue Tracker](https://github.com/boscorat/bank_statement_parser/issues)
+- [openstan](https://github.com/boscorat/openstan) — Desktop app for bank statement analysis (uses this library)
+- [Community & Support](https://github.com/boscorat/openstan/discussions) — Questions, help, and feature discussions
