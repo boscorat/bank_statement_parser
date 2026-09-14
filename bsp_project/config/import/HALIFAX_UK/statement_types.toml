@@ -3,6 +3,7 @@
 
 [HALIFAX_UK_CUR]
 statement_type = 'Halifax UK Current Account'
+opening_balance_source = "closing_minus_movements"
     [HALIFAX_UK_CUR.header]
         [[HALIFAX_UK_CUR.header.configs]]
             config = 'Statement Balances'

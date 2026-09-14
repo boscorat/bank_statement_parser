@@ -524,6 +524,7 @@ Full extraction specification for one statement layout variant.
 | `statement_type` | `str` | ACTIVE | Human-readable label matching the value used in StdRefs.statement_type (e.g. "HSBC UK Current Account").  Used to select the correct StdRefs mapping when promoting raw fields to standard columns. |
 | `header` | `ConfigGroup` | ACTIVE | Config steps that extract statement-level metadata: dates, account numbers, opening/closing balances, etc. |
 | `lines` | `ConfigGroup` | ACTIVE | Config steps that extract per-transaction data from the body of each page. |
+| `opening_balance_source` | `Literal&#91;'closing_minus_movements'&#93; | None` | ACTIVE | When set to "closing_minus_movements", the opening balance is derived from the closing balance minus the sum of all transaction movements rather than using the value extracted from the statement header.  This corrects PDFs (e.g. Halifax) where the "opening balance" cell in the summary table actually contains the end-of-day-1 balance instead of the true start-of-period balance. |
 
 #### `ConfigGroup`
 
@@ -740,6 +741,7 @@ Full extraction specification for one statement layout variant.
 | `statement_type` | `str` | ACTIVE | Human-readable label matching the value used in StdRefs.statement_type (e.g. "HSBC UK Current Account").  Used to select the correct StdRefs mapping when promoting raw fields to standard columns. |
 | `header` | `ConfigGroup` | ACTIVE | Config steps that extract statement-level metadata: dates, account numbers, opening/closing balances, etc. |
 | `lines` | `ConfigGroup` | ACTIVE | Config steps that extract per-transaction data from the body of each page. |
+| `opening_balance_source` | `Literal&#91;'closing_minus_movements'&#93; | None` | ACTIVE | When set to "closing_minus_movements", the opening balance is derived from the closing balance minus the sum of all transaction movements rather than using the value extracted from the statement header.  This corrects PDFs (e.g. Halifax) where the "opening balance" cell in the summary table actually contains the end-of-day-1 balance instead of the true start-of-period balance. |
 
 ### `ConfigGroup`
 
