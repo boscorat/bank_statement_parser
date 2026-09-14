@@ -69,12 +69,18 @@ class TestOpeningBalanceCorrection:
 
         # Config with correction enabled
         config_group = ConfigGroup(configs=[])
-        stmt.config = type("Config", (), {"statement_type": StatementType(
-            statement_type="Halifax UK Current Account",
-            header=config_group,
-            lines=config_group,
-            opening_balance_source="closing_minus_movements",
-        )})()
+        stmt.config = type(
+            "Config",
+            (),
+            {
+                "statement_type": StatementType(
+                    statement_type="Halifax UK Current Account",
+                    header=config_group,
+                    lines=config_group,
+                    opening_balance_source="closing_minus_movements",
+                )
+            },
+        )()
 
         return stmt
 
@@ -118,11 +124,17 @@ class TestOpeningBalanceCorrection:
         stmt = object.__new__(Statement)
         stmt.checks_and_balances = pl.DataFrame({"STD_OPENING_BALANCE": [40.0]})
         config_group = ConfigGroup(configs=[])
-        stmt.config = type("Config", (), {"statement_type": StatementType(
-            statement_type="HSBC UK Current Account",
-            header=config_group,
-            lines=config_group,
-        )})()
+        stmt.config = type(
+            "Config",
+            (),
+            {
+                "statement_type": StatementType(
+                    statement_type="HSBC UK Current Account",
+                    header=config_group,
+                    lines=config_group,
+                )
+            },
+        )()
         stmt.lines_results = pl.DataFrame({"STD_RUNNING_BALANCE": [40.0]}).lazy()
 
         stmt._apply_opening_balance_correction()
@@ -157,9 +169,7 @@ class TestOpeningBalanceCorrection:
         # closing=55, transactions: in=0 out=10, in=20 out=0, in=0 out=5
         # sum(movements) = -10 + 20 + -5 = 5
         # true_opening = 55 - 5 = 50
-        stmt = self._make_statement_with_correction(
-            closing=55.0, transactions=[(0.0, 10.0), (20.0, 0.0), (0.0, 5.0)]
-        )
+        stmt = self._make_statement_with_correction(closing=55.0, transactions=[(0.0, 10.0), (20.0, 0.0), (0.0, 5.0)])
         stmt._apply_opening_balance_correction()
 
         result = stmt.checks_and_balances
