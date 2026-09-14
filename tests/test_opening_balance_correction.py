@@ -229,9 +229,7 @@ class TestOpeningBalanceCorrection:
         # closing=60, transactions: in=20 out=10, in=0 out=5, in=15 out=0
         # sum(movements) = 10 + (-5) + 15 = 20
         # true_opening = 60 - 20 = 40
-        stmt = self._make_statement_with_correction(
-            closing=60.0, transactions=[(20.0, 10.0), (0.0, 5.0), (15.0, 0.0)]
-        )
+        stmt = self._make_statement_with_correction(closing=60.0, transactions=[(20.0, 10.0), (0.0, 5.0), (15.0, 0.0)])
         stmt._apply_opening_balance_correction()
 
         result = stmt.checks_and_balances
