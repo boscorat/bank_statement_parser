@@ -728,13 +728,7 @@ class Statement:
             return
 
         # Sum of all transaction movements (independent of the opening balance)
-        total_movement = (
-            self.checks_and_balances.select(
-                pl.col("STD_TRANSACTION_PAYMENTS_IN").sub(pl.col("STD_TRANSACTION_PAYMENTS_OUT")).alias("movement")
-            )
-            .select(pl.col("movement").sum())
-            .item()
-        )
+        total_movement = self.checks_and_balances.select("STD_TRANSACTION_MOVEMENT").item()
         closing = self.checks_and_balances.select("STD_CLOSING_BALANCE").item()
         true_opening = closing - total_movement
 
