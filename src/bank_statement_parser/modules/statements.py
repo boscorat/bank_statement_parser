@@ -750,6 +750,13 @@ class Statement:
             STD_RUNNING_BALANCE=opening_lit.add(pl.col("STD_TRANSACTION_MOVEMENT").cum_sum())
         )
 
+        # Update checks_and_balances.STD_RUNNING_BALANCE with the corrected last running balance
+        last_running = self.lines_results.select(pl.last("STD_RUNNING_BALANCE")).collect().item()
+        self.checks_and_balances = self.checks_and_balances.with_columns(STD_RUNNING_BALANCE=pl.lit(last_running))
+
+        # Update the scalar summary field so PdfResult carries the corrected value
+        self.std_opening_balance = true_opening
+
     def get_config(self) -> Account | None:
         """
         Load the appropriate configuration for statement extraction.
