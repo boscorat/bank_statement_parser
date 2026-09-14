@@ -473,6 +473,8 @@ class Statement:
                 self.header_results = self.get_results("header")
                 self.lines_results = self.get_results("lines")
 
+                self._apply_opening_balance_correction()
+
                 # Perform validation checks on extracted financial data
                 # Compares calculated totals against stated totals from the statement
                 self.checks_and_balances = self.checks_and_balances.with_columns(
@@ -705,6 +707,49 @@ class Statement:
             )
         self.logs.rechunk()
         return results.rechunk().lazy()
+
+    def _apply_opening_balance_correction(self) -> None:
+        """Derive the true opening balance from closing balance and transaction movements.
+
+        When ``StatementType.opening_balance_source`` is ``"closing_minus_movements"``
+        the opening balance in the statement header is unreliable (e.g. Halifax
+        PDFs where the summary table shows the end-of-day-1 balance instead of
+        the true start-of-period balance).  This method recomputes the opening
+        balance as ``STD_CLOSING_BALANCE - sum(transaction_movements)``, updates
+        ``checks_and_balances``, and rebuilds ``STD_RUNNING_BALANCE`` on the
+        lines DataFrame.
+        """
+        if not self.config or not self.config.statement_type:
+            return
+        source = getattr(self.config.statement_type, "opening_balance_source", None)
+        if source != "closing_minus_movements":
+            return
+        if self.checks_and_balances.is_empty():
+            return
+
+        # Sum of all transaction movements (independent of the opening balance)
+        total_movement = self.checks_and_balances.select("STD_TRANSACTION_MOVEMENT").item()
+        closing = self.checks_and_balances.select("STD_CLOSING_BALANCE").item()
+        true_opening = closing - total_movement
+
+        # Update checks_and_balances with the corrected opening balance
+        self.checks_and_balances = self.checks_and_balances.with_columns(
+            STD_OPENING_BALANCE=pl.lit(true_opening),
+            STD_MOVEMENT=pl.col("STD_CLOSING_BALANCE").sub(pl.lit(true_opening)),
+        )
+
+        # Recompute STD_RUNNING_BALANCE on the lines LazyFrame
+        opening_lit = pl.lit(true_opening)
+        self.lines_results = self.lines_results.with_columns(
+            STD_RUNNING_BALANCE=opening_lit.add(pl.col("STD_TRANSACTION_MOVEMENT").cum_sum())
+        )
+
+        # Update checks_and_balances.STD_RUNNING_BALANCE with the corrected last running balance
+        last_running = self.lines_results.select(pl.last("STD_RUNNING_BALANCE")).collect().item()
+        self.checks_and_balances = self.checks_and_balances.with_columns(STD_RUNNING_BALANCE=pl.lit(last_running))
+
+        # Update the scalar summary field so PdfResult carries the corrected value
+        self.std_opening_balance = true_opening
 
     def get_config(self) -> Account | None:
         """

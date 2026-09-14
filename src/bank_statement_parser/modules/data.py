@@ -1009,6 +1009,14 @@ class StatementType:
     # [ACTIVE] — Config steps that extract per-transaction data from the body of
     # each page.
 
+    opening_balance_source: Literal["closing_minus_movements"] | None = None
+    # [ACTIVE] — When set to "closing_minus_movements", the opening balance is
+    # derived from the closing balance minus the sum of all transaction movements
+    # rather than using the value extracted from the statement header.  This
+    # corrects PDFs (e.g. Halifax) where the "opening balance" cell in the
+    # summary table actually contains the end-of-day-1 balance instead of the
+    # true start-of-period balance.
+
 
 @dataclass(frozen=True, slots=True)
 class AccountType:

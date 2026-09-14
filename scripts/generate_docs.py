@@ -628,8 +628,8 @@ def _field_table(fields: list[FieldInfo]) -> str:
     for f in fields:
         # Escape brackets using HTML entities to prevent mkdocs treating them as link refs
         # (link ref detection runs before code spans, so backslash escaping doesn't work)
-        esc_desc = f.description.replace("|", "\\|").replace("[", "&#91;").replace("]", "&#93;")
-        esc_type = f.type_annotation.replace("[", "&#91;").replace("]", "&#93;")
+        esc_desc = f.description.replace("|", "\\|")
+        esc_type = f.type_annotation.replace("|", "\\|")
         status_badge = f.status
         rows.append(f"| `{f.name}` | `{esc_type}` | {status_badge} | {esc_desc} |")
     return "\n".join(rows)
