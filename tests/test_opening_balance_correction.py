@@ -83,6 +83,12 @@ class TestOpeningBalanceCorrection:
             }
         ).lazy()
 
+        stmt.header_results = pl.DataFrame(
+            {
+                "STD_OPENING_BALANCE": [incorrect_opening],
+            }
+        ).lazy()
+
         # Config with correction enabled
         config_group = ConfigGroup(configs=[])
         stmt.config = type(
@@ -137,13 +143,25 @@ class TestOpeningBalanceCorrection:
         assert cb_running == pytest.approx(55.0)
 
     def test_correction_updates_std_opening_balance_scalar(self):
-        """Statement.std_opening_balance should reflect the corrected value."""
+        """Statement.std_opening_balance should reflect the corrected value after scalar is derived from header_results."""
         # closing=40, transactions: in=0 out=10
         # true_opening = 40 - (-10) = 50
         stmt = self._make_statement_with_correction(closing=40.0, transactions=[(0.0, 10.0)])
         stmt._apply_opening_balance_correction()
 
+        # Simulate Statement.__init__ line 560: scalar derived from header_results
+        stmt.std_opening_balance = stmt.header_results.select("STD_OPENING_BALANCE").collect().item()
         assert stmt.std_opening_balance == pytest.approx(50.0)
+
+    def test_correction_updates_header_results(self):
+        """header_results should carry the corrected opening balance for parquet/SQLite."""
+        # closing=55, transactions: in=0 out=10
+        # true_opening = 55 - (-10) = 65
+        stmt = self._make_statement_with_correction(closing=55.0, transactions=[(0.0, 10.0)])
+        stmt._apply_opening_balance_correction()
+
+        header_opening = stmt.header_results.select("STD_OPENING_BALANCE").collect().item()
+        assert header_opening == pytest.approx(65.0)
 
     def test_correction_with_halifax_realistic_scenario(self):
         """Realistic Halifax scenario: Jan closing=50, Feb has day-1 debit of 10, closing=55."""
@@ -163,6 +181,9 @@ class TestOpeningBalanceCorrection:
         result = stmt.checks_and_balances
         assert result.select("STD_OPENING_BALANCE").item() == pytest.approx(50.0)
         assert result.select("STD_MOVEMENT").item() == pytest.approx(5.0)
+
+        # Simulate Statement.__init__ line 560: scalar derived from header_results
+        stmt.std_opening_balance = stmt.header_results.select("STD_OPENING_BALANCE").collect().item()
         assert stmt.std_opening_balance == pytest.approx(50.0)
 
         running = stmt.lines_results.select("STD_RUNNING_BALANCE").collect().to_series().to_list()

@@ -716,8 +716,8 @@ class Statement:
         PDFs where the summary table shows the end-of-day-1 balance instead of
         the true start-of-period balance).  This method recomputes the opening
         balance as ``STD_CLOSING_BALANCE - sum(transaction_movements)``, updates
-        ``checks_and_balances``, and rebuilds ``STD_RUNNING_BALANCE`` on the
-        lines DataFrame.
+        ``header_results``, ``checks_and_balances``, and rebuilds
+        ``STD_RUNNING_BALANCE`` on the lines DataFrame.
         """
         if not self.config or not self.config.statement_type:
             return
@@ -744,12 +744,14 @@ class Statement:
             STD_RUNNING_BALANCE=opening_lit.add(pl.col("STD_TRANSACTION_MOVEMENT").cum_sum())
         )
 
+        # Update header_results so the corrected opening balance flows to parquet/SQLite
+        self.header_results = self.header_results.with_columns(STD_OPENING_BALANCE=pl.lit(true_opening))
+
         # Update checks_and_balances.STD_RUNNING_BALANCE with the corrected last running balance
         last_running = self.lines_results.select(pl.last("STD_RUNNING_BALANCE")).collect().item()
         self.checks_and_balances = self.checks_and_balances.with_columns(STD_RUNNING_BALANCE=pl.lit(last_running))
 
-        # Update the scalar summary field so PdfResult carries the corrected value
-        self.std_opening_balance = true_opening
+        print(f"[opening_balance] corrected opening balance for {getattr(self, 'file', '<unknown>')}: {true_opening}")
 
     def get_config(self) -> Account | None:
         """
