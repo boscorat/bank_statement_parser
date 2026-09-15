@@ -149,7 +149,7 @@ class TestOpeningBalanceCorrection:
         stmt = self._make_statement_with_correction(closing=40.0, transactions=[(0.0, 10.0)])
         stmt._apply_opening_balance_correction()
 
-        # Simulate Statement.__init__ line 560: scalar derived from header_results
+        # Scalar is derived from header_results downstream in Statement.__init__
         stmt.std_opening_balance = stmt.header_results.select("STD_OPENING_BALANCE").collect().item()
         assert stmt.std_opening_balance == pytest.approx(50.0)
 
@@ -182,7 +182,7 @@ class TestOpeningBalanceCorrection:
         assert result.select("STD_OPENING_BALANCE").item() == pytest.approx(50.0)
         assert result.select("STD_MOVEMENT").item() == pytest.approx(5.0)
 
-        # Simulate Statement.__init__ line 560: scalar derived from header_results
+        # Scalar is derived from header_results downstream in Statement.__init__
         stmt.std_opening_balance = stmt.header_results.select("STD_OPENING_BALANCE").collect().item()
         assert stmt.std_opening_balance == pytest.approx(50.0)
 
