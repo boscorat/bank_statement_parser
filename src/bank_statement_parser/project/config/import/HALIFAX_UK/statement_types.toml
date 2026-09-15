@@ -14,7 +14,7 @@ opening_balance_source = "closing_minus_movements"
             config = 'Statement Info'
             # TODO: Adjust coordinates to match statement date location on page 1
             # Typical location: top-right or center of header (e.g., "Statement from X to Y")
-            locations = [{page_number=1, top_left = [330, 150], bottom_right = [550, 180]}]
+            locations = [{page_number=1, top_left = [290, 150], bottom_right = [550, 180]}]
             # Pattern matches date range like "01 January 2024 to 31 January 2024"
             field = {field = "statement_date", vital=true, type = "string", string_pattern = "\\d{2}\\s+[A-Z][a-z]+\\s+\\d{4}\\s+to\\s+\\d{2}\\s+[A-Z][a-z]+\\s+\\d{4}"}
 
