@@ -175,6 +175,12 @@ Delete temporary parquet files created during batch processing.
 
 Fetch daily USD-based exchange rates and persist them to ``exchange_rates``.
 
+### `bsp.get_logger()`
+
+*function* — `bank_statement_parser.modules.logging_config`
+
+Get or create a logger for the given module name.
+
 ### `bsp.get_table_from_region()`
 
 *function* — `bank_statement_parser.modules.pdf_functions`
