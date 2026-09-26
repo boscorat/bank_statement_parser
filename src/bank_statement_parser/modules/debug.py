@@ -28,9 +28,12 @@ Functions:
     debug_statements: Re-process all failing entries from a completed batch.
 """
 
+import logging
 from pathlib import Path
 
 from bank_statement_parser.modules.data import PdfResult
+
+logger = logging.getLogger(__name__)
 
 
 def debug_pdf_statement(
@@ -65,7 +68,7 @@ def debug_pdf_statement(
 
     Returns:
         Path to the debug.json file that was written, or ``None`` if an
-        unexpected error prevented writing (the error is printed to stdout).
+        unexpected error prevented writing (the error is logged).
     """
     # Local import to avoid a circular dependency:
     # debug.py → statements.py → debug.py
@@ -87,7 +90,7 @@ def debug_pdf_statement(
         return debug_json_path
 
     except Exception as e:  # noqa: BLE001
-        print(f"[debug] unexpected error processing {pdf.name}: {e}")
+        logger.error("Unexpected error processing %s", pdf.name, exc_info=True)
         return None
 
 
@@ -144,5 +147,5 @@ def debug_statements(
         )
         if result is not None:
             count += 1
-            print(f"[debug] written → {result}")
+            logger.debug("Debug file written: %s", result)
     return count

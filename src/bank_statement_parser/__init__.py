@@ -117,6 +117,11 @@ from bank_statement_parser.modules.db_migration import migrate_db, needs_upgrade
 from bank_statement_parser.modules.debug import debug_pdf_statement, debug_statements
 
 # ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
+from bank_statement_parser.modules.logging_config import get_logger
+
+# ---------------------------------------------------------------------------
 # Errors
 # ---------------------------------------------------------------------------
 from bank_statement_parser.modules.errors import (
@@ -205,6 +210,7 @@ __all__ = [
     "debug_statements",
     "delete_temp_files",
     "get_exchange_rates",
+    "get_logger",
     "get_table_from_region",
     "migrate_db",
     "needs_upgrade",
