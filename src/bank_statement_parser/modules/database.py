@@ -538,10 +538,7 @@ def update_db(
     if pdf_count > (errors + reviews):  # if all pdf statements have failed/are under review no point in re-building the datamart
         try:
             build_datamart(db_path=db_path)
-        except Exception as e:  # noqa: BLE001
-            logger.error(
-                "Datamart rebuild failed",
-                exc_info=True,
-            )
+        except Exception:
+            logger.exception("Datamart rebuild failed")
 
     return db_secs

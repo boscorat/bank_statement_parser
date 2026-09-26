@@ -117,11 +117,6 @@ from bank_statement_parser.modules.db_migration import migrate_db, needs_upgrade
 from bank_statement_parser.modules.debug import debug_pdf_statement, debug_statements
 
 # ---------------------------------------------------------------------------
-# Logging
-# ---------------------------------------------------------------------------
-from bank_statement_parser.modules.logging_config import get_logger
-
-# ---------------------------------------------------------------------------
 # Errors
 # ---------------------------------------------------------------------------
 from bank_statement_parser.modules.errors import (
@@ -135,6 +130,11 @@ from bank_statement_parser.modules.errors import (
 # Config helpers
 # ---------------------------------------------------------------------------
 from bank_statement_parser.modules.import_config import copy_default_import_config
+
+# ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
+from bank_statement_parser.modules.logging_config import get_logger
 from bank_statement_parser.modules.parquet import update_parquet
 from bank_statement_parser.modules.paths import ProjectPaths, copy_project_folders, validate_or_initialise_project
 

@@ -36,7 +36,6 @@ Python's logging module.
 """
 
 import logging
-from typing import Any
 
 __all__: list[str] = ["get_logger"]
 

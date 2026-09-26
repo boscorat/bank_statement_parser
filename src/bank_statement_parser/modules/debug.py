@@ -89,8 +89,8 @@ def debug_pdf_statement(
 
         return debug_json_path
 
-    except Exception as e:  # noqa: BLE001
-        logger.error("Unexpected error processing %s", pdf.name, exc_info=True)
+    except Exception:
+        logger.exception("Unexpected error processing %s", pdf.name)
         return None
 
 

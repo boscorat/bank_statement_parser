@@ -30,7 +30,6 @@ Classes:
 import asyncio
 import getpass
 import hashlib
-import logging
 import multiprocessing
 import os
 import shutil
@@ -47,7 +46,6 @@ from uuid import uuid4
 import polars as pl
 
 import bank_statement_parser.modules.parquet as pq
-from bank_statement_parser.modules.logging_config import get_logger
 from bank_statement_parser.modules.data import (
     Account,
     Failure,
@@ -61,6 +59,7 @@ from bank_statement_parser.modules.data import (
 from bank_statement_parser.modules.database import update_db
 from bank_statement_parser.modules.errors import ConfigError
 from bank_statement_parser.modules.import_config import ImportConfigManager
+from bank_statement_parser.modules.logging_config import get_logger
 from bank_statement_parser.modules.parquet import update_parquet
 from bank_statement_parser.modules.paths import ProjectPaths, validate_or_initialise_project
 from bank_statement_parser.modules.pdf_functions import pdf_close, pdf_open
@@ -195,11 +194,10 @@ def _write_debug_excel(
                 df.write_excel(workbook=wb, worksheet=ws)
 
         wb.close()
-    except Exception as write_exc:  # noqa: BLE001
-        logger.error(
+    except Exception:
+        logger.exception(
             "Failed to write debug_dataframes.xlsx for %s",
             stmt.file.name,
-            exc_info=True,
         )
 
 
@@ -280,11 +278,10 @@ def _write_debug_json(stmt: "Statement", include_lines: bool = False) -> Path | 
             _write_debug_excel(stmt, debug_dir, stmt._debug_dataframes)
 
         return out_file
-    except Exception as write_exc:  # noqa: BLE001
-        logger.error(
+    except Exception:
+        logger.exception(
             "Failed to write debug.json for %s",
             stmt.file.name,
-            exc_info=True,
         )
         return None
 
@@ -889,7 +886,6 @@ def _handle_parquet_write_error(
         batch_line["STD_BATCH_LINE"],
         pdf.name,
         error_message,
-        exc_info=True,
     )
 
 
@@ -1109,18 +1105,17 @@ def process_pdf_statement(
 
         stmt.cleanup()
         stmt = None
-    except Exception as e:  # noqa: BLE001 — last-resort guard, intentionally broad
+    except Exception as e:
         # All recoverable statement-level errors are caught by inner try/except blocks above.
         error_other = True
         batch_line["ERROR_CONFIG"] = True
         error_message = f"** Unexpected Failure **: {e}"
         batch_line["STD_ERROR_MESSAGE"] += error_message
-        logger.error(
+        logger.exception(
             "Line %s | %s: %s",
             batch_line["STD_BATCH_LINE"],
             pdf.name,
             error_message,
-            exc_info=True,
         )
 
     # Record processing time and timestamp
@@ -1840,12 +1835,11 @@ class StatementBatch:
                     count += 1
                     logger.debug("Debug file written: %s [result=%s]", debug_file, entry.result)
                 stmt.cleanup()
-            except Exception as e:  # noqa: BLE001
-                logger.error(
-                    "Failed to re-process debug for %s",
-                    pdf_path.name,
-                    exc_info=True,
-                )
+            except Exception:
+                 logger.exception(
+                     "Failed to re-process debug for %s",
+                     pdf_path.name,
+                 )
         return count
 
     def __del__(self):
