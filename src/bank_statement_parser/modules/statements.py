@@ -1836,10 +1836,10 @@ class StatementBatch:
                     logger.debug("Debug file written: %s [result=%s]", debug_file, entry.result)
                 stmt.cleanup()
             except Exception:
-                 logger.exception(
-                     "Failed to re-process debug for %s",
-                     pdf_path.name,
-                 )
+                logger.exception(
+                    "Failed to re-process debug for %s",
+                    pdf_path.name,
+                )
         return count
 
     def __del__(self):
