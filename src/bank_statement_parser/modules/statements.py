@@ -33,7 +33,6 @@ import hashlib
 import multiprocessing
 import os
 import shutil
-import sys
 import traceback
 from concurrent.futures import ProcessPoolExecutor
 from copy import deepcopy
@@ -578,7 +577,7 @@ class Statement:
             self.error_message = f"** Configuration Failure **: {e}"
             self.error_detail = _build_error_detail(e)
             self.success = False
-            traceback.print_exc(file=sys.stderr)
+            logger.exception("Configuration failure for %s", getattr(self, "file", "<unknown>"))
             if self._debug_collector is not None:
                 self._debug_collector.append(
                     {
@@ -867,7 +866,7 @@ def _handle_parquet_write_error(
     """Handle a Parquet write error by updating batch_line and logging.
 
     Updates batch_line with error flags and messages, appends to error list,
-    prints diagnostic output, and logs the full exception traceback.
+    and logs the error message with the full exception traceback.
 
     Args:
         name: Human-readable name of the Parquet file (e.g., 'StatementHeads').
@@ -886,6 +885,7 @@ def _handle_parquet_write_error(
         batch_line["STD_BATCH_LINE"],
         pdf.name,
         error_message,
+        exc_info=exc,
     )
 
 

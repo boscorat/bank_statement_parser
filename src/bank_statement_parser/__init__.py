@@ -134,7 +134,7 @@ from bank_statement_parser.modules.import_config import copy_default_import_conf
 # ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------
-from bank_statement_parser.modules.logging_config import get_logger
+from bank_statement_parser.modules.logging_config import get_logger, get_verbosity, set_verbosity
 from bank_statement_parser.modules.parquet import update_parquet
 from bank_statement_parser.modules.paths import ProjectPaths, copy_project_folders, validate_or_initialise_project
 
@@ -212,6 +212,7 @@ __all__ = [
     "get_exchange_rates",
     "get_logger",
     "get_table_from_region",
+    "get_verbosity",
     "migrate_db",
     "needs_upgrade",
     "page_crop",
@@ -219,6 +220,7 @@ __all__ = [
     "pdf_open",
     "process_pdf_statement",
     "region_search",
+    "set_verbosity",
     "update_db",
     "update_parquet",
     "validate_or_initialise_project",

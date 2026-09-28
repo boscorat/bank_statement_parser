@@ -22,7 +22,6 @@ Provides standalone functions for writing processed bank statement data
 to a SQLite database.
 """
 
-import logging
 import sqlite3
 from datetime import date, datetime
 from pathlib import Path
@@ -33,9 +32,10 @@ import polars as pl
 from bank_statement_parser.data.build_datamart import _ensure_mart_structure, build_datamart
 from bank_statement_parser.modules.data import PdfResult, Success
 from bank_statement_parser.modules.errors import ProjectDatabaseMissing
+from bank_statement_parser.modules.logging_config import get_logger
 from bank_statement_parser.modules.paths import ProjectPaths
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Python 3.12+ deprecates the built-in date/datetime adapters for sqlite3.
 # Register explicit ISO-format adapters so that datetime.date and

@@ -18,26 +18,14 @@
 """Logging configuration for bank_statement_parser.
 
 This module provides a logger factory for use by consuming applications
-(e.g., openstan). The library itself does not enforce logging configuration —
-callers are responsible for setting up handlers (file, console, etc.).
-
-Typical usage (by consuming application):
-
-    from bank_statement_parser import get_logger
-    import logging
-
-    # Initialize root logger with handlers (application responsibility)
-    logger = get_logger("my_app")
-    logger.info("Processing started")
-
-When used standalone (CLI), the bank_statement_parser CLI tool initializes
-its own console handlers. Library users can add their own handlers via
-Python's logging module.
+(e.g., openstan). The library itself does not configure any handlers —
+callers are responsible for setting up handlers (file, console, etc.)
+via Python's logging module.
 """
 
 import logging
 
-__all__: list[str] = ["get_logger"]
+__all__: list[str] = ["get_logger", "get_verbosity", "set_verbosity"]
 
 
 # Module-level cache of loggers to avoid duplicate configuration
@@ -72,6 +60,7 @@ def get_logger(name: str) -> logging.Logger:
         logger = logging.getLogger(name)
         # Propagate to root logger; handlers are added by consuming application
         logger.propagate = True
+        logger.setLevel(logging.DEBUG if _VERBOSITY == "verbose" else logging.INFO)
         _LOGGERS[name] = logger
 
     return _LOGGERS[name]

@@ -187,6 +187,12 @@ Get or create a logger for the given module name.
 
 Extract a structured table from a PDF region using configurable extraction settings.
 
+### `bsp.get_verbosity()`
+
+*function* — `bank_statement_parser.modules.logging_config`
+
+Return the current verbosity setting.
+
 ### `bsp.migrate_db()`
 
 *function* — `bank_statement_parser.modules.db_migration`
@@ -228,6 +234,12 @@ Process a single bank statement PDF and save results to parquet files.
 *function* — `bank_statement_parser.modules.pdf_functions`
 
 Search for a regex pattern within a PDF region and return the first match text.
+
+### `bsp.set_verbosity()`
+
+*function* — `bank_statement_parser.modules.logging_config`
+
+Set the verbosity level for all bank_statement_parser loggers.
 
 ### `bsp.update_db()`
 

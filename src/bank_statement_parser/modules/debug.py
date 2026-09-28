@@ -28,12 +28,12 @@ Functions:
     debug_statements: Re-process all failing entries from a completed batch.
 """
 
-import logging
 from pathlib import Path
 
 from bank_statement_parser.modules.data import PdfResult
+from bank_statement_parser.modules.logging_config import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def debug_pdf_statement(
