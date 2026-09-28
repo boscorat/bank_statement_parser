@@ -885,7 +885,7 @@ def _handle_parquet_write_error(
         batch_line["STD_BATCH_LINE"],
         pdf.name,
         error_message,
-        exc_info=exc,
+        exc_info=(type(exc), exc, exc.__traceback__),
     )
 
 

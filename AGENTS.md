@@ -153,7 +153,7 @@ def __exit__(self, *args: object) -> None:
 
 ### Paths — `Path(__file__).parent` chains for internal paths. Always `mkdir(parents=True, exist_ok=True)`. Pass `str(path)` to libraries that reject `Path`.
 
-### Logging — no `logging` module. User output via `print()`. `pl.Config` display blocks only in `if __name__ == "__main__"` guards.
+### Logging — `logging` module via `get_logger()` factory. Library code uses `get_logger(__name__)` from `bank_statement_parser.modules.logging_config`. User-facing CLI output uses `print()`. Handlers are the consuming application's responsibility — the library configures none. `pl.Config` display blocks only in `if __name__ == "__main__"` guards.
 
 ### Warnings — use `warnings.warn` for non-fatal issues:
 - `DeprecationWarning` for deprecated API aliases (e.g. deprecated `filetype='both'` parameter).

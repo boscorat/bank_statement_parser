@@ -24,13 +24,15 @@ via Python's logging module.
 """
 
 import logging
+from typing import Literal
 
 __all__: list[str] = ["get_logger", "get_verbosity", "set_verbosity"]
 
+Verbosity = Literal["normal", "verbose"]
 
 # Module-level cache of loggers to avoid duplicate configuration
 _LOGGERS: dict[str, logging.Logger] = {}
-_VERBOSITY: str = "normal"
+_VERBOSITY: Verbosity = "normal"
 
 
 def get_logger(name: str) -> logging.Logger:
@@ -66,7 +68,7 @@ def get_logger(name: str) -> logging.Logger:
     return _LOGGERS[name]
 
 
-def set_verbosity(verbosity: str) -> None:
+def set_verbosity(verbosity: Verbosity) -> None:
     """Set the verbosity level for all bank_statement_parser loggers.
 
     Args:
