@@ -60,9 +60,8 @@ def get_logger(name: str) -> logging.Logger:
     """
     if name not in _LOGGERS:
         logger = logging.getLogger(name)
-        # Propagate to root logger; handlers are added by consuming application
-        logger.propagate = True
-        logger.setLevel(logging.DEBUG if _VERBOSITY == "verbose" else logging.INFO)
+        if logger.level == logging.NOTSET:
+            logger.setLevel(logging.DEBUG if _VERBOSITY == "verbose" else logging.INFO)
         _LOGGERS[name] = logger
 
     return _LOGGERS[name]
@@ -92,7 +91,7 @@ def set_verbosity(verbosity: Verbosity) -> None:
         logger.setLevel(level)
 
 
-def get_verbosity() -> str:
+def get_verbosity() -> Verbosity:
     """Return the current verbosity setting.
 
     Returns:

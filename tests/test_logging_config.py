@@ -28,6 +28,7 @@ Covers:
 """
 
 import logging
+from collections.abc import Iterator
 
 import pytest
 
@@ -36,7 +37,7 @@ from bank_statement_parser.modules.logging_config import get_logger, get_verbosi
 
 
 @pytest.fixture(autouse=True)
-def reset_verbosity() -> None:
+def reset_verbosity() -> Iterator[None]:
     """Reset verbosity to normal before and after each test."""
     set_verbosity("normal")
     yield
@@ -123,3 +124,26 @@ class TestLoggerPropagation:
     def test_loggers_propagate(self) -> None:
         logger = get_logger("test.propagate")
         assert logger.propagate is True
+
+
+class TestConsumerConfiguration:
+    """Verify get_logger does not override consumer-configured loggers."""
+
+    def test_get_logger_preserves_consumer_level(self) -> None:
+        """If consumer sets a level before get_logger, it is preserved."""
+        name = "test.consumer.configured"
+        raw_logger = logging.getLogger(name)
+        raw_logger.setLevel(logging.WARNING)
+        try:
+            logger = get_logger(name)
+            assert logger.level == logging.WARNING
+        finally:
+            raw_logger.setLevel(logging.NOTSET)
+
+    def test_get_logger_sets_level_when_notset(self) -> None:
+        """If consumer has not set a level, get_logger applies verbosity."""
+        name = "test.consumer.unconfigured"
+        raw_logger = logging.getLogger(name)
+        raw_logger.setLevel(logging.NOTSET)
+        logger = get_logger(name)
+        assert logger.level == logging.INFO
