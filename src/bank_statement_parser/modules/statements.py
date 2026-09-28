@@ -33,7 +33,6 @@ import hashlib
 import multiprocessing
 import os
 import shutil
-import sys
 import traceback
 from concurrent.futures import ProcessPoolExecutor
 from copy import deepcopy
@@ -59,10 +58,13 @@ from bank_statement_parser.modules.data import (
 from bank_statement_parser.modules.database import update_db
 from bank_statement_parser.modules.errors import ConfigError
 from bank_statement_parser.modules.import_config import ImportConfigManager
+from bank_statement_parser.modules.logging_config import get_logger
 from bank_statement_parser.modules.parquet import update_parquet
 from bank_statement_parser.modules.paths import ProjectPaths, validate_or_initialise_project
 from bank_statement_parser.modules.pdf_functions import pdf_close, pdf_open
 from bank_statement_parser.modules.statement_functions import get_results, get_standard_fields
+
+logger = get_logger(__name__)
 
 CPU_WORKERS = os.cpu_count()
 
@@ -191,8 +193,11 @@ def _write_debug_excel(
                 df.write_excel(workbook=wb, worksheet=ws)
 
         wb.close()
-    except Exception as write_exc:  # noqa: BLE001
-        print(f"[debug] failed to write debug_dataframes.xlsx for {stmt.file.name}: {write_exc}")
+    except Exception:
+        logger.exception(
+            "Failed to write debug_dataframes.xlsx for %s",
+            stmt.file.name,
+        )
 
 
 def _write_debug_json(stmt: "Statement", include_lines: bool = False) -> Path | None:
@@ -272,8 +277,11 @@ def _write_debug_json(stmt: "Statement", include_lines: bool = False) -> Path | 
             _write_debug_excel(stmt, debug_dir, stmt._debug_dataframes)
 
         return out_file
-    except Exception as write_exc:  # noqa: BLE001
-        print(f"[debug] failed to write debug.json for {stmt.file.name}: {write_exc}")
+    except Exception:
+        logger.exception(
+            "Failed to write debug.json for %s",
+            stmt.file.name,
+        )
         return None
 
 
@@ -569,7 +577,7 @@ class Statement:
             self.error_message = f"** Configuration Failure **: {e}"
             self.error_detail = _build_error_detail(e)
             self.success = False
-            traceback.print_exc(file=sys.stderr)
+            logger.exception("Configuration failure for %s", getattr(self, "file", "<unknown>"))
             if self._debug_collector is not None:
                 self._debug_collector.append(
                     {
@@ -751,7 +759,11 @@ class Statement:
         last_running = self.lines_results.select(pl.last("STD_RUNNING_BALANCE")).collect().item()
         self.checks_and_balances = self.checks_and_balances.with_columns(STD_RUNNING_BALANCE=pl.lit(last_running))
 
-        print(f"[opening_balance] corrected opening balance for {getattr(self, 'file', '<unknown>')}: {true_opening}")
+        logger.info(
+            "Corrected opening balance for %s: %s",
+            getattr(self, "file", "<unknown>"),
+            true_opening,
+        )
 
     def get_config(self) -> Account | None:
         """
@@ -854,7 +866,7 @@ def _handle_parquet_write_error(
     """Handle a Parquet write error by updating batch_line and logging.
 
     Updates batch_line with error flags and messages, appends to error list,
-    prints diagnostic output, and logs the full exception traceback.
+    and logs the error message with the full exception traceback.
 
     Args:
         name: Human-readable name of the Parquet file (e.g., 'StatementHeads').
@@ -868,8 +880,13 @@ def _handle_parquet_write_error(
     batch_line["STD_SUCCESS"] = False  # type: ignore[index]
     batch_line["ERROR_DATA"] = True  # type: ignore[index]
     error_message_list.append(error_message)
-    print(f"[line {batch_line['STD_BATCH_LINE']}] {pdf.name}: {error_message}")
-    traceback.print_exc(file=sys.stderr)
+    logger.error(
+        "Line %s | %s: %s",
+        batch_line["STD_BATCH_LINE"],
+        pdf.name,
+        error_message,
+        exc_info=(type(exc), exc, exc.__traceback__),
+    )
 
 
 def process_pdf_statement(
@@ -979,7 +996,12 @@ def process_pdf_statement(
             batch_line["ERROR_CONFIG"] = True
             batch_line["STD_ERROR_MESSAGE"] += stmt.error_message
             error_message = stmt.error_message
-            print(f"[line {batch_line['STD_BATCH_LINE']}] {pdf.name}: {stmt.error_message}")
+            logger.error(
+                "Line %s | %s: %s",
+                batch_line["STD_BATCH_LINE"],
+                pdf.name,
+                stmt.error_message,
+            )
         else:
             # Statement parsed — persist all data regardless of CAB outcome.
             # A CAB failure returns REVIEW (not FAILURE), so statement_heads,
@@ -993,7 +1015,12 @@ def process_pdf_statement(
                 batch_line["STD_ERROR_MESSAGE"] += cab_message
                 error_message = cab_message
                 error_detail_str = detail_str
-                print(f"[line {batch_line['STD_BATCH_LINE']}] {pdf.name}: {cab_message}")
+                logger.warning(
+                    "Line %s | %s: %s",
+                    batch_line["STD_BATCH_LINE"],
+                    pdf.name,
+                    cab_message,
+                )
 
             # Derive currency directly from the account configuration
             _currency: str | None = stmt.config.currency if stmt.config else None
@@ -1078,14 +1105,18 @@ def process_pdf_statement(
 
         stmt.cleanup()
         stmt = None
-    except Exception as e:  # noqa: BLE001 — last-resort guard, intentionally broad
+    except Exception as e:
         # All recoverable statement-level errors are caught by inner try/except blocks above.
         error_other = True
         batch_line["ERROR_CONFIG"] = True
         error_message = f"** Unexpected Failure **: {e}"
         batch_line["STD_ERROR_MESSAGE"] += error_message
-        print(f"[line {batch_line['STD_BATCH_LINE']}] {pdf.name}: {error_message}")
-        traceback.print_exc(file=sys.stderr)
+        logger.exception(
+            "Line %s | %s: %s",
+            batch_line["STD_BATCH_LINE"],
+            pdf.name,
+            error_message,
+        )
 
     # Record processing time and timestamp
     line_end = time()
@@ -1358,7 +1389,7 @@ class StatementBatch:
         """
         if not skip_project_validation:
             validate_or_initialise_project(ProjectPaths.resolve(project_path).root)
-        print("processing...")
+        logger.info("Batch processing started")
         self.process_time: datetime = datetime.now()  # noqa: DTZ005
         self.timer_start = time()
         self.ID_BATCH: str = str(uuid4())
@@ -1394,7 +1425,13 @@ class StatementBatch:
             self.process()
             self.process_secs = time() - self.timer_start
             self.duration_secs += self.process_secs
-        print(f"[TIMING] process: {self.process_secs:.2f}s | pdfs: {self.pdf_count} | errors: {self.errors} | reviews: {self.reviews}")
+        logger.info(
+            "Batch processing completed: duration=%.2fs | pdfs=%d | errors=%d | reviews=%d",
+            self.process_secs,
+            self.pdf_count,
+            self.errors,
+            self.reviews,
+        )
 
     def process(self):
         """
@@ -1591,7 +1628,12 @@ class StatementBatch:
                 project_path=resolved,
             )
             self.duration_secs += self.db_secs
-        print(f"[TIMING] parquet: {self.parquet_secs:.2f}s | db: {self.db_secs:.2f}s | total: {self.duration_secs:.2f}s")
+        logger.info(
+            "Data persistence completed: parquet=%.2fs | db=%.2fs | total=%.2fs",
+            self.parquet_secs,
+            self.db_secs,
+            self.duration_secs,
+        )
 
     def copy_statements_to_project(self, project_path: Path | None = None) -> list[Path]:
         """
@@ -1791,11 +1833,13 @@ class StatementBatch:
                 debug_file = ProjectPaths.resolve(resolved).log_debug_dir(folder_name) / "debug.json"
                 if debug_file.exists():
                     count += 1
-                    print(f"[debug {entry.result}] written → {debug_file}")
+                    logger.debug("Debug file written: %s [result=%s]", debug_file, entry.result)
                 stmt.cleanup()
-            except Exception as e:  # noqa: BLE001
-                print(f"[debug] failed to re-process {pdf_path.name}: {e}")
-                traceback.print_exc(file=sys.stderr)
+            except Exception:
+                logger.exception(
+                    "Failed to re-process debug for %s",
+                    pdf_path.name,
+                )
         return count
 
     def __del__(self):

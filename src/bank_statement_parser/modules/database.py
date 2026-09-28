@@ -32,7 +32,10 @@ import polars as pl
 from bank_statement_parser.data.build_datamart import _ensure_mart_structure, build_datamart
 from bank_statement_parser.modules.data import PdfResult, Success
 from bank_statement_parser.modules.errors import ProjectDatabaseMissing
+from bank_statement_parser.modules.logging_config import get_logger
 from bank_statement_parser.modules.paths import ProjectPaths
+
+logger = get_logger(__name__)
 
 # Python 3.12+ deprecates the built-in date/datetime adapters for sqlite3.
 # Register explicit ISO-format adapters so that datetime.date and
@@ -365,13 +368,13 @@ def _migrate_db(conn: sqlite3.Connection) -> None:
         existing = {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
         if column not in existing:
             conn.execute(f'ALTER TABLE {table} ADD COLUMN "{column}" {col_type} DEFAULT {default}')
-            print(f"[migrate] added column {column} to {table}")
+            logger.debug("Added column %s to %s", column, table)
 
     existing_tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'").fetchall()}
     for table_name, create_sql in _TABLE_MIGRATIONS:
         if table_name not in existing_tables:
             conn.execute(create_sql)
-            print(f"[migrate] created table {table_name}")
+            logger.debug("Created table %s", table_name)
 
     _ensure_mart_structure(conn)
 
@@ -379,7 +382,7 @@ def _migrate_db(conn: sqlite3.Connection) -> None:
     for view_name, create_sql in _VIEW_MIGRATIONS:
         if view_name not in existing_views:
             conn.execute(create_sql)
-            print(f"[migrate] created view {view_name}")
+            logger.debug("Created view %s", view_name)
 
     conn.commit()
 
@@ -535,7 +538,7 @@ def update_db(
     if pdf_count > (errors + reviews):  # if all pdf statements have failed/are under review no point in re-building the datamart
         try:
             build_datamart(db_path=db_path)
-        except Exception as e:  # noqa: BLE001
-            print(f"[update_db] ** Datamart Rebuild Failed **: {type(e).__name__}: {e}")
+        except Exception:
+            logger.exception("Datamart rebuild failed")
 
     return db_secs
