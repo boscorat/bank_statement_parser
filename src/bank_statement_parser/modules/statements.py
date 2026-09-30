@@ -69,6 +69,7 @@ logger = get_logger(__name__)
 CPU_WORKERS = os.cpu_count()
 
 _MAX_STRING_LEN = 500  # truncate long strings captured from locals
+FLOAT_TOL = 0.005  # absolute tolerance for monetary comparisons
 
 # Variable names that are safe to capture from frame locals during error reporting.
 # Omitting this set (capturing all str locals) risks leaking financial data or PII
@@ -735,10 +736,20 @@ class Statement:
         if self.checks_and_balances.is_empty():
             return
 
+        # Skip if no transactions exist (e.g., inactive monthly statement)
+        if self.lines_results.collect().height == 0:
+            return
+
         # Sum of all transaction movements (independent of the opening balance)
         total_movement = self.checks_and_balances.select("STD_TRANSACTION_MOVEMENT").item()
         closing = self.checks_and_balances.select("STD_CLOSING_BALANCE").item()
         true_opening = closing - total_movement
+
+        # Fetch the current opening balance and compare within tolerance
+        current_opening = self.checks_and_balances.select("STD_OPENING_BALANCE").item()
+        if abs(true_opening - current_opening) < FLOAT_TOL:
+            # Already correct within tolerance; no update needed
+            return
 
         # Update checks_and_balances with the corrected opening balance
         self.checks_and_balances = self.checks_and_balances.with_columns(
@@ -759,10 +770,14 @@ class Statement:
         last_running = self.lines_results.select(pl.last("STD_RUNNING_BALANCE")).collect().item()
         self.checks_and_balances = self.checks_and_balances.with_columns(STD_RUNNING_BALANCE=pl.lit(last_running))
 
+        # Log the correction with the delta (useful for Halifax debugging)
+        delta = true_opening - current_opening
         logger.info(
-            "Corrected opening balance for %s: %s",
+            "Corrected opening balance for %s: %s → %s (delta: %+.2f)",
             getattr(self, "file", "<unknown>"),
+            current_opening,
             true_opening,
+            delta,
         )
 
     def get_config(self) -> Account | None:

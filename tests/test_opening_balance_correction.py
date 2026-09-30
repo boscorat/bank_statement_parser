@@ -260,3 +260,87 @@ class TestOpeningBalanceCorrection:
         running = stmt.lines_results.select("STD_RUNNING_BALANCE").collect().to_series().to_list()
         # 40+10=50, 50+(-5)=45, 45+15=60
         assert running == pytest.approx([50.0, 45.0, 60.0])
+
+    def test_no_correction_when_zero_transactions(self):
+        """Silently skips correction when statement has no transaction rows."""
+        # Create statement with no transactions (empty lines_results)
+        # Use closing=50, opening=60 to ensure tolerance check doesn't short-circuit
+        # true_opening = closing - 0 (no movement) = 50
+        # abs(50 - 60) = 10 > FLOAT_TOL, so would normally correct, but zero-transaction guard should intercept
+        stmt = object.__new__(Statement)
+        closing = 50.0
+        incorrect_opening = 60.0
+
+        stmt.checks_and_balances = pl.DataFrame(
+            {
+                "STD_CLOSING_BALANCE": [closing],
+                "STD_OPENING_BALANCE": [incorrect_opening],
+                "STD_PAYMENTS_IN": [0.0],
+                "STD_PAYMENTS_OUT": [0.0],
+                "STD_MOVEMENT": [closing - incorrect_opening],
+                "STD_BALANCE_OF_PAYMENTS": [0.0],
+                "STD_TRANSACTION_PAYMENTS_IN": [0.0],
+                "STD_TRANSACTION_PAYMENTS_OUT": [0.0],
+                "STD_TRANSACTION_MOVEMENT": [0.0],
+                "STD_RUNNING_BALANCE": [closing],
+            }
+        )
+
+        # Empty lines_results (no transaction rows)
+        stmt.lines_results = pl.DataFrame(
+            {
+                "STD_TRANSACTION_MOVEMENT": [],
+                "STD_RUNNING_BALANCE": [],
+            }
+        ).lazy()
+
+        stmt.header_results = pl.DataFrame(
+            {
+                "STD_OPENING_BALANCE": [incorrect_opening],
+            }
+        ).lazy()
+
+        # Config with correction enabled
+        stmt.config = type(
+            "Config",
+            (),
+            {
+                "statement_type": StatementType(
+                    statement_type="Halifax UK Current Account",
+                    header=ConfigGroup(configs=[]),
+                    lines=ConfigGroup(configs=[]),
+                    opening_balance_source="closing_minus_movements",
+                )
+            },
+        )()
+
+        # Call the method
+        stmt._apply_opening_balance_correction()
+
+        # Verify: opening balance should remain unchanged (not corrected to 50)
+        assert stmt.checks_and_balances.select("STD_OPENING_BALANCE").item() == pytest.approx(incorrect_opening)
+        # Verify: lines_results should remain empty (0 rows)
+        assert stmt.lines_results.collect().height == 0
+        # Verify: header_results should remain unchanged
+        assert stmt.header_results.select("STD_OPENING_BALANCE").collect().item() == pytest.approx(incorrect_opening)
+
+    def test_no_update_when_opening_already_correct(self):
+        """Silently skips update when computed opening equals stored opening within tolerance."""
+        # closing=100, no movement, current opening=100
+        # true_opening = 100 - 0 = 100 (matches current within FLOAT_TOL)
+        stmt = self._make_statement_with_correction(closing=100.0, transactions=[(0.0, 0.0)], incorrect_opening=100.0)
+
+        # Capture the original state
+        original_opening = stmt.checks_and_balances.select("STD_OPENING_BALANCE").item()
+        original_movement = stmt.checks_and_balances.select("STD_MOVEMENT").item()
+        original_running = stmt.lines_results.select("STD_RUNNING_BALANCE").collect().to_series().to_list()
+        original_header_opening = stmt.header_results.select("STD_OPENING_BALANCE").collect().item()
+
+        # Call the method
+        stmt._apply_opening_balance_correction()
+
+        # Verify: All values should remain unchanged (no updates performed)
+        assert stmt.checks_and_balances.select("STD_OPENING_BALANCE").item() == pytest.approx(original_opening)
+        assert stmt.checks_and_balances.select("STD_MOVEMENT").item() == pytest.approx(original_movement)
+        assert stmt.lines_results.select("STD_RUNNING_BALANCE").collect().to_series().to_list() == pytest.approx(original_running)
+        assert stmt.header_results.select("STD_OPENING_BALANCE").collect().item() == pytest.approx(original_header_opening)
