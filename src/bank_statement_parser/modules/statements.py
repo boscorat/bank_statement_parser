@@ -737,7 +737,7 @@ class Statement:
             return
 
         # Skip if no transactions exist (e.g., inactive monthly statement)
-        if self.lines_results.select(pl.len()).collect().height == 0:
+        if self.lines_results.collect().height == 0:
             return
 
         # Sum of all transaction movements (independent of the opening balance)

@@ -264,9 +264,12 @@ class TestOpeningBalanceCorrection:
     def test_no_correction_when_zero_transactions(self):
         """Silently skips correction when statement has no transaction rows."""
         # Create statement with no transactions (empty lines_results)
+        # Use closing=50, opening=60 to ensure tolerance check doesn't short-circuit
+        # true_opening = closing - 0 (no movement) = 50
+        # abs(50 - 60) = 10 > FLOAT_TOL, so would normally correct, but zero-transaction guard should intercept
         stmt = object.__new__(Statement)
         closing = 50.0
-        incorrect_opening = 50.0
+        incorrect_opening = 60.0
 
         stmt.checks_and_balances = pl.DataFrame(
             {
@@ -274,7 +277,7 @@ class TestOpeningBalanceCorrection:
                 "STD_OPENING_BALANCE": [incorrect_opening],
                 "STD_PAYMENTS_IN": [0.0],
                 "STD_PAYMENTS_OUT": [0.0],
-                "STD_MOVEMENT": [0.0],
+                "STD_MOVEMENT": [closing - incorrect_opening],
                 "STD_BALANCE_OF_PAYMENTS": [0.0],
                 "STD_TRANSACTION_PAYMENTS_IN": [0.0],
                 "STD_TRANSACTION_PAYMENTS_OUT": [0.0],
@@ -298,8 +301,6 @@ class TestOpeningBalanceCorrection:
         ).lazy()
 
         # Config with correction enabled
-        from bank_statement_parser.modules.data import ConfigGroup, StatementType
-
         stmt.config = type(
             "Config",
             (),
@@ -316,12 +317,12 @@ class TestOpeningBalanceCorrection:
         # Call the method
         stmt._apply_opening_balance_correction()
 
-        # Verify: opening balance should remain unchanged
-        assert stmt.checks_and_balances.select("STD_OPENING_BALANCE").item() == pytest.approx(50.0)
+        # Verify: opening balance should remain unchanged (not corrected to 50)
+        assert stmt.checks_and_balances.select("STD_OPENING_BALANCE").item() == pytest.approx(incorrect_opening)
         # Verify: lines_results should remain empty (0 rows)
         assert stmt.lines_results.collect().height == 0
         # Verify: header_results should remain unchanged
-        assert stmt.header_results.select("STD_OPENING_BALANCE").collect().item() == pytest.approx(50.0)
+        assert stmt.header_results.select("STD_OPENING_BALANCE").collect().item() == pytest.approx(incorrect_opening)
 
     def test_no_update_when_opening_already_correct(self):
         """Silently skips update when computed opening equals stored opening within tolerance."""
