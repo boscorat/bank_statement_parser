@@ -1128,10 +1128,32 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#bspget_logger" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        bsp.get_logger()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#bspget_table_from_region" class="md-nav__link">
     <span class="md-ellipsis">
       
         bsp.get_table_from_region()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bspget_verbosity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        bsp.get_verbosity()
       
     </span>
   </a>
@@ -1209,6 +1231,17 @@
     <span class="md-ellipsis">
       
         bsp.region_search()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bspset_verbosity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        bsp.set_verbosity()
       
     </span>
   </a>
@@ -1705,10 +1738,32 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#bspget_logger" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        bsp.get_logger()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#bspget_table_from_region" class="md-nav__link">
     <span class="md-ellipsis">
       
         bsp.get_table_from_region()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bspget_verbosity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        bsp.get_verbosity()
       
     </span>
   </a>
@@ -1786,6 +1841,17 @@
     <span class="md-ellipsis">
       
         bsp.region_search()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bspset_verbosity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        bsp.set_verbosity()
       
     </span>
   </a>
@@ -2029,9 +2095,15 @@
 <h3 id="bspget_exchange_rates"><code>bsp.get_exchange_rates()</code><a class="headerlink" href="#bspget_exchange_rates" title="Permanent link">&para;</a></h3>
 <p><em>function</em> — <code>bank_statement_parser.modules.forex</code></p>
 <p>Fetch daily USD-based exchange rates and persist them to <code>exchange_rates</code>.</p>
+<h3 id="bspget_logger"><code>bsp.get_logger()</code><a class="headerlink" href="#bspget_logger" title="Permanent link">&para;</a></h3>
+<p><em>function</em> — <code>bank_statement_parser.modules.logging_config</code></p>
+<p>Get or create a logger for the given module name.</p>
 <h3 id="bspget_table_from_region"><code>bsp.get_table_from_region()</code><a class="headerlink" href="#bspget_table_from_region" title="Permanent link">&para;</a></h3>
 <p><em>function</em> — <code>bank_statement_parser.modules.pdf_functions</code></p>
 <p>Extract a structured table from a PDF region using configurable extraction settings.</p>
+<h3 id="bspget_verbosity"><code>bsp.get_verbosity()</code><a class="headerlink" href="#bspget_verbosity" title="Permanent link">&para;</a></h3>
+<p><em>function</em> — <code>bank_statement_parser.modules.logging_config</code></p>
+<p>Return the current verbosity setting.</p>
 <h3 id="bspmigrate_db"><code>bsp.migrate_db()</code><a class="headerlink" href="#bspmigrate_db" title="Permanent link">&para;</a></h3>
 <p><em>function</em> — <code>bank_statement_parser.modules.db_migration</code></p>
 <p>Upgrade <em>db_path</em> to the current BSP version if needed.</p>
@@ -2053,6 +2125,9 @@
 <h3 id="bspregion_search"><code>bsp.region_search()</code><a class="headerlink" href="#bspregion_search" title="Permanent link">&para;</a></h3>
 <p><em>function</em> — <code>bank_statement_parser.modules.pdf_functions</code></p>
 <p>Search for a regex pattern within a PDF region and return the first match text.</p>
+<h3 id="bspset_verbosity"><code>bsp.set_verbosity()</code><a class="headerlink" href="#bspset_verbosity" title="Permanent link">&para;</a></h3>
+<p><em>function</em> — <code>bank_statement_parser.modules.logging_config</code></p>
+<p>Set the verbosity level for all bank_statement_parser loggers.</p>
 <h3 id="bspupdate_db"><code>bsp.update_db()</code><a class="headerlink" href="#bspupdate_db" title="Permanent link">&para;</a></h3>
 <p><em>function</em> — <code>bank_statement_parser.modules.database</code></p>
 <p>Insert processed batch results into the SQLite database.</p>
