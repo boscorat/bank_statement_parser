@@ -1657,14 +1657,14 @@ wheels = [
 
 [[package]]
 name = "uk-bank-statement-anonymiser"
-version = "0.2.3"
+version = "0.2.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pikepdf" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b4/46/ac8736c394b51bd7fb4e9b89abf7ef99ef372a33a0f44b3438d9d8d28416/uk_bank_statement_anonymiser-0.2.3.tar.gz", hash = "sha256:875ddab4c851dbaaeb4377cb14c246b6f5c42104c1a543591d921780d7f707b9", size = 30753, upload-time = "2026-08-05T10:29:38.714Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7c/64/9e903eedc36de54d99d6a863136be99f6c8e21ed9f8e4eb80487ab1210e4/uk_bank_statement_anonymiser-0.2.4.tar.gz", hash = "sha256:8095b92a6aedbcf0b29d6e9a0bdb63a289907e041ca0f2c33814ac0094815225", size = 33120, upload-time = "2026-09-30T12:06:41.86Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c0/cd/4e3d433e5cf062a90a8f6ce905f8d94a63e8f62a2475e84eb7d68e76c9f5/uk_bank_statement_anonymiser-0.2.3-py3-none-any.whl", hash = "sha256:e54dad393256164c8cd86b5d54f7843106035f7e66eab5b112f990223eb9d663", size = 33953, upload-time = "2026-08-05T10:29:37.716Z" },
+    { url = "https://files.pythonhosted.org/packages/a0/d7/58210937000d036d7c425ab97eced697d5d66e29e5d291ab3aa779bf0b90/uk_bank_statement_anonymiser-0.2.4-py3-none-any.whl", hash = "sha256:ae296d1a95545bdcff9856435cced933c8298aa67667fb39a4c6a972688e9e53", size = 36699, upload-time = "2026-09-30T12:06:40.767Z" },
 ]
 
 [[package]]
@@ -1700,7 +1700,7 @@ requires-dist = [
     { name = "dacite", specifier = ">=1.9.2" },
     { name = "pdfplumber", specifier = ">=0.11.9" },
     { name = "polars", specifier = ">=1.36.1" },
-    { name = "uk-bank-statement-anonymiser", marker = "extra == 'anonymise'", specifier = "==0.2.3" },
+    { name = "uk-bank-statement-anonymiser", marker = "extra == 'anonymise'", specifier = "==0.2.4" },
     { name = "xlsxwriter", specifier = ">=3.2.9" },
 ]
 provides-extras = ["anonymise"]
