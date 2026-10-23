@@ -77,7 +77,7 @@ def generate_mock_data(db_path: Path, num_batches: int = 10, statements_per_batc
 
     batch_ids = [str(uuid.uuid4()) for _ in range(num_batches)]
     session_ids = [str(uuid.uuid4()) for _ in range(num_batches)]
-    start_date = datetime(2024, 1, 1)  # noqa: DTZ001
+    start_date = datetime(2024, 1, 1)
     batch_dates = [(start_date + timedelta(days=i * 30)).strftime("%Y-%m-%d %H:%M:%S") for i in range(num_batches)]
 
     batch_heads_data = []
@@ -105,7 +105,7 @@ def generate_mock_data(db_path: Path, num_batches: int = 10, statements_per_batc
 
     statement_dates = []
     for batch_idx in range(num_batches):
-        base_date = datetime(2024, 1, 1) + timedelta(days=batch_idx * 30)  # noqa: DTZ001
+        base_date = datetime(2024, 1, 1) + timedelta(days=batch_idx * 30)
         for stmt_idx in range(statements_per_batch):
             stmt_date = (base_date + timedelta(days=random.randint(10, 25))).strftime("%Y-%m-%d")
             statement_dates.append(stmt_date)
@@ -185,7 +185,7 @@ def generate_mock_data(db_path: Path, num_batches: int = 10, statements_per_batc
         for trn_idx in range(num_transactions):
             transaction_id = str(uuid.uuid4())
             page_number = 1
-            transaction_date = (datetime.strptime(statement_dates[stmt_idx], "%Y-%m-%d") - timedelta(days=random.randint(1, 28))).strftime(  # noqa: DTZ007
+            transaction_date = (datetime.strptime(statement_dates[stmt_idx], "%Y-%m-%d") - timedelta(days=random.randint(1, 28))).strftime(
                 "%Y-%m-%d"
             )
             transaction_number = trn_idx + 1

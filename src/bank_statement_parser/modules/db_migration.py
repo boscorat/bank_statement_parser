@@ -425,7 +425,7 @@ def migrate_db(db_path: Path) -> bool:
         if archive_path.exists():
             from datetime import datetime
 
-            ts = datetime.now().strftime("%Y%m%d%H%M%S")  # noqa: DTZ005
+            ts = datetime.now().strftime("%Y%m%d%H%M%S")
             archive_path = archive_dir / f"project_v{old_version}_{ts}{db_path.suffix}"
         db_path.rename(archive_path)
         # Move WAL/SHM sidecar files alongside the archived DB so stale
