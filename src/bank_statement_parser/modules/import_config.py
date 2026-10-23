@@ -411,7 +411,7 @@ class ImportConfigManager:
             if len(result) > 0:
                 logs.vstack(
                     pl.DataFrame(
-                        [[file_path, "config", "identify_from_pdf", time.time() - start, 1, datetime.now(), ""]],  # noqa: DTZ005
+                        [[file_path, "config", "identify_from_pdf", time.time() - start, 1, datetime.now(), ""]],
                         schema=logs.schema,
                         orient="row",
                     ),
@@ -443,7 +443,7 @@ class ImportConfigManager:
             raise StatementError(f"Unable to identify the account from the statement provided: {file_path}")
         logs.vstack(
             pl.DataFrame(
-                [[file_path, "config", "get_config_from_account", time.time() - start, 1, datetime.now(), ""]],  # noqa: DTZ005
+                [[file_path, "config", "get_config_from_account", time.time() - start, 1, datetime.now(), ""]],
                 schema=logs.schema,
                 orient="row",
             ),
@@ -483,7 +483,7 @@ class ImportConfigManager:
             if len(result) > 0:
                 logs.vstack(
                     pl.DataFrame(
-                        [[file_path, "config", "get_config_from_company", time.time() - start, 1, datetime.now(), ""]],  # noqa: DTZ005
+                        [[file_path, "config", "get_config_from_company", time.time() - start, 1, datetime.now(), ""]],
                         schema=logs.schema,
                         orient="row",
                     ),
@@ -522,7 +522,7 @@ class ImportConfigManager:
                 account = self.get_config_from_company(key, pdf, logs, file_path)
                 logs.vstack(
                     pl.DataFrame(
-                        [[file_path, "config", "get_config_from_statement", time.time() - start, 1, datetime.now(), ""]],  # noqa: DTZ005
+                        [[file_path, "config", "get_config_from_statement", time.time() - start, 1, datetime.now(), ""]],
                         schema=logs.schema,
                         orient="row",
                     ),

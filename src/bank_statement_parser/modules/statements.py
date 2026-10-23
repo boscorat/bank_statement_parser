@@ -262,7 +262,7 @@ def _write_debug_json(stmt: "Statement", include_lines: bool = False) -> Path | 
                 "id_batch": stmt.ID_BATCH or "",
                 "success": stmt.success,
                 "error_message": stmt.error_message,
-                "debug_timestamp": datetime.now().isoformat(timespec="seconds"),  # noqa: DTZ005
+                "debug_timestamp": datetime.now().isoformat(timespec="seconds"),
             },
             "events": stmt._debug_collector or [],
             "checks_and_balances": cab_data,
@@ -983,7 +983,7 @@ def process_pdf_statement(
     batch_line["STD_FILENAME"] = pdf.name
     batch_line["STD_ACCOUNT"] = ""
     batch_line["STD_DURATION_SECS"] = 0.00
-    batch_line["STD_UPDATETIME"] = datetime.now()  # noqa: DTZ005
+    batch_line["STD_UPDATETIME"] = datetime.now()
     batch_line["STD_SUCCESS"] = False
     batch_line["STD_ERROR_MESSAGE"] = ""
     batch_line["ERROR_CAB"] = False
@@ -1136,7 +1136,7 @@ def process_pdf_statement(
     # Record processing time and timestamp
     line_end = time()
     batch_line["STD_DURATION_SECS"] = line_end - line_start
-    batch_line["STD_UPDATETIME"] = datetime.now()  # noqa: DTZ005
+    batch_line["STD_UPDATETIME"] = datetime.now()
 
     # Save batch line data — always written regardless of success/failure
     pq_batch_lines = pq.BatchLines(file=paths.batch_lines_temp(idx, batch_id), batch_lines=[batch_line])
@@ -1405,7 +1405,7 @@ class StatementBatch:
         if not skip_project_validation:
             validate_or_initialise_project(ProjectPaths.resolve(project_path).root)
         logger.info("Batch processing started")
-        self.process_time: datetime = datetime.now()  # noqa: DTZ005
+        self.process_time: datetime = datetime.now()
         self.timer_start = time()
         self.ID_BATCH: str = str(uuid4())
         self.ID_SESSION: str = str(uuid4())

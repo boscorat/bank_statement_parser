@@ -194,7 +194,7 @@ def _ts() -> str:
     Returns:
         Datetime formatted as ``"yyyymmddHHMMSS"``, e.g. ``"20250331143022"``.
     """
-    return datetime.now().strftime("%Y%m%d%H%M%S")  # noqa: DTZ005
+    return datetime.now().strftime("%Y%m%d%H%M%S")
 
 
 def _collect_report_frames(
