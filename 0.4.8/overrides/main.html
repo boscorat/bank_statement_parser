@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block analytics %}
+  {{ super() }}
+  {% if config.extra.goatcounter_url %}
+  <script data-goatcounter="{{ config.extra.goatcounter_url }}/count"
+          async src="//gc.zgo.at/count.js"></script>
+  {% endif %}
+{% endblock %}
