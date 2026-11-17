@@ -179,7 +179,7 @@ def patmatch(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: st
         # Default: extract entire match (group 0)
         group_idx = 0
         data = data.with_columns(pl.col(f"value_{src}").str.extract(pattern, group_idx).fill_null("").alias(f"value_{step}"))
-    elif isinstance(field.regex_groups, int):
+    elif type(field.regex_groups) is int:
         # Single group extraction (backward compatible, existing behavior)
         group_idx = field.regex_groups
         data = data.with_columns(pl.col(f"value_{src}").str.extract(pattern, group_idx).fill_null("").alias(f"value_{step}"))
