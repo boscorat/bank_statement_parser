@@ -288,7 +288,7 @@ class TestRegexGroupsIntegration:
 
         # Pattern extracts end date components: day, month, year
         # Month pattern matches 3+ letter names (Sep, Oct, Jan, Dec, etc.)
-        pattern = r'^\d{1,2}(?:st|nd|rd|th)?\s+[A-Z][a-z]{2,}\s+\d{4}\s+to\s+(\d{1,2})(?:st|nd|rd|th)?\s+([A-Z][a-z]{2,})\s+(\d{4})$'
+        pattern = r"^\d{1,2}(?:st|nd|rd|th)?\s+[A-Z][a-z]{2,}\s+\d{4}\s+to\s+(\d{1,2})(?:st|nd|rd|th)?\s+([A-Z][a-z]{2,})\s+(\d{4})$"
 
         field = Field(
             field="statement_date",
@@ -327,7 +327,7 @@ class TestRegexGroupsIntegration:
         ).lazy()
 
         # Pattern extracts account components: country, account, type
-        pattern = r'^([A-Z]{2})(\d{8})([A-Z]{3})$'
+        pattern = r"^([A-Z]{2})(\d{8})([A-Z]{3})$"
 
         field = Field(
             field="account_info",
