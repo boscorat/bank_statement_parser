@@ -274,3 +274,118 @@ class TestRegexGroupsIntegration:
 
         assert result_pt["value_pattern"][1] == "Direct Debit"
         assert result_desc["value_pattern"][1] == "CHRISTIAN AG POV"
+
+    def test_patmatch_extract_multiple_groups_with_separator(self) -> None:
+        """Test extraction of multiple groups concatenated with space separator."""
+        data = pl.DataFrame(
+            {
+                "value_strip": [
+                    "21st Sep 2026 to 19th Oct 2026",
+                    "1st Jan 2026 to 31st Dec 2026",
+                ]
+            }
+        ).lazy()
+
+        # Pattern extracts end date components: day, month, year
+        # Month pattern matches 3+ letter names (Sep, Oct, Jan, Dec, etc.)
+        pattern = r'^\d{1,2}(?:st|nd|rd|th)?\s+[A-Z][a-z]{2,}\s+\d{4}\s+to\s+(\d{1,2})(?:st|nd|rd|th)?\s+([A-Z][a-z]{2,})\s+(\d{4})$'
+
+        field = Field(
+            field="statement_date",
+            column=0,
+            vital=True,
+            type="string",
+            string_pattern=pattern,
+            regex_groups=[1, 2, 3],  # Extract groups 1, 2, 3
+            regex_groups_separator=" ",  # Join with spaces
+            cell=None,
+            strip_characters_start=None,
+            strip_characters_end=None,
+            currency_override=None,
+            numeric_modifier=None,
+            string_max_length=None,
+            date_format=None,
+            value_offset=None,
+        )
+
+        result = patmatch(data, field, pl.DataFrame(), "test.pdf", spec=None).collect()
+
+        # Should concatenate groups with spaces, skipping ordinals
+        assert result["value_pattern"][0] == "19 Oct 2026"
+        assert result["value_pattern"][1] == "31 Dec 2026"
+        assert result["success_pattern"][0] is True
+        assert result["success_pattern"][1] is True
+
+    def test_patmatch_extract_multiple_groups_no_separator(self) -> None:
+        """Test extraction of multiple groups concatenated without separator."""
+        data = pl.DataFrame(
+            {
+                "value_strip": [
+                    "UK12345678ABC",
+                ]
+            }
+        ).lazy()
+
+        # Pattern extracts account components: country, account, type
+        pattern = r'^([A-Z]{2})(\d{8})([A-Z]{3})$'
+
+        field = Field(
+            field="account_info",
+            column=0,
+            vital=True,
+            type="string",
+            string_pattern=pattern,
+            regex_groups=[1, 2, 3],
+            regex_groups_separator="",  # Explicit empty separator
+            cell=None,
+            strip_characters_start=None,
+            strip_characters_end=None,
+            currency_override=None,
+            numeric_modifier=None,
+            string_max_length=None,
+            date_format=None,
+            value_offset=None,
+        )
+
+        result = patmatch(data, field, pl.DataFrame(), "test.pdf", spec=None).collect()
+
+        # Should concatenate groups without separator
+        assert result["value_pattern"][0] == "UK12345678ABC"
+        assert result["success_pattern"][0] is True
+
+    def test_patmatch_backward_compatible_int_regex_groups(self) -> None:
+        """Ensure existing int regex_groups behavior is unchanged."""
+        data = pl.DataFrame(
+            {
+                "value_strip": [
+                    "Card Transaction 0940 15JAN26 C WOODIES LEEDS GB",
+                    "Direct Debit CHRISTIAN AG POV",
+                ]
+            }
+        ).lazy()
+
+        pattern = r"^([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s+([A-Z0-9_\-/*.,&'\s]+)$"
+
+        field = Field(
+            field="payment_type",
+            column=3,
+            vital=True,
+            type="string",
+            string_pattern=pattern,
+            regex_groups=1,  # Single int (existing behavior)
+            regex_groups_separator=None,  # Ignored for int
+            cell=None,
+            strip_characters_start=None,
+            strip_characters_end=None,
+            currency_override=None,
+            numeric_modifier=None,
+            string_max_length=20,
+            date_format=None,
+            value_offset=None,
+        )
+
+        result = patmatch(data, field, pl.DataFrame(), "test.pdf", spec=None).collect()
+
+        # Should extract group 1 only (unchanged behavior)
+        assert result["value_pattern"][0] == "Card Transaction"
+        assert result["value_pattern"][1] == "Direct Debit"

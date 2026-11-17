@@ -174,13 +174,24 @@ def patmatch(data: pl.LazyFrame, field: Field, logs: pl.DataFrame, file_path: st
         pl.lit(False).alias(f"success_{step}"),
         pl.lit(f"{step} error").alias(f"error_{step}"),
     )
-    # Determine which capture group to extract (default to 0 for backward compatibility)
-    group_idx = field.regex_groups if field.regex_groups is not None else 0
-    data = data.with_columns(pl.col(f"value_{src}").str.extract(pattern, group_idx).fill_null("").alias(f"value_{step}"))
+    # Determine which capture group(s) to extract
+    if field.regex_groups is None:
+        # Default: extract entire match (group 0)
+        group_idx = 0
+        data = data.with_columns(pl.col(f"value_{src}").str.extract(pattern, group_idx).fill_null("").alias(f"value_{step}"))
+    elif isinstance(field.regex_groups, int):
+        # Single group extraction (backward compatible, existing behavior)
+        group_idx = field.regex_groups
+        data = data.with_columns(pl.col(f"value_{src}").str.extract(pattern, group_idx).fill_null("").alias(f"value_{step}"))
+    else:
+        # Multiple groups: extract each and concatenate with separator
+        # regex_groups is list[int] at this point
+        separator = field.regex_groups_separator if field.regex_groups_separator is not None else " "
+        group_exprs = [pl.col(f"value_{src}").str.extract(pattern, group_idx).fill_null("") for group_idx in field.regex_groups]
+        data = data.with_columns(pl.concat_str(group_exprs, separator=separator).alias(f"value_{step}"))
     data = data.with_columns(
         ((pl.col(f"value_{step}").is_not_null()) & (pl.col(f"value_{step}").str.len_bytes() > 0)).alias(f"success_{step}")
     ).with_columns(pl.when(pl.col(f"success_{step}")).then(None).otherwise(pl.col(f"error_{step}")).alias(f"error_{step}"))
-
     return data
 
 

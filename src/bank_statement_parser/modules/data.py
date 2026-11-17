@@ -592,14 +592,28 @@ class Field:
     # column is still extracted normally; the offset column value replaces it in the
     # output.  See FieldOffset.
 
-    regex_groups: int | None = None
-    # [ACTIVE] — When set, extracts the specified capture group (1-indexed) from the
-    # string_pattern regex match instead of the entire match (group 0). Useful for
-    # splitting a single PDF column into multiple fields via regex capture groups.
-    # Example: string_pattern = '^([A-Z ]+)\s+([A-Z0-9]+)$' with regex_groups = 1
-    # extracts group 1; regex_groups = 2 extracts group 2.
-    # When None, defaults to group 0 (entire match, backward compatible).
-    # Omit for standard extraction.
+    regex_groups: int | list[int] | None = None
+    # [ACTIVE] — Extracts specified capture group(s) from the string_pattern regex match.
+    # - If int: extracts single group (e.g., 1 extracts group 1; 0 extracts entire match)
+    # - If list[int]: extracts multiple groups and concatenates with regex_groups_separator
+    # - If None: defaults to group 0 (entire match, backward compatible)
+    # Examples:
+    #   regex_groups = 1 → extracts group 1 only
+    #   regex_groups = [1, 2, 3] with regex_groups_separator = " " → "19 Oct 2026"
+    #   regex_groups = [1, 2, 3] (no separator specified) → "19 Oct 2026" (default space)
+    # Useful for splitting a single PDF column into multiple fields (via int)
+    # or extracting date/account components and concatenating (via list).
+
+    regex_groups_separator: str | None = None
+    # [ACTIVE] — Separator string used when concatenating multiple regex groups.
+    # Only applies when regex_groups is a list[int].
+    # Defaults to " " (space) when regex_groups is a list and this field is None.
+    # Example: regex_groups = [1, 2, 3], regex_groups_separator = " "
+    #   Input: "21st Sep 2026 to 19th Oct 2026" (with pattern matching end date)
+    #   Groups: ["19", "Oct", "2026"]
+    #   Result: "19 Oct 2026"
+    # Set to "" (empty string) to concatenate without separator.
+    # Ignored when regex_groups is int or None.
 
 
 @dataclass(frozen=True, slots=True)

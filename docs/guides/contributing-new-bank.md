@@ -263,6 +263,86 @@ vertical_lines = [50, 100, 100, 150, 150, 250]
 
 ---
 
+## Advanced: Extracting Multi-Component Fields with regex_groups
+
+Some banks format data in ways that require extracting multiple components from a single PDF cell and combining them. For example, Santander statement dates appear as:
+
+```
+"21st Sep 2026 to 19th Oct 2026"
+```
+
+If you only need the **end date** (`"19 Oct 2026"`), you can use the `regex_groups` feature to extract multiple capture groups and concatenate them with a separator.
+
+### How It Works
+
+The `regex_groups` field accepts:
+- **`int`** (single group) — extracts one capture group
+- **`list[int]`** (multiple groups) — extracts multiple groups and concatenates them
+- **`None`** (default) — extracts the entire match (group 0)
+
+The `regex_groups_separator` field specifies the string to join groups (defaults to `" "` / space).
+
+### Real Example: Santander Statement Dates
+
+**Problem:** The PDF contains `"21st Sep 2026 to 19th Oct 2026"`. You want to extract just the end date as `"19 Oct 2026"` for parsing.
+
+**Solution:** Use a regex with 3 capture groups (day, month, year) and concatenate them:
+
+```toml
+{
+    field = "statement_date",
+    vital = true,
+    type = "string",
+    string_pattern = '^\d{1,2}(?:st|nd|rd|th)?\s+[A-Z][a-z]{2,}\s+\d{4}\s+to\s+(\d{1,2})(?:st|nd|rd|th)?\s+([A-Z][a-z]{2,})\s+(\d{4})$',
+    regex_groups = [1, 2, 3],
+    regex_groups_separator = " ",
+    strip_characters_start = "Statement from ",
+    strip_characters_end = "\n"
+}
+```
+
+**How it works:**
+
+1. **Pattern matches:** `21st Sep 2026 to 19th Oct 2026`
+2. **Capture groups:**
+   - Group 1: `19` (day)
+   - Group 2: `Oct` (month)
+   - Group 3: `2026` (year)
+3. **Concatenate with separator:** `"19" + " " + "Oct" + " " + "2026"` → `"19 Oct 2026"`
+4. **Result:** A clean date string ready for date parsing
+
+### Pattern Writing Tips
+
+- **Use non-capturing groups** `(?:...)` for parts you don't want extracted (e.g., ordinal suffixes `(?:st|nd|rd|th)?`)
+- **Use capturing groups** `(...)` for parts you DO want extracted
+- **Number groups 1, 2, 3, etc.** (group 0 is always the entire match)
+- **Order matters:** `regex_groups = [1, 2, 3]` concatenates in order
+
+### Advanced Options
+
+| Option | Default | Purpose |
+|--------|---------|---------|
+| `regex_groups` | `None` | Which capture groups to extract and combine |
+| `regex_groups_separator` | `" "` (space) | String to join groups |
+
+**Examples:**
+- `regex_groups = [1, 2, 3], regex_groups_separator = " "` — Join with spaces
+- `regex_groups = [1, 2, 3], regex_groups_separator = ""` — Join with no separator
+- `regex_groups = 1` — Extract only group 1 (backward compatible with existing configs)
+
+### When to Use
+
+✅ **Good use cases:**
+- Multi-component dates (day, month, year from one cell)
+- Split account numbers (prefix + number)
+- Concatenating separated first and last names
+
+❌ **Not recommended for:**
+- Extracting text that already appears in separate columns (use separate fields instead)
+- Complex transformations (consider splitting the extraction into multiple fields)
+
+---
+
 ## Complete Reference
 
 Below is the complete technical reference (auto-generated from code). It covers all TOML fields, dataclasses, and configuration options.
