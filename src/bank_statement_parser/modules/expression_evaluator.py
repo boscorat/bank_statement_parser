@@ -1051,7 +1051,7 @@ class ExpressionEvaluator:
         if node.op == "-":
             return operand.neg()
         if node.op == "NOT":
-            return operand.is_not()
+            return ~operand
         raise ConfigError(f"Expression evaluator: unknown unary operator {node.op!r}")
 
     # -- CASE ----------------------------------------------------------------
