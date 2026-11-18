@@ -666,6 +666,9 @@ Mapping rule that promotes a raw extracted field to a standard output column.
 | `exclude_positive_values` | `bool \| None` | ACTIVE | When True, any positive numeric value is replaced with 0 after casting.  Used to isolate debit-side figures from a combined amount column. |
 | `exclude_negative_values` | `bool \| None` | ACTIVE | When True, any negative numeric value is replaced with 0 after casting.  Used to isolate credit-side figures from a combined amount column. |
 | `terminator` | `str \| None` | ACTIVE | Regex pattern; when present the string value is truncated at the first match position before being written to the standard column.  Useful for stripping trailing boilerplate appended by merge_fields (e.g. " \| BALANCE CARRIED FORWARD"). |
+| `expression` | `str \| None` | ACTIVE | Expression string for config-driven field transformation. When set, ``field`` and ``concat_fields`` must both be None. Validated at config load time by ``validate_expression()``. Supports string, date, and numeric functions; see expression_evaluator.py. Example: ``"CONCAT(date_day, ' ', date_month, ' ', CAST(YEAR(statement_date) AS STRING))"`` |
+| `null_strategy` | `Literal['return_null', 'skip_row', 'default_value'] \| None` | ACTIVE | Null handling strategy when expression references a missing column or produces a NULL result.  Defaults to 'return_null'. 'skip_row': row is excluded post-loop (not mid-loop — would skew C&B totals). 'default_value': NULL is replaced with ``null_default_value``. |
+| `null_default_value` | `str \| None` | ACTIVE | Fallback string value when ``null_strategy='default_value'``. Always str (not int/float); numeric values are cast at evaluation time. Required when ``null_strategy='default_value'``. |
 
 #### `StandardFields`
 
@@ -947,6 +950,9 @@ Mapping rule that promotes a raw extracted field to a standard output column.
 | `exclude_positive_values` | `bool \| None` | ACTIVE | When True, any positive numeric value is replaced with 0 after casting.  Used to isolate debit-side figures from a combined amount column. |
 | `exclude_negative_values` | `bool \| None` | ACTIVE | When True, any negative numeric value is replaced with 0 after casting.  Used to isolate credit-side figures from a combined amount column. |
 | `terminator` | `str \| None` | ACTIVE | Regex pattern; when present the string value is truncated at the first match position before being written to the standard column.  Useful for stripping trailing boilerplate appended by merge_fields (e.g. " \| BALANCE CARRIED FORWARD"). |
+| `expression` | `str \| None` | ACTIVE | Expression string for config-driven field transformation. When set, ``field`` and ``concat_fields`` must both be None. Validated at config load time by ``validate_expression()``. Supports string, date, and numeric functions; see expression_evaluator.py. Example: ``"CONCAT(date_day, ' ', date_month, ' ', CAST(YEAR(statement_date) AS STRING))"`` |
+| `null_strategy` | `Literal['return_null', 'skip_row', 'default_value'] \| None` | ACTIVE | Null handling strategy when expression references a missing column or produces a NULL result.  Defaults to 'return_null'. 'skip_row': row is excluded post-loop (not mid-loop — would skew C&B totals). 'default_value': NULL is replaced with ``null_default_value``. |
+| `null_default_value` | `str \| None` | ACTIVE | Fallback string value when ``null_strategy='default_value'``. Always str (not int/float); numeric values are cast at evaluation time. Required when ``null_strategy='default_value'``. |
 
 ### `Test`
 

@@ -816,12 +816,13 @@ def get_standard_fields(
                     # Inject any header scalar values referenced in the expression
                     # (header and lines are separate DataFrames; STD_STATEMENT_DATE
                     # etc. are not columns in the lines DataFrame by default).
-                    from bank_statement_parser.modules.expression_evaluator import (  # noqa: PLC0415
+                    from bank_statement_parser.modules.expression_evaluator import (
                         ExpressionEvaluator,
                         ExpressionLexer,
                         ExpressionParser,
                         collect_expression_column_refs,
                     )
+
                     _injected_cols: list[str] = []
                     if header_scalars:
                         expr_col_refs = collect_expression_column_refs(ref.expression)

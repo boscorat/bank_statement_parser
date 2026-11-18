@@ -45,7 +45,7 @@ Design constraints (from AGENTS.md)
 """
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Any, Literal
 
@@ -89,19 +89,19 @@ class TokenType(Enum):
     SLASH = auto()
 
     # Comparison
-    EQ = auto()       # =
-    NEQ = auto()      # <>
-    LT = auto()       # <
-    GT = auto()       # >
-    LTE = auto()      # <=
-    GTE = auto()      # >=
+    EQ = auto()  # =
+    NEQ = auto()  # <>
+    LT = auto()  # <
+    GT = auto()  # >
+    LTE = auto()  # <=
+    GTE = auto()  # >=
 
     # Punctuation
-    LPAREN = auto()   # (
-    RPAREN = auto()   # )
-    LBRACKET = auto() # [
-    RBRACKET = auto() # ]
-    COMMA = auto()    # ,
+    LPAREN = auto()  # (
+    RPAREN = auto()  # )
+    LBRACKET = auto()  # [
+    RBRACKET = auto()  # ]
+    COMMA = auto()  # ,
 
     # Sentinel
     EOF = auto()
@@ -234,10 +234,7 @@ class ExpressionLexer:
                 pos += 1
                 continue
 
-            raise ConfigError(
-                f"Expression lexer: unexpected character {ch!r} at position {pos} "
-                f"in expression: {expr!r}"
-            )
+            raise ConfigError(f"Expression lexer: unexpected character {ch!r} at position {pos} in expression: {expr!r}")
 
         tokens.append(Token(TokenType.EOF, "", pos))
         return tokens
@@ -263,10 +260,7 @@ class ExpressionLexer:
             ch = expr[pos]
             if ch == "\\":
                 if pos + 1 >= length:
-                    raise ConfigError(
-                        f"Expression lexer: unterminated escape sequence at position {pos} "
-                        f"in expression: {expr!r}"
-                    )
+                    raise ConfigError(f"Expression lexer: unterminated escape sequence at position {pos} in expression: {expr!r}")
                 nxt = expr[pos + 1]
                 if nxt == "'":
                     buf.append("'")
@@ -288,10 +282,7 @@ class ExpressionLexer:
             else:
                 buf.append(ch)
                 pos += 1
-        raise ConfigError(
-            f"Expression lexer: unclosed string literal starting at position {start} "
-            f"in expression: {expr!r}"
-        )
+        raise ConfigError(f"Expression lexer: unclosed string literal starting at position {start} in expression: {expr!r}")
 
     @staticmethod
     def _read_number(expr: str, start: int) -> tuple[Token, int]:
@@ -316,8 +307,7 @@ class ExpressionLexer:
             pos += 1
             if pos >= len(expr) or not expr[pos].isdigit():
                 raise ConfigError(
-                    f"Expression lexer: malformed number at position {start} "
-                    f"(expected digit after decimal point) in expression: {expr!r}"
+                    f"Expression lexer: malformed number at position {start} (expected digit after decimal point) in expression: {expr!r}"
                 )
             while pos < len(expr) and expr[pos].isdigit():
                 pos += 1
@@ -328,8 +318,7 @@ class ExpressionLexer:
                 pos += 1
             if pos >= len(expr) or not expr[pos].isdigit():
                 raise ConfigError(
-                    f"Expression lexer: malformed number at position {start} "
-                    f"(expected digit in exponent) in expression: {expr!r}"
+                    f"Expression lexer: malformed number at position {start} (expected digit in exponent) in expression: {expr!r}"
                 )
             while pos < len(expr) and expr[pos].isdigit():
                 pos += 1
@@ -498,22 +487,22 @@ class FunctionSpec:
 
 
 _FUNCTION_REGISTRY: dict[str, FunctionSpec] = {
-    "CONCAT":    FunctionSpec("CONCAT",    1, -1, "STRING"),
-    "SUBSTRING": FunctionSpec("SUBSTRING", 2,  3, "STRING"),
-    "UPPER":     FunctionSpec("UPPER",     1,  1, "STRING"),
-    "LOWER":     FunctionSpec("LOWER",     1,  1, "STRING"),
-    "TRIM":      FunctionSpec("TRIM",      1,  2, "STRING"),
-    "LTRIM":     FunctionSpec("LTRIM",     1,  2, "STRING"),
-    "RTRIM":     FunctionSpec("RTRIM",     1,  2, "STRING"),
-    "LENGTH":    FunctionSpec("LENGTH",    1,  1, "INT"),
-    "REPLACE":   FunctionSpec("REPLACE",   3,  3, "STRING"),
-    "SPLIT":     FunctionSpec("SPLIT",     2,  2, "ARRAY[STRING]"),
-    "YEAR":      FunctionSpec("YEAR",      1,  1, "INT"),
-    "MONTH":     FunctionSpec("MONTH",     1,  1, "INT"),
-    "DAY":       FunctionSpec("DAY",       1,  1, "INT"),
-    "MONTH_NAME":FunctionSpec("MONTH_NAME",1,  1, "STRING"),
-    "CAST":      FunctionSpec("CAST",      2,  2, "specified_type"),
-    "COALESCE":  FunctionSpec("COALESCE",  1, -1, "type_of_first_non_null"),
+    "CONCAT": FunctionSpec("CONCAT", 1, -1, "STRING"),
+    "SUBSTRING": FunctionSpec("SUBSTRING", 2, 3, "STRING"),
+    "UPPER": FunctionSpec("UPPER", 1, 1, "STRING"),
+    "LOWER": FunctionSpec("LOWER", 1, 1, "STRING"),
+    "TRIM": FunctionSpec("TRIM", 1, 2, "STRING"),
+    "LTRIM": FunctionSpec("LTRIM", 1, 2, "STRING"),
+    "RTRIM": FunctionSpec("RTRIM", 1, 2, "STRING"),
+    "LENGTH": FunctionSpec("LENGTH", 1, 1, "INT"),
+    "REPLACE": FunctionSpec("REPLACE", 3, 3, "STRING"),
+    "SPLIT": FunctionSpec("SPLIT", 2, 2, "ARRAY[STRING]"),
+    "YEAR": FunctionSpec("YEAR", 1, 1, "INT"),
+    "MONTH": FunctionSpec("MONTH", 1, 1, "INT"),
+    "DAY": FunctionSpec("DAY", 1, 1, "INT"),
+    "MONTH_NAME": FunctionSpec("MONTH_NAME", 1, 1, "STRING"),
+    "CAST": FunctionSpec("CAST", 2, 2, "specified_type"),
+    "COALESCE": FunctionSpec("COALESCE", 1, -1, "type_of_first_non_null"),
 }
 
 
@@ -540,7 +529,7 @@ class ExpressionParser:
         tokens: Token list produced by ``ExpressionLexer.tokenize()``.
     """
 
-    __slots__ = ("_tokens", "_pos")
+    __slots__ = ("_pos", "_tokens")
 
     def __init__(self, tokens: list[Token]) -> None:
         self._tokens = tokens
@@ -559,10 +548,7 @@ class ExpressionParser:
     def _expect(self, ttype: TokenType) -> Token:
         tok = self._peek()
         if tok.type != ttype:
-            raise ConfigError(
-                f"Expression parser: expected {ttype.name} but got "
-                f"{tok.type.name} ({tok.value!r}) at position {tok.pos}"
-            )
+            raise ConfigError(f"Expression parser: expected {ttype.name} but got {tok.type.name} ({tok.value!r}) at position {tok.pos}")
         return self._advance()
 
     def _match(self, *ttypes: TokenType) -> bool:
@@ -583,8 +569,7 @@ class ExpressionParser:
         if self._peek().type != TokenType.EOF:
             tok = self._peek()
             raise ConfigError(
-                f"Expression parser: unexpected token {tok.type.name} ({tok.value!r}) "
-                f"at position {tok.pos} — expected end of expression"
+                f"Expression parser: unexpected token {tok.type.name} ({tok.value!r}) at position {tok.pos} — expected end of expression"
             )
         return node
 
@@ -616,9 +601,12 @@ class ExpressionParser:
     def _parse_comparison(self) -> ASTNode:
         node = self._parse_addition()
         _cmp_types = (
-            TokenType.EQ, TokenType.NEQ,
-            TokenType.LT, TokenType.GT,
-            TokenType.LTE, TokenType.GTE,
+            TokenType.EQ,
+            TokenType.NEQ,
+            TokenType.LT,
+            TokenType.GT,
+            TokenType.LTE,
+            TokenType.GTE,
             TokenType.IN,
         )
         if self._match(*_cmp_types):
@@ -647,10 +635,7 @@ class ExpressionParser:
                 self._advance()
                 values.append(None)
             else:
-                raise ConfigError(
-                    f"Expression parser: IN list may only contain literal values, "
-                    f"got {tok.type.name} at position {tok.pos}"
-                )
+                raise ConfigError(f"Expression parser: IN list may only contain literal values, got {tok.type.name} at position {tok.pos}")
             if self._match(TokenType.COMMA):
                 self._advance()
         self._expect(TokenType.RPAREN)
@@ -692,10 +677,7 @@ class ExpressionParser:
                 idx_tok = self._advance()
                 index = int(idx_tok.value)
             else:
-                raise ConfigError(
-                    f"Expression parser: array index must be an integer literal, "
-                    f"got {tok.type.name} at position {tok.pos}"
-                )
+                raise ConfigError(f"Expression parser: array index must be an integer literal, got {tok.type.name} at position {tok.pos}")
             self._expect(TokenType.RBRACKET)
             node = ArrayIndexNode(node, index)
         return node
@@ -769,10 +751,7 @@ class ExpressionParser:
             self._expect(TokenType.AS)
             type_tok = self._peek()
             if type_tok.type not in (TokenType.IDENTIFIER, TokenType.STRING):
-                raise ConfigError(
-                    f"Expression parser: CAST expects a type name as second argument "
-                    f"at position {type_tok.pos}"
-                )
+                raise ConfigError(f"Expression parser: CAST expects a type name as second argument at position {type_tok.pos}")
             self._advance()
             args = [value_node, LiteralNode(type_tok.value.upper())]
         else:
@@ -794,10 +773,7 @@ class ExpressionParser:
                 if spec.min_args == spec.max_args
                 else f"{spec.min_args}–{spec.max_args}"
             )
-            raise ConfigError(
-                f"Expression parser: function {name} expects {expected} argument(s) "
-                f"but got {n} at position {name_pos}"
-            )
+            raise ConfigError(f"Expression parser: function {name} expects {expected} argument(s) but got {n} at position {name_pos}")
 
         return FunctionCallNode(name, tuple(args))
 
@@ -827,10 +803,7 @@ class ExpressionParser:
 
         if not when_clauses:
             tok = self._peek()
-            raise ConfigError(
-                f"Expression parser: CASE expression requires at least one WHEN clause "
-                f"at position {tok.pos}"
-            )
+            raise ConfigError(f"Expression parser: CASE expression requires at least one WHEN clause at position {tok.pos}")
 
         else_node: ASTNode | None = None
         if self._match(TokenType.ELSE):
@@ -887,7 +860,7 @@ class ExpressionEvaluator:
             ``null_strategy='default_value'`` and the expression result is NULL.
     """
 
-    __slots__ = ("_schema", "_null_strategy", "_null_default_value")
+    __slots__ = ("_null_default_value", "_null_strategy", "_schema")
 
     def __init__(
         self,
@@ -930,7 +903,7 @@ class ExpressionEvaluator:
             return self._eval_case(node)
         if isinstance(node, ArrayIndexNode):
             return self._eval_array_index(node)
-        raise ConfigError(f"Expression evaluator: unknown AST node type {type(node).__name__}")  # noqa: TRY003
+        raise ConfigError(f"Expression evaluator: unknown AST node type {type(node).__name__}")
 
     # -- literals and column refs --------------------------------------------
 
@@ -959,9 +932,7 @@ class ExpressionEvaluator:
             # right must be a LiteralNode holding a list
             right_node = node.right
             if not isinstance(right_node, LiteralNode) or not isinstance(right_node.value, list):
-                raise ConfigError(
-                    "Expression evaluator: right operand of IN must be a literal list"
-                )
+                raise ConfigError("Expression evaluator: right operand of IN must be a literal list")
             return left_expr.is_in(right_node.value)
 
         left_expr = self._eval(node.left)
@@ -1008,6 +979,7 @@ class ExpressionEvaluator:
         Returns:
             Polars expression for the arithmetic operation.
         """
+
         def _apply(l: pl.Expr, r: pl.Expr, o: str) -> pl.Expr:
             if o == "+":
                 return l + r
@@ -1198,16 +1170,12 @@ class ExpressionEvaluator:
         start_node = args[1]
         # start must be a literal integer
         if not isinstance(start_node, LiteralNode) or not isinstance(start_node.value, int):
-            raise ConfigError(
-                "Expression evaluator: SUBSTRING start argument must be an integer literal"
-            )
+            raise ConfigError("Expression evaluator: SUBSTRING start argument must be an integer literal")
         start: int = start_node.value
         if len(args) == 3:
             length_node = args[2]
             if not isinstance(length_node, LiteralNode) or not isinstance(length_node.value, int):
-                raise ConfigError(
-                    "Expression evaluator: SUBSTRING length argument must be an integer literal"
-                )
+                raise ConfigError("Expression evaluator: SUBSTRING length argument must be an integer literal")
             length: int = length_node.value
             return source.str.slice(start, length)
         return source.str.slice(start)
@@ -1249,15 +1217,11 @@ class ExpressionEvaluator:
         if isinstance(pattern_node, LiteralNode) and isinstance(pattern_node.value, str):
             pattern = pattern_node.value
         else:
-            raise ConfigError(
-                "Expression evaluator: REPLACE pattern must be a string literal"
-            )
+            raise ConfigError("Expression evaluator: REPLACE pattern must be a string literal")
         if isinstance(replacement_node, LiteralNode) and isinstance(replacement_node.value, str):
             replacement = replacement_node.value
         else:
-            raise ConfigError(
-                "Expression evaluator: REPLACE replacement must be a string literal"
-            )
+            raise ConfigError("Expression evaluator: REPLACE replacement must be a string literal")
         return source.str.replace_all(re.escape(pattern), replacement, literal=True)
 
     def _eval_split(self, args: tuple) -> pl.Expr:
@@ -1272,9 +1236,7 @@ class ExpressionEvaluator:
         source = self._eval(args[0])
         delim_node = args[1]
         if not isinstance(delim_node, LiteralNode) or not isinstance(delim_node.value, str):
-            raise ConfigError(
-                "Expression evaluator: SPLIT delimiter must be a string literal"
-            )
+            raise ConfigError("Expression evaluator: SPLIT delimiter must be a string literal")
         return source.str.split(delim_node.value)
 
     # -- date function implementations ---------------------------------------
@@ -1315,18 +1277,50 @@ class ExpressionEvaluator:
             Polars Utf8 expression with 3-letter title-case abbreviation.
         """
         _MONTH_MAP: dict[str, str] = {
-            "1": "Jan", "01": "Jan", "january": "Jan", "jan": "Jan",
-            "2": "Feb", "02": "Feb", "february": "Feb", "feb": "Feb",
-            "3": "Mar", "03": "Mar", "march": "Mar",    "mar": "Mar",
-            "4": "Apr", "04": "Apr", "april": "Apr",    "apr": "Apr",
-            "5": "May", "05": "May", "may": "May",
-            "6": "Jun", "06": "Jun", "june": "Jun",     "jun": "Jun",
-            "7": "Jul", "07": "Jul", "july": "Jul",     "jul": "Jul",
-            "8": "Aug", "08": "Aug", "august": "Aug",   "aug": "Aug",
-            "9": "Sep", "09": "Sep", "september": "Sep","sep": "Sep",
-            "10": "Oct",             "october": "Oct",  "oct": "Oct",
-            "11": "Nov",             "november": "Nov", "nov": "Nov",
-            "12": "Dec",             "december": "Dec", "dec": "Dec",
+            "1": "Jan",
+            "01": "Jan",
+            "january": "Jan",
+            "jan": "Jan",
+            "2": "Feb",
+            "02": "Feb",
+            "february": "Feb",
+            "feb": "Feb",
+            "3": "Mar",
+            "03": "Mar",
+            "march": "Mar",
+            "mar": "Mar",
+            "4": "Apr",
+            "04": "Apr",
+            "april": "Apr",
+            "apr": "Apr",
+            "5": "May",
+            "05": "May",
+            "may": "May",
+            "6": "Jun",
+            "06": "Jun",
+            "june": "Jun",
+            "jun": "Jun",
+            "7": "Jul",
+            "07": "Jul",
+            "july": "Jul",
+            "jul": "Jul",
+            "8": "Aug",
+            "08": "Aug",
+            "august": "Aug",
+            "aug": "Aug",
+            "9": "Sep",
+            "09": "Sep",
+            "september": "Sep",
+            "sep": "Sep",
+            "10": "Oct",
+            "october": "Oct",
+            "oct": "Oct",
+            "11": "Nov",
+            "november": "Nov",
+            "nov": "Nov",
+            "12": "Dec",
+            "december": "Dec",
+            "dec": "Dec",
         }
         expr = self._eval(arg_node)
         col_name = arg_node.name if isinstance(arg_node, ColumnRefNode) else None
@@ -1364,23 +1358,18 @@ class ExpressionEvaluator:
         value_expr = self._eval(args[0])
         type_node = args[1]
         if not isinstance(type_node, LiteralNode) or not isinstance(type_node.value, str):
-            raise ConfigError(
-                "Expression evaluator: CAST second argument must be a type name string"
-            )
+            raise ConfigError("Expression evaluator: CAST second argument must be a type name string")
         type_name = type_node.value.upper()
         _type_map: dict[str, type[pl.DataType]] = {
             "STRING": pl.Utf8,
-            "TEXT":   pl.Utf8,
-            "INT":    pl.Int64,
-            "INTEGER":pl.Int64,
-            "FLOAT":  pl.Float64,
-            "DATE":   pl.Date,
+            "TEXT": pl.Utf8,
+            "INT": pl.Int64,
+            "INTEGER": pl.Int64,
+            "FLOAT": pl.Float64,
+            "DATE": pl.Date,
         }
         if type_name not in _type_map:
-            raise ConfigError(
-                f"Expression evaluator: unrecognised CAST type {type_name!r}. "
-                f"Supported: {', '.join(_type_map)}"
-            )
+            raise ConfigError(f"Expression evaluator: unrecognised CAST type {type_name!r}. Supported: {', '.join(_type_map)}")
         return value_expr.cast(_type_map[type_name])
 
     def _eval_coalesce(self, args: tuple) -> pl.Expr:
@@ -1420,9 +1409,7 @@ def validate_expression(expr: str, available_columns: list[str] | None = None) -
         tokens = ExpressionLexer.tokenize(expr)
         ast = ExpressionParser(tokens).parse()
     except ConfigError as exc:
-        raise ConfigError(
-            f"Invalid expression {expr!r}: {exc}"
-        ) from exc
+        raise ConfigError(f"Invalid expression {expr!r}: {exc}") from exc
 
     if available_columns is not None:
         refs = _collect_column_refs(ast)

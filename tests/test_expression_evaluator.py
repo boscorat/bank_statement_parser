@@ -40,12 +40,8 @@ from bank_statement_parser.modules.expression_evaluator import (
     ExpressionParser,
     FunctionCallNode,
     LiteralNode,
-    Token,
     TokenType,
     UnaryOpNode,
-    WhenClause,
-    _FUNCTION_REGISTRY,
-    _parse_number,
     collect_expression_column_refs,
     validate_expression,
 )
@@ -381,22 +377,22 @@ class TestExpressionParser:
         """Every function in the registry can be called with its minimum args."""
         # Build a minimal valid call for each function
         minimal: dict[str, str] = {
-            "CONCAT":    "CONCAT('a')",
+            "CONCAT": "CONCAT('a')",
             "SUBSTRING": "SUBSTRING(col, 0)",
-            "UPPER":     "UPPER(col)",
-            "LOWER":     "LOWER(col)",
-            "TRIM":      "TRIM(col)",
-            "LTRIM":     "LTRIM(col)",
-            "RTRIM":     "RTRIM(col)",
-            "LENGTH":    "LENGTH(col)",
-            "REPLACE":   "REPLACE(col, 'a', 'b')",
-            "SPLIT":     "SPLIT(col, '-')",
-            "YEAR":      "YEAR(col)",
-            "MONTH":     "MONTH(col)",
-            "DAY":       "DAY(col)",
-            "MONTH_NAME":"MONTH_NAME(col)",
-            "CAST":      "CAST(col AS STRING)",
-            "COALESCE":  "COALESCE(col)",
+            "UPPER": "UPPER(col)",
+            "LOWER": "LOWER(col)",
+            "TRIM": "TRIM(col)",
+            "LTRIM": "LTRIM(col)",
+            "RTRIM": "RTRIM(col)",
+            "LENGTH": "LENGTH(col)",
+            "REPLACE": "REPLACE(col, 'a', 'b')",
+            "SPLIT": "SPLIT(col, '-')",
+            "YEAR": "YEAR(col)",
+            "MONTH": "MONTH(col)",
+            "DAY": "DAY(col)",
+            "MONTH_NAME": "MONTH_NAME(col)",
+            "CAST": "CAST(col AS STRING)",
+            "COALESCE": "COALESCE(col)",
         }
         for name, expr in minimal.items():
             node = ExpressionParser(ExpressionLexer.tokenize(expr)).parse()
@@ -601,10 +597,8 @@ class TestDateFunctions:
 
     def test_month_name_all_months(self) -> None:
         """MONTH_NAME returns correct abbreviation for all 12 months."""
-        months = ["January", "February", "March", "April", "May", "June",
-                  "July", "August", "September", "October", "November", "December"]
-        expected = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+        months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+        expected = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
         df = pl.DataFrame({"m": months})
         result = _eval("MONTH_NAME(m)", df)
         assert result.to_list() == expected
@@ -870,6 +864,7 @@ class TestStdRefsValidation:
     def test_expression_field_mutually_exclusive(self) -> None:
         """expression and field cannot both be set."""
         from bank_statement_parser.modules.data import StdRefs
+
         with pytest.raises(ConfigError, match="mutually exclusive"):
             StdRefs(
                 statement_type="Test",
@@ -883,6 +878,7 @@ class TestStdRefsValidation:
     def test_default_value_requires_null_default_value(self) -> None:
         """null_strategy='default_value' without null_default_value raises ConfigError."""
         from bank_statement_parser.modules.data import StdRefs
+
         with pytest.raises(ConfigError, match="null_default_value"):
             StdRefs(
                 statement_type="Test",
@@ -897,6 +893,7 @@ class TestStdRefsValidation:
     def test_concat_fields_emits_deprecation_warning(self) -> None:
         """Using concat_fields emits a DeprecationWarning."""
         from bank_statement_parser.modules.data import StdRefs
+
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
             StdRefs(
@@ -911,6 +908,7 @@ class TestStdRefsValidation:
     def test_valid_expression_passes(self) -> None:
         """A valid expression entry creates a StdRefs without error."""
         from bank_statement_parser.modules.data import StdRefs
+
         ref = StdRefs(
             statement_type="Test",
             field=None,
@@ -924,6 +922,7 @@ class TestStdRefsValidation:
     def test_valid_default_value_passes(self) -> None:
         """null_strategy='default_value' with null_default_value set is valid."""
         from bank_statement_parser.modules.data import StdRefs
+
         ref = StdRefs(
             statement_type="Test",
             field=None,
@@ -948,6 +947,7 @@ class TestGetStandardFieldsExpression:
     def _make_std_fields(self, std_field: str, section: str, stmt_type: str, **ref_kwargs: Any) -> dict:
         """Build a minimal config_standard_fields dict for testing."""
         from bank_statement_parser.modules.data import StandardFields, StdRefs
+
         # Extract format separately since it's a positional StdRefs field
         fmt = ref_kwargs.pop("format", None)
         ref = StdRefs(
@@ -971,9 +971,11 @@ class TestGetStandardFieldsExpression:
 
     def _checks_and_balances(self) -> pl.DataFrame:
         """Minimal checks_and_balances DataFrame required for the lines section."""
-        return pl.DataFrame({
-            "STD_OPENING_BALANCE": pl.Series([0.0], dtype=pl.Float64),
-        })
+        return pl.DataFrame(
+            {
+                "STD_OPENING_BALANCE": pl.Series([0.0], dtype=pl.Float64),
+            }
+        )
 
     def _pages_df(self, base: pl.DataFrame) -> pl.DataFrame:
         """Add required pages-section column."""
@@ -982,9 +984,12 @@ class TestGetStandardFieldsExpression:
     def test_expression_applied_to_lines_data(self) -> None:
         """Expression is evaluated and result stored in the target column."""
         from bank_statement_parser.modules.statement_functions import get_standard_fields
+
         df = self._pages_df(pl.DataFrame({"description": ["  hello  ", " WORLD "]}))
         std_fields = self._make_std_fields(
-            "STD_DESC", "pages", "TestBank",
+            "STD_DESC",
+            "pages",
+            "TestBank",
             expression="UPPER(TRIM(description))",
         )
         result = get_standard_fields(df, "pages", std_fields, "TestBank", pl.DataFrame())
@@ -993,9 +998,12 @@ class TestGetStandardFieldsExpression:
     def test_expression_concat_columns(self) -> None:
         """CONCAT expression joins multiple columns."""
         from bank_statement_parser.modules.statement_functions import get_standard_fields
+
         df = self._pages_df(pl.DataFrame({"day": ["20"], "month": ["Dec"], "year": ["2026"]}))
         std_fields = self._make_std_fields(
-            "STD_DATE_STR", "pages", "TestBank",
+            "STD_DATE_STR",
+            "pages",
+            "TestBank",
             expression="CONCAT(day, ' ', month, ' ', year)",
         )
         result = get_standard_fields(df, "pages", std_fields, "TestBank", pl.DataFrame())
@@ -1004,13 +1012,20 @@ class TestGetStandardFieldsExpression:
     def test_expression_with_header_scalars(self) -> None:
         """Lines expression can reference header scalar values via header_scalars."""
         from bank_statement_parser.modules.statement_functions import get_standard_fields
+
         df = self._pages_df(pl.DataFrame({"day": ["20"], "month": ["Dec"]}))
         std_fields = self._make_std_fields(
-            "STD_DATE_STR", "pages", "TestBank",
+            "STD_DATE_STR",
+            "pages",
+            "TestBank",
             expression="CONCAT(day, ' ', month, ' ', CAST(STD_STATEMENT_YEAR AS STRING))",
         )
         result = get_standard_fields(
-            df, "pages", std_fields, "TestBank", pl.DataFrame(),
+            df,
+            "pages",
+            std_fields,
+            "TestBank",
+            pl.DataFrame(),
             header_scalars={"STD_STATEMENT_YEAR": 2026},
         )
         assert result["STD_DATE_STR"][0] == "20 Dec 2026"
@@ -1018,9 +1033,12 @@ class TestGetStandardFieldsExpression:
     def test_expression_null_default_value_strategy(self) -> None:
         """null_strategy='default_value' replaces NULLs in output."""
         from bank_statement_parser.modules.statement_functions import get_standard_fields
+
         df = self._pages_df(pl.DataFrame({"col": [None, "hello"]}))
         std_fields = self._make_std_fields(
-            "STD_COL", "pages", "TestBank",
+            "STD_COL",
+            "pages",
+            "TestBank",
             expression="UPPER(col)",
             null_strategy="default_value",
             null_default_value="MISSING",
@@ -1032,9 +1050,12 @@ class TestGetStandardFieldsExpression:
     def test_expression_skip_row_strategy(self) -> None:
         """null_strategy='skip_row' removes rows where expression result is NULL."""
         from bank_statement_parser.modules.statement_functions import get_standard_fields
+
         df = self._pages_df(pl.DataFrame({"col": [None, "hello", None, "world"]}))
         std_fields = self._make_std_fields(
-            "STD_COL", "pages", "TestBank",
+            "STD_COL",
+            "pages",
+            "TestBank",
             expression="UPPER(col)",
             null_strategy="skip_row",
         )
@@ -1044,9 +1065,12 @@ class TestGetStandardFieldsExpression:
     def test_statement_type_no_match_vital_false_null(self) -> None:
         """When statement_type has no match and vital=False, column is set to None."""
         from bank_statement_parser.modules.statement_functions import get_standard_fields
+
         df = self._pages_df(pl.DataFrame({"col": ["x"]}))
         std_fields = self._make_std_fields(
-            "STD_COL", "pages", "OtherBank",
+            "STD_COL",
+            "pages",
+            "OtherBank",
             expression="UPPER(col)",
         )
         result = get_standard_fields(df, "pages", std_fields, "TestBank", pl.DataFrame())
@@ -1056,6 +1080,7 @@ class TestGetStandardFieldsExpression:
         """concat_fields still works (backward compat) but emits DeprecationWarning."""
         from bank_statement_parser.modules.data import StandardFields, StdRefs
         from bank_statement_parser.modules.statement_functions import get_standard_fields
+
         with warnings.catch_warnings(record=True):
             warnings.simplefilter("always")
             ref = StdRefs(
@@ -1076,6 +1101,7 @@ class TestGetStandardFieldsExpression:
     def test_santander_date_year_inference(self) -> None:
         """Full Santander date year inference expression produces correct results."""
         from bank_statement_parser.modules.statement_functions import get_standard_fields
+
         expr = """CONCAT(
             date_day, ' ', date_month, ' ',
             CASE
@@ -1085,19 +1111,25 @@ class TestGetStandardFieldsExpression:
                 ELSE CAST(YEAR(statement_date) AS STRING)
             END
         )"""
-        base_df = pl.DataFrame({
-            "date_day":       ["20",  "5",   "1",  "15"],
-            "date_month":     ["Dec", "Mar", "Jan", "Nov"],
-            "statement_date": [date(2026, 1, 15), date(2026, 4, 10),
-                               date(2026, 2, 1),  date(2025, 12, 20)],
-        }).with_columns(pl.col("statement_date").cast(pl.Date))
+        base_df = pl.DataFrame(
+            {
+                "date_day": ["20", "5", "1", "15"],
+                "date_month": ["Dec", "Mar", "Jan", "Nov"],
+                "statement_date": [date(2026, 1, 15), date(2026, 4, 10), date(2026, 2, 1), date(2025, 12, 20)],
+            }
+        ).with_columns(pl.col("statement_date").cast(pl.Date))
         df = self._lines_df(base_df)
         std_fields = self._make_std_fields(
-            "STD_TRANSACTION_DATE", "lines", "Santander UK Current",
+            "STD_TRANSACTION_DATE",
+            "lines",
+            "Santander UK Current",
             expression=expr,
         )
         result = get_standard_fields(
-            df, "lines", std_fields, "Santander UK Current",
+            df,
+            "lines",
+            std_fields,
+            "Santander UK Current",
             self._checks_and_balances(),
         )
         dates = result["STD_TRANSACTION_DATE"].to_list()
@@ -1114,4 +1146,4 @@ class TestGetStandardFieldsExpression:
 # ---------------------------------------------------------------------------
 # allow running with python directly
 # ---------------------------------------------------------------------------
-import re  # noqa: E402  (needed for the pytest.raises match= pattern above)
+import re

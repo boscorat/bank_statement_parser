@@ -365,12 +365,11 @@ class StdRefs:
                 alongside ``field`` or ``concat_fields``.
         """
         # Deferred import to avoid circular dependency at module load time
-        from bank_statement_parser.modules.errors import ConfigError  # noqa: PLC0415
+        from bank_statement_parser.modules.errors import ConfigError
 
         if self.concat_fields is not None:
             warnings.warn(
-                f"StdRefs.concat_fields is deprecated for statement_type="
-                f"{self.statement_type!r}; use 'expression' instead.",
+                f"StdRefs.concat_fields is deprecated for statement_type={self.statement_type!r}; use 'expression' instead.",
                 DeprecationWarning,
                 stacklevel=2,
             )
@@ -382,13 +381,13 @@ class StdRefs:
                     f"'expression' is mutually exclusive with 'field' and 'concat_fields'."
                 )
             # Validate expression syntax at load time
-            from bank_statement_parser.modules.expression_evaluator import validate_expression  # noqa: PLC0415
+            from bank_statement_parser.modules.expression_evaluator import validate_expression
+
             validate_expression(self.expression)
 
         if self.null_strategy == "default_value" and self.null_default_value is None:
             raise ConfigError(
-                f"StdRefs for statement_type={self.statement_type!r}: "
-                f"null_strategy='default_value' requires null_default_value to be set."
+                f"StdRefs for statement_type={self.statement_type!r}: null_strategy='default_value' requires null_default_value to be set."
             )
 
 
