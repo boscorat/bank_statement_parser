@@ -45,6 +45,7 @@ New to Bank Statement Parser? The [Quick Start guide](guides/quick-start.md) wal
 | [Anonymisation](guides/anonymisation.md) | Redact personal details from PDFs before sharing |
 | [Project Structure](guides/project-structure.md) | How output files and folders are organised |
 | [Adding a New Bank](guides/new-bank-config.md) | Configure support for a bank not listed above |
+| [Field Transformations with Expressions](guides/expressions.md) | Config-driven field transforms without Python code |
 | [CLI Reference](reference/cli.md) | All command-line options |
 | [Python API Reference](reference/python-api.md) | Automate from your own scripts |
 

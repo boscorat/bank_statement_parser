@@ -682,6 +682,21 @@ Declaration of a single standard output column and how to derive it.
 | `std_refs` | `list[StdRefs]` | ACTIVE | One entry per supported statement type.  The correct entry is selected at runtime by matching StdRefs.statement_type. |
 
 
+### Advanced: field transformations with expressions
+
+When a plain `field` reference is not enough — for example, when you need to
+combine fields, normalise casing, or apply conditional logic based on another
+field's value — use the `expression` key instead of `field` in the `std_refs`
+entry.
+
+```toml
+{statement_type="My Bank", expression="UPPER(TRIM(description))"}
+```
+
+See the **[Field Transformations with Expressions](expressions.md)** guide for
+the full function reference, null handling strategies, practical examples, and a
+step-by-step walkthrough of the Santander UK date year-inference expression.
+
 ## Configuration Checklist
 
 Use this checklist to verify your configuration is complete:

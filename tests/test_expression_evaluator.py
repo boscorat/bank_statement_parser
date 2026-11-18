@@ -1099,48 +1099,76 @@ class TestGetStandardFieldsExpression:
         assert any(issubclass(warning.category, DeprecationWarning) for warning in w2)
 
     def test_santander_date_year_inference(self) -> None:
-        """Full Santander date year inference expression produces correct results."""
+        """Santander date year inference: SPLIT extracts month from single 'date' field.
+
+        Production expression mirrors standard_fields.toml exactly:
+        - 'date' column contains 'DD MMM' or 'D MMM' (e.g. '20 Dec', '5 Nov')
+        - STD_STATEMENT_DATE injected as a header scalar (Date type)
+        - Month-boundary logic: Q4 transaction on Q1 statement → year - 1
+        - format = '%d %b %Y' (parses the constructed string back to a Date;
+          single-digit days are NOT zero-padded by CONCAT — the format string
+          is used for strptime parsing, not output formatting)
+        """
         from bank_statement_parser.modules.statement_functions import get_standard_fields
 
-        expr = """CONCAT(
-            date_day, ' ', date_month, ' ',
-            CASE
-                WHEN MONTH(statement_date) <= 3
-                 AND MONTH_NAME(date_month) IN ('Oct', 'Nov', 'Dec')
-                THEN CAST(YEAR(statement_date) - 1 AS STRING)
-                ELSE CAST(YEAR(statement_date) AS STRING)
-            END
-        )"""
+        # Production expression from standard_fields.toml
+        expr = (
+            "CONCAT(date,' ',"
+            "CASE WHEN MONTH(STD_STATEMENT_DATE) <= 3"
+            " AND MONTH_NAME(SPLIT(date, ' ')[1]) IN ('Oct', 'Nov', 'Dec')"
+            " THEN CAST(YEAR(STD_STATEMENT_DATE) - 1 AS String)"
+            " ELSE CAST(YEAR(STD_STATEMENT_DATE) AS String)"
+            " END)"
+        )
+
+        # Six cases covering all boundary conditions:
+        #   row 0: Q4 txn (Dec) on Q1 statement (Jan) → prior year
+        #   row 1: Q4 txn (Nov) on Q1 statement (Feb) → prior year
+        #   row 2: Q4 txn (Oct) on Q1 statement (Mar) → prior year
+        #   row 3: non-Q4 txn (Sep) on Q1 statement (Jan) → same year
+        #   row 4: Q4 txn (Dec) on Q4 statement (Dec, month > 3) → same year
+        #   row 5: non-Q4 txn (Mar) on Q2 statement (Apr, month > 3) → same year
         base_df = pl.DataFrame(
             {
-                "date_day": ["20", "5", "1", "15"],
-                "date_month": ["Dec", "Mar", "Jan", "Nov"],
-                "statement_date": [date(2026, 1, 15), date(2026, 4, 10), date(2026, 2, 1), date(2025, 12, 20)],
+                "date": ["20 Dec", "5 Nov", "15 Oct", "20 Sep", "15 Dec", "1 Mar"],
+                "STD_STATEMENT_DATE": [
+                    date(2026, 1, 15),
+                    date(2026, 2, 1),
+                    date(2026, 3, 10),
+                    date(2026, 1, 15),
+                    date(2025, 12, 20),
+                    date(2026, 4, 10),
+                ],
             }
-        ).with_columns(pl.col("statement_date").cast(pl.Date))
+        ).with_columns(pl.col("STD_STATEMENT_DATE").cast(pl.Date))
         df = self._lines_df(base_df)
         std_fields = self._make_std_fields(
             "STD_TRANSACTION_DATE",
             "lines",
-            "Santander UK Current",
+            "Santander UK Current Account",
             expression=expr,
+            format="%d %b %Y",
+            null_strategy="default_value",
+            null_default_value="1 Jan 2000",
         )
         result = get_standard_fields(
             df,
             "lines",
             std_fields,
-            "Santander UK Current",
+            "Santander UK Current Account",
             self._checks_and_balances(),
         )
         dates = result["STD_TRANSACTION_DATE"].to_list()
-        # Dec on Jan statement → 2025
-        assert dates[0] == "20 Dec 2025", dates[0]
-        # Mar on Apr statement → 2026
-        assert dates[1] == "5 Mar 2026", dates[1]
-        # Jan on Feb statement → 2026 (Jan is not in Oct/Nov/Dec)
-        assert dates[2] == "1 Jan 2026", dates[2]
-        # Nov on Dec statement → 2025 (month=12, not <=3, stays same year)
-        assert dates[3] == "15 Nov 2025", dates[3]
+        # Q4 txn on Q1 statement → year decremented
+        assert dates[0] == "20 Dec 2025", f"row 0: {dates[0]}"
+        assert dates[1] == "5 Nov 2025", f"row 1: {dates[1]}"
+        assert dates[2] == "15 Oct 2025", f"row 2: {dates[2]}"
+        # non-Q4 txn on Q1 statement → same year
+        assert dates[3] == "20 Sep 2026", f"row 3: {dates[3]}"
+        # Q4 txn on Q4 statement (month > 3) → same year
+        assert dates[4] == "15 Dec 2025", f"row 4: {dates[4]}"
+        # non-Q4 txn on Q2 statement (month > 3) → same year
+        assert dates[5] == "1 Mar 2026", f"row 5: {dates[5]}"
 
 
 # ---------------------------------------------------------------------------
