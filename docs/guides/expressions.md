@@ -567,21 +567,17 @@ def test_santander_date_year_inference():
         null_strategy="default_value",
         null_default_value="1 Jan 2000",
     )
-    std_fields = {
-        "STD_TRANSACTION_DATE": StandardFields(
-            section="lines", type="string", vital=False, std_refs=[ref]
-        )
-    }
+    std_fields = {"STD_TRANSACTION_DATE": StandardFields(section="lines", type="string", vital=False, std_refs=[ref])}
     df = pl.DataFrame(
         {
             "date": ["20 Dec", "5 Nov", "15 Oct", "20 Sep", "15 Dec", "1 Mar"],
             "STD_STATEMENT_DATE": [
-                date(2026, 1, 15),   # Q4 txn on Q1 stmt → 2025
-                date(2026, 2, 1),    # Q4 txn on Q1 stmt → 2025
-                date(2026, 3, 10),   # Q4 txn on Q1 stmt → 2025
-                date(2026, 1, 15),   # non-Q4 txn on Q1 stmt → 2026
+                date(2026, 1, 15),  # Q4 txn on Q1 stmt → 2025
+                date(2026, 2, 1),  # Q4 txn on Q1 stmt → 2025
+                date(2026, 3, 10),  # Q4 txn on Q1 stmt → 2025
+                date(2026, 1, 15),  # non-Q4 txn on Q1 stmt → 2026
                 date(2025, 12, 20),  # Q4 txn on Q4 stmt → 2025
-                date(2026, 4, 10),   # non-Q4 txn on Q2 stmt → 2026
+                date(2026, 4, 10),  # non-Q4 txn on Q2 stmt → 2026
             ],
         }
     ).with_columns(
@@ -592,17 +588,15 @@ def test_santander_date_year_inference():
         pl.lit(0).cast(pl.Decimal(scale=4)).alias("STD_TRANSACTION_PAYMENTS_OUT"),
     )
     checks = pl.DataFrame({"STD_OPENING_BALANCE": pl.Series([0.0], dtype=pl.Float64)})
-    result = get_standard_fields(
-        df, "lines", std_fields, "Santander UK Current Account", checks
-    )
+    result = get_standard_fields(df, "lines", std_fields, "Santander UK Current Account", checks)
     dates = result["STD_TRANSACTION_DATE"].to_list()
     assert dates == [
         "20 Dec 2025",  # Q4 on Q1 → prior year
-        "5 Nov 2025",   # Q4 on Q1 → prior year
+        "5 Nov 2025",  # Q4 on Q1 → prior year
         "15 Oct 2025",  # Q4 on Q1 → prior year
         "20 Sep 2026",  # Sep not in Q4 → same year
         "15 Dec 2025",  # Dec on Dec stmt (month > 3) → same year
-        "1 Mar 2026",   # Mar not in Q4 → same year
+        "1 Mar 2026",  # Mar not in Q4 → same year
     ]
 ```
 
