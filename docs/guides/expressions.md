@@ -288,12 +288,19 @@ MONTH(STD_STATEMENT_DATE) IN (1, 2, 3)
 
 ## Type System and Coercion
 
-The evaluator performs automatic type coercion in arithmetic and comparison
-contexts, following this chain:
+The evaluator performs automatic type coercion in **arithmetic** contexts only
+(`+`, `-`, `*`, `/`), following this chain:
 
 1. Try native types (e.g. both operands already numeric).
 2. Cast String to `Float64`, then `Int64` if applicable.
 3. Fall back to NULL if conversion fails (logged at INFO level).
+
+**Comparison operators do not coerce automatically.** If you compare a String
+column to a number, use an explicit `CAST` to align the types first:
+
+```
+CAST(year_str AS Int64) > 2020
+```
 
 Use `CAST` for explicit, predictable conversion rather than relying on
 automatic coercion.

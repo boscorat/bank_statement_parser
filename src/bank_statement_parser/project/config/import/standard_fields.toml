@@ -115,7 +115,7 @@
         # Santander: dates lack year; infer from statement_date with month-boundary handling.
         # Dec/Nov/Oct transactions on Jan-Mar statements belong to the prior year.
         # STD_STATEMENT_DATE is injected as a header scalar via header_scalars mechanism.
-        {statement_type="Santander UK Current Account", expression="CONCAT(date_day, ' ', date_month, ' ', CASE WHEN MONTH(STD_STATEMENT_DATE) <= 3 AND MONTH_NAME(date_month) IN ('Oct', 'Nov', 'Dec') THEN CAST(YEAR(STD_STATEMENT_DATE) - 1 AS STRING) ELSE CAST(YEAR(STD_STATEMENT_DATE) AS STRING) END)", format = "%-d %b %Y", null_strategy="default_value", null_default_value="1 Jan 2000"},
+        {statement_type="Santander UK Current Account", expression="CONCAT(date,' ',CASE WHEN MONTH(STD_STATEMENT_DATE) <= 3 AND MONTH_NAME(SPLIT(date, ' ')[1]) IN ('Oct', 'Nov', 'Dec') THEN CAST(YEAR(STD_STATEMENT_DATE) - 1 AS String) ELSE CAST(YEAR(STD_STATEMENT_DATE) AS String) END)", format = "%d %b %Y"},
     ]
 [STD_TRANSACTION_TYPE]
     section = 'lines'

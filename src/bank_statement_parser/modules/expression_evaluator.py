@@ -839,9 +839,6 @@ def _parse_number(raw: str) -> int | float:
 # Evaluator
 # ---------------------------------------------------------------------------
 
-# Polars Utf8 dtype alias for compatibility across Polars versions
-_STR_DTYPE = pl.Utf8
-
 
 class ExpressionEvaluator:
     """Compile an AST into a Polars expression (``pl.Expr``).
@@ -1246,7 +1243,8 @@ class ExpressionEvaluator:
     def _eval_date_part(self, arg_node: ASTNode, part: str) -> pl.Expr:
         """Extract a date component (year, month, day) from various input types.
 
-        Accepts: Date column, ISO date string column, or integer column.
+        Accepts: Date-typed column or ISO date string column (``'YYYY-MM-DD'``).
+        Integer columns are not supported; use ``CAST(col AS Date)`` first.
 
         Args:
             arg_node: The argument AST node.

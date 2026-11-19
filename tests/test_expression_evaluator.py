@@ -21,6 +21,7 @@ Run with:
     pytest tests/test_expression_evaluator.py -v
 """
 
+import re
 import warnings
 from datetime import date
 from typing import Any
@@ -1169,9 +1170,3 @@ class TestGetStandardFieldsExpression:
         assert dates[4] == "15 Dec 2025", f"row 4: {dates[4]}"
         # non-Q4 txn on Q2 statement (month > 3) → same year
         assert dates[5] == "1 Mar 2026", f"row 5: {dates[5]}"
-
-
-# ---------------------------------------------------------------------------
-# allow running with python directly
-# ---------------------------------------------------------------------------
-import re
