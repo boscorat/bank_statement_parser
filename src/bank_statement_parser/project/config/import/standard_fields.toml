@@ -10,6 +10,7 @@
         {statement_type="Halifax UK Current Account", field="statement_date", format = "%d %B %Y"},
         {statement_type="NatWest UK Current Account", field="statement_date", format = "%d %B %Y"},
         {statement_type="NatWest UK Current Account Old", field="statement_date", format = "%d %B %Y"},
+        {statement_type="Santander UK Current Account", field="statement_date", format = "%d %B %Y"},
     ]
 [STD_SORTCODE]
     section = "header"
@@ -22,6 +23,7 @@
         {statement_type="Halifax UK Current Account", field="sortcode"},
         {statement_type="NatWest UK Current Account", field="sortcode"},
         {statement_type="NatWest UK Current Account Old", field="sortcode"},
+        {statement_type="Santander UK Current Account", field="sortcode"},
     ]
 [STD_ACCOUNT_NUMBER]
     section = "header"
@@ -35,6 +37,7 @@
         {statement_type="Halifax UK Current Account", field="account_number"},
         {statement_type="NatWest UK Current Account", field="account_number"},
         {statement_type="NatWest UK Current Account Old", field="account_number"},
+        {statement_type="Santander UK Current Account", field="account_number"},
     ]
 [STD_ACCOUNT_HOLDER]
     section = "header"
@@ -47,6 +50,7 @@
         {statement_type="Halifax UK Current Account", field="account_name"},
         {statement_type="NatWest UK Current Account", field="account_name"},
         {statement_type="NatWest UK Current Account Old", field="account_name"},
+        {statement_type="Santander UK Current Account", field="account_name"},
     ]
 [STD_OPENING_BALANCE]
     section = "header"
@@ -60,6 +64,7 @@
         {statement_type="Halifax UK Current Account", field="opening_balance"},
         {statement_type="NatWest UK Current Account", field="opening_balance"},
         {statement_type="NatWest UK Current Account Old", field="opening_balance"},
+        {statement_type="Santander UK Current Account", field="opening_balance"},
     ]
 [STD_CLOSING_BALANCE]
     section = "header"
@@ -73,6 +78,7 @@
         {statement_type="Halifax UK Current Account", field="closing_balance"},
         {statement_type="NatWest UK Current Account", field="closing_balance"},
         {statement_type="NatWest UK Current Account Old", field="closing_balance"},
+        {statement_type="Santander UK Current Account", field="closing_balance"},
     ]
 [STD_PAYMENTS_IN]
     section = "header"
@@ -86,6 +92,7 @@
         {statement_type="Halifax UK Current Account", field="payments_in"},
         {statement_type="NatWest UK Current Account", field="payments_in"},
         {statement_type="NatWest UK Current Account Old", field="payments_in"},
+        {statement_type="Santander UK Current Account", field="payments_in"},
     ]
 [STD_PAYMENTS_OUT]
     section = "header"
@@ -99,6 +106,7 @@
         {statement_type="Halifax UK Current Account", field="payments_out"},
         {statement_type="NatWest UK Current Account", field="payments_out"},
         {statement_type="NatWest UK Current Account Old", field="payments_out"},
+        {statement_type="Santander UK Current Account", field="payments_out"},
     ]
 [STD_TRANSACTION_DATE]
     section = "lines"
@@ -112,9 +120,6 @@
         {statement_type="Halifax UK Current Account", field="date", format = "%d %b %y"},
         {statement_type="NatWest UK Current Account", concat_fields=["date_day","date_month","date_year"], format = "%d %b %Y"},
         {statement_type="NatWest UK Current Account Old", concat_fields=["date"], format = "%d %b %Y"},
-        # Santander: dates lack year; infer from statement_date with month-boundary handling.
-        # Dec/Nov/Oct transactions on Jan-Mar statements belong to the prior year.
-        # STD_STATEMENT_DATE is injected as a header scalar via header_scalars mechanism.
         {statement_type="Santander UK Current Account", expression="CONCAT(date,' ',CASE WHEN MONTH(STD_STATEMENT_DATE) <= 3 AND MONTH_NAME(SPLIT(date, ' ')[1]) IN ('Oct', 'Nov', 'Dec') THEN CAST(YEAR(STD_STATEMENT_DATE) - 1 AS String) ELSE CAST(YEAR(STD_STATEMENT_DATE) AS String) END)", format = "%d %b %Y"},
     ]
 [STD_TRANSACTION_TYPE]
@@ -129,6 +134,7 @@
         {statement_type="Halifax UK Current Account", field="payment_type"},
         {statement_type="NatWest UK Current Account", field="payment_type"},
         {statement_type="NatWest UK Current Account Old", field="payment_type"},
+        {statement_type="Santander UK Current Account", field="payment_type"},
     ]
 [STD_TRANSACTION_DESC]
     section = "lines"
@@ -142,7 +148,7 @@
         {statement_type="Halifax UK Current Account", field="description"},
         {statement_type="NatWest UK Current Account", concat_fields=["description","description_2"]},
         {statement_type="NatWest UK Current Account Old", concat_fields=["description"]},
-        {statement_type="Santander UK Current Account", expression="UPPER(TRIM(description))"},
+        {statement_type="Santander UK Current Account", field="details"},
     ]
 [STD_TRANSACTION_PAYMENTS_IN]
     section = "lines"
@@ -156,6 +162,7 @@
         {statement_type="Halifax UK Current Account", field="money_in_£"},
         {statement_type="NatWest UK Current Account", field="paid_in_£"},
         {statement_type="NatWest UK Current Account Old", field="paid_in_£"},
+        {statement_type="Santander UK Current Account", field="£_paid_in"},
     ]
 [STD_TRANSACTION_PAYMENTS_OUT]
     section = "lines"
@@ -169,4 +176,5 @@
         {statement_type="Halifax UK Current Account", field="money_out_£"},
         {statement_type="NatWest UK Current Account", field="paid_out_£"},
         {statement_type="NatWest UK Current Account Old", field="paid_out_£"},
+        {statement_type="Santander UK Current Account", field="£_paid_out"},
     ]
