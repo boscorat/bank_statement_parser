@@ -112,6 +112,10 @@
         {statement_type="Halifax UK Current Account", field="date", format = "%d %b %y"},
         {statement_type="NatWest UK Current Account", concat_fields=["date_day","date_month","date_year"], format = "%d %b %Y"},
         {statement_type="NatWest UK Current Account Old", concat_fields=["date"], format = "%d %b %Y"},
+        # Santander: dates lack year; infer from statement_date with month-boundary handling.
+        # Dec/Nov/Oct transactions on Jan-Mar statements belong to the prior year.
+        # STD_STATEMENT_DATE is injected as a header scalar via header_scalars mechanism.
+        {statement_type="Santander UK Current Account", expression="CONCAT(date,' ',CASE WHEN MONTH(STD_STATEMENT_DATE) <= 3 AND MONTH_NAME(SPLIT(date, ' ')[1]) IN ('Oct', 'Nov', 'Dec') THEN CAST(YEAR(STD_STATEMENT_DATE) - 1 AS String) ELSE CAST(YEAR(STD_STATEMENT_DATE) AS String) END)", format = "%d %b %Y"},
     ]
 [STD_TRANSACTION_TYPE]
     section = 'lines'
@@ -138,6 +142,7 @@
         {statement_type="Halifax UK Current Account", field="description"},
         {statement_type="NatWest UK Current Account", concat_fields=["description","description_2"]},
         {statement_type="NatWest UK Current Account Old", concat_fields=["description"]},
+        {statement_type="Santander UK Current Account", expression="UPPER(TRIM(description))"},
     ]
 [STD_TRANSACTION_PAYMENTS_IN]
     section = "lines"

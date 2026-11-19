@@ -55,6 +55,7 @@ Each field comment is prefixed with one of:
                  implementation and should not be relied upon.
 """
 
+import warnings
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
@@ -336,6 +337,58 @@ class StdRefs:
     # first match position before being written to the standard column.  Useful for
     # stripping trailing boilerplate appended by merge_fields
     # (e.g. " | BALANCE CARRIED FORWARD").
+
+    expression: str | None = None
+    # [ACTIVE] — Expression string for config-driven field transformation.
+    # When set, ``field`` and ``concat_fields`` must both be None.
+    # Validated at config load time by ``validate_expression()``.
+    # Supports string, date, and numeric functions; see expression_evaluator.py.
+    # Example: ``"CONCAT(date_day, ' ', date_month, ' ', CAST(YEAR(statement_date) AS STRING))"``
+
+    null_strategy: Literal["return_null", "skip_row", "default_value"] | None = None
+    # [ACTIVE] — Null handling strategy when expression references a missing column
+    # or produces a NULL result.  Defaults to 'return_null'.
+    # 'skip_row': row is excluded post-loop (not mid-loop — would skew C&B totals).
+    # 'default_value': NULL is replaced with ``null_default_value``.
+
+    null_default_value: str | None = None
+    # [ACTIVE] — Fallback string value when ``null_strategy='default_value'``.
+    # Always str (not int/float); numeric values are cast at evaluation time.
+    # Required when ``null_strategy='default_value'``.
+
+    def __post_init__(self) -> None:
+        """Validate cross-field constraints and emit deprecation warnings.
+
+        Raises:
+            ConfigError: If ``null_strategy='default_value'`` but
+                ``null_default_value`` is not set, or if ``expression`` is set
+                alongside ``field`` or ``concat_fields``.
+        """
+        # Deferred import to avoid circular dependency at module load time
+        from bank_statement_parser.modules.errors import ConfigError
+
+        if self.concat_fields is not None:
+            warnings.warn(
+                f"StdRefs.concat_fields is deprecated for statement_type={self.statement_type!r}; use 'expression' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+
+        if self.expression is not None:
+            if self.field is not None or self.concat_fields is not None:
+                raise ConfigError(
+                    f"StdRefs for statement_type={self.statement_type!r}: "
+                    f"'expression' is mutually exclusive with 'field' and 'concat_fields'."
+                )
+            # Validate expression syntax at load time
+            from bank_statement_parser.modules.expression_evaluator import validate_expression
+
+            validate_expression(self.expression)
+
+        if self.null_strategy == "default_value" and self.null_default_value is None:
+            raise ConfigError(
+                f"StdRefs for statement_type={self.statement_type!r}: null_strategy='default_value' requires null_default_value to be set."
+            )
 
 
 @dataclass(frozen=True, slots=True)

@@ -1073,6 +1073,21 @@ def generate_bank_config() -> str:
     if "StandardFields" in class_map:
         w(_class_section(class_map["StandardFields"], heading_level=4))
     w()
+    w("### Advanced: field transformations with expressions")
+    w()
+    w("When a plain `field` reference is not enough — for example, when you need to")
+    w("combine fields, normalise casing, or apply conditional logic based on another")
+    w("field's value — use the `expression` key instead of `field` in the `std_refs`")
+    w("entry.")
+    w()
+    w("```toml")
+    w('{statement_type="My Bank", expression="UPPER(TRIM(description))"}')
+    w("```")
+    w()
+    w("See the **[Field Transformations with Expressions](expressions.md)** guide for")
+    w("the full function reference, null handling strategies, practical examples, and a")
+    w("step-by-step walkthrough of the Santander UK date year-inference expression.")
+    w()
 
     # ----- Checklist -----
     w("## Configuration Checklist")

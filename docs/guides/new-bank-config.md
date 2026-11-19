@@ -666,6 +666,9 @@ Mapping rule that promotes a raw extracted field to a standard output column.
 | `exclude_positive_values` | `bool \| None` | ACTIVE | When True, any positive numeric value is replaced with 0 after casting.  Used to isolate debit-side figures from a combined amount column. |
 | `exclude_negative_values` | `bool \| None` | ACTIVE | When True, any negative numeric value is replaced with 0 after casting.  Used to isolate credit-side figures from a combined amount column. |
 | `terminator` | `str \| None` | ACTIVE | Regex pattern; when present the string value is truncated at the first match position before being written to the standard column.  Useful for stripping trailing boilerplate appended by merge_fields (e.g. " \| BALANCE CARRIED FORWARD"). |
+| `expression` | `str \| None` | ACTIVE | Expression string for config-driven field transformation. When set, ``field`` and ``concat_fields`` must both be None. Validated at config load time by ``validate_expression()``. Supports string, date, and numeric functions; see expression_evaluator.py. Example: ``"CONCAT(date_day, ' ', date_month, ' ', CAST(YEAR(statement_date) AS STRING))"`` |
+| `null_strategy` | `Literal['return_null', 'skip_row', 'default_value'] \| None` | ACTIVE | Null handling strategy when expression references a missing column or produces a NULL result.  Defaults to 'return_null'. 'skip_row': row is excluded post-loop (not mid-loop — would skew C&B totals). 'default_value': NULL is replaced with ``null_default_value``. |
+| `null_default_value` | `str \| None` | ACTIVE | Fallback string value when ``null_strategy='default_value'``. Always str (not int/float); numeric values are cast at evaluation time. Required when ``null_strategy='default_value'``. |
 
 #### `StandardFields`
 
@@ -678,6 +681,21 @@ Declaration of a single standard output column and how to derive it.
 | `vital` | `bool` | ACTIVE | When True a ConfigError is raised if no matching StdRefs entry is found for the current statement type, halting processing.  Set False for optional fields that not all statement types provide. |
 | `std_refs` | `list[StdRefs]` | ACTIVE | One entry per supported statement type.  The correct entry is selected at runtime by matching StdRefs.statement_type. |
 
+
+### Advanced: field transformations with expressions
+
+When a plain `field` reference is not enough — for example, when you need to
+combine fields, normalise casing, or apply conditional logic based on another
+field's value — use the `expression` key instead of `field` in the `std_refs`
+entry.
+
+```toml
+{statement_type="My Bank", expression="UPPER(TRIM(description))"}
+```
+
+See the **[Field Transformations with Expressions](expressions.md)** guide for
+the full function reference, null handling strategies, practical examples, and a
+step-by-step walkthrough of the Santander UK date year-inference expression.
 
 ## Configuration Checklist
 
@@ -947,6 +965,9 @@ Mapping rule that promotes a raw extracted field to a standard output column.
 | `exclude_positive_values` | `bool \| None` | ACTIVE | When True, any positive numeric value is replaced with 0 after casting.  Used to isolate debit-side figures from a combined amount column. |
 | `exclude_negative_values` | `bool \| None` | ACTIVE | When True, any negative numeric value is replaced with 0 after casting.  Used to isolate credit-side figures from a combined amount column. |
 | `terminator` | `str \| None` | ACTIVE | Regex pattern; when present the string value is truncated at the first match position before being written to the standard column.  Useful for stripping trailing boilerplate appended by merge_fields (e.g. " \| BALANCE CARRIED FORWARD"). |
+| `expression` | `str \| None` | ACTIVE | Expression string for config-driven field transformation. When set, ``field`` and ``concat_fields`` must both be None. Validated at config load time by ``validate_expression()``. Supports string, date, and numeric functions; see expression_evaluator.py. Example: ``"CONCAT(date_day, ' ', date_month, ' ', CAST(YEAR(statement_date) AS STRING))"`` |
+| `null_strategy` | `Literal['return_null', 'skip_row', 'default_value'] \| None` | ACTIVE | Null handling strategy when expression references a missing column or produces a NULL result.  Defaults to 'return_null'. 'skip_row': row is excluded post-loop (not mid-loop — would skew C&B totals). 'default_value': NULL is replaced with ``null_default_value``. |
+| `null_default_value` | `str \| None` | ACTIVE | Fallback string value when ``null_strategy='default_value'``. Always str (not int/float); numeric values are cast at evaluation time. Required when ``null_strategy='default_value'``. |
 
 ### `Test`
 

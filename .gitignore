@@ -49,3 +49,6 @@ pending/
 
 # Dev testing file
 src/bank_statement_parser/dev.py
+
+# opencode feature planning
+.opencode

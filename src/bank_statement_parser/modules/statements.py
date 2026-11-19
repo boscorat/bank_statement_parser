@@ -701,6 +701,17 @@ class Statement:
             # Resolve standard_fields via ImportConfigManager so that a custom
             # project_path on this Statement is always respected.
             std_fields: dict[str, StandardFields] = ImportConfigManager(self.project_path).standard_fields
+
+            # Build header_scalars for lines expressions that reference header STD fields.
+            # header and lines are separate DataFrames; STD_STATEMENT_DATE etc. do not
+            # exist as columns in the lines data.  Inject them as pl.lit() scalars inside
+            # get_standard_fields when a lines expression references them.
+            _header_scalars: dict | None = None
+            if section == "lines":
+                _hdr = self.header_results.collect()
+                if not _hdr.is_empty():
+                    _header_scalars = {col: _hdr[col][0] for col in _hdr.columns}
+
             # Apply standard field transformations based on statement type
             results = results.pipe(
                 get_standard_fields,
@@ -711,6 +722,7 @@ class Statement:
                 debug=self.debug,
                 debug_collector=self._debug_collector,
                 debug_dataframes=self._debug_dataframes,
+                header_scalars=_header_scalars,
                 # self.logs,
                 # str(self.file.absolute()),
             )

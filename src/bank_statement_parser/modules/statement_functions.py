@@ -16,7 +16,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import traceback
+import warnings
 from copy import deepcopy
+from typing import Any
 
 # from uuid import uuid4
 import polars as pl
@@ -792,6 +794,7 @@ def get_standard_fields(
     debug: bool | None = None,
     debug_collector: list | None = None,
     debug_dataframes: dict[str, list] | None = None,
+    header_scalars: dict[str, Any] | None = None,
 ) -> pl.DataFrame:
     # Log start of standard fields processing if debugging enabled
     if debug and debug_collector is not None:
@@ -804,11 +807,53 @@ def get_standard_fields(
             }
         )
 
+    _skip_row_fields: list[str] = []  # std_fields with null_strategy='skip_row'; filtered post-C&B
     for std_field, std_config in config_standard_fields.items():
         if std_config.section == section:
             ref = next((ref for ref in std_config.std_refs if ref.statement_type == statement_type), None)
             if ref:
-                if ref.concat_fields:
+                if ref.expression:
+                    # Expression evaluation: compile to Polars expression and apply.
+                    # Inject any header scalar values referenced in the expression
+                    # (header and lines are separate DataFrames; STD_STATEMENT_DATE
+                    # etc. are not columns in the lines DataFrame by default).
+                    from bank_statement_parser.modules.expression_evaluator import (
+                        ExpressionEvaluator,
+                        ExpressionLexer,
+                        ExpressionParser,
+                        collect_expression_column_refs,
+                    )
+
+                    _injected_cols: list[str] = []
+                    if header_scalars:
+                        expr_col_refs = collect_expression_column_refs(ref.expression)
+                        for _col_name, _scalar_value in header_scalars.items():
+                            if _col_name in expr_col_refs and _col_name not in data.columns:
+                                data = data.with_columns(pl.lit(_scalar_value).alias(_col_name))
+                                _injected_cols.append(_col_name)
+                    _tokens = ExpressionLexer.tokenize(ref.expression)
+                    _ast = ExpressionParser(_tokens).parse()
+                    _evaluator = ExpressionEvaluator(
+                        dict(data.schema),
+                        null_strategy=ref.null_strategy or "return_null",
+                        null_default_value=ref.null_default_value,
+                    )
+                    _polars_expr = _evaluator.evaluate(_ast)
+                    data = data.with_columns(_polars_expr.alias(std_field))
+                    # Drop any injected header scalar columns to keep the DataFrame clean
+                    if _injected_cols:
+                        data = data.drop(_injected_cols)
+                    # skip_row: record field for post-loop filtering (after C&B sums)
+                    if ref.null_strategy == "skip_row":
+                        _skip_row_fields.append(std_field)
+                elif ref.concat_fields:
+                    warnings.warn(
+                        f"StdRefs.concat_fields is deprecated for statement_type="
+                        f"{statement_type!r}, std_field={std_field!r}; "
+                        f"use 'expression' with CONCAT() instead.",
+                        DeprecationWarning,
+                        stacklevel=2,
+                    )
                     data = data.with_columns(pl.concat_str([f"{field}" for field in ref.concat_fields]).alias(std_field))
                 else:
                     data = (
@@ -914,6 +959,12 @@ def get_standard_fields(
             data.select("STD_TRANSACTION_PAYMENTS_IN", "STD_TRANSACTION_PAYMENTS_OUT", "STD_TRANSACTION_MOVEMENT").sum(), in_place=True
         )
         checks_and_balances.hstack(data.select(pl.last("STD_RUNNING_BALANCE")), in_place=True)
+
+    # Deferred skip_row filtering: applied after C&B sums are committed so that
+    # payment totals are not skewed by mid-loop row removal.
+    if _skip_row_fields:
+        skip_mask = pl.all_horizontal([pl.col(f).is_not_null() for f in _skip_row_fields])
+        data = data.filter(skip_mask)
 
     # Add dataframe snapshot to debug_dataframes if available
     if debug_dataframes is not None:
