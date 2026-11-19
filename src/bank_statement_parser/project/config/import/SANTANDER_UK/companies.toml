@@ -1,0 +1,15 @@
+# Santander Bank UK - Company Identification
+# Identifies Santander-issued statements by distinctive footer element
+
+[SANTANDER_UK]
+company = 'Santander Bank UK'
+[SANTANDER_UK.config]
+    config = 'Company Info'
+    # Footer region containing regulatory/company information
+    # Located at bottom of page 1 with Santander company identifier
+    locations = [
+        {page_number = 1, top_left = [36, 26], bottom_right = [575, 800]},
+    ]
+    # Pattern matches the distinctive Santander regulatory footer text
+    # Tested across statements from 2019-2026, highly distinctive identifier
+    field = {field = "info", vital=true, type="string", string_pattern ="Santander.co.uk"}

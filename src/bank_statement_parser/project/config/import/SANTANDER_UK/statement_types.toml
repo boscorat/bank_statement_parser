@@ -1,0 +1,39 @@
+# Santander Bank UK - Statement Type Definitions
+# Defines the extraction workflow for Santander current account statements
+
+[SANTANDER_UK_CUR]
+statement_type = 'Santander UK Current Account'
+    [SANTANDER_UK_CUR.header]
+        [[SANTANDER_UK_CUR.header.configs]]
+            config = 'Statement Balances'
+            # Reference to summary table with opening/closing balances and payment totals
+            statement_table_key = 'SANTANDER_UK_CUR_ACCT_SUM'
+
+        [[SANTANDER_UK_CUR.header.configs]]
+            config = 'Statement Info'
+            # TODO: Adjust coordinates to match statement date location on page 1
+            # Typical location: top-right or center of header (e.g., "Statement from X to Y")
+            locations = [{page_number=1, top_left = [45, 330], bottom_right = [301, 348]}]
+            # Pattern matches date range like "01 January 2024 to 31 January 2024"
+            field = {field = "statement_date", vital=true, type = "string", string_pattern = '^\d{1,2}(?:st|nd|rd|th)?\s+[A-Z][a-z]{2,}\s+\d{4}\s+to\s+(\d{1,2})(?:st|nd|rd|th)?\s+([A-Z][a-z]{2,})\s+(\d{4})$', regex_groups = [1, 2, 3], regex_groups_separator = " ", string_max_length = 100, strip_characters_start = "Statement from ", strip_characters_end = "\n" }
+
+        [[SANTANDER_UK_CUR.header.configs]]
+            config = 'Account Info'
+            locations = [{page_number=2, top_left = [365, 13], bottom_right = [580, 28]}]
+            field = {field = "account_name", vital=true, type = "string", replace_characters = ['Account Name: ']}
+
+        [[SANTANDER_UK_CUR.header.configs]]
+            config = 'Account Info'
+            locations = [{page_number=2, top_left = [371, 28], bottom_right = [409, 38]}]
+            field = {field = "account_number", vital=true, type = "string", string_pattern ='^[0-9]{8}$'}   
+
+        [[SANTANDER_UK_CUR.header.configs]]
+            config = 'Account Info'
+            locations = [{page_number=2, top_left = [446, 28], bottom_right = [489, 38]}]
+            field = {field = "sortcode", vital=true, type = "string", string_pattern ='[0-9]{2} [0-9]{2} [0-9]{2}[)]?', strip_characters_end = "\\)"}
+
+    [SANTANDER_UK_CUR.lines]
+        [[SANTANDER_UK_CUR.lines.configs]]
+            config = 'Transaction Lines'
+            # Reference to transaction table extraction
+            statement_table_key = 'SANTANDER_UK_CUR_TRANSACTIONS'
