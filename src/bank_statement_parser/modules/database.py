@@ -477,12 +477,10 @@ def update_db(
         if isinstance(pdf, BaseException):
             conn.close()
             return time() - update_start
-        elif isinstance(pdf, PdfResult):
-            # batch_lines is always present on PdfResult
-            if pdf.batch_lines and pdf.batch_lines.exists():
-                df = pl.read_parquet(pdf.batch_lines)
-                batch_lines_dfs.append(df)
-                pdf.batch_lines.unlink()
+        elif isinstance(pdf, PdfResult) and pdf.batch_lines and pdf.batch_lines.exists():  # batch_lines is always present on PdfResult
+            df = pl.read_parquet(pdf.batch_lines)
+            batch_lines_dfs.append(df)
+            pdf.batch_lines.unlink()
 
     # Insert all batch_lines and commit as separate transaction
     for df in batch_lines_dfs:
