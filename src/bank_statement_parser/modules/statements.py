@@ -707,9 +707,10 @@ class Statement:
             # exist as columns in the lines data.  Inject them as pl.lit() scalars inside
             # get_standard_fields when a lines expression references them.
             _header_scalars: dict | None = None
-            if section == "lines" and not self.header_results.collect().is_empty():
+            if section == "lines":
                 _hdr = self.header_results.collect()
-                _header_scalars = {col: _hdr[col][0] for col in _hdr.columns}
+                if not _hdr.is_empty():
+                    _header_scalars = {col: _hdr[col][0] for col in _hdr.columns}
 
             # Apply standard field transformations based on statement type
             results = results.pipe(

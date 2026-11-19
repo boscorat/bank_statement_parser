@@ -187,8 +187,8 @@ class ExpressionLexer:
                 tokens.append(tok)
                 continue
 
-            # Numeric literal
-            if ch.isdigit() or (ch == "-" and pos + 1 < length and expr[pos + 1].isdigit()):
+            # Numeric literal — digits only; unary minus is handled by the parser
+            if ch.isdigit():
                 tok, pos = ExpressionLexer._read_number(expr, pos)
                 tokens.append(tok)
                 continue
@@ -288,9 +288,13 @@ class ExpressionLexer:
     def _read_number(expr: str, start: int) -> tuple[Token, int]:
         """Read an integer or floating-point number literal.
 
+        Called only when the character at ``start`` is a digit; unary minus
+        is handled by the parser so negative-number literals are not consumed
+        here.
+
         Args:
             expr: Full expression source.
-            start: Position of the first digit (or leading minus sign).
+            start: Position of the first digit.
 
         Returns:
             Tuple of (Token, new_position_after_number).
@@ -299,8 +303,6 @@ class ExpressionLexer:
             ConfigError: If the number is malformed (e.g. ``1e`` with no exponent).
         """
         pos = start
-        if expr[pos] == "-":
-            pos += 1
         while pos < len(expr) and expr[pos].isdigit():
             pos += 1
         if pos < len(expr) and expr[pos] == ".":

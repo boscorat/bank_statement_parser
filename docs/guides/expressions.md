@@ -39,10 +39,12 @@ An expression is a single TOML string assigned to the `expression` key of a
 | Category | Symbols / Keywords |
 |---|---|
 | Arithmetic | `+` `-` `*` `/` |
-| Comparison | `==` `!=` `<` `>` `<=` `>=` |
+| Comparison | `=` `<>` `<` `>` `<=` `>=` |
 | Logical | `AND` `OR` `NOT` |
 | Membership | `IN` (used in `CASE/WHEN` conditions) |
 | Array index | `[0]` `[-1]` (applied to `SPLIT` results) |
+
+Equality uses SQL-style `=` and `<>` (not `==` / `!=`).
 
 ### CASE / WHEN / THEN / ELSE / END
 

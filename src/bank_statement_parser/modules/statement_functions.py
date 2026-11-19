@@ -807,6 +807,7 @@ def get_standard_fields(
             }
         )
 
+    _skip_row_fields: list[str] = []  # std_fields with null_strategy='skip_row'; filtered post-C&B
     for std_field, std_config in config_standard_fields.items():
         if std_config.section == section:
             ref = next((ref for ref in std_config.std_refs if ref.statement_type == statement_type), None)
@@ -842,9 +843,9 @@ def get_standard_fields(
                     # Drop any injected header scalar columns to keep the DataFrame clean
                     if _injected_cols:
                         data = data.drop(_injected_cols)
-                    # skip_row: filter rows where the expression produced NULL
+                    # skip_row: record field for post-loop filtering (after C&B sums)
                     if ref.null_strategy == "skip_row":
-                        data = data.filter(pl.col(std_field).is_not_null())
+                        _skip_row_fields.append(std_field)
                 elif ref.concat_fields:
                     warnings.warn(
                         f"StdRefs.concat_fields is deprecated for statement_type="
@@ -958,6 +959,12 @@ def get_standard_fields(
             data.select("STD_TRANSACTION_PAYMENTS_IN", "STD_TRANSACTION_PAYMENTS_OUT", "STD_TRANSACTION_MOVEMENT").sum(), in_place=True
         )
         checks_and_balances.hstack(data.select(pl.last("STD_RUNNING_BALANCE")), in_place=True)
+
+    # Deferred skip_row filtering: applied after C&B sums are committed so that
+    # payment totals are not skewed by mid-loop row removal.
+    if _skip_row_fields:
+        skip_mask = pl.all_horizontal([pl.col(f).is_not_null() for f in _skip_row_fields])
+        data = data.filter(skip_mask)
 
     # Add dataframe snapshot to debug_dataframes if available
     if debug_dataframes is not None:
