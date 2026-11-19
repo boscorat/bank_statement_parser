@@ -1,0 +1,1925 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Documentation for the bank_statement_parser Python library — parse bank statement PDFs, extract structured transaction data, and persist to Parquet and SQLite.">
+      
+      
+      
+        <link rel="canonical" href="https://boscorat.github.io/bank_statement_parser/0.4.8/guides/expressions/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.2">
+    
+    
+      
+        <title>Expressions - Bank Statement Parser</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+  
+      
+
+    
+  
+
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#field-transformations-with-expressions" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Bank Statement Parser" class="md-header__button md-logo" aria-label="Bank Statement Parser" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Bank Statement Parser
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Expressions
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/boscorat/bank_statement_parser" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    boscorat/bank_statement_parser
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Bank Statement Parser" class="md-nav__button md-logo" aria-label="Bank Statement Parser" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Bank Statement Parser
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/boscorat/bank_statement_parser" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    boscorat/bank_statement_parser
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quick-start/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://github.com/boscorat/bank_statement_parser/releases" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Releases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Contributing
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing-new-bank/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adding a New Bank
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../local-testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Local Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../test-data-submission/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test Data Submission
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../new-bank-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    New Bank Config Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../anonymisation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Anonymisation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../project-structure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Project Structure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../exports/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Export Options
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/python-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#expression-basics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Expression Basics
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Expression Basics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#literals-and-column-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Literals and column references
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#operators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Operators
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#case-when-then-else-end" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CASE / WHEN / THEN / ELSE / END
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#data-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data types
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#function-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Function Reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Function Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#string-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        String functions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="String functions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#concatstr-str" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CONCAT(str, str, ...)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#substringstr-start-length" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SUBSTRING(str, start, length)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#upperstr" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UPPER(str)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lowerstr" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LOWER(str)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#trimstr" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TRIM(str)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ltrimstr" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LTRIM(str)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rtrimstr" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RTRIM(str)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#lengthstr" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        LENGTH(str)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#replacestr-old-new" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        REPLACE(str, old, new)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#splitstr-delimiter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SPLIT(str, delimiter)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#date-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Date functions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Date functions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#yeardate_or_str" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        YEAR(date_or_str)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#monthdate_or_str" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MONTH(date_or_str)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#daydate_or_str" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DAY(date_or_str)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#month_nameint_or_str" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MONTH_NAME(int_or_str)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#castvalue-as-type" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CAST(value AS type)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#utility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Utility
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Utility">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#coalescevalue1-value2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        COALESCE(value1, value2, ...)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#in-membership-test" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IN (membership test)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#type-system-and-coercion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Type System and Coercion
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#null-handling-strategies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Null Handling Strategies
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Null Handling Strategies">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#return_null-default" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        return_null (default)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#default_value" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        default_value
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#skip_row" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        skip_row
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#practical-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Practical Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Practical Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#normalise-a-description-field" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Normalise a description field
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#build-a-date-from-separate-day-month-year-columns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build a date from separate day, month, year columns
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#strip-a-currency-symbol-from-an-amount-field" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Strip a currency symbol from an amount field
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#handle-two-date-formats-in-the-same-bank-config" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Handle two date formats in the same bank config
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#polarsexceptionsschemaerror-type-string-is-incompatible-with-expected-type-date" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        polars.exceptions.SchemaError: type String is incompatible with expected type Date
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configerror-column-xyz-not-found-in-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ConfigError: column 'xyz' not found in schema
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#split-index-out-of-range-returns-null" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SPLIT index out of range returns NULL
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#complex-example-santander-uk-current-account" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Complex Example: Santander UK Current Account
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Complex Example: Santander UK Current Account">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#problem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Problem
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-split-not-substring" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why SPLIT, not SUBSTRING
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#expression" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Expression
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#toml-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TOML configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verifying-with-a-pytest-test" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verifying with a pytest test
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#further-reading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Further Reading
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<!-- markdownlint-disable MD013 -->
+
+<h1 id="field-transformations-with-expressions">Field Transformations with Expressions<a class="headerlink" href="#field-transformations-with-expressions" title="Permanent link">&para;</a></h1>
+<p>The expression evaluator lets you transform extracted PDF fields using a
+declarative mini-language inside <code>standard_fields.toml</code>. Instead of writing
+Python code, you write an <code>expression</code> string directly in the <code>std_refs</code> entry.</p>
+<p>Use expressions when a plain <code>field</code> reference is not enough — for example,
+when you need to combine fields, normalise casing, extract a substring, or
+apply conditional logic based on another field's value. For simple pass-through
+mappings, stick with <code>field</code>.</p>
+<p>The <a href="#complex-example-santander-uk-current-account">Santander STD_TRANSACTION_DATE example</a>
+at the end of this guide shows a real production expression that combines
+<code>CONCAT</code>, <code>SPLIT</code>, <code>MONTH_NAME</code>, <code>MONTH</code>, <code>YEAR</code>, <code>CASE</code>, and <code>CAST</code> to infer
+a transaction year from statement metadata.</p>
+<hr />
+<h2 id="expression-basics">Expression Basics<a class="headerlink" href="#expression-basics" title="Permanent link">&para;</a></h2>
+<p>An expression is a single TOML string assigned to the <code>expression</code> key of a
+<code>std_refs</code> entry:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="err">{</span><span class="n">statement_type</span><span class="o">=</span><span class="s2">"My Bank"</span><span class="err">,</span><span class="w"> </span><span class="n">expression</span><span class="o">=</span><span class="s2">"UPPER(TRIM(description))"</span><span class="err">}</span>
+</code></pre></div>
+<h3 id="literals-and-column-references">Literals and column references<a class="headerlink" href="#literals-and-column-references" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>String literals</strong> — single-quoted: <code>'hello'</code>, <code>'Jan'</code></li>
+<li><strong>Numeric literals</strong> — bare integers or floats: <code>1</code>, <code>3</code>, <code>1.5</code></li>
+<li><strong>Column references</strong> — bare identifiers matching column names in the
+  extraction context: <code>date</code>, <code>amount</code>, <code>STD_STATEMENT_DATE</code></li>
+</ul>
+<h3 id="operators">Operators<a class="headerlink" href="#operators" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Symbols / Keywords</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Arithmetic</td>
+<td><code>+</code> <code>-</code> <code>*</code> <code>/</code></td>
+</tr>
+<tr>
+<td>Comparison</td>
+<td><code>=</code> <code>&lt;&gt;</code> <code>&lt;</code> <code>&gt;</code> <code>&lt;=</code> <code>&gt;=</code></td>
+</tr>
+<tr>
+<td>Logical</td>
+<td><code>AND</code> <code>OR</code> <code>NOT</code></td>
+</tr>
+<tr>
+<td>Membership</td>
+<td><code>IN</code> (used in <code>CASE/WHEN</code> conditions)</td>
+</tr>
+<tr>
+<td>Array index</td>
+<td><code>[0]</code> <code>[-1]</code> (applied to <code>SPLIT</code> results)</td>
+</tr>
+</tbody>
+</table>
+<p>Equality uses SQL-style <code>=</code> and <code>&lt;&gt;</code> (not <code>==</code> / <code>!=</code>).</p>
+<h3 id="case-when-then-else-end">CASE / WHEN / THEN / ELSE / END<a class="headerlink" href="#case-when-then-else-end" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>CASE
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  WHEN condition THEN result
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>  WHEN condition THEN result
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>  ELSE default_result
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>END
+</code></pre></div>
+<p>The first matching <code>WHEN</code> branch is returned. <code>ELSE</code> is optional (defaults to
+NULL if omitted and no branch matches).</p>
+<h3 id="data-types">Data types<a class="headerlink" href="#data-types" title="Permanent link">&para;</a></h3>
+<p>Expressions work with four types:</p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>String</strong></td>
+<td>Text; operations include <code>CONCAT</code>, <code>SUBSTRING</code>, <code>UPPER</code>, etc.</td>
+</tr>
+<tr>
+<td><strong>Int64</strong></td>
+<td>Integer; returned by <code>YEAR</code>, <code>MONTH</code>, <code>DAY</code>, <code>LENGTH</code></td>
+</tr>
+<tr>
+<td><strong>Float64</strong></td>
+<td>Decimal; used in arithmetic and <code>CAST(... AS Float64)</code></td>
+</tr>
+<tr>
+<td><strong>Date</strong></td>
+<td>Calendar date; accepted by <code>YEAR</code>, <code>MONTH</code>, <code>DAY</code>, <code>MONTH_NAME</code></td>
+</tr>
+<tr>
+<td><strong>Array</strong></td>
+<td>List of strings; produced by <code>SPLIT</code>, consumed by <code>[index]</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="function-reference">Function Reference<a class="headerlink" href="#function-reference" title="Permanent link">&para;</a></h2>
+<h3 id="string-functions">String functions<a class="headerlink" href="#string-functions" title="Permanent link">&para;</a></h3>
+<h4 id="concatstr-str"><code>CONCAT(str, str, ...)</code><a class="headerlink" href="#concatstr-str" title="Permanent link">&para;</a></h4>
+<p>Concatenates one or more values as strings. Each argument is cast to String
+before joining; NULL arguments are treated as empty strings.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>CONCAT('Hello', ' ', 'World')  →  'Hello World'
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>CONCAT(day, ' ', month)        →  '20 Sep'
+</code></pre></div>
+<hr />
+<h4 id="substringstr-start-length"><code>SUBSTRING(str, start, length)</code><a class="headerlink" href="#substringstr-start-length" title="Permanent link">&para;</a></h4>
+<p>Extracts a substring. <code>start</code> is <strong>0-indexed</strong>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>SUBSTRING('hello', 1, 3)   →  'ell'
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>SUBSTRING(ref, 0, 2)       →  first two characters of ref
+</code></pre></div>
+<hr />
+<h4 id="upperstr"><code>UPPER(str)</code><a class="headerlink" href="#upperstr" title="Permanent link">&para;</a></h4>
+<p>Converts to uppercase.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>UPPER('hello')  →  'HELLO'
+</code></pre></div>
+<hr />
+<h4 id="lowerstr"><code>LOWER(str)</code><a class="headerlink" href="#lowerstr" title="Permanent link">&para;</a></h4>
+<p>Converts to lowercase.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>LOWER('HELLO')  →  'hello'
+</code></pre></div>
+<hr />
+<h4 id="trimstr"><code>TRIM(str)</code><a class="headerlink" href="#trimstr" title="Permanent link">&para;</a></h4>
+<p>Removes leading and trailing whitespace.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>TRIM('  hello  ')  →  'hello'
+</code></pre></div>
+<hr />
+<h4 id="ltrimstr"><code>LTRIM(str)</code><a class="headerlink" href="#ltrimstr" title="Permanent link">&para;</a></h4>
+<p>Removes leading whitespace only.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>LTRIM('  hello  ')  →  'hello  '
+</code></pre></div>
+<hr />
+<h4 id="rtrimstr"><code>RTRIM(str)</code><a class="headerlink" href="#rtrimstr" title="Permanent link">&para;</a></h4>
+<p>Removes trailing whitespace only.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>RTRIM('  hello  ')  →  '  hello'
+</code></pre></div>
+<hr />
+<h4 id="lengthstr"><code>LENGTH(str)</code><a class="headerlink" href="#lengthstr" title="Permanent link">&para;</a></h4>
+<p>Returns the number of characters.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>LENGTH('hello')    →  5
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>LENGTH(date_str)   →  varies per row
+</code></pre></div>
+<hr />
+<h4 id="replacestr-old-new"><code>REPLACE(str, old, new)</code><a class="headerlink" href="#replacestr-old-new" title="Permanent link">&para;</a></h4>
+<p>Replaces every occurrence of <code>old</code> with <code>new</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>REPLACE('1,234.56', ',', '')   →  '1234.56'
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>REPLACE('hello', 'l', 'L')    →  'heLLo'
+</code></pre></div>
+<hr />
+<h4 id="splitstr-delimiter"><code>SPLIT(str, delimiter)</code><a class="headerlink" href="#splitstr-delimiter" title="Permanent link">&para;</a></h4>
+<p>Splits a string on a delimiter and returns an array. Access elements with
+<code>[index]</code> (0-based; <code>-1</code> is the last element).</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>SPLIT('a-b-c', '-')      →  ['a', 'b', 'c']
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>SPLIT('a-b-c', '-')[0]   →  'a'
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>SPLIT('a-b-c', '-')[-1]  →  'c'
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>SPLIT('20 Sep', ' ')[1]  →  'Sep'
+</code></pre></div>
+<p><strong>Common use case:</strong> Extracting the month abbreviation from a <code>"DD MMM"</code> field
+where the day may be one or two digits. Using <code>SPLIT(date, ' ')[1]</code> is more
+robust than <code>SUBSTRING</code> with a position calculation because it does not depend
+on knowing the day width in advance.</p>
+<hr />
+<h3 id="date-functions">Date functions<a class="headerlink" href="#date-functions" title="Permanent link">&para;</a></h3>
+<p>All date functions accept either a <code>Date</code>-typed column <strong>or</strong> an ISO-format
+string column (<code>'YYYY-MM-DD'</code>).</p>
+<h4 id="yeardate_or_str"><code>YEAR(date_or_str)</code><a class="headerlink" href="#yeardate_or_str" title="Permanent link">&para;</a></h4>
+<p>Returns the year as Int64.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>YEAR('2024-09-20')     →  2024
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>YEAR(STD_STATEMENT_DATE)  →  2026
+</code></pre></div>
+<hr />
+<h4 id="monthdate_or_str"><code>MONTH(date_or_str)</code><a class="headerlink" href="#monthdate_or_str" title="Permanent link">&para;</a></h4>
+<p>Returns the month as Int64 (1–12).</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>MONTH('2024-09-20')       →  9
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>MONTH(STD_STATEMENT_DATE) →  1
+</code></pre></div>
+<hr />
+<h4 id="daydate_or_str"><code>DAY(date_or_str)</code><a class="headerlink" href="#daydate_or_str" title="Permanent link">&para;</a></h4>
+<p>Returns the day of month as Int64.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>DAY('2024-09-20')  →  20
+</code></pre></div>
+<hr />
+<h4 id="month_nameint_or_str"><code>MONTH_NAME(int_or_str)</code><a class="headerlink" href="#month_nameint_or_str" title="Permanent link">&para;</a></h4>
+<p>Returns the 3-letter English month abbreviation, always title-case. Accepts an
+integer (1–12), a 3-letter abbreviation, or a full month name.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>MONTH_NAME(1)           →  'Jan'
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>MONTH_NAME(12)          →  'Dec'
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>MONTH_NAME('Sep')       →  'Sep'   (passthrough)
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>MONTH_NAME('September') →  'Sep'
+</code></pre></div>
+<p><strong>Common use case:</strong> Normalising a month string extracted from a PDF so it can
+be reliably compared in a <code>CASE/WHEN ... IN (...)</code> condition.</p>
+<hr />
+<h4 id="castvalue-as-type"><code>CAST(value AS type)</code><a class="headerlink" href="#castvalue-as-type" title="Permanent link">&para;</a></h4>
+<p>Explicitly converts a value to a type. Valid types: <code>String</code>, <code>Int64</code>,
+<code>Float64</code>, <code>Date</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>CAST(YEAR(STD_STATEMENT_DATE) AS String)   →  '2026'
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>CAST('1234.56' AS Float64)                 →  1234.56
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>CAST(YEAR(STD_STATEMENT_DATE) - 1 AS String) →  '2025'
+</code></pre></div>
+<p><strong>Important:</strong> <code>YEAR()</code> returns an Int64. When you need to include the year in a
+<code>CONCAT</code>, you must <code>CAST(... AS String)</code> first; otherwise Polars raises a schema
+error because <code>CONCAT</code> expects all arguments to be of type String.</p>
+<hr />
+<h3 id="utility">Utility<a class="headerlink" href="#utility" title="Permanent link">&para;</a></h3>
+<h4 id="coalescevalue1-value2"><code>COALESCE(value1, value2, ...)</code><a class="headerlink" href="#coalescevalue1-value2" title="Permanent link">&para;</a></h4>
+<p>Returns the first non-NULL argument.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>COALESCE(alt_date, primary_date, '1970-01-01')
+</code></pre></div>
+<hr />
+<h4 id="in-membership-test"><code>IN</code> (membership test)<a class="headerlink" href="#in-membership-test" title="Permanent link">&para;</a></h4>
+<p>Used inside <code>CASE/WHEN</code> conditions to check whether a value belongs to a list
+of literals.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>MONTH_NAME(SPLIT(date, ' ')[1]) IN ('Oct', 'Nov', 'Dec')
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>MONTH(STD_STATEMENT_DATE) IN (1, 2, 3)
+</code></pre></div>
+<hr />
+<h2 id="type-system-and-coercion">Type System and Coercion<a class="headerlink" href="#type-system-and-coercion" title="Permanent link">&para;</a></h2>
+<p>The evaluator performs automatic type coercion in <strong>arithmetic</strong> contexts only
+(<code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>), following this chain:</p>
+<ol>
+<li>Try native types (e.g. both operands already numeric).</li>
+<li>Cast String to <code>Float64</code>, then <code>Int64</code> if applicable.</li>
+<li>Fall back to NULL if conversion fails (logged at INFO level).</li>
+</ol>
+<p><strong>Comparison operators do not coerce automatically.</strong> If you compare a String
+column to a number, use an explicit <code>CAST</code> to align the types first:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>CAST(year_str AS Int64) &gt; 2020
+</code></pre></div>
+<p>Use <code>CAST</code> for explicit, predictable conversion rather than relying on
+automatic coercion.</p>
+<p><strong>Config-load-time errors:</strong> <code>ConfigError</code> is raised immediately (before any
+PDF is processed) if the expression contains a syntax error, an unknown
+function name, or a reference to a column that is not present in the extraction
+schema.</p>
+<p><strong>Runtime errors:</strong> A <code>ValueError</code> is raised with the full expression text in
+the error message, making it straightforward to identify which configuration
+entry caused the problem.</p>
+<hr />
+<h2 id="null-handling-strategies">Null Handling Strategies<a class="headerlink" href="#null-handling-strategies" title="Permanent link">&para;</a></h2>
+<p>Add <code>null_strategy</code> and (when needed) <code>null_default_value</code> alongside
+<code>expression</code> in the <code>std_refs</code> entry.</p>
+<h3 id="return_null-default"><code>return_null</code> (default)<a class="headerlink" href="#return_null-default" title="Permanent link">&para;</a></h3>
+<p>NULL propagates through the expression. Any operation involving NULL typically
+produces NULL, which flows into the output column.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="err">{</span><span class="n">statement_type</span><span class="o">=</span><span class="s2">"My Bank"</span><span class="err">,</span><span class="w"> </span><span class="n">expression</span><span class="o">=</span><span class="s2">"UPPER(TRIM(description))"</span><span class="err">}</span>
+</code></pre></div>
+<p>Use when a missing field should leave the output column NULL (downstream
+checks &amp; balances validation will flag incomplete rows).</p>
+<hr />
+<h3 id="default_value"><code>default_value</code><a class="headerlink" href="#default_value" title="Permanent link">&para;</a></h3>
+<p>NULL is replaced with the string in <code>null_default_value</code> before evaluation.
+The fallback is cast to the expected output type at runtime.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="err">{</span><span class="n">statement_type</span><span class="o">=</span><span class="s2">"My Bank"</span><span class="err">,</span><span class="w"> </span><span class="n">expression</span><span class="o">=</span><span class="s2">"UPPER(TRIM(description))"</span><span class="err">,</span>
+<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="w"> </span><span class="n">null_strategy</span><span class="o">=</span><span class="s2">"default_value"</span><span class="err">,</span><span class="w"> </span><span class="n">null_default_value</span><span class="o">=</span><span class="s2">"UNKNOWN"</span><span class="err">}</span>
+</code></pre></div>
+<p>Use when a sensible fallback exists (e.g. <code>"0"</code> for a missing amount,
+<code>"1 Jan 2000"</code> as a sentinel date). Be aware that defaulting numeric fields
+to <code>0</code> can make checks &amp; balances appear to pass even when data is missing.</p>
+<hr />
+<h3 id="skip_row"><code>skip_row</code><a class="headerlink" href="#skip_row" title="Permanent link">&para;</a></h3>
+<p>The row is excluded from the output after all expressions are evaluated.
+This happens <em>post-loop</em> (not mid-loop) so that statement-level totals used by
+checks &amp; balances are not affected.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="err">{</span><span class="n">statement_type</span><span class="o">=</span><span class="s2">"My Bank"</span><span class="err">,</span><span class="w"> </span><span class="n">expression</span><span class="o">=</span><span class="s2">"UPPER(TRIM(description))"</span><span class="err">,</span>
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="w"> </span><span class="n">null_strategy</span><span class="o">=</span><span class="s2">"skip_row"</span><span class="err">}</span>
+</code></pre></div>
+<p>Use when the field is so critical that a row without it is meaningless and
+should be silently dropped rather than flagged.</p>
+<hr />
+<h2 id="practical-examples">Practical Examples<a class="headerlink" href="#practical-examples" title="Permanent link">&para;</a></h2>
+<h3 id="normalise-a-description-field">Normalise a description field<a class="headerlink" href="#normalise-a-description-field" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="err">{</span><span class="n">statement_type</span><span class="o">=</span><span class="s2">"My Bank"</span><span class="err">,</span><span class="w"> </span><span class="n">expression</span><span class="o">=</span><span class="s2">"UPPER(TRIM(description))"</span><span class="err">}</span>
+</code></pre></div>
+<p>Strips whitespace and upper-cases the description — useful before merchant
+categorisation or duplicate detection.</p>
+<hr />
+<h3 id="build-a-date-from-separate-day-month-year-columns">Build a date from separate day, month, year columns<a class="headerlink" href="#build-a-date-from-separate-day-month-year-columns" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="err">{</span><span class="n">statement_type</span><span class="o">=</span><span class="s2">"My Bank"</span><span class="err">,</span>
+<a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="w"> </span><span class="n">expression</span><span class="o">=</span><span class="s2">"CONCAT(day, ' ', MONTH_NAME(month), ' ', CAST(year AS String))"</span><span class="err">,</span>
+<a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="w"> </span><span class="n">format</span><span class="o">=</span><span class="s2">"%d %b %Y"</span><span class="err">}</span>
+</code></pre></div>
+<p>Combines three separate extracted fields into a parseable date string.</p>
+<hr />
+<h3 id="strip-a-currency-symbol-from-an-amount-field">Strip a currency symbol from an amount field<a class="headerlink" href="#strip-a-currency-symbol-from-an-amount-field" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="err">{</span><span class="n">statement_type</span><span class="o">=</span><span class="s2">"My Bank"</span><span class="err">,</span>
+<a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="w"> </span><span class="n">expression</span><span class="o">=</span><span class="s2">"CAST(REPLACE(TRIM(SUBSTRING(amount, 1, LENGTH(amount))), ',', '') AS Float64)"</span><span class="err">,</span>
+<a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a><span class="w"> </span><span class="n">null_strategy</span><span class="o">=</span><span class="s2">"default_value"</span><span class="err">,</span><span class="w"> </span><span class="n">null_default_value</span><span class="o">=</span><span class="s2">"0"</span><span class="err">}</span>
+</code></pre></div>
+<p>Removes the first character (the currency symbol), trims spaces, strips
+thousands separators, then casts to Float64.</p>
+<hr />
+<h3 id="handle-two-date-formats-in-the-same-bank-config">Handle two date formats in the same bank config<a class="headerlink" href="#handle-two-date-formats-in-the-same-bank-config" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="err">{</span><span class="n">statement_type</span><span class="o">=</span><span class="s2">"My Bank"</span><span class="err">,</span>
+<a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a><span class="w"> </span><span class="n">expression</span><span class="o">=</span><span class="s2">"CASE WHEN LENGTH(date) &gt; 10 THEN SUBSTRING(date, 0, 10) ELSE date END"</span><span class="err">,</span>
+<a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a><span class="w"> </span><span class="n">format</span><span class="o">=</span><span class="s2">"%Y-%m-%d"</span><span class="err">}</span>
+</code></pre></div>
+<p>Detects whether a field looks like a full ISO timestamp and truncates it to
+the date portion. Useful when a bank has changed its PDF format over time.</p>
+<hr />
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<h3 id="polarsexceptionsschemaerror-type-string-is-incompatible-with-expected-type-date"><code>polars.exceptions.SchemaError: type String is incompatible with expected type Date</code><a class="headerlink" href="#polarsexceptionsschemaerror-type-string-is-incompatible-with-expected-type-date" title="Permanent link">&para;</a></h3>
+<p>You are passing a non-String value to <code>CONCAT</code>. The most common cause is
+<code>YEAR()</code> returning an Int64:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a># Wrong:
+<a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>CONCAT(date, ' ', YEAR(STD_STATEMENT_DATE))
+<a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>
+<a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a># Correct:
+<a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a>CONCAT(date, ' ', CAST(YEAR(STD_STATEMENT_DATE) AS String))
+</code></pre></div>
+<hr />
+<h3 id="configerror-column-xyz-not-found-in-schema"><code>ConfigError: column 'xyz' not found in schema</code><a class="headerlink" href="#configerror-column-xyz-not-found-in-schema" title="Permanent link">&para;</a></h3>
+<p>The column name in the expression does not match any column in the extraction
+context. Check:</p>
+<ul>
+<li>The field name in <code>statement_tables.toml</code> (raw extracted column names).</li>
+<li>That the column you need is in the same section (<code>header</code> or <code>lines</code>).</li>
+<li>For header-section values referenced in a lines expression, that the field
+  is listed in <code>header_scalars</code> (see <a href="../new-bank-config/">new-bank-config.md</a>).</li>
+</ul>
+<hr />
+<h3 id="split-index-out-of-range-returns-null">SPLIT index out of range returns NULL<a class="headerlink" href="#split-index-out-of-range-returns-null" title="Permanent link">&para;</a></h3>
+<p><code>SPLIT(str, delimiter)[n]</code> returns NULL if the index is out of range (not an
+error). If you depend on a specific element being present, consider using
+<code>null_strategy="default_value"</code> or <code>null_strategy="skip_row"</code> to handle the
+case where the split does not produce enough elements.</p>
+<hr />
+<h2 id="complex-example-santander-uk-current-account">Complex Example: Santander UK Current Account<a class="headerlink" href="#complex-example-santander-uk-current-account" title="Permanent link">&para;</a></h2>
+<h3 id="problem">Problem<a class="headerlink" href="#problem" title="Permanent link">&para;</a></h3>
+<p>Santander PDFs contain transaction rows where the <code>date</code> field holds only the
+day and month — for example <code>"20 Sep"</code> or <code>"5 Dec"</code> — with no year. The year
+must be inferred from the statement date (a header field).</p>
+<p>The complication: Santander sometimes groups December, November, and October
+transactions onto a January, February, or March statement of the following
+year. A transaction dated <code>"20 Dec"</code> on a statement dated <code>2026-01-15</code> actually
+occurred on <code>20 Dec 2025</code>, not <code>20 Dec 2026</code>.</p>
+<p><strong>Rule:</strong> If the statement month is in January–March <strong>AND</strong> the transaction
+month is in October–December, subtract 1 from the statement year. Otherwise
+use the statement year as-is.</p>
+<hr />
+<h3 id="why-split-not-substring">Why SPLIT, not SUBSTRING<a class="headerlink" href="#why-split-not-substring" title="Permanent link">&para;</a></h3>
+<p>The <code>date</code> field is <code>"DD MMM"</code> or <code>"D MMM"</code> — the day can be one or two
+digits, so the month abbreviation starts at a variable position. Using
+<code>SUBSTRING</code> would require a fragile position calculation.</p>
+<p><code>SPLIT(date, ' ')[1]</code> is simpler and correct for all day widths:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>SPLIT('20 Dec', ' ')[1]  →  'Dec'
+<a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>SPLIT('5 Nov', ' ')[1]   →  'Nov'
+</code></pre></div>
+<hr />
+<h3 id="expression">Expression<a class="headerlink" href="#expression" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>CONCAT(
+<a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>  date, ' ',
+<a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a>  CASE
+<a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a>    WHEN MONTH(STD_STATEMENT_DATE) &lt;= 3
+<a id="__codelineno-29-5" name="__codelineno-29-5" href="#__codelineno-29-5"></a>     AND MONTH_NAME(SPLIT(date, ' ')[1]) IN ('Oct', 'Nov', 'Dec')
+<a id="__codelineno-29-6" name="__codelineno-29-6" href="#__codelineno-29-6"></a>    THEN CAST(YEAR(STD_STATEMENT_DATE) - 1 AS String)
+<a id="__codelineno-29-7" name="__codelineno-29-7" href="#__codelineno-29-7"></a>    ELSE CAST(YEAR(STD_STATEMENT_DATE) AS String)
+<a id="__codelineno-29-8" name="__codelineno-29-8" href="#__codelineno-29-8"></a>  END
+<a id="__codelineno-29-9" name="__codelineno-29-9" href="#__codelineno-29-9"></a>)
+</code></pre></div>
+<p><strong>Step by step:</strong></p>
+<ol>
+<li><code>SPLIT(date, ' ')[1]</code> — extract the month abbreviation from the <code>date</code> field
+   regardless of whether the day is one or two digits.</li>
+<li><code>MONTH_NAME(...)</code> — normalise the abbreviation to title-case (<code>'Dec'</code>, <code>'Nov'</code>,
+   <code>'Oct'</code>) so the <code>IN</code> test is reliable.</li>
+<li><code>MONTH(STD_STATEMENT_DATE) &lt;= 3</code> — check whether the statement falls in Q1
+   (January, February, or March).</li>
+<li><code>CASE WHEN ... AND ...</code> — both conditions must be true to trigger the
+   year-decrement path.</li>
+<li><code>CAST(YEAR(STD_STATEMENT_DATE) - 1 AS String)</code> — decrement the year and cast
+   to String for <code>CONCAT</code>.</li>
+<li><code>ELSE CAST(YEAR(STD_STATEMENT_DATE) AS String)</code> — otherwise use the statement
+   year unchanged.</li>
+<li><code>CONCAT(date, ' ', ...)</code> — combine the original <code>date</code> string with a space
+   and the computed year to produce e.g. <code>"20 Dec 2025"</code>.</li>
+</ol>
+<hr />
+<h3 id="toml-configuration">TOML configuration<a class="headerlink" href="#toml-configuration" title="Permanent link">&para;</a></h3>
+<p>In <code>project/config/import/standard_fields.toml</code>, under <code>[STD_TRANSACTION_DATE]</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="err">{</span><span class="n">statement_type</span><span class="o">=</span><span class="s2">"Santander UK Current Account"</span><span class="err">,</span>
+<a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a><span class="w"> </span><span class="n">expression</span><span class="o">=</span><span class="s2">"CONCAT(date,' ',CASE WHEN MONTH(STD_STATEMENT_DATE) &lt;= 3 AND MONTH_NAME(SPLIT(date, ' ')[1]) IN ('Oct', 'Nov', 'Dec') THEN CAST(YEAR(STD_STATEMENT_DATE) - 1 AS String) ELSE CAST(YEAR(STD_STATEMENT_DATE) AS String) END)"</span><span class="err">,</span>
+<a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a><span class="w"> </span><span class="n">format</span><span class="o">=</span><span class="s2">"%d %b %Y"</span><span class="err">}</span>
+</code></pre></div>
+<p><code>STD_STATEMENT_DATE</code> is a header field. For it to be available inside a lines
+expression, it must be passed as a header scalar by the calling code — see
+<code>new-bank-config.md</code> for how <code>header_scalars</code> works.</p>
+<p>The <code>format</code> string <code>"%d %b %Y"</code> is used to parse the constructed string
+(e.g. <code>"20 Dec 2025"</code> or <code>"5 Nov 2025"</code>) back into a Polars <code>Date</code>. Note
+that <code>%d</code> accepts both <code>"5"</code> and <code>"20"</code> as valid day values — there is no
+zero-padding requirement.</p>
+<hr />
+<h3 id="verifying-with-a-pytest-test">Verifying with a pytest test<a class="headerlink" href="#verifying-with-a-pytest-test" title="Permanent link">&para;</a></h3>
+<p>The following test covers all six boundary conditions:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">polars</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pl</span>
+<a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">date</span>
+<a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">bank_statement_parser.modules.data</span><span class="w"> </span><span class="kn">import</span> <span class="n">StandardFields</span><span class="p">,</span> <span class="n">StdRefs</span>
+<a id="__codelineno-31-4" name="__codelineno-31-4" href="#__codelineno-31-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">bank_statement_parser.modules.statement_functions</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_standard_fields</span>
+<a id="__codelineno-31-5" name="__codelineno-31-5" href="#__codelineno-31-5"></a>
+<a id="__codelineno-31-6" name="__codelineno-31-6" href="#__codelineno-31-6"></a><span class="n">EXPR</span> <span class="o">=</span> <span class="p">(</span>
+<a id="__codelineno-31-7" name="__codelineno-31-7" href="#__codelineno-31-7"></a>    <span class="s2">"CONCAT(date,' ',"</span>
+<a id="__codelineno-31-8" name="__codelineno-31-8" href="#__codelineno-31-8"></a>    <span class="s2">"CASE WHEN MONTH(STD_STATEMENT_DATE) &lt;= 3"</span>
+<a id="__codelineno-31-9" name="__codelineno-31-9" href="#__codelineno-31-9"></a>    <span class="s2">" AND MONTH_NAME(SPLIT(date, ' ')[1]) IN ('Oct', 'Nov', 'Dec')"</span>
+<a id="__codelineno-31-10" name="__codelineno-31-10" href="#__codelineno-31-10"></a>    <span class="s2">" THEN CAST(YEAR(STD_STATEMENT_DATE) - 1 AS String)"</span>
+<a id="__codelineno-31-11" name="__codelineno-31-11" href="#__codelineno-31-11"></a>    <span class="s2">" ELSE CAST(YEAR(STD_STATEMENT_DATE) AS String)"</span>
+<a id="__codelineno-31-12" name="__codelineno-31-12" href="#__codelineno-31-12"></a>    <span class="s2">" END)"</span>
+<a id="__codelineno-31-13" name="__codelineno-31-13" href="#__codelineno-31-13"></a><span class="p">)</span>
+<a id="__codelineno-31-14" name="__codelineno-31-14" href="#__codelineno-31-14"></a>
+<a id="__codelineno-31-15" name="__codelineno-31-15" href="#__codelineno-31-15"></a>
+<a id="__codelineno-31-16" name="__codelineno-31-16" href="#__codelineno-31-16"></a><span class="k">def</span><span class="w"> </span><span class="nf">test_santander_date_year_inference</span><span class="p">():</span>
+<a id="__codelineno-31-17" name="__codelineno-31-17" href="#__codelineno-31-17"></a><span class="w">    </span><span class="sd">"""Six cases covering all month-boundary conditions."""</span>
+<a id="__codelineno-31-18" name="__codelineno-31-18" href="#__codelineno-31-18"></a>    <span class="n">ref</span> <span class="o">=</span> <span class="n">StdRefs</span><span class="p">(</span>
+<a id="__codelineno-31-19" name="__codelineno-31-19" href="#__codelineno-31-19"></a>        <span class="n">statement_type</span><span class="o">=</span><span class="s2">"Santander UK Current Account"</span><span class="p">,</span>
+<a id="__codelineno-31-20" name="__codelineno-31-20" href="#__codelineno-31-20"></a>        <span class="n">field</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-31-21" name="__codelineno-31-21" href="#__codelineno-31-21"></a>        <span class="n">concat_fields</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-31-22" name="__codelineno-31-22" href="#__codelineno-31-22"></a>        <span class="nb">format</span><span class="o">=</span><span class="s2">"</span><span class="si">%d</span><span class="s2"> %b %Y"</span><span class="p">,</span>
+<a id="__codelineno-31-23" name="__codelineno-31-23" href="#__codelineno-31-23"></a>        <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-31-24" name="__codelineno-31-24" href="#__codelineno-31-24"></a>        <span class="n">expression</span><span class="o">=</span><span class="n">EXPR</span><span class="p">,</span>
+<a id="__codelineno-31-25" name="__codelineno-31-25" href="#__codelineno-31-25"></a>        <span class="n">null_strategy</span><span class="o">=</span><span class="s2">"default_value"</span><span class="p">,</span>
+<a id="__codelineno-31-26" name="__codelineno-31-26" href="#__codelineno-31-26"></a>        <span class="n">null_default_value</span><span class="o">=</span><span class="s2">"1 Jan 2000"</span><span class="p">,</span>
+<a id="__codelineno-31-27" name="__codelineno-31-27" href="#__codelineno-31-27"></a>    <span class="p">)</span>
+<a id="__codelineno-31-28" name="__codelineno-31-28" href="#__codelineno-31-28"></a>    <span class="n">std_fields</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"STD_TRANSACTION_DATE"</span><span class="p">:</span> <span class="n">StandardFields</span><span class="p">(</span><span class="n">section</span><span class="o">=</span><span class="s2">"lines"</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s2">"string"</span><span class="p">,</span> <span class="n">vital</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">std_refs</span><span class="o">=</span><span class="p">[</span><span class="n">ref</span><span class="p">])}</span>
+<a id="__codelineno-31-29" name="__codelineno-31-29" href="#__codelineno-31-29"></a>    <span class="n">df</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+<a id="__codelineno-31-30" name="__codelineno-31-30" href="#__codelineno-31-30"></a>        <span class="p">{</span>
+<a id="__codelineno-31-31" name="__codelineno-31-31" href="#__codelineno-31-31"></a>            <span class="s2">"date"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"20 Dec"</span><span class="p">,</span> <span class="s2">"5 Nov"</span><span class="p">,</span> <span class="s2">"15 Oct"</span><span class="p">,</span> <span class="s2">"20 Sep"</span><span class="p">,</span> <span class="s2">"15 Dec"</span><span class="p">,</span> <span class="s2">"1 Mar"</span><span class="p">],</span>
+<a id="__codelineno-31-32" name="__codelineno-31-32" href="#__codelineno-31-32"></a>            <span class="s2">"STD_STATEMENT_DATE"</span><span class="p">:</span> <span class="p">[</span>
+<a id="__codelineno-31-33" name="__codelineno-31-33" href="#__codelineno-31-33"></a>                <span class="n">date</span><span class="p">(</span><span class="mi">2026</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">15</span><span class="p">),</span>  <span class="c1"># Q4 txn on Q1 stmt → 2025</span>
+<a id="__codelineno-31-34" name="__codelineno-31-34" href="#__codelineno-31-34"></a>                <span class="n">date</span><span class="p">(</span><span class="mi">2026</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>  <span class="c1"># Q4 txn on Q1 stmt → 2025</span>
+<a id="__codelineno-31-35" name="__codelineno-31-35" href="#__codelineno-31-35"></a>                <span class="n">date</span><span class="p">(</span><span class="mi">2026</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>  <span class="c1"># Q4 txn on Q1 stmt → 2025</span>
+<a id="__codelineno-31-36" name="__codelineno-31-36" href="#__codelineno-31-36"></a>                <span class="n">date</span><span class="p">(</span><span class="mi">2026</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">15</span><span class="p">),</span>  <span class="c1"># non-Q4 txn on Q1 stmt → 2026</span>
+<a id="__codelineno-31-37" name="__codelineno-31-37" href="#__codelineno-31-37"></a>                <span class="n">date</span><span class="p">(</span><span class="mi">2025</span><span class="p">,</span> <span class="mi">12</span><span class="p">,</span> <span class="mi">20</span><span class="p">),</span>  <span class="c1"># Q4 txn on Q4 stmt → 2025</span>
+<a id="__codelineno-31-38" name="__codelineno-31-38" href="#__codelineno-31-38"></a>                <span class="n">date</span><span class="p">(</span><span class="mi">2026</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>  <span class="c1"># non-Q4 txn on Q2 stmt → 2026</span>
+<a id="__codelineno-31-39" name="__codelineno-31-39" href="#__codelineno-31-39"></a>            <span class="p">],</span>
+<a id="__codelineno-31-40" name="__codelineno-31-40" href="#__codelineno-31-40"></a>        <span class="p">}</span>
+<a id="__codelineno-31-41" name="__codelineno-31-41" href="#__codelineno-31-41"></a>    <span class="p">)</span><span class="o">.</span><span class="n">with_columns</span><span class="p">(</span>
+<a id="__codelineno-31-42" name="__codelineno-31-42" href="#__codelineno-31-42"></a>        <span class="n">pl</span><span class="o">.</span><span class="n">col</span><span class="p">(</span><span class="s2">"STD_STATEMENT_DATE"</span><span class="p">)</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">Date</span><span class="p">),</span>
+<a id="__codelineno-31-43" name="__codelineno-31-43" href="#__codelineno-31-43"></a>        <span class="n">pl</span><span class="o">.</span><span class="n">lit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="s2">"transaction_number"</span><span class="p">),</span>
+<a id="__codelineno-31-44" name="__codelineno-31-44" href="#__codelineno-31-44"></a>        <span class="n">pl</span><span class="o">.</span><span class="n">lit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="s2">"page"</span><span class="p">),</span>
+<a id="__codelineno-31-45" name="__codelineno-31-45" href="#__codelineno-31-45"></a>        <span class="n">pl</span><span class="o">.</span><span class="n">lit</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">Decimal</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="mi">4</span><span class="p">))</span><span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="s2">"STD_TRANSACTION_PAYMENTS_IN"</span><span class="p">),</span>
+<a id="__codelineno-31-46" name="__codelineno-31-46" href="#__codelineno-31-46"></a>        <span class="n">pl</span><span class="o">.</span><span class="n">lit</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">Decimal</span><span class="p">(</span><span class="n">scale</span><span class="o">=</span><span class="mi">4</span><span class="p">))</span><span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="s2">"STD_TRANSACTION_PAYMENTS_OUT"</span><span class="p">),</span>
+<a id="__codelineno-31-47" name="__codelineno-31-47" href="#__codelineno-31-47"></a>    <span class="p">)</span>
+<a id="__codelineno-31-48" name="__codelineno-31-48" href="#__codelineno-31-48"></a>    <span class="n">checks</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">"STD_OPENING_BALANCE"</span><span class="p">:</span> <span class="n">pl</span><span class="o">.</span><span class="n">Series</span><span class="p">([</span><span class="mf">0.0</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">pl</span><span class="o">.</span><span class="n">Float64</span><span class="p">)})</span>
+<a id="__codelineno-31-49" name="__codelineno-31-49" href="#__codelineno-31-49"></a>    <span class="n">result</span> <span class="o">=</span> <span class="n">get_standard_fields</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="s2">"lines"</span><span class="p">,</span> <span class="n">std_fields</span><span class="p">,</span> <span class="s2">"Santander UK Current Account"</span><span class="p">,</span> <span class="n">checks</span><span class="p">)</span>
+<a id="__codelineno-31-50" name="__codelineno-31-50" href="#__codelineno-31-50"></a>    <span class="n">dates</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="s2">"STD_TRANSACTION_DATE"</span><span class="p">]</span><span class="o">.</span><span class="n">to_list</span><span class="p">()</span>
+<a id="__codelineno-31-51" name="__codelineno-31-51" href="#__codelineno-31-51"></a>    <span class="k">assert</span> <span class="n">dates</span> <span class="o">==</span> <span class="p">[</span>
+<a id="__codelineno-31-52" name="__codelineno-31-52" href="#__codelineno-31-52"></a>        <span class="s2">"20 Dec 2025"</span><span class="p">,</span>  <span class="c1"># Q4 on Q1 → prior year</span>
+<a id="__codelineno-31-53" name="__codelineno-31-53" href="#__codelineno-31-53"></a>        <span class="s2">"5 Nov 2025"</span><span class="p">,</span>  <span class="c1"># Q4 on Q1 → prior year</span>
+<a id="__codelineno-31-54" name="__codelineno-31-54" href="#__codelineno-31-54"></a>        <span class="s2">"15 Oct 2025"</span><span class="p">,</span>  <span class="c1"># Q4 on Q1 → prior year</span>
+<a id="__codelineno-31-55" name="__codelineno-31-55" href="#__codelineno-31-55"></a>        <span class="s2">"20 Sep 2026"</span><span class="p">,</span>  <span class="c1"># Sep not in Q4 → same year</span>
+<a id="__codelineno-31-56" name="__codelineno-31-56" href="#__codelineno-31-56"></a>        <span class="s2">"15 Dec 2025"</span><span class="p">,</span>  <span class="c1"># Dec on Dec stmt (month &gt; 3) → same year</span>
+<a id="__codelineno-31-57" name="__codelineno-31-57" href="#__codelineno-31-57"></a>        <span class="s2">"1 Mar 2026"</span><span class="p">,</span>  <span class="c1"># Mar not in Q4 → same year</span>
+<a id="__codelineno-31-58" name="__codelineno-31-58" href="#__codelineno-31-58"></a>    <span class="p">]</span>
+</code></pre></div>
+<p>Run with:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a>pytest<span class="w"> </span>tests/test_expression_evaluator.py::TestGetStandardFieldsExpression::test_santander_date_year_inference<span class="w"> </span>-v
+</code></pre></div>
+<hr />
+<h2 id="further-reading">Further Reading<a class="headerlink" href="#further-reading" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong><a href="../new-bank-config/">Adding a New Bank</a></strong> — full TOML configuration
+  walkthrough; the <code>std_refs</code> entry options (including <code>expression</code>) are
+  documented in the <a href="../new-bank-config/#stdRefs">StdRefs reference</a> section.</li>
+<li><strong><code>expression_evaluator.py</code></strong> — source for the Lexer, Parser, AST, and
+  Evaluator; relevant for contributors wanting to extend the function registry.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "toc.follow"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.a5f9d56c.min.js"></script>
+      
+    
+  </body>
+</html>
